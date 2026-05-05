@@ -56,8 +56,8 @@ public sealed class GPUInstancingManagerStage5Editor : Editor
             return;
         }
 
-        if (manager.defenderPaintedFlowFieldAsset == null)
-            EditorGUILayout.HelpBox("Defender Flow Field mode is selected, but no Defender Painted Flow Field is assigned. Defenders will hold position.", MessageType.Warning);
+        if (manager.defenderPaintedFlowFieldAsset == null && !manager.enableRuntimeDynamicDefenderFlowField)
+            EditorGUILayout.HelpBox("Defender Flow Field mode is selected, but no Defender Painted Flow Field is assigned and Runtime Dynamic Defender Flow is disabled. Defenders will hold position.", MessageType.Warning);
     }
 
     private void DrawVatProfileTools(GPUInstancingManager_Stage5 manager)

@@ -351,6 +351,24 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
     [Tooltip("每个战区至少需要多少个活防守方才会成为流场目标。")]
     [Min(1)] public int dynamicFlowMinDefendersPerTarget = 8;
 
+    [Header("Stage 5 Runtime Dynamic Defender Flow")]
+    [Tooltip("开战后根据活着的攻击方分布，定时重建防守方运行时流场。仅在 Defender Movement Mode 为 Use Defender Flow Field 时生效。")]
+    public bool enableRuntimeDynamicDefenderFlowField;
+    [Tooltip("运行时自动根据模拟世界范围创建防守方流场网格。Defender Painted Flow Field 只作为初始方向模板重采样，不再决定运行时流场尺寸。")]
+    public bool autoSizeRuntimeDefenderFlowField = true;
+    [Tooltip("自动防守方运行时流场在模拟世界范围外额外扩展的距离。")]
+    [Min(0f)] public float runtimeDefenderFlowFieldPadding = 40f;
+    [Tooltip("自动防守方运行时流场单轴最大分辨率。范围越大时会自动增大 Cell Size，避免流场图过大。")]
+    [Min(16)] public int runtimeDefenderFlowFieldMaxResolution = 256;
+    [Tooltip("动态防守流场更新间隔，单位秒。越小响应越快，但 GPU 生成频率越高。")]
+    [Min(0.1f)] public float dynamicDefenderFlowUpdateInterval = 0.5f;
+    [Tooltip("把攻击方阵线沿 Z 方向切成几个战区；每个仍有足够攻击方的战区会成为防守方流场目标源。")]
+    [Range(1, 8)] public int dynamicDefenderFlowSectorCount = 5;
+    [Tooltip("防守方流场格子距离动态目标小于该半径时方向归零，避免目标点附近原地打转。")]
+    [Min(0f)] public float dynamicDefenderFlowTargetStopRadius = 2f;
+    [Tooltip("每个战区至少需要多少个活攻击方才会成为防守方流场目标。")]
+    [Min(1)] public int dynamicDefenderFlowMinAttackersPerTarget = 8;
+
     [System.Serializable]
     public sealed class FlowFieldPreviewSnapshot
     {
@@ -433,15 +451,23 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
     private static readonly int FlowFieldCellSizeId = Shader.PropertyToID("flowFieldCellSize");
     private static readonly int FlowFieldWeightId = Shader.PropertyToID("flowFieldWeight");
     private static readonly int FlowFieldResponsivenessId = Shader.PropertyToID("flowFieldResponsiveness");
-    private static readonly int RuntimeDefenderDensityId = Shader.PropertyToID("runtimeDefenderDensity");
-    private static readonly int RuntimeFlowStatsId = Shader.PropertyToID("runtimeFlowStats");
-    private static readonly int RuntimeFlowPreviewTextureId = Shader.PropertyToID("runtimeFlowPreviewTexture");
+    private static readonly int RuntimeAttackerTargetDensityId = Shader.PropertyToID("runtimeAttackerTargetDensity");
+    private static readonly int RuntimeAttackerFlowStatsId = Shader.PropertyToID("runtimeAttackerFlowStats");
+    private static readonly int RuntimeAttackerFlowTargetsId = Shader.PropertyToID("runtimeAttackerFlowTargets");
+    private static readonly int RuntimeAttackerFlowPreviewTextureId = Shader.PropertyToID("runtimeAttackerFlowPreviewTexture");
+    private static readonly int RuntimeDefenderTargetDensityId = Shader.PropertyToID("runtimeDefenderTargetDensity");
+    private static readonly int RuntimeDefenderFlowStatsId = Shader.PropertyToID("runtimeDefenderFlowStats");
+    private static readonly int RuntimeDefenderFlowTargetsId = Shader.PropertyToID("runtimeDefenderFlowTargets");
+    private static readonly int RuntimeDefenderFlowPreviewTextureId = Shader.PropertyToID("runtimeDefenderFlowPreviewTexture");
     private static readonly int RuntimeFlowPreviewModeId = Shader.PropertyToID("runtimeFlowPreviewMode");
     private static readonly int RuntimeDynamicAttackerFlowEnabledId = Shader.PropertyToID("runtimeDynamicAttackerFlowEnabled");
-    private static readonly int RuntimeFlowTargetsId = Shader.PropertyToID("runtimeFlowTargets");
+    private static readonly int RuntimeDynamicDefenderFlowEnabledId = Shader.PropertyToID("runtimeDynamicDefenderFlowEnabled");
     private static readonly int DynamicFlowSectorCountId = Shader.PropertyToID("dynamicFlowSectorCount");
     private static readonly int DynamicFlowTargetStopRadiusId = Shader.PropertyToID("dynamicFlowTargetStopRadius");
     private static readonly int DynamicFlowMinDefendersPerTargetId = Shader.PropertyToID("dynamicFlowMinDefendersPerTarget");
+    private static readonly int DynamicDefenderFlowSectorCountId = Shader.PropertyToID("dynamicDefenderFlowSectorCount");
+    private static readonly int DynamicDefenderFlowTargetStopRadiusId = Shader.PropertyToID("dynamicDefenderFlowTargetStopRadius");
+    private static readonly int DynamicDefenderFlowMinAttackersPerTargetId = Shader.PropertyToID("dynamicDefenderFlowMinAttackersPerTarget");
     private static readonly int DefenderFlowFieldDirectionsId = Shader.PropertyToID("defenderFlowFieldDirections");
     private static readonly int DefenderFlowFieldEnabledId = Shader.PropertyToID("defenderFlowFieldEnabled");
     private static readonly int DefenderFlowFieldResolutionId = Shader.PropertyToID("defenderFlowFieldResolution");
@@ -499,9 +525,12 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
     private ComputeBuffer gridAgentIndicesBuffer;
     private ComputeBuffer flowFieldDirectionsBuffer;
     private ComputeBuffer defenderFlowFieldDirectionsBuffer;
-    private ComputeBuffer runtimeDefenderDensityBuffer;
-    private ComputeBuffer runtimeFlowStatsBuffer;
-    private ComputeBuffer runtimeFlowTargetsBuffer;
+    private ComputeBuffer runtimeAttackerTargetDensityBuffer;
+    private ComputeBuffer runtimeAttackerFlowStatsBuffer;
+    private ComputeBuffer runtimeAttackerFlowTargetsBuffer;
+    private ComputeBuffer runtimeDefenderTargetDensityBuffer;
+    private ComputeBuffer runtimeDefenderFlowStatsBuffer;
+    private ComputeBuffer runtimeDefenderFlowTargetsBuffer;
     private ComputeBuffer teamIdBuffer;
     private ComputeBuffer hpBuffer;
     private ComputeBuffer targetAgentIndexBuffer;
@@ -543,7 +572,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
     private Material runtimeDefenderNearMaterial;
     private Material runtimeDefenderMidMaterial;
     private Material runtimeDefenderFarMaterial;
-    private RenderTexture runtimeFlowPreviewTexture;
+    private RenderTexture runtimeAttackerFlowPreviewTexture;
+    private RenderTexture runtimeDefenderFlowPreviewTexture;
 
     private Bounds renderBounds;
 
@@ -567,11 +597,15 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
     private Vector2 defenderFlowFieldOrigin;
     private float activeDefenderFlowFieldCellSize = 2f;
     private float nextDynamicFlowUpdateTime;
-    private bool runtimeDynamicFlowActive;
+    private float nextDefenderDynamicFlowUpdateTime;
+    private bool runtimeDynamicAttackerFlowActive;
+    private bool runtimeDynamicDefenderFlowActive;
     private float lastRuntimeDynamicFlowUpdateTime = -1f;
+    private float lastRuntimeDynamicDefenderFlowUpdateTime = -1f;
 
     private float AnimationDuration => vatFrameCount / Mathf.Max(vatFrameRate, 0.0001f);
     private int FlowFieldThreadGroupsX => Mathf.CeilToInt(Mathf.Max(1, flowFieldResolutionX * flowFieldResolutionZ) / 64f);
+    private int DefenderFlowFieldThreadGroupsX => Mathf.CeilToInt(Mathf.Max(1, defenderFlowFieldResolutionX * defenderFlowFieldResolutionZ) / 64f);
 
     private void Start()
     {
@@ -585,20 +619,25 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
     {
         battleStarted = true;
         nextDynamicFlowUpdateTime = Time.time;
+        nextDefenderDynamicFlowUpdateTime = Time.time;
     }
 
     public void StopBattle()
     {
         battleStarted = false;
-        runtimeDynamicFlowActive = false;
+        runtimeDynamicAttackerFlowActive = false;
+        runtimeDynamicDefenderFlowActive = false;
         RestorePaintedAttackerFlowField("Battle stopped; attacker flow field restored to painted fallback.");
+        RestorePaintedDefenderFlowField("Battle stopped; defender flow field restored to painted fallback.");
     }
 
     public void ResetBattleStarted()
     {
         battleStarted = false;
-        runtimeDynamicFlowActive = false;
+        runtimeDynamicAttackerFlowActive = false;
+        runtimeDynamicDefenderFlowActive = false;
         RestorePaintedAttackerFlowField("Battle reset; attacker flow field restored to painted fallback.");
+        RestorePaintedDefenderFlowField("Battle reset; defender flow field restored to painted fallback.");
     }
 
     private void InitializeBuffers()
@@ -663,6 +702,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         BuildAndUploadFlowField();
         CreateRuntimeDynamicFlowResources();
         nextDynamicFlowUpdateTime = Time.time + Mathf.Max(0.1f, dynamicFlowUpdateInterval);
+        nextDefenderDynamicFlowUpdateTime = Time.time + Mathf.Max(0.1f, dynamicDefenderFlowUpdateInterval);
 
         UploadInitialAgents();
 
@@ -677,10 +717,14 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
 
         BindComputeBuffers(kernels.ClearGrid);
         BindComputeBuffers(kernels.BuildSpatialHash);
-        BindComputeBuffers(kernels.ClearRuntimeDefenderDensity);
-        BindComputeBuffers(kernels.BuildRuntimeDefenderDensity);
-        BindComputeBuffers(kernels.SelectRuntimeFlowTargets);
+        BindComputeBuffers(kernels.ClearRuntimeAttackerFlowResources);
+        BindComputeBuffers(kernels.BuildRuntimeAttackerTargetDensity);
+        BindComputeBuffers(kernels.SelectRuntimeAttackerFlowTargets);
         BindComputeBuffers(kernels.GenerateRuntimeAttackerFlowField);
+        BindComputeBuffers(kernels.ClearRuntimeDefenderFlowResources);
+        BindComputeBuffers(kernels.BuildRuntimeDefenderTargetDensity);
+        BindComputeBuffers(kernels.SelectRuntimeDefenderFlowTargets);
+        BindComputeBuffers(kernels.GenerateRuntimeDefenderFlowField);
         BindComputeBuffers(kernels.ClearPendingDamage);
         BindComputeBuffers(kernels.EvaluateStateAndAccumulateDamage);
         BindComputeBuffers(kernels.ResolveDamageSimulateAndClassify);
@@ -1081,37 +1125,71 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
             return;
         }
 
-        if (kernel == kernels.ClearRuntimeDefenderDensity)
+        if (kernel == kernels.ClearRuntimeAttackerFlowResources)
         {
-            computeShader.SetBuffer(kernel, RuntimeDefenderDensityId, runtimeDefenderDensityBuffer);
-            computeShader.SetBuffer(kernel, RuntimeFlowStatsId, runtimeFlowStatsBuffer);
-            computeShader.SetBuffer(kernel, RuntimeFlowTargetsId, runtimeFlowTargetsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerTargetDensityId, runtimeAttackerTargetDensityBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerFlowStatsId, runtimeAttackerFlowStatsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerFlowTargetsId, runtimeAttackerFlowTargetsBuffer);
             return;
         }
 
-        if (kernel == kernels.BuildRuntimeDefenderDensity)
+        if (kernel == kernels.BuildRuntimeAttackerTargetDensity)
         {
             computeShader.SetBuffer(kernel, HpReadBufferId, hpBuffer);
-            computeShader.SetBuffer(kernel, RuntimeDefenderDensityId, runtimeDefenderDensityBuffer);
-            computeShader.SetBuffer(kernel, RuntimeFlowStatsId, runtimeFlowStatsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerTargetDensityId, runtimeAttackerTargetDensityBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerFlowStatsId, runtimeAttackerFlowStatsBuffer);
             return;
         }
 
-        if (kernel == kernels.SelectRuntimeFlowTargets)
+        if (kernel == kernels.SelectRuntimeAttackerFlowTargets)
         {
-            computeShader.SetBuffer(kernel, RuntimeDefenderDensityId, runtimeDefenderDensityBuffer);
-            computeShader.SetBuffer(kernel, RuntimeFlowStatsId, runtimeFlowStatsBuffer);
-            computeShader.SetBuffer(kernel, RuntimeFlowTargetsId, runtimeFlowTargetsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerTargetDensityId, runtimeAttackerTargetDensityBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerFlowStatsId, runtimeAttackerFlowStatsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerFlowTargetsId, runtimeAttackerFlowTargetsBuffer);
             return;
         }
 
         if (kernel == kernels.GenerateRuntimeAttackerFlowField)
         {
             computeShader.SetBuffer(kernel, FlowFieldDirectionsId, flowFieldDirectionsBuffer);
-            computeShader.SetBuffer(kernel, RuntimeDefenderDensityId, runtimeDefenderDensityBuffer);
-            computeShader.SetBuffer(kernel, RuntimeFlowStatsId, runtimeFlowStatsBuffer);
-            computeShader.SetBuffer(kernel, RuntimeFlowTargetsId, runtimeFlowTargetsBuffer);
-            computeShader.SetTexture(kernel, RuntimeFlowPreviewTextureId, runtimeFlowPreviewTexture);
+            computeShader.SetBuffer(kernel, RuntimeAttackerTargetDensityId, runtimeAttackerTargetDensityBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerFlowStatsId, runtimeAttackerFlowStatsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeAttackerFlowTargetsId, runtimeAttackerFlowTargetsBuffer);
+            computeShader.SetTexture(kernel, RuntimeAttackerFlowPreviewTextureId, runtimeAttackerFlowPreviewTexture);
+            return;
+        }
+
+        if (kernel == kernels.ClearRuntimeDefenderFlowResources)
+        {
+            computeShader.SetBuffer(kernel, RuntimeDefenderTargetDensityId, runtimeDefenderTargetDensityBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderFlowStatsId, runtimeDefenderFlowStatsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderFlowTargetsId, runtimeDefenderFlowTargetsBuffer);
+            return;
+        }
+
+        if (kernel == kernels.BuildRuntimeDefenderTargetDensity)
+        {
+            computeShader.SetBuffer(kernel, HpReadBufferId, hpBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderTargetDensityId, runtimeDefenderTargetDensityBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderFlowStatsId, runtimeDefenderFlowStatsBuffer);
+            return;
+        }
+
+        if (kernel == kernels.SelectRuntimeDefenderFlowTargets)
+        {
+            computeShader.SetBuffer(kernel, RuntimeDefenderTargetDensityId, runtimeDefenderTargetDensityBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderFlowStatsId, runtimeDefenderFlowStatsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderFlowTargetsId, runtimeDefenderFlowTargetsBuffer);
+            return;
+        }
+
+        if (kernel == kernels.GenerateRuntimeDefenderFlowField)
+        {
+            computeShader.SetBuffer(kernel, DefenderFlowFieldDirectionsId, defenderFlowFieldDirectionsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderTargetDensityId, runtimeDefenderTargetDensityBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderFlowStatsId, runtimeDefenderFlowStatsBuffer);
+            computeShader.SetBuffer(kernel, RuntimeDefenderFlowTargetsId, runtimeDefenderFlowTargetsBuffer);
+            computeShader.SetTexture(kernel, RuntimeDefenderFlowPreviewTextureId, runtimeDefenderFlowPreviewTexture);
             return;
         }
  
@@ -1178,16 +1256,22 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         ConfigureRuntimeAttackerFlowFieldGrid();
         UploadRuntimeAttackerFlowField();
 
-        if (defenderMovementMode == DefenderMovementMode.UseDefenderFlowField && defenderPaintedFlowFieldAsset != null)
+        if (defenderMovementMode != DefenderMovementMode.UseDefenderFlowField)
+        {
+            UploadEmptyDefenderFlowField("Defender movement mode is Hold Position No Separation.");
+        }
+        else if (enableRuntimeDynamicDefenderFlowField)
+        {
+            ConfigureRuntimeDefenderFlowFieldGrid();
+            UploadRuntimeDefenderFlowField();
+        }
+        else if (defenderPaintedFlowFieldAsset != null)
         {
             UploadDefenderPaintedFlowField();
         }
         else
         {
-            string status = defenderMovementMode == DefenderMovementMode.UseDefenderFlowField
-                ? "No defender painted flow field asset assigned; defenders fall back to holding position."
-                : "Defender movement mode is Hold Position No Separation.";
-            UploadEmptyDefenderFlowField(status);
+            UploadEmptyDefenderFlowField("No defender painted flow field asset assigned; defenders fall back to holding position.");
         }
     }
 
@@ -1260,6 +1344,31 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         flowFieldResolutionZ = Mathf.Max(1, Mathf.CeilToInt(worldSize.y / activeFlowFieldCellSize));
     }
 
+    private void ConfigureRuntimeDefenderFlowFieldGrid()
+    {
+        if (!autoSizeRuntimeDefenderFlowField && defenderPaintedFlowFieldAsset != null)
+        {
+            defenderFlowFieldResolutionX = defenderPaintedFlowFieldAsset.resolutionX;
+            defenderFlowFieldResolutionZ = defenderPaintedFlowFieldAsset.resolutionZ;
+            defenderFlowFieldOrigin = defenderPaintedFlowFieldAsset.origin;
+            activeDefenderFlowFieldCellSize = defenderPaintedFlowFieldAsset.cellSize;
+            return;
+        }
+
+        float padding = Mathf.Max(0f, runtimeDefenderFlowFieldPadding);
+        Vector2 worldSize = new Vector2(
+            Mathf.Max(0.25f, activeWorldSize.x + padding * 2f),
+            Mathf.Max(0.25f, activeWorldSize.y + padding * 2f));
+        defenderFlowFieldOrigin = gridOrigin - new Vector2(padding, padding);
+
+        float requestedCellSize = Mathf.Max(0.25f, flowFieldCellSize);
+        int maxResolution = Mathf.Max(16, runtimeDefenderFlowFieldMaxResolution);
+        float resolutionCellSize = Mathf.Max(worldSize.x / maxResolution, worldSize.y / maxResolution);
+        activeDefenderFlowFieldCellSize = Mathf.Max(requestedCellSize, resolutionCellSize);
+        defenderFlowFieldResolutionX = Mathf.Max(1, Mathf.CeilToInt(worldSize.x / activeDefenderFlowFieldCellSize));
+        defenderFlowFieldResolutionZ = Mathf.Max(1, Mathf.CeilToInt(worldSize.y / activeDefenderFlowFieldCellSize));
+    }
+
     private Bounds CalculateCombatSpawnBounds()
     {
         Bounds bounds = CreateXZBounds(attackerSettings.spawnCenter, attackerSettings.spawnSize);
@@ -1285,6 +1394,15 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         CacheRuntimeInitialFlowFieldPreview("Runtime attacker flow grid uploaded.", flowVectors);
 
         Debug.Log($"[GPUInstancingManager_Stage5] Stage5 runtime attacker flow field {flowFieldResolutionX}x{flowFieldResolutionZ}, cell {activeFlowFieldCellSize:0.###}, origin {flowFieldOrigin}.");
+    }
+
+    private void UploadRuntimeDefenderFlowField()
+    {
+        Vector2[] flowVectors = BuildRuntimeInitialDefenderFlowVectors();
+        defenderFlowFieldDirectionsBuffer = new ComputeBuffer(flowVectors.Length, sizeof(float) * 2);
+        defenderFlowFieldDirectionsBuffer.SetData(flowVectors);
+
+        Debug.Log($"[GPUInstancingManager_Stage5] Stage5 runtime defender flow field {defenderFlowFieldResolutionX}x{defenderFlowFieldResolutionZ}, cell {activeDefenderFlowFieldCellSize:0.###}, origin {defenderFlowFieldOrigin}.");
     }
 
     private Vector2[] BuildRuntimeInitialAttackerFlowVectors()
@@ -1323,9 +1441,50 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         return vectors;
     }
 
+    private Vector2[] BuildRuntimeInitialDefenderFlowVectors()
+    {
+        int count = Mathf.Max(1, defenderFlowFieldResolutionX * defenderFlowFieldResolutionZ);
+        Vector2[] vectors = new Vector2[count];
+        Vector2 fallbackTarget = new Vector2(attackerSettings.spawnCenter.x, attackerSettings.spawnCenter.z);
+        Vector2[] paintedVectors = null;
+
+        if (defenderPaintedFlowFieldAsset != null)
+        {
+            defenderPaintedFlowFieldAsset.EnsureCellArray();
+            paintedVectors = defenderPaintedFlowFieldAsset.BuildFlowVectors();
+        }
+
+        for (int z = 0; z < defenderFlowFieldResolutionZ; z++)
+        {
+            for (int x = 0; x < defenderFlowFieldResolutionX; x++)
+            {
+                int index = z * defenderFlowFieldResolutionX + x;
+                Vector2 center = RuntimeDefenderFlowCellCenter(x, z);
+                Vector2 direction = paintedVectors != null
+                    ? SampleDefenderPaintedFlowDirection(center, paintedVectors)
+                    : Vector2.zero;
+
+                if (direction.sqrMagnitude <= 0.0001f)
+                {
+                    Vector2 toTarget = fallbackTarget - center;
+                    direction = toTarget.sqrMagnitude > 0.0001f ? toTarget.normalized : Vector2.zero;
+                }
+
+                vectors[index] = direction;
+            }
+        }
+
+        return vectors;
+    }
+
     private Vector2 RuntimeFlowCellCenter(int x, int z)
     {
         return flowFieldOrigin + new Vector2((x + 0.5f) * activeFlowFieldCellSize, (z + 0.5f) * activeFlowFieldCellSize);
+    }
+
+    private Vector2 RuntimeDefenderFlowCellCenter(int x, int z)
+    {
+        return defenderFlowFieldOrigin + new Vector2((x + 0.5f) * activeDefenderFlowFieldCellSize, (z + 0.5f) * activeDefenderFlowFieldCellSize);
     }
 
     private Vector2 SamplePaintedFlowDirection(Vector2 world, Vector2[] paintedVectors)
@@ -1341,6 +1500,21 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
             return Vector2.zero;
 
         return paintedVectors[z * paintedFlowFieldAsset.resolutionX + x];
+    }
+
+    private Vector2 SampleDefenderPaintedFlowDirection(Vector2 world, Vector2[] paintedVectors)
+    {
+        if (defenderPaintedFlowFieldAsset == null || paintedVectors == null || paintedVectors.Length == 0)
+            return Vector2.zero;
+
+        Vector2 local = world - defenderPaintedFlowFieldAsset.origin;
+        float cellSize = Mathf.Max(0.0001f, defenderPaintedFlowFieldAsset.cellSize);
+        int x = Mathf.FloorToInt(local.x / cellSize);
+        int z = Mathf.FloorToInt(local.y / cellSize);
+        if (x < 0 || z < 0 || x >= defenderPaintedFlowFieldAsset.resolutionX || z >= defenderPaintedFlowFieldAsset.resolutionZ)
+            return Vector2.zero;
+
+        return paintedVectors[z * defenderPaintedFlowFieldAsset.resolutionX + x];
     }
 
     private void UploadDefenderPaintedFlowField()
@@ -1394,39 +1568,62 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
 
     private void CreateRuntimeDynamicFlowResources()
     {
-        ReleaseBuffer(ref runtimeDefenderDensityBuffer);
-        ReleaseBuffer(ref runtimeFlowStatsBuffer);
-        ReleaseBuffer(ref runtimeFlowTargetsBuffer);
-        ReleaseRuntimeFlowPreviewTexture();
+        ReleaseBuffer(ref runtimeAttackerTargetDensityBuffer);
+        ReleaseBuffer(ref runtimeAttackerFlowStatsBuffer);
+        ReleaseBuffer(ref runtimeAttackerFlowTargetsBuffer);
+        ReleaseBuffer(ref runtimeDefenderTargetDensityBuffer);
+        ReleaseBuffer(ref runtimeDefenderFlowStatsBuffer);
+        ReleaseBuffer(ref runtimeDefenderFlowTargetsBuffer);
+        ReleaseRuntimeFlowPreviewTextures();
 
-        int cellCount = Mathf.Max(1, flowFieldResolutionX * flowFieldResolutionZ);
-        runtimeDefenderDensityBuffer = new ComputeBuffer(cellCount, sizeof(uint));
-        runtimeFlowStatsBuffer = new ComputeBuffer(4, sizeof(int));
-        runtimeFlowTargetsBuffer = new ComputeBuffer(8, sizeof(float) * 4);
+        int attackerCellCount = Mathf.Max(1, flowFieldResolutionX * flowFieldResolutionZ);
+        runtimeAttackerTargetDensityBuffer = new ComputeBuffer(attackerCellCount, sizeof(uint));
+        runtimeAttackerFlowStatsBuffer = new ComputeBuffer(4, sizeof(int));
+        runtimeAttackerFlowTargetsBuffer = new ComputeBuffer(8, sizeof(float) * 4);
 
-        runtimeFlowPreviewTexture = new RenderTexture(flowFieldResolutionX, flowFieldResolutionZ, 0, RenderTextureFormat.ARGBFloat)
+        runtimeAttackerFlowPreviewTexture = new RenderTexture(flowFieldResolutionX, flowFieldResolutionZ, 0, RenderTextureFormat.ARGBFloat)
         {
             enableRandomWrite = true,
             filterMode = FilterMode.Point,
             wrapMode = TextureWrapMode.Clamp,
             name = "RuntimeDynamicAttackerFlowPreview_Stage5"
         };
-        runtimeFlowPreviewTexture.Create();
+        runtimeAttackerFlowPreviewTexture.Create();
 
-        FlowFieldPreview.runtimePreviewTexture = runtimeFlowPreviewTexture;
+        int defenderCellCount = Mathf.Max(1, defenderFlowFieldResolutionX * defenderFlowFieldResolutionZ);
+        runtimeDefenderTargetDensityBuffer = new ComputeBuffer(defenderCellCount, sizeof(uint));
+        runtimeDefenderFlowStatsBuffer = new ComputeBuffer(4, sizeof(int));
+        runtimeDefenderFlowTargetsBuffer = new ComputeBuffer(8, sizeof(float) * 4);
+
+        runtimeDefenderFlowPreviewTexture = new RenderTexture(defenderFlowFieldResolutionX, defenderFlowFieldResolutionZ, 0, RenderTextureFormat.ARGBFloat)
+        {
+            enableRandomWrite = true,
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+            name = "RuntimeDynamicDefenderFlowPreview_Stage5"
+        };
+        runtimeDefenderFlowPreviewTexture.Create();
+
+        FlowFieldPreview.runtimePreviewTexture = runtimeAttackerFlowPreviewTexture;
     }
 
-    private void ReleaseRuntimeFlowPreviewTexture()
+    private void ReleaseRuntimeFlowPreviewTextures()
     {
-        if (runtimeFlowPreviewTexture == null)
+        ReleaseRuntimeFlowPreviewTexture(ref runtimeAttackerFlowPreviewTexture);
+        ReleaseRuntimeFlowPreviewTexture(ref runtimeDefenderFlowPreviewTexture);
+    }
+
+    private void ReleaseRuntimeFlowPreviewTexture(ref RenderTexture texture)
+    {
+        if (texture == null)
             return;
 
-        runtimeFlowPreviewTexture.Release();
+        texture.Release();
         if (Application.isPlaying)
-            Destroy(runtimeFlowPreviewTexture);
+            Destroy(texture);
         else
-            DestroyImmediate(runtimeFlowPreviewTexture);
-        runtimeFlowPreviewTexture = null;
+            DestroyImmediate(texture);
+        texture = null;
     }
 
     private void CachePaintedFlowFieldPreview(string status)
@@ -1454,7 +1651,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         preview.aliveDefenderCount = 0;
         preview.lastRuntimeUpdateTime = lastRuntimeDynamicFlowUpdateTime;
         preview.isWaitingForRuntimeReadback = false;
-        preview.runtimePreviewTexture = runtimeFlowPreviewTexture;
+        preview.runtimePreviewTexture = runtimeAttackerFlowPreviewTexture;
     }
 
     private void CacheRuntimeInitialFlowFieldPreview(string status, Vector2[] directions = null)
@@ -1478,7 +1675,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         preview.aliveDefenderCount = 0;
         preview.lastRuntimeUpdateTime = lastRuntimeDynamicFlowUpdateTime;
         preview.isWaitingForRuntimeReadback = false;
-        preview.runtimePreviewTexture = runtimeFlowPreviewTexture;
+        preview.runtimePreviewTexture = runtimeAttackerFlowPreviewTexture;
     }
 
     private float[] BuildRuntimeFlowPreviewCosts()
@@ -1512,7 +1709,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         preview.aliveDefenderCount = 0;
         preview.lastRuntimeUpdateTime = lastRuntimeDynamicFlowUpdateTime;
         preview.isWaitingForRuntimeReadback = false;
-        preview.runtimePreviewTexture = runtimeFlowPreviewTexture;
+        preview.runtimePreviewTexture = runtimeAttackerFlowPreviewTexture;
     }
 
     private void CacheDisabledFlowFieldPreview()
@@ -1536,7 +1733,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         preview.aliveDefenderCount = 0;
         preview.lastRuntimeUpdateTime = lastRuntimeDynamicFlowUpdateTime;
         preview.isWaitingForRuntimeReadback = false;
-        preview.runtimePreviewTexture = runtimeFlowPreviewTexture;
+        preview.runtimePreviewTexture = runtimeAttackerFlowPreviewTexture;
     }
 
     private Vector2 GetPaintedFlowFieldCenter()
@@ -1559,14 +1756,20 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         if (agentBuffer == null || computeShader == null)
             return;
 
-        runtimeDynamicFlowActive = false;
+        runtimeDynamicAttackerFlowActive = false;
+        runtimeDynamicDefenderFlowActive = false;
         BuildAndUploadFlowField();
         CreateRuntimeDynamicFlowResources();
         nextDynamicFlowUpdateTime = Time.time + Mathf.Max(0.1f, dynamicFlowUpdateInterval);
-        BindComputeBuffers(kernels.ClearRuntimeDefenderDensity);
-        BindComputeBuffers(kernels.BuildRuntimeDefenderDensity);
-        BindComputeBuffers(kernels.SelectRuntimeFlowTargets);
+        nextDefenderDynamicFlowUpdateTime = Time.time + Mathf.Max(0.1f, dynamicDefenderFlowUpdateInterval);
+        BindComputeBuffers(kernels.ClearRuntimeAttackerFlowResources);
+        BindComputeBuffers(kernels.BuildRuntimeAttackerTargetDensity);
+        BindComputeBuffers(kernels.SelectRuntimeAttackerFlowTargets);
         BindComputeBuffers(kernels.GenerateRuntimeAttackerFlowField);
+        BindComputeBuffers(kernels.ClearRuntimeDefenderFlowResources);
+        BindComputeBuffers(kernels.BuildRuntimeDefenderTargetDensity);
+        BindComputeBuffers(kernels.SelectRuntimeDefenderFlowTargets);
+        BindComputeBuffers(kernels.GenerateRuntimeDefenderFlowField);
         BindComputeBuffers(kernels.ResolveDamageSimulateAndClassify);
     }
 
@@ -1577,10 +1780,25 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
                enableFlowFieldNavigation &&
                enableTwoTeamCombat &&
                battleStarted &&
-               runtimeDefenderDensityBuffer != null &&
-               runtimeFlowStatsBuffer != null &&
-               runtimeFlowTargetsBuffer != null &&
-               runtimeFlowPreviewTexture != null;
+               runtimeAttackerTargetDensityBuffer != null &&
+               runtimeAttackerFlowStatsBuffer != null &&
+               runtimeAttackerFlowTargetsBuffer != null &&
+               runtimeAttackerFlowPreviewTexture != null;
+    }
+
+    private bool ShouldUseRuntimeDynamicDefenderFlowField()
+    {
+        return Application.isPlaying &&
+               enableRuntimeDynamicDefenderFlowField &&
+               enableFlowFieldNavigation &&
+               enableTwoTeamCombat &&
+               battleStarted &&
+               defenderMovementMode == DefenderMovementMode.UseDefenderFlowField &&
+               defenderFlowFieldDirectionsBuffer != null &&
+               runtimeDefenderTargetDensityBuffer != null &&
+               runtimeDefenderFlowStatsBuffer != null &&
+               runtimeDefenderFlowTargetsBuffer != null &&
+               runtimeDefenderFlowPreviewTexture != null;
     }
 
     private bool ConsumeRuntimeDynamicAttackerFlowRebuildRequest()
@@ -1589,9 +1807,9 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
 
         if (!ShouldUseRuntimeDynamicAttackerFlowField())
         {
-            if (runtimeDynamicFlowActive)
+            if (runtimeDynamicAttackerFlowActive)
             {
-                runtimeDynamicFlowActive = false;
+                runtimeDynamicAttackerFlowActive = false;
                 RestorePaintedAttackerFlowField("Runtime dynamic attacker flow disabled; restored painted fallback.");
             }
             return false;
@@ -1600,12 +1818,33 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         if (Time.time < nextDynamicFlowUpdateTime)
             return false;
 
-        runtimeDynamicFlowActive = true;
+        runtimeDynamicAttackerFlowActive = true;
         lastRuntimeDynamicFlowUpdateTime = Time.time;
         nextDynamicFlowUpdateTime = Time.time + Mathf.Max(0.1f, dynamicFlowUpdateInterval);
         CacheRuntimeGpuFlowPreview(
             "Runtime GPU Sector Flow",
             $"Runtime GPU attacker flow rebuilt every {dynamicFlowUpdateInterval:0.###}s. Preview is rendered on GPU.");
+        return true;
+    }
+
+    private bool ConsumeRuntimeDynamicDefenderFlowRebuildRequest()
+    {
+        if (!ShouldUseRuntimeDynamicDefenderFlowField())
+        {
+            if (runtimeDynamicDefenderFlowActive)
+            {
+                runtimeDynamicDefenderFlowActive = false;
+                RestorePaintedDefenderFlowField("Runtime dynamic defender flow disabled; restored painted fallback.");
+            }
+            return false;
+        }
+
+        if (Time.time < nextDefenderDynamicFlowUpdateTime)
+            return false;
+
+        runtimeDynamicDefenderFlowActive = true;
+        lastRuntimeDynamicDefenderFlowUpdateTime = Time.time;
+        nextDefenderDynamicFlowUpdateTime = Time.time + Mathf.Max(0.1f, dynamicDefenderFlowUpdateInterval);
         return true;
     }
 
@@ -1628,7 +1867,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         preview.aliveDefenderCount = 0;
         preview.lastRuntimeUpdateTime = lastRuntimeDynamicFlowUpdateTime;
         preview.isWaitingForRuntimeReadback = false;
-        preview.runtimePreviewTexture = runtimeFlowPreviewTexture;
+        preview.runtimePreviewTexture = runtimeAttackerFlowPreviewTexture;
     }
 
     private void RestorePaintedAttackerFlowField(string status)
@@ -1636,7 +1875,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         if (!Application.isPlaying || computeShader == null || agentBuffer == null)
             return;
 
-        runtimeDynamicFlowActive = false;
+        runtimeDynamicAttackerFlowActive = false;
         ReleaseBuffer(ref flowFieldDirectionsBuffer);
 
         if (!enableFlowFieldNavigation)
@@ -1656,8 +1895,39 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
             FlowFieldPreview.source = "Fallback";
         }
 
-        BindComputeBuffers(kernels.SelectRuntimeFlowTargets);
+        BindComputeBuffers(kernels.SelectRuntimeAttackerFlowTargets);
         BindComputeBuffers(kernels.GenerateRuntimeAttackerFlowField);
+        BindComputeBuffers(kernels.ResolveDamageSimulateAndClassify);
+    }
+
+    private void RestorePaintedDefenderFlowField(string status)
+    {
+        if (!Application.isPlaying || computeShader == null || agentBuffer == null)
+            return;
+
+        runtimeDynamicDefenderFlowActive = false;
+        ReleaseBuffer(ref defenderFlowFieldDirectionsBuffer);
+
+        if (!enableFlowFieldNavigation || defenderMovementMode != DefenderMovementMode.UseDefenderFlowField)
+        {
+            CreateEmptyDefenderFlowFieldBuffer();
+        }
+        else if (enableRuntimeDynamicDefenderFlowField)
+        {
+            ConfigureRuntimeDefenderFlowFieldGrid();
+            UploadRuntimeDefenderFlowField();
+        }
+        else if (defenderPaintedFlowFieldAsset != null)
+        {
+            UploadDefenderPaintedFlowField();
+        }
+        else
+        {
+            UploadEmptyDefenderFlowField(status);
+        }
+
+        BindComputeBuffers(kernels.SelectRuntimeDefenderFlowTargets);
+        BindComputeBuffers(kernels.GenerateRuntimeDefenderFlowField);
         BindComputeBuffers(kernels.ResolveDamageSimulateAndClassify);
     }
 
@@ -1694,8 +1964,17 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
 
         ResetAppendCounters();
         UploadFrameParameters();
-        bool rebuildRuntimeFlow = ConsumeRuntimeDynamicAttackerFlowRebuildRequest();
-        dispatchScheduler.DispatchSimulation(computeShader, kernels, gridThreadGroupsX, agentThreadGroupsX, FlowFieldThreadGroupsX, rebuildRuntimeFlow);
+        bool rebuildRuntimeAttackerFlow = ConsumeRuntimeDynamicAttackerFlowRebuildRequest();
+        bool rebuildRuntimeDefenderFlow = ConsumeRuntimeDynamicDefenderFlowRebuildRequest();
+        dispatchScheduler.DispatchSimulation(
+            computeShader,
+            kernels,
+            gridThreadGroupsX,
+            agentThreadGroupsX,
+            FlowFieldThreadGroupsX,
+            DefenderFlowFieldThreadGroupsX,
+            rebuildRuntimeAttackerFlow,
+            rebuildRuntimeDefenderFlow);
         CopyVisibleCountsToArgs();
         DrawLods();
     }
@@ -1750,12 +2029,15 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         computeShader.SetFloat(FlowFieldResponsivenessId, flowFieldResponsiveness);
         computeShader.SetInt(RuntimeFlowPreviewModeId, (int)runtimeFlowPreviewMode);
         computeShader.SetInt(RuntimeDynamicAttackerFlowEnabledId, ShouldUseRuntimeDynamicAttackerFlowField() ? 1 : 0);
+        computeShader.SetInt(RuntimeDynamicDefenderFlowEnabledId, ShouldUseRuntimeDynamicDefenderFlowField() ? 1 : 0);
         computeShader.SetInt(DynamicFlowSectorCountId, dynamicFlowSectorCount);
         computeShader.SetFloat(DynamicFlowTargetStopRadiusId, dynamicFlowTargetStopRadius);
         computeShader.SetInt(DynamicFlowMinDefendersPerTargetId, dynamicFlowMinDefendersPerTarget);
+        computeShader.SetInt(DynamicDefenderFlowSectorCountId, dynamicDefenderFlowSectorCount);
+        computeShader.SetFloat(DynamicDefenderFlowTargetStopRadiusId, dynamicDefenderFlowTargetStopRadius);
+        computeShader.SetInt(DynamicDefenderFlowMinAttackersPerTargetId, dynamicDefenderFlowMinAttackersPerTarget);
         bool defenderFlowEnabled = enableFlowFieldNavigation &&
                                    defenderMovementMode == DefenderMovementMode.UseDefenderFlowField &&
-                                   defenderPaintedFlowFieldAsset != null &&
                                    defenderFlowFieldDirectionsBuffer != null;
         computeShader.SetInt(DefenderMovementModeId, defenderFlowEnabled ? (int)DefenderMovementMode.UseDefenderFlowField : (int)DefenderMovementMode.HoldPositionNoSeparation);
         computeShader.SetInt(DefenderFlowFieldEnabledId, defenderFlowEnabled ? 1 : 0);
@@ -1851,16 +2133,20 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
 
     private void ReleaseBuffers()
     {
-        runtimeDynamicFlowActive = false;
+        runtimeDynamicAttackerFlowActive = false;
+        runtimeDynamicDefenderFlowActive = false;
 
         ReleaseBuffer(ref agentBuffer);
         ReleaseBuffer(ref gridCountsBuffer);
         ReleaseBuffer(ref gridAgentIndicesBuffer);
         ReleaseBuffer(ref flowFieldDirectionsBuffer);
         ReleaseBuffer(ref defenderFlowFieldDirectionsBuffer);
-        ReleaseBuffer(ref runtimeDefenderDensityBuffer);
-        ReleaseBuffer(ref runtimeFlowStatsBuffer);
-        ReleaseBuffer(ref runtimeFlowTargetsBuffer);
+        ReleaseBuffer(ref runtimeAttackerTargetDensityBuffer);
+        ReleaseBuffer(ref runtimeAttackerFlowStatsBuffer);
+        ReleaseBuffer(ref runtimeAttackerFlowTargetsBuffer);
+        ReleaseBuffer(ref runtimeDefenderTargetDensityBuffer);
+        ReleaseBuffer(ref runtimeDefenderFlowStatsBuffer);
+        ReleaseBuffer(ref runtimeDefenderFlowTargetsBuffer);
         ReleaseBuffer(ref teamIdBuffer);
         ReleaseBuffer(ref hpBuffer);
         ReleaseBuffer(ref targetAgentIndexBuffer);
@@ -1879,7 +2165,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         ReleaseBuffer(ref nearDefenderArgsBuffer);
         ReleaseBuffer(ref midDefenderArgsBuffer);
         ReleaseBuffer(ref farDefenderArgsBuffer);
-        ReleaseRuntimeFlowPreviewTexture();
+        ReleaseRuntimeFlowPreviewTextures();
 
         if (runtimeGeneratedFarMesh != null)
         {
@@ -1974,6 +2260,12 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         dynamicFlowSectorCount = Mathf.Clamp(dynamicFlowSectorCount, 1, 8);
         dynamicFlowTargetStopRadius = Mathf.Max(0f, dynamicFlowTargetStopRadius);
         dynamicFlowMinDefendersPerTarget = Mathf.Max(1, dynamicFlowMinDefendersPerTarget);
+        runtimeDefenderFlowFieldPadding = Mathf.Max(0f, runtimeDefenderFlowFieldPadding);
+        runtimeDefenderFlowFieldMaxResolution = Mathf.Max(16, runtimeDefenderFlowFieldMaxResolution);
+        dynamicDefenderFlowUpdateInterval = Mathf.Max(0.1f, dynamicDefenderFlowUpdateInterval);
+        dynamicDefenderFlowSectorCount = Mathf.Clamp(dynamicDefenderFlowSectorCount, 1, 8);
+        dynamicDefenderFlowTargetStopRadius = Mathf.Max(0f, dynamicDefenderFlowTargetStopRadius);
+        dynamicDefenderFlowMinAttackersPerTarget = Mathf.Max(1, dynamicDefenderFlowMinAttackersPerTarget);
         attackerCount = Mathf.Clamp(attackerCount, 0, instanceCount);
         targetAcquireRadius = Mathf.Max(0.1f, targetAcquireRadius);
         attackRange = Mathf.Max(0.05f, attackRange);
@@ -2000,4 +2292,3 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
     }
 #endif
 }
-
