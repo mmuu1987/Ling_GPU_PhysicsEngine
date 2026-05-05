@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c21e2a070d8e1c44afcba755bfee9f5, type: 3}
+  m_Name: FemaleCharacterPBR_Stage5_MultiClip_Profile
+  m_EditorClassIdentifier: Assembly-CSharp::VATProfile_Stage5
+  cleanMesh: {fileID: 4300000, guid: 49530f134b183c546a5cd62ba9dc1ed2, type: 2}
+  positionTexture: {fileID: 2800000, guid: b1ae268e89e9b7b4bbe790838159c697, type: 2}
+  normalTexture: {fileID: 2800000, guid: 3695b6dd5a067d54b8c1bc2aee4dd5ce, type: 2}
+  lowLodMesh: {fileID: 4300000, guid: db2a4b402547afd41afc433760575880, type: 2}
+  lowLodPositionTexture: {fileID: 2800000, guid: f767d02b216b3c144bd62bb2b8cb5c25, type: 2}
+  lowLodNormalTexture: {fileID: 2800000, guid: 3cbdf5ca0ac27f648a441f258cf12bea, type: 2}
+  lowLodTextureWidth: 1010
+  lowLodTextureHeight: 67
+  lowLodRowsPerFrame: 1
+  textureWidth: 4066
+  textureHeight: 67
+  rowsPerFrame: 1
+  totalFrameCount: 67
+  frameRate: 30
+  idle:
+    label: Idle
+    startFrame: 0
+    frameCount: 20
+    frameRate: 30
+    loop: 1
+  move:
+    label: Move
+    startFrame: 20
+    frameCount: 16
+    frameRate: 30
+    loop: 1
+  attack:
+    label: Attack
+    startFrame: 36
+    frameCount: 16
+    frameRate: 30
+    loop: 1
+  death:
+    label: Death
+    startFrame: 52
+    frameCount: 15
+    frameRate: 30
+    loop: 0

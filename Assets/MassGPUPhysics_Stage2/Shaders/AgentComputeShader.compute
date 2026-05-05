@@ -1,0 +1,115 @@
+// ============================================================
+// AgentComputeShader.compute
+//
+// GPU 侧的实例调度核心。
+// 每帧并行处理所有 agent，完成：
+// 1. 视锥剔除：摄像机看不到的 agent 不进入任何绘制列表。
+// 2. 三档 LOD 分组：near / mid / far 分别进入不同 AppendBuffer。
+// 3. 动画降频：中远距离可以隔几帧才更新一次动画时间。
+//
+// 重要优化：
+// LOD 列表里只保存 uint agent 索引，不复制完整 AgentData。
+// 渲染 shader 再用 visibleAgentIndices[unity_InstanceID] 找回真实 agent。
+// ============================================================
+
+#pragma kernel CSMain
+
+struct AgentData
+{
+    float3 position;
+    float3 rotation;
+    float3 scale;
+    int currentState;
+    float currentAnimationTime;
+};
+
+RWStructuredBuffer<AgentData> agentBuffer;
+
+AppendStructuredBuffer<uint> nearAgentIndices;
+AppendStructuredBuffer<uint> midAgentIndices;
+AppendStructuredBuffer<uint> farAgentIndices;
+
+float deltaTime;
+float animationDuration;
+uint frameIndex;
+
+float3 lodCenter;
+float nearLodRadiusSqr;
+float midLodRadiusSqr;
+
+int enableFrustumCulling;
+float cullingRadius;
+float4 frustumPlanes[6];
+
+int nearAnimationInterval;
+int midAnimationInterval;
+int farAnimationInterval;
+
+bool IsInsideFrustum(float3 position)
+{
+    if (enableFrustumCulling == 0)
+        return true;
+
+    [unroll]
+    for (int i = 0; i < 6; i++)
+    {
+        // Plane format: xyz = normal, w = distance.
+        // Unity plane inside test: dot(normal, position) + distance >= -radius.
+        if (dot(frustumPlanes[i].xyz, position) + frustumPlanes[i].w < -cullingRadius)
+            return false;
+    }
+
+    return true;
+}
+
+void UpdateAnimationTime(inout AgentData agent, int interval)
+{
+    interval = max(interval, 1);
+
+    // 远处角色不需要每帧更新动画。隔 N 帧更新一次时，把 deltaTime 乘 N，
+    // 这样平均播放速度仍然接近真实速度，只是远处动作更“分帧”。
+    if ((frameIndex % (uint)interval) != 0)
+        return;
+
+    float safeDuration = max(animationDuration, 0.0001);
+    agent.currentAnimationTime = fmod(agent.currentAnimationTime + deltaTime * interval, safeDuration);
+}
+
+[numthreads(64, 1, 1)]
+void CSMain(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+
+    if (id.x >= count)
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+
+    if (!IsInsideFrustum(agent.position))
+        return;
+
+    float3 offset = agent.position - lodCenter;
+    offset.y = 0.0;
+    float distSqr = dot(offset, offset);
+
+    if (distSqr <= nearLodRadiusSqr)
+    {
+        UpdateAnimationTime(agent, nearAnimationInterval);
+        agentBuffer[id.x] = agent;
+        nearAgentIndices.Append(id.x);
+    }
+    else if (distSqr <= midLodRadiusSqr)
+    {
+        UpdateAnimationTime(agent, midAnimationInterval);
+        agentBuffer[id.x] = agent;
+        midAgentIndices.Append(id.x);
+    }
+    else
+    {
+        UpdateAnimationTime(agent, farAnimationInterval);
+        agentBuffer[id.x] = agent;
+        farAgentIndices.Append(id.x);
+    }
+}

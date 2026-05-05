@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c21e2a070d8e1c44afcba755bfee9f5, type: 3}
+  m_Name: MaleCharacter_Stage5_MultiClip_Profile
+  m_EditorClassIdentifier: 
+  cleanMesh: {fileID: 4300000, guid: 9b386404fa14e0e4da8e573e18dd6e57, type: 2}
+  positionTexture: {fileID: 2800000, guid: 9ad4775006468b847a5db085c09df109, type: 2}
+  normalTexture: {fileID: 2800000, guid: e0633b86bf163c44e98327b2dc4c7b9b, type: 2}
+  lowLodMesh: {fileID: 4300000, guid: 38514bbd1e629fb458cef9cd5094f04a, type: 2}
+  lowLodPositionTexture: {fileID: 2800000, guid: 8afa26f26be13a242ae3594a7b5a5162, type: 2}
+  lowLodNormalTexture: {fileID: 2800000, guid: 17028c78821673e48aaf02c2dff18b9a, type: 2}
+  lowLodTextureWidth: 994
+  lowLodTextureHeight: 188
+  lowLodRowsPerFrame: 1
+  textureWidth: 4096
+  textureHeight: 376
+  rowsPerFrame: 2
+  totalFrameCount: 188
+  frameRate: 30
+  idle:
+    label: Idle
+    startFrame: 0
+    frameCount: 141
+    frameRate: 30
+    loop: 1
+  move:
+    label: Move
+    startFrame: 141
+    frameCount: 16
+    frameRate: 30
+    loop: 1
+  attack:
+    label: Attack
+    startFrame: 157
+    frameCount: 16
+    frameRate: 30
+    loop: 1
+  death:
+    label: Death
+    startFrame: 173
+    frameCount: 15
+    frameRate: 30
+    loop: 0

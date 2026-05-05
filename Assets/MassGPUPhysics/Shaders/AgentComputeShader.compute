@@ -1,0 +1,41 @@
+#pragma kernel CSMain
+
+struct AgentData
+{
+    float3 position;
+    float3 rotation; // 欧拉角
+    float3 scale;
+};
+
+// 读写结构化缓冲 (连接显存中的数据池)
+RWStructuredBuffer<AgentData> agentBuffer;
+float deltaTime; // 从 C# 传过来的两帧之间的时间差
+
+// 定义每个线程组内部包含 64 个线程并排运行
+[numthreads(64,1,1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // 获取缓冲区的总长度，防止线程写出界
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    
+    // 安全检查：如果当前分配的线程 ID 超过了实际物体总数，直接退出
+    if(id.x >= count)
+        return;
+
+    // 1. 从显存中把当前物体的数据拿出来
+    AgentData agent = agentBuffer[id.x];
+    
+    // --- 模拟逻辑引擎部分 ---
+    // 这里我们模拟让所有物体沿着世界坐标的 Z 轴傻瓜式向前移动
+    // 在第一阶段，我们给它一个固定的速度
+    float speed = 10.0;
+    agent.position.z += speed * deltaTime;
+    
+    // 并且让它们绕着 Y 轴缓慢自转
+    agent.rotation.y += 45.0 * deltaTime;
+
+    // 2. 将修改后的新数据写回显存池子里
+    agentBuffer[id.x] = agent;
+}

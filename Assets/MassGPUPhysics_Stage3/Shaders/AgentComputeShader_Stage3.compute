@@ -1,0 +1,459 @@
+// ============================================================
+// AgentComputeShader_Stage3.compute
+//
+// 第三阶段 Compute Shader ———— GPU 海量 Agent 物理模拟核心。
+//
+// 【这个 Compute Shader 在 GPU 上做什么？】
+// 它用三个 kernel 函数把 O(N²) 的全员碰撞检测优化为 O(N) 的邻域查询：
+//   1. ClearGrid      — 每帧开始时清空空间哈希格子的计数
+//   2. BuildSpatialHash — 每个 Agent 算出自己所属的格子编号，原子写入哈希表
+//   3. SimulateAndClassify — 查自身+邻居格子做碰撞排斥，然后剔除+LOD分类
+//
+// 【空间哈希（Spatial Hash）为什么快？】
+// 10万个 Agent 如果两两比较，需要约 50 亿次距离计算，GPU 也扛不住。
+// 空间哈希把世界划分为规则的矩形格子，每个 Agent 只需检查自己所在格子
+// 和周围 8 个邻居格子（共 9 个格子），碰撞检测量从 O(N²) 降到 O(N)。
+// 这就像把大象放进冰箱：先把世界切成方格，只检查相邻格子里的东西是否重叠。
+//
+// 【三个 kernel 的 Dispatch 顺序】（由 C# GPUInstancingManager_Stage3.Update 控制）
+// ClearGrid → BuildSpatialHash → SimulateAndClassify
+// 这个顺序不能改变！必须先清空计数，再构建哈希，最后模拟。
+//
+// 【数据共享注意】
+// 这个 Compute Shader 中的 AgentData 结构体必须和以下文件完全一致：
+//   - GPUInstancingManager_Stage3.cs（C# 端的 AgentData）
+//   - 所有渲染 Shader 中的 AgentData
+// 字段顺序、类型、数量都不能改，否则 GPU 读到的是乱码。
+// ============================================================
+
+#pragma kernel ClearGrid
+#pragma kernel BuildSpatialHash
+#pragma kernel SimulateAndClassify
+
+// ============================================================
+// AgentData 结构体 —— GPU 端每个 Agent 的全部状态。
+// 字节布局必须和 C# 的 AgentData（LayoutKind.Sequential）完全一致。
+// Vector3 = 12 字节，int = 4 字节，float = 4 字节。总大小约 64 字节。
+// ============================================================
+struct AgentData
+{
+    float3 position;             // 世界空间位置（碰撞只用 XZ，Y 是渲染高度）
+    float3 rotation;             // 欧拉角旋转（度），只用 Y 分量控制朝向
+    float3 scale;                // 缩放，当前默认 (1,1,1)
+    float3 velocity;             // 速度（第三阶段核心字段），碰撞排斥累积到 XZ
+    int currentState;            // 动画状态机 ID（预留）
+    float currentAnimationTime;  // VAT 动画当前播放时间（秒）
+};
+
+// 完整 Agent 数据。
+// RW 表示 compute shader 可以读写；渲染 shader 只读同一个 buffer。
+RWStructuredBuffer<AgentData> agentBuffer;
+
+// 空间哈希格子计数。
+// gridCounts[cellIndex] 保存该格子本帧被写入了多少个 Agent。
+RWStructuredBuffer<uint> gridCounts;
+
+// 空间哈希索引表。
+// 对于某个 cellIndex，它的第 slot 个 Agent 索引存放在：
+// gridAgentIndices[cellIndex * maxAgentsPerCell + slot]
+RWStructuredBuffer<uint> gridAgentIndices;
+StructuredBuffer<float2> flowFieldDirections;
+
+// 三个可见实例索引列表。
+// AppendStructuredBuffer 自带 GPU 计数器，C# 每帧会先 SetCounterValue(0)。
+AppendStructuredBuffer<uint> nearAgentIndices;
+AppendStructuredBuffer<uint> midAgentIndices;
+AppendStructuredBuffer<uint> farAgentIndices;
+
+// -------- 每帧通用参数 --------
+float deltaTime;
+float animationDuration;
+uint frameIndex;
+
+// -------- LOD 参数 --------
+float3 lodCenter;
+float nearLodRadiusSqr;
+float midLodRadiusSqr;
+
+// -------- 视锥剔除参数 --------
+int enableFrustumCulling;
+float cullingRadius;
+float4 frustumPlanes[6];
+
+// -------- 动画降频参数 --------
+int nearAnimationInterval;
+int midAnimationInterval;
+int farAnimationInterval;
+
+// -------- 空间哈希网格参数 --------
+uint gridCellCount;
+int2 gridResolution;
+float2 gridOrigin;
+float2 gridWorldSize;
+float cellSize;
+uint maxAgentsPerCell;
+
+// -------- 碰撞/速度积分参数 --------
+float agentRadius;
+float separationStrength;
+float velocityDamping;
+float maxSpeed;
+float boundaryPadding;
+int flowFieldEnabled;
+int2 flowFieldResolution;
+float2 flowFieldOrigin;
+float flowFieldCellSize;
+float flowFieldWeight;
+float flowFieldResponsiveness;
+
+// ============================================================
+// IsInsideFrustum — 判断一个点是否在摄像机视锥（平截头体）内。
+//
+// 视锥由 6 个平面围成：左、右、上、下、近、远。
+// 每个平面用 float4 (nx, ny, nz, d) 表示，满足 dot(normal, point) + d >= 0 即在平面内侧。
+// 我们检查的是 Agent 的球形包围体（位置 ± cullingRadius），用 -cullingRadius 做保守剔除：
+// 如果球心到平面的距离 < -radius，说明球体完全在平面外侧 → 不可见。
+// ============================================================
+bool IsInsideFrustum(float3 position)
+{
+    if (enableFrustumCulling == 0)
+        return true;
+
+    [unroll]
+    for (int i = 0; i < 6; i++)
+    {
+        // Unity Plane 格式是 dot(normal, position) + distance。
+        // 如果小于 -radius，说明球形包围体完全在该裁剪平面外侧。
+        if (dot(frustumPlanes[i].xyz, position) + frustumPlanes[i].w < -cullingRadius)
+            return false;
+    }
+
+    return true;
+}
+
+void UpdateAnimationTime(inout AgentData agent, int interval)
+{
+    interval = max(interval, 1);
+
+    // 动画降频：
+    // 例如 interval = 4 时，每 4 帧才推进一次动画。
+    // 推进时乘以 interval，保证平均播放速度仍接近真实时间。
+    if ((frameIndex % (uint)interval) != 0)
+        return;
+
+    float safeDuration = max(animationDuration, 0.0001);
+    agent.currentAnimationTime = fmod(agent.currentAnimationTime + deltaTime * interval, safeDuration);
+}
+
+// ============================================================
+// PositionToCell — 将世界空间 XZ 坐标映射到空间哈希格子坐标。
+//
+// 算法：
+// 1. 用 gridOrigin 做偏移，把世界坐标变为相对于网格左下角的局部坐标
+// 2. 除以 cellSize 得到"第几个格子"
+// 3. floor 取整得到整数格子坐标
+// 4. clamp 到合法范围防止越界
+//
+// 例如：gridOrigin=(-100,-100), cellSize=2, position=(15, 0, 30)
+//   → local = (115, 130) / 2 = (57.5, 65)
+//   → cell = floor(57.5, 65) = (57, 65)
+// ============================================================
+int2 PositionToCell(float3 position)
+{
+    // 把世界 XZ 坐标转换成以 gridOrigin 为原点的网格局部坐标。
+    float2 local = (position.xz - gridOrigin) / max(cellSize, 0.0001);
+    int2 cell = (int2)floor(local);
+
+    // Clamp 到合法范围，避免越界写 grid buffer。
+    cell.x = clamp(cell.x, 0, gridResolution.x - 1);
+    cell.y = clamp(cell.y, 0, gridResolution.y - 1);
+    return cell;
+}
+
+uint CellToIndex(int2 cell)
+{
+    // 二维 cell 坐标拍平成一维数组索引。
+    return (uint)(cell.y * gridResolution.x + cell.x);
+}
+
+int2 PositionToFlowFieldCell(float3 position)
+{
+    float2 local = (position.xz - flowFieldOrigin) / max(flowFieldCellSize, 0.0001);
+    int2 cell = (int2)floor(local);
+    cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
+    cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
+    return cell;
+}
+
+uint FlowFieldCellToIndex(int2 cell)
+{
+    return (uint)(cell.y * flowFieldResolution.x + cell.x);
+}
+
+float2 SampleFlowDirection(float3 position)
+{
+    if (flowFieldEnabled == 0 || flowFieldWeight <= 0.0)
+        return 0.0;
+
+    int2 cell = PositionToFlowFieldCell(position);
+    float2 direction = flowFieldDirections[FlowFieldCellToIndex(cell)];
+    float lengthSqr = dot(direction, direction);
+    if (lengthSqr <= 0.0001)
+        return 0.0;
+
+    if (lengthSqr > 1.0)
+        direction *= rsqrt(lengthSqr);
+
+    return direction;
+}
+
+float2 FallbackDirection(uint id)
+{
+    // 两个 Agent 完全重合时，delta 为 0，无法归一化。
+    // 这里用 agent id 生成一个稳定的伪随机方向，避免 NaN。
+    uint h = id * 1664525u + 1013904223u;
+    float angle = (float)(h & 65535u) * (6.2831853 / 65535.0);
+    return float2(cos(angle), sin(angle));
+}
+
+float3 ClampVelocity(float3 velocity)
+{
+    // 第三阶段只模拟 XZ 水平速度，Y 速度强制归零。
+    velocity.y = 0.0;
+
+    float speedSqr = dot(velocity.xz, velocity.xz);
+    float maxSpeedSqr = maxSpeed * maxSpeed;
+
+    if (speedSqr > maxSpeedSqr && speedSqr > 0.0001)
+        velocity.xz *= maxSpeed * rsqrt(speedSqr);
+
+    return velocity;
+}
+
+void ApplyBounds(inout AgentData agent)
+{
+    // 把 Agent 约束在空间哈希覆盖的 XZ 区域内。
+    // 这里不是完整物理反弹，只是把越界位置拉回并给一点反向速度，避免贴边抖得太厉害。
+    float2 minXZ = gridOrigin + boundaryPadding;
+    float2 maxXZ = gridOrigin + gridWorldSize - boundaryPadding;
+
+    if (agent.position.x < minXZ.x)
+    {
+        agent.position.x = minXZ.x;
+        agent.velocity.x = abs(agent.velocity.x) * 0.25;
+    }
+    else if (agent.position.x > maxXZ.x)
+    {
+        agent.position.x = maxXZ.x;
+        agent.velocity.x = -abs(agent.velocity.x) * 0.25;
+    }
+
+    if (agent.position.z < minXZ.y)
+    {
+        agent.position.z = minXZ.y;
+        agent.velocity.z = abs(agent.velocity.z) * 0.25;
+    }
+    else if (agent.position.z > maxXZ.y)
+    {
+        agent.position.z = maxXZ.y;
+        agent.velocity.z = -abs(agent.velocity.z) * 0.25;
+    }
+}
+
+// ============================================================
+// [numthreads(64, 1, 1)] — 每个线程组包含 64 个线程（一维）。
+// C# 侧 Dispatch(gridThreadGroupsX, 1, 1) 启动 gridThreadGroupsX 个线程组，
+// 总共 gridThreadGroupsX × 64 个线程，每个线程处理一个格子。
+// id.x 从 0 到 gridCellCount-1，超出范围的线程直接 return。
+// ============================================================
+[numthreads(64, 1, 1)]
+void ClearGrid(uint3 id : SV_DispatchThreadID)
+{
+    // 每个线程负责清一个 cell 计数。
+    // gridAgentIndices 不需要清空，因为 BuildSpatialHash 会根据 gridCounts 决定有效范围。
+    if (id.x >= gridCellCount)
+        return;
+
+    gridCounts[id.x] = 0;
+}
+
+// ============================================================
+// BuildSpatialHash — 第二段流水线：每个 Agent 计算自己所属的格子，原子写入哈希表。
+//
+// 【原子操作 InterlockedAdd 的必要性】
+// 多个 Agent 可能同时写入同一个格子。例如 100 个 Agent 挤在一起，它们的
+// PositionToCell 可能都返回同一个 cellIndex。如果不用原子操作，后写入的
+// 线程会覆盖先写入的数据（data race）。InterlockedAdd 保证每个线程拿到的
+// slot 编号是唯一的（依次 0, 1, 2, ...）。
+//
+// 【过载处理】
+// 如果某个格子 slot >= maxAgentsPerCell，该 Agent 不写入索引表。
+// gridCounts 会继续增加但 gridAgentIndices 不写入。
+// 后续 SimulateAndClassify 读取时用 min(gridCounts, maxAgentsPerCell) 控制有效范围。
+// 这是一种"固定容量哈希表"策略：宁可丢弃少量 Agent 的碰撞信息，也不让显存无限增长。
+// ============================================================
+[numthreads(64, 1, 1)]
+void BuildSpatialHash(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+
+    if (id.x >= count)
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+    uint cellIndex = CellToIndex(PositionToCell(agent.position));
+
+    // 多个线程可能同时写同一个格子，所以必须用原子加。
+    // slot 是当前线程拿到的旧计数值，即它应该写入的槽位。
+    uint slot;
+    InterlockedAdd(gridCounts[cellIndex], 1, slot);
+
+    // 固定容量策略：
+    // 如果某个格子过载，超出的 Agent 不写入索引表。
+    // gridCounts 仍会继续增加，但后续读取时会 min(gridCounts, maxAgentsPerCell)。
+    if (slot < maxAgentsPerCell)
+        gridAgentIndices[cellIndex * maxAgentsPerCell + slot] = id.x;
+}
+
+// ============================================================
+// SimulateAndClassify — 第三段流水线（核心计算）。
+//
+// 每个 Agent 执行以下步骤：
+// 1. 碰撞检测：查询自己所在格子和周围 8 个邻居格子（3×3 邻域）
+// 2. 累积排斥力：对所有重叠的邻居累加 (delta/distance) * penetration
+// 3. 速度积分：排斥力 → 速度变化 → 阻尼衰减 → 限速 → 位置更新
+// 4. 边界约束：把越界的 Agent 拉回模拟区域
+// 5. 朝向更新：根据速度方向计算面向角度
+// 6. 视锥剔除：不在视野内的 Agent 只保存物理状态，不加入可见列表
+// 7. LOD 分类：在视野内的 Agent 根据距离分配到 near/mid/far 列表
+// 8. 动画推进：根据 LOD 等级决定动画更新频率（近处每帧更新，远处降频）
+//
+// 【碰撞算法的物理直觉】
+// 把每个 Agent 看成一个半径为 agentRadius 的圆（2D 俯视图）。
+// 当两个圆的中心距 < 2*agentRadius 时产生重叠，重叠越深排斥力越大。
+// 排斥方向是 delta 的归一化方向（从对方指向自己）。
+// ============================================================
+[numthreads(64, 1, 1)]
+void SimulateAndClassify(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+
+    if (id.x >= count)
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+    int2 homeCell = PositionToCell(agent.position);
+
+    // 两个半径为 agentRadius 的圆形 Agent 之间的最小中心距离。
+    float minDistance = agentRadius * 2.0;
+    float minDistanceSqr = minDistance * minDistance;
+
+    // 累积邻居对当前 Agent 的排斥方向和强度。
+    float2 separation = 0.0;
+
+    // 查询自身格子 + 周围 8 个格子。
+    // 因为 cellSize 建议接近直径，所以 3x3 邻域足够覆盖潜在重叠对象。
+    [unroll]
+    for (int dz = -1; dz <= 1; dz++)
+    {
+        [unroll]
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int2 cell = homeCell + int2(dx, dz);
+            if (cell.x < 0 || cell.y < 0 || cell.x >= gridResolution.x || cell.y >= gridResolution.y)
+                continue;
+
+            uint cellIndex = CellToIndex(cell);
+            uint occupantCount = min(gridCounts[cellIndex], maxAgentsPerCell);
+
+            for (uint i = 0; i < occupantCount; i++)
+            {
+                uint otherIndex = gridAgentIndices[cellIndex * maxAgentsPerCell + i];
+                if (otherIndex == id.x)
+                    continue;
+
+                AgentData other = agentBuffer[otherIndex];
+                float2 delta = agent.position.xz - other.position.xz;
+                float distSqr = dot(delta, delta);
+
+                // 没有重叠，不需要排斥。
+                if (distSqr >= minDistanceSqr)
+                    continue;
+
+                // 完全重合时给一个很小的稳定方向，避免 normalize(0)。
+                if (distSqr < 0.000001)
+                {
+                    delta = FallbackDirection(id.x) * 0.001;
+                    distSqr = dot(delta, delta);
+                }
+
+                // penetration 越大，说明重叠越深，排斥越强。
+                float dist = max(sqrt(max(distSqr, 0.000001)), 0.0001);
+                float penetration = minDistance - dist;
+                separation += (delta / dist) * penetration;
+            }
+        }
+    }
+
+    // 限制 dt，避免编辑器卡顿/断点后某一帧 deltaTime 过大导致 Agent 被弹飞。
+    float dt = min(deltaTime, 0.05);
+
+    // 将排斥量转成速度，再做阻尼、限速、积分。
+    agent.velocity.xz += separation * separationStrength * dt;
+    agent.velocity *= saturate(1.0 - velocityDamping * dt);
+
+    float2 flowDirection = SampleFlowDirection(agent.position);
+    if (dot(flowDirection, flowDirection) > 0.0001)
+    {
+        float2 desiredVelocity = flowDirection * maxSpeed;
+        float steer = saturate(flowFieldResponsiveness * flowFieldWeight * dt);
+        agent.velocity.xz = lerp(agent.velocity.xz, desiredVelocity, steer);
+    }
+
+    agent.velocity = ClampVelocity(agent.velocity);
+    agent.position += agent.velocity * dt;
+    ApplyBounds(agent);
+
+    // 根据移动方向更新朝向，让角色看起来朝运动方向转身。
+    float speedSqr = dot(agent.velocity.xz, agent.velocity.xz);
+    if (speedSqr > 0.0001)
+    {
+        float yaw = atan2(agent.velocity.x, agent.velocity.z);
+        agent.rotation.y = degrees(yaw);
+    }
+
+    // 先保存物理结果。即使不可见，位置和速度也要保留到下一帧继续模拟。
+    if (!IsInsideFrustum(agent.position))
+    {
+        agentBuffer[id.x] = agent;
+        return;
+    }
+
+    // LOD 分类只按 XZ 平面距离计算，忽略高度差。
+    float3 offset = agent.position - lodCenter;
+    offset.y = 0.0;
+    float distSqr = dot(offset, offset);
+
+    if (distSqr <= nearLodRadiusSqr)
+    {
+        UpdateAnimationTime(agent, nearAnimationInterval);
+        nearAgentIndices.Append(id.x);
+    }
+    else if (distSqr <= midLodRadiusSqr)
+    {
+        UpdateAnimationTime(agent, midAnimationInterval);
+        midAgentIndices.Append(id.x);
+    }
+    else
+    {
+        UpdateAnimationTime(agent, farAnimationInterval);
+        farAgentIndices.Append(id.x);
+    }
+
+    // 最后写回完整 AgentData，供下一帧 compute 和本帧 draw shader 使用。
+    agentBuffer[id.x] = agent;
+}

@@ -1,0 +1,38 @@
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# Visual Studio / Rider / OS files
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.tmp
+*.bak
+*.swp
+*.DS_Store
+Thumbs.db
+
+# Unity crash and memory captures
+sysinfo.txt
+*.stackdump
+*.apk
+*.aab
+*.unitypackage
+*.mem
+
+# Build outputs in nested asset/tool folders
+[Bb]in/
+[Oo]bj/

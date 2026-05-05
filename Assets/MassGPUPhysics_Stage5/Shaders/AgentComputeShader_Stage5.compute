@@ -1,0 +1,1019 @@
+// Stage5 GPU agent simulation:
+// ClearGrid -> BuildSpatialHash -> ClearPendingDamage ->
+// EvaluateStateAndAccumulateDamage -> ResolveDamageSimulateAndClassify
+
+#pragma kernel ClearGrid
+#pragma kernel BuildSpatialHash
+#pragma kernel ClearRuntimeDefenderDensity
+#pragma kernel BuildRuntimeDefenderDensity
+#pragma kernel SelectRuntimeFlowTargets
+#pragma kernel GenerateRuntimeAttackerFlowField
+#pragma kernel ClearPendingDamage
+#pragma kernel EvaluateStateAndAccumulateDamage
+#pragma kernel ResolveDamageSimulateAndClassify
+#pragma kernel ClassifyVisibleAgentsByTeam
+
+#define STATE_IDLE 0
+#define STATE_MOVE 1
+#define STATE_ENGAGE 2
+#define STATE_ATTACK 3
+#define STATE_DEAD 4
+#define DEFENDER_MODE_HOLD_POSITION 0
+#define DEFENDER_MODE_FLOW_FIELD 1
+
+struct AgentData
+{
+    float3 position;
+    float3 rotation;
+    float3 scale;
+    float3 velocity;
+    int currentState;
+    float currentAnimationTime;
+};
+
+RWStructuredBuffer<AgentData> agentBuffer;
+RWStructuredBuffer<uint> gridCounts;
+RWStructuredBuffer<uint> gridAgentIndices;
+StructuredBuffer<uint> gridCountsReadBuffer;
+StructuredBuffer<uint> gridAgentIndicesReadBuffer;
+RWStructuredBuffer<float2> flowFieldDirections;
+StructuredBuffer<float2> defenderFlowFieldDirections;
+RWStructuredBuffer<uint> runtimeDefenderDensity;
+RWStructuredBuffer<int> runtimeFlowStats;
+RWStructuredBuffer<float4> runtimeFlowTargets;
+RWTexture2D<float4> runtimeFlowPreviewTexture;
+int runtimeFlowPreviewMode;
+
+RWStructuredBuffer<int> hpBuffer;
+StructuredBuffer<int> teamIdReadBuffer;
+StructuredBuffer<int> hpReadBuffer;
+RWStructuredBuffer<int> targetAgentIndexBuffer;
+RWStructuredBuffer<float> attackCooldownBuffer;
+StructuredBuffer<float3> homePositionReadBuffer;
+RWStructuredBuffer<int> pendingDamageBuffer;
+StructuredBuffer<int> pendingDamageReadBuffer;
+
+AppendStructuredBuffer<uint> nearAttackerAgentIndices;
+AppendStructuredBuffer<uint> midAttackerAgentIndices;
+AppendStructuredBuffer<uint> farAttackerAgentIndices;
+AppendStructuredBuffer<uint> nearDefenderAgentIndices;
+AppendStructuredBuffer<uint> midDefenderAgentIndices;
+AppendStructuredBuffer<uint> farDefenderAgentIndices;
+
+float deltaTime;
+float animationDuration;
+uint frameIndex;
+
+float3 lodCenter;
+float nearLodRadiusSqr;
+float midLodRadiusSqr;
+
+int enableFrustumCulling;
+float cullingRadius;
+float4 frustumPlanes[6];
+
+int nearAnimationInterval;
+int midAnimationInterval;
+int farAnimationInterval;
+
+uint gridCellCount;
+int2 gridResolution;
+float2 gridOrigin;
+float2 gridWorldSize;
+float cellSize;
+uint maxAgentsPerCell;
+
+float attackerAgentRadius;
+float defenderAgentRadius;
+float attackerSeparationStrength;
+float defenderSeparationStrength;
+float attackerVelocityDamping;
+float defenderVelocityDamping;
+float attackerMaxSpeed;
+float defenderMaxSpeed;
+float boundaryPadding;
+
+int flowFieldEnabled;
+int2 flowFieldResolution;
+float2 flowFieldOrigin;
+float flowFieldCellSize;
+float flowFieldWeight;
+float flowFieldResponsiveness;
+int runtimeDynamicAttackerFlowEnabled;
+int dynamicFlowSectorCount;
+float dynamicFlowTargetStopRadius;
+int dynamicFlowMinDefendersPerTarget;
+int defenderMovementMode;
+int defenderFlowFieldEnabled;
+int2 defenderFlowFieldResolution;
+float2 defenderFlowFieldOrigin;
+float defenderFlowFieldCellSize;
+
+int enableTwoTeamCombat;
+int battleStarted;
+int attackerCount;
+float attackerTargetAcquireRadius;
+float defenderTargetAcquireRadius;
+float attackerAttackRange;
+float defenderAttackRange;
+int attackerAttackDamage;
+int defenderAttackDamage;
+float attackerAttackInterval;
+float defenderAttackInterval;
+float defenderGuardRadius;
+float defenderMaxChaseDistance;
+float deathClipDuration;
+
+bool IsInsideFrustum(float3 position)
+{
+    if (enableFrustumCulling == 0)
+        return true;
+
+    [unroll]
+    for (int i = 0; i < 6; i++)
+    {
+        if (dot(frustumPlanes[i].xyz, position) + frustumPlanes[i].w < -cullingRadius)
+            return false;
+    }
+
+    return true;
+}
+
+float SafeDt()
+{
+    return min(deltaTime, 0.05);
+}
+
+void UpdateAnimationTime(inout AgentData agent, int interval, float duration, bool loop)
+{
+    interval = max(interval, 1);
+    if ((frameIndex % (uint)interval) != 0)
+        return;
+
+    float safeDuration = max(duration, 0.0001);
+    float nextTime = agent.currentAnimationTime + deltaTime * interval;
+    agent.currentAnimationTime = loop ? fmod(nextTime, safeDuration) : min(nextTime, safeDuration);
+}
+
+void SetAgentState(inout AgentData agent, int state)
+{
+    if (agent.currentState != state)
+        agent.currentAnimationTime = 0.0;
+
+    agent.currentState = state;
+}
+
+int2 PositionToCell(float3 position)
+{
+    float2 local = (position.xz - gridOrigin) / max(cellSize, 0.0001);
+    int2 cell = (int2)floor(local);
+    cell.x = clamp(cell.x, 0, gridResolution.x - 1);
+    cell.y = clamp(cell.y, 0, gridResolution.y - 1);
+    return cell;
+}
+
+uint CellToIndex(int2 cell)
+{
+    return (uint)(cell.y * gridResolution.x + cell.x);
+}
+
+int2 PositionToFlowFieldCell(float3 position)
+{
+    float2 local = (position.xz - flowFieldOrigin) / max(flowFieldCellSize, 0.0001);
+    int2 cell = (int2)floor(local);
+    cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
+    cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
+    return cell;
+}
+
+uint FlowFieldCellToIndex(int2 cell)
+{
+    return (uint)(cell.y * flowFieldResolution.x + cell.x);
+}
+
+uint FlowFieldCellCount()
+{
+    return (uint)max(1, flowFieldResolution.x * flowFieldResolution.y);
+}
+
+float2 FlowFieldCellCenter(int2 cell)
+{
+    return flowFieldOrigin + ((float2)cell + 0.5) * flowFieldCellSize;
+}
+
+int2 PositionToDefenderFlowFieldCell(float3 position)
+{
+    float2 local = (position.xz - defenderFlowFieldOrigin) / max(defenderFlowFieldCellSize, 0.0001);
+    int2 cell = (int2)floor(local);
+    cell.x = clamp(cell.x, 0, defenderFlowFieldResolution.x - 1);
+    cell.y = clamp(cell.y, 0, defenderFlowFieldResolution.y - 1);
+    return cell;
+}
+
+uint DefenderFlowFieldCellToIndex(int2 cell)
+{
+    return (uint)(cell.y * defenderFlowFieldResolution.x + cell.x);
+}
+
+float2 SampleFlowDirection(float3 position)
+{
+    if (flowFieldEnabled == 0 || flowFieldWeight <= 0.0)
+        return 0.0;
+
+    float2 direction = flowFieldDirections[FlowFieldCellToIndex(PositionToFlowFieldCell(position))];
+    float lengthSqr = dot(direction, direction);
+    if (lengthSqr <= 0.0001)
+        return 0.0;
+
+    if (lengthSqr > 1.0)
+        direction *= rsqrt(lengthSqr);
+
+    return direction;
+}
+
+float2 SampleDefenderFlowDirection(float3 position)
+{
+    if (defenderFlowFieldEnabled == 0 || flowFieldWeight <= 0.0)
+        return 0.0;
+
+    float2 direction = defenderFlowFieldDirections[DefenderFlowFieldCellToIndex(PositionToDefenderFlowFieldCell(position))];
+    float lengthSqr = dot(direction, direction);
+    if (lengthSqr <= 0.0001)
+        return 0.0;
+
+    if (lengthSqr > 1.0)
+        direction *= rsqrt(lengthSqr);
+
+    return direction;
+}
+
+float2 FallbackDirection(uint id)
+{
+    uint h = id * 1664525u + 1013904223u;
+    float angle = (float)(h & 65535u) * (6.2831853 / 65535.0);
+    return float2(cos(angle), sin(angle));
+}
+
+float3 HsvToRgb(float3 hsv)
+{
+    float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float3 p = abs(frac(hsv.xxx + k.xyz) * 6.0 - k.www);
+    return hsv.z * lerp(k.xxx, saturate(p - k.xxx), hsv.y);
+}
+
+float3 FlowDirectionToPreviewColor(float2 direction)
+{
+    float magnitude = saturate(length(direction));
+    if (magnitude <= 0.0001)
+        return float3(0.03, 0.03, 0.03);
+
+    float hue = atan2(direction.y, direction.x) / 6.2831853;
+    if (hue < 0.0)
+        hue += 1.0;
+
+    float saturation = lerp(0.35, 0.9, magnitude);
+    float value = lerp(0.28, 0.88, magnitude);
+    return HsvToRgb(float3(hue, saturation, value));
+}
+
+bool UsesDefenderSettings(uint index)
+{
+    return enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == 1;
+}
+
+float GetAgentRadius(uint index)
+{
+    return UsesDefenderSettings(index) ? defenderAgentRadius : attackerAgentRadius;
+}
+
+float GetSeparationStrength(uint index)
+{
+    return UsesDefenderSettings(index) ? defenderSeparationStrength : attackerSeparationStrength;
+}
+
+float GetVelocityDamping(uint index)
+{
+    return UsesDefenderSettings(index) ? defenderVelocityDamping : attackerVelocityDamping;
+}
+
+float GetMaxSpeed(uint index)
+{
+    return UsesDefenderSettings(index) ? defenderMaxSpeed : attackerMaxSpeed;
+}
+
+float GetTargetAcquireRadius(uint index)
+{
+    return UsesDefenderSettings(index) ? defenderTargetAcquireRadius : attackerTargetAcquireRadius;
+}
+
+float GetAttackRange(uint index)
+{
+    return UsesDefenderSettings(index) ? defenderAttackRange : attackerAttackRange;
+}
+
+int GetAttackDamage(uint index)
+{
+    return UsesDefenderSettings(index) ? defenderAttackDamage : attackerAttackDamage;
+}
+
+float GetAttackInterval(uint index)
+{
+    return UsesDefenderSettings(index) ? defenderAttackInterval : attackerAttackInterval;
+}
+
+float3 ClampVelocity(uint selfIndex, float3 velocity)
+{
+    velocity.y = 0.0;
+    float speedSqr = dot(velocity.xz, velocity.xz);
+    float maxSpeed = GetMaxSpeed(selfIndex);
+    float maxSpeedSqr = maxSpeed * maxSpeed;
+    if (speedSqr > maxSpeedSqr && speedSqr > 0.0001)
+        velocity.xz *= maxSpeed * rsqrt(speedSqr);
+    return velocity;
+}
+
+void ApplyBounds(inout AgentData agent)
+{
+    float2 minXZ = gridOrigin + boundaryPadding;
+    float2 maxXZ = gridOrigin + gridWorldSize - boundaryPadding;
+
+    if (agent.position.x < minXZ.x)
+    {
+        agent.position.x = minXZ.x;
+        agent.velocity.x = abs(agent.velocity.x) * 0.25;
+    }
+    else if (agent.position.x > maxXZ.x)
+    {
+        agent.position.x = maxXZ.x;
+        agent.velocity.x = -abs(agent.velocity.x) * 0.25;
+    }
+
+    if (agent.position.z < minXZ.y)
+    {
+        agent.position.z = minXZ.y;
+        agent.velocity.z = abs(agent.velocity.z) * 0.25;
+    }
+    else if (agent.position.z > maxXZ.y)
+    {
+        agent.position.z = maxXZ.y;
+        agent.velocity.z = -abs(agent.velocity.z) * 0.25;
+    }
+}
+
+void FaceDirection(inout AgentData agent, float2 direction)
+{
+    if (dot(direction, direction) <= 0.0001)
+        return;
+
+    agent.rotation.y = degrees(atan2(direction.x, direction.y));
+}
+
+bool IsAliveIndex(uint index)
+{
+    return hpReadBuffer[index] > 0;
+}
+
+bool IsAliveIndexRw(uint index)
+{
+    return hpBuffer[index] > 0;
+}
+
+bool IsEnemy(uint selfIndex, uint otherIndex)
+{
+    if (enableTwoTeamCombat == 0)
+        return false;
+
+    return teamIdReadBuffer[selfIndex] != teamIdReadBuffer[otherIndex];
+}
+
+bool IsDefender(uint index)
+{
+    return enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == 1;
+}
+
+bool TargetIsUsable(uint selfIndex, uint otherIndex, float distSqr, float3 selfPosition)
+{
+    if (selfIndex == otherIndex || !IsAliveIndex(otherIndex) || !IsEnemy(selfIndex, otherIndex))
+        return false;
+
+    if (IsDefender(selfIndex))
+    {
+        if (defenderMovementMode == DEFENDER_MODE_HOLD_POSITION)
+        {
+            float defenderRange = GetAttackRange(selfIndex);
+            return distSqr <= defenderRange * defenderRange;
+        }
+
+        float defenderAcquireRadius = GetTargetAcquireRadius(selfIndex);
+        float aggroSqr = defenderAcquireRadius * defenderAcquireRadius;
+        float chaseSqr = defenderMaxChaseDistance * defenderMaxChaseDistance;
+        float2 fromHome = selfPosition.xz - homePositionReadBuffer[selfIndex].xz;
+        return distSqr <= aggroSqr && dot(fromHome, fromHome) <= chaseSqr;
+    }
+
+    float acquireRadius = GetTargetAcquireRadius(selfIndex);
+    float acquireSqr = acquireRadius * acquireRadius;
+    return distSqr <= acquireSqr;
+}
+
+int FindNearestEnemy(uint selfIndex, AgentData self, float maxRadius)
+{
+    int2 homeCell = PositionToCell(self.position);
+    float bestDistSqr = maxRadius * maxRadius;
+    int bestIndex = -1;
+
+    [unroll]
+    for (int dz = -1; dz <= 1; dz++)
+    {
+        [unroll]
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int2 cell = homeCell + int2(dx, dz);
+            if (cell.x < 0 || cell.y < 0 || cell.x >= gridResolution.x || cell.y >= gridResolution.y)
+                continue;
+
+            uint cellIndex = CellToIndex(cell);
+            uint occupantCount = min(gridCountsReadBuffer[cellIndex], maxAgentsPerCell);
+
+            for (uint i = 0; i < occupantCount; i++)
+            {
+                uint otherIndex = gridAgentIndicesReadBuffer[cellIndex * maxAgentsPerCell + i];
+                AgentData other = agentBuffer[otherIndex];
+                float2 delta = other.position.xz - self.position.xz;
+                float distSqr = dot(delta, delta);
+
+                if (distSqr < bestDistSqr && TargetIsUsable(selfIndex, otherIndex, distSqr, self.position))
+                {
+                    bestDistSqr = distSqr;
+                    bestIndex = (int)otherIndex;
+                }
+            }
+        }
+    }
+
+    return bestIndex;
+}
+
+bool CurrentTargetIsValid(uint selfIndex, AgentData self, int targetIndex)
+{
+    if (targetIndex < 0)
+        return false;
+
+    uint otherIndex = (uint)targetIndex;
+    AgentData other = agentBuffer[otherIndex];
+    float2 delta = other.position.xz - self.position.xz;
+    return TargetIsUsable(selfIndex, otherIndex, dot(delta, delta), self.position);
+}
+
+float2 AccumulateSeparation(uint selfIndex, AgentData agent)
+{
+    int2 homeCell = PositionToCell(agent.position);
+    float selfRadius = GetAgentRadius(selfIndex);
+    float2 separation = 0.0;
+
+    [unroll]
+    for (int dz = -1; dz <= 1; dz++)
+    {
+        [unroll]
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int2 cell = homeCell + int2(dx, dz);
+            if (cell.x < 0 || cell.y < 0 || cell.x >= gridResolution.x || cell.y >= gridResolution.y)
+                continue;
+
+            uint cellIndex = CellToIndex(cell);
+            uint occupantCount = min(gridCountsReadBuffer[cellIndex], maxAgentsPerCell);
+
+            for (uint i = 0; i < occupantCount; i++)
+            {
+                uint otherIndex = gridAgentIndicesReadBuffer[cellIndex * maxAgentsPerCell + i];
+                if (otherIndex == selfIndex || !IsAliveIndexRw(otherIndex))
+                    continue;
+
+                AgentData other = agentBuffer[otherIndex];
+                float2 delta = agent.position.xz - other.position.xz;
+                float distSqr = dot(delta, delta);
+                float minDistance = selfRadius + GetAgentRadius(otherIndex);
+                float minDistanceSqr = minDistance * minDistance;
+                if (distSqr >= minDistanceSqr)
+                    continue;
+
+                if (distSqr < 0.000001)
+                {
+                    delta = FallbackDirection(selfIndex) * 0.001;
+                    distSqr = dot(delta, delta);
+                }
+
+                float dist = max(sqrt(max(distSqr, 0.000001)), 0.0001);
+                separation += (delta / dist) * (minDistance - dist);
+            }
+        }
+    }
+
+    return separation;
+}
+
+void AppendVisibleAgent(uint index, inout AgentData agent, float duration, bool loop, bool includeFar)
+{
+    if (!IsInsideFrustum(agent.position))
+        return;
+
+    bool isDefender = enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == 1;
+    float3 offset = agent.position - lodCenter;
+    offset.y = 0.0;
+    float distSqr = dot(offset, offset);
+
+    if (distSqr <= nearLodRadiusSqr)
+    {
+        UpdateAnimationTime(agent, nearAnimationInterval, duration, loop);
+        if (isDefender)
+            nearDefenderAgentIndices.Append(index);
+        else
+            nearAttackerAgentIndices.Append(index);
+    }
+    else if (distSqr <= midLodRadiusSqr)
+    {
+        UpdateAnimationTime(agent, midAnimationInterval, duration, loop);
+        if (isDefender)
+            midDefenderAgentIndices.Append(index);
+        else
+            midAttackerAgentIndices.Append(index);
+    }
+    else if (includeFar)
+    {
+        UpdateAnimationTime(agent, farAnimationInterval, duration, loop);
+        if (isDefender)
+            farDefenderAgentIndices.Append(index);
+        else
+            farAttackerAgentIndices.Append(index);
+    }
+}
+
+[numthreads(64, 1, 1)]
+void ClearGrid(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= gridCellCount)
+        return;
+
+    gridCounts[id.x] = 0;
+}
+
+[numthreads(64, 1, 1)]
+void BuildSpatialHash(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count || !IsAliveIndex(id.x))
+        return;
+
+    uint cellIndex = CellToIndex(PositionToCell(agentBuffer[id.x].position));
+    uint slot;
+    InterlockedAdd(gridCounts[cellIndex], 1, slot);
+    if (slot < maxAgentsPerCell)
+        gridAgentIndices[cellIndex * maxAgentsPerCell + slot] = id.x;
+}
+
+[numthreads(64, 1, 1)]
+void ClearRuntimeDefenderDensity(uint3 id : SV_DispatchThreadID)
+{
+    uint cellCount = FlowFieldCellCount();
+    if (id.x < cellCount)
+        runtimeDefenderDensity[id.x] = 0;
+
+    if (id.x == 0)
+    {
+        runtimeFlowStats[0] = 0;
+        runtimeFlowStats[1] = 0;
+        runtimeFlowStats[2] = 0;
+        runtimeFlowStats[3] = 0;
+    }
+
+    if (id.x < 8)
+    {
+        runtimeFlowTargets[id.x] = 0.0;
+    }
+}
+
+[numthreads(64, 1, 1)]
+void BuildRuntimeDefenderDensity(uint3 id : SV_DispatchThreadID)
+{
+    if (runtimeDynamicAttackerFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
+        return;
+
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count || id.x < (uint)attackerCount || !IsAliveIndex(id.x))
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+    int2 cell = PositionToFlowFieldCell(agent.position);
+    uint cellIndex = FlowFieldCellToIndex(cell);
+    uint ignoredDensity;
+    InterlockedAdd(runtimeDefenderDensity[cellIndex], 1u, ignoredDensity);
+
+    int ignoredStats;
+    InterlockedAdd(runtimeFlowStats[0], 1, ignoredStats);
+    InterlockedAdd(runtimeFlowStats[1], (int)round(agent.position.x * 100.0), ignoredStats);
+    InterlockedAdd(runtimeFlowStats[2], (int)round(agent.position.z * 100.0), ignoredStats);
+}
+
+[numthreads(1, 1, 1)]
+void SelectRuntimeFlowTargets(uint3 id : SV_DispatchThreadID)
+{
+    if (runtimeDynamicAttackerFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
+        return;
+
+    if (runtimeFlowStats[0] <= 0)
+        return;
+
+    uint sectorCount = (uint)clamp(dynamicFlowSectorCount, 1, 8);
+    int targetCount = 0;
+
+    for (uint sectorIndex = 0u; sectorIndex < sectorCount; sectorIndex++)
+    {
+        int minZ = (int)((sectorIndex * (uint)flowFieldResolution.y) / sectorCount);
+        int maxZ = (int)(((sectorIndex + 1u) * (uint)flowFieldResolution.y) / sectorCount);
+        uint sectorDefenderCount = 0u;
+        float2 sectorPositionSum = 0.0;
+
+        for (int z = minZ; z < maxZ; z++)
+        {
+            for (int x = 0; x < flowFieldResolution.x; x++)
+            {
+                int2 cell = int2(x, z);
+                uint density = runtimeDefenderDensity[FlowFieldCellToIndex(cell)];
+                if (density == 0u)
+                    continue;
+
+                sectorDefenderCount += density;
+                sectorPositionSum += FlowFieldCellCenter(cell) * (float)density;
+            }
+        }
+
+        if (sectorDefenderCount < (uint)max(1, dynamicFlowMinDefendersPerTarget))
+            continue;
+
+        float2 target = sectorPositionSum / max(1.0, (float)sectorDefenderCount);
+        runtimeFlowTargets[sectorIndex] = float4(target.x, target.y, (float)sectorDefenderCount, 1.0);
+        targetCount++;
+        runtimeFlowStats[3] = targetCount;
+    }
+}
+
+[numthreads(64, 1, 1)]
+void GenerateRuntimeAttackerFlowField(uint3 id : SV_DispatchThreadID)
+{
+    uint cellCount = FlowFieldCellCount();
+    if (id.x >= cellCount)
+        return;
+
+    if (runtimeDynamicAttackerFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
+        return;
+
+    int aliveDefenderCount = runtimeFlowStats[0];
+    if (aliveDefenderCount <= 0)
+    {
+        flowFieldDirections[id.x] = 0.0;
+        int xEmpty = (int)(id.x % (uint)flowFieldResolution.x);
+        int zEmpty = (int)(id.x / (uint)flowFieldResolution.x);
+        runtimeFlowPreviewTexture[int2(xEmpty, zEmpty)] = float4(0.03, 0.03, 0.03, 1.0);
+        return;
+    }
+
+    int x = (int)(id.x % (uint)flowFieldResolution.x);
+    int z = (int)(id.x / (uint)flowFieldResolution.x);
+    int2 cell = int2(x, z);
+    float2 cellCenter = FlowFieldCellCenter(cell);
+    int targetCount = clamp(runtimeFlowStats[3], 0, 8);
+    if (targetCount <= 0)
+    {
+        flowFieldDirections[id.x] = 0.0;
+        runtimeFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
+        return;
+    }
+
+    uint sectorCount = (uint)clamp(dynamicFlowSectorCount, 1, 8);
+    uint currentSectorU = min(((uint)z * sectorCount) / max(1u, (uint)flowFieldResolution.y), sectorCount - 1u);
+    int currentSector = (int)currentSectorU;
+    int sectorCountInt = (int)sectorCount;
+    int selectedSector = -1;
+    if (runtimeFlowTargets[currentSector].w > 0.0)
+    {
+        selectedSector = currentSector;
+    }
+    else
+    {
+        for (int radius = 1; radius < 8 && selectedSector < 0; radius++)
+        {
+            int lower = currentSector - radius;
+            int upper = currentSector + radius;
+            if (lower >= 0 && runtimeFlowTargets[lower].w > 0.0)
+                selectedSector = lower;
+            if (selectedSector < 0 && upper < sectorCountInt && runtimeFlowTargets[upper].w > 0.0)
+                selectedSector = upper;
+        }
+    }
+
+    if (selectedSector < 0)
+    {
+        flowFieldDirections[id.x] = 0.0;
+        runtimeFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
+        return;
+    }
+
+    float4 selectedTarget = runtimeFlowTargets[selectedSector];
+    int sectorMinZ = (int)(((uint)selectedSector * (uint)flowFieldResolution.y) / sectorCount);
+    int sectorMaxZ = (int)((((uint)selectedSector + 1u) * (uint)flowFieldResolution.y) / sectorCount);
+    float targetX = selectedTarget.x;
+    float targetZ = clamp(cellCenter.y, FlowFieldCellCenter(int2(x, sectorMinZ)).y, FlowFieldCellCenter(int2(x, max(sectorMinZ, sectorMaxZ - 1))).y);
+    float2 target = float2(targetX, targetZ);
+    float targetWeight = selectedTarget.z;
+
+    float2 offset = target - cellCenter;
+    float distSqr = dot(offset, offset);
+    float stopRadius = max(0.0, dynamicFlowTargetStopRadius);
+    float2 direction = (distSqr <= stopRadius * stopRadius || distSqr <= 0.0001)
+        ? 0.0
+        : normalize(offset);
+
+    flowFieldDirections[id.x] = direction;
+
+    float lengthSqr = dot(direction, direction);
+    float density01 = saturate(targetWeight / max(1.0, (float)dynamicFlowMinDefendersPerTarget * 4.0));
+    float3 color = 0.03;
+
+    if (runtimeFlowPreviewMode == 0)
+    {
+        color = FlowDirectionToPreviewColor(direction);
+    }
+    else
+    {
+        color = lerp(float3(0.08, 0.08, 0.08), float3(0.85, 0.18, 0.08), density01);
+        if (lengthSqr > 0.0001)
+            color = lerp(color, float3(1.0, 0.86, 0.12), saturate(density01 * 0.75));
+    }
+
+    runtimeFlowPreviewTexture[int2(x, z)] = float4(color, 1.0);
+}
+
+[numthreads(64, 1, 1)]
+void ClearPendingDamage(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    pendingDamageBuffer[id.x] = 0;
+}
+
+[numthreads(64, 1, 1)]
+void EvaluateStateAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+    if (!IsAliveIndex(id.x))
+    {
+        targetAgentIndexBuffer[id.x] = -1;
+        attackCooldownBuffer[id.x] = 0.0;
+        agent.currentState = STATE_DEAD;
+        agentBuffer[id.x] = agent;
+        return;
+    }
+
+    if (battleStarted == 0)
+    {
+        targetAgentIndexBuffer[id.x] = -1;
+        attackCooldownBuffer[id.x] = 0.0;
+        agent.velocity = 0.0;
+        SetAgentState(agent, STATE_IDLE);
+        agentBuffer[id.x] = agent;
+        return;
+    }
+
+    float dt = SafeDt();
+    float cooldown = max(0.0, attackCooldownBuffer[id.x] - dt);
+    int targetIndex = targetAgentIndexBuffer[id.x];
+
+    if (!CurrentTargetIsValid(id.x, agent, targetIndex))
+    {
+        float searchRadius = GetTargetAcquireRadius(id.x);
+        targetIndex = FindNearestEnemy(id.x, agent, searchRadius);
+    }
+
+    int nextState = STATE_MOVE;
+    if (targetIndex >= 0)
+    {
+        AgentData target = agentBuffer[(uint)targetIndex];
+        float2 toTarget = target.position.xz - agent.position.xz;
+        float distSqr = dot(toTarget, toTarget);
+        float activeAttackRange = GetAttackRange(id.x);
+        float attackRangeSqr = activeAttackRange * activeAttackRange;
+
+        if (distSqr <= attackRangeSqr)
+        {
+            nextState = STATE_ATTACK;
+            if (cooldown <= 0.0)
+            {
+                int ignored;
+                InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], max(1, GetAttackDamage(id.x)), ignored);
+                cooldown = GetAttackInterval(id.x);
+            }
+        }
+        else
+        {
+            nextState = STATE_ENGAGE;
+        }
+    }
+    else if (IsDefender(id.x))
+    {
+        if (defenderMovementMode == DEFENDER_MODE_HOLD_POSITION)
+        {
+            nextState = STATE_IDLE;
+        }
+        else if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
+        {
+            nextState = STATE_MOVE;
+        }
+        else
+        {
+            float2 toHome = homePositionReadBuffer[id.x].xz - agent.position.xz;
+            nextState = dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius ? STATE_MOVE : STATE_IDLE;
+        }
+    }
+
+    if (nextState != agent.currentState)
+        agent.currentAnimationTime = 0.0;
+
+    agent.currentState = nextState;
+    attackCooldownBuffer[id.x] = cooldown;
+    targetAgentIndexBuffer[id.x] = targetIndex;
+    agentBuffer[id.x] = agent;
+}
+
+[numthreads(64, 1, 1)]
+void ResolveDamageSimulateAndClassify(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+    float dt = SafeDt();
+
+    if (battleStarted == 0)
+    {
+        targetAgentIndexBuffer[id.x] = -1;
+        attackCooldownBuffer[id.x] = 0.0;
+        agent.velocity = 0.0;
+
+        if (hpBuffer[id.x] <= 0)
+        {
+            SetAgentState(agent, STATE_DEAD);
+        }
+        else
+        {
+            SetAgentState(agent, STATE_IDLE);
+        }
+
+        agentBuffer[id.x] = agent;
+        return;
+    }
+
+    int damage = pendingDamageReadBuffer[id.x];
+    if (damage > 0 && hpBuffer[id.x] > 0)
+        hpBuffer[id.x] = max(0, hpBuffer[id.x] - damage);
+
+    if (hpBuffer[id.x] <= 0)
+    {
+        SetAgentState(agent, STATE_DEAD);
+        agent.velocity = 0.0;
+        targetAgentIndexBuffer[id.x] = -1;
+        attackCooldownBuffer[id.x] = 0.0;
+
+        agentBuffer[id.x] = agent;
+        return;
+    }
+
+    float2 desiredDirection = 0.0;
+    int targetIndex = targetAgentIndexBuffer[id.x];
+    bool isDefender = IsDefender(id.x);
+    bool defenderHoldingPosition = isDefender && defenderMovementMode == DEFENDER_MODE_HOLD_POSITION;
+    if (targetIndex >= 0 && IsAliveIndexRw((uint)targetIndex))
+    {
+        AgentData target = agentBuffer[(uint)targetIndex];
+        float2 toTarget = target.position.xz - agent.position.xz;
+        float distSqr = dot(toTarget, toTarget);
+
+        if (isDefender && defenderMovementMode != DEFENDER_MODE_FLOW_FIELD && !defenderHoldingPosition)
+        {
+            float2 fromHome = agent.position.xz - homePositionReadBuffer[id.x].xz;
+            float chaseSqr = defenderMaxChaseDistance * defenderMaxChaseDistance;
+            if (dot(fromHome, fromHome) > chaseSqr)
+            {
+                targetAgentIndexBuffer[id.x] = -1;
+                SetAgentState(agent, STATE_MOVE);
+            }
+        }
+
+        if (targetAgentIndexBuffer[id.x] >= 0)
+        {
+            FaceDirection(agent, toTarget);
+            float activeAttackRange = GetAttackRange(id.x);
+            if (!defenderHoldingPosition && distSqr > activeAttackRange * activeAttackRange)
+                desiredDirection = normalize(toTarget);
+        }
+    }
+
+    if (targetAgentIndexBuffer[id.x] < 0)
+    {
+        if (isDefender)
+        {
+            if (defenderHoldingPosition)
+            {
+                SetAgentState(agent, STATE_IDLE);
+            }
+            else if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
+            {
+                desiredDirection = SampleDefenderFlowDirection(agent.position);
+                SetAgentState(agent, dot(desiredDirection, desiredDirection) > 0.0001 ? STATE_MOVE : STATE_IDLE);
+            }
+            else
+            {
+                float2 toHome = homePositionReadBuffer[id.x].xz - agent.position.xz;
+                if (dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius)
+                {
+                    desiredDirection = normalize(toHome);
+                    SetAgentState(agent, STATE_MOVE);
+                }
+                else
+                {
+                    SetAgentState(agent, STATE_IDLE);
+                }
+            }
+        }
+        else
+        {
+            desiredDirection = SampleFlowDirection(agent.position);
+        }
+    }
+
+    if (defenderHoldingPosition)
+    {
+        agent.velocity = 0.0;
+        agentBuffer[id.x] = agent;
+        return;
+    }
+
+    float2 separation = AccumulateSeparation(id.x, agent);
+    agent.velocity.xz += separation * GetSeparationStrength(id.x) * dt;
+    agent.velocity *= saturate(1.0 - GetVelocityDamping(id.x) * dt);
+
+    if (agent.currentState == STATE_ATTACK)
+    {
+        agent.velocity.xz *= saturate(1.0 - 12.0 * dt);
+    }
+    else if (dot(desiredDirection, desiredDirection) > 0.0001)
+    {
+        float steer = saturate((agent.currentState == STATE_ENGAGE ? 10.0 : flowFieldResponsiveness) * max(flowFieldWeight, 0.2) * dt);
+        agent.velocity.xz = lerp(agent.velocity.xz, desiredDirection * GetMaxSpeed(id.x), steer);
+        FaceDirection(agent, desiredDirection);
+    }
+
+    agent.velocity = ClampVelocity(id.x, agent.velocity);
+    agent.position += agent.velocity * dt;
+    ApplyBounds(agent);
+
+    if (dot(agent.velocity.xz, agent.velocity.xz) > 0.0001 && agent.currentState != STATE_ATTACK)
+        FaceDirection(agent, agent.velocity.xz);
+
+    agentBuffer[id.x] = agent;
+}
+
+[numthreads(64, 1, 1)]
+void ClassifyVisibleAgentsByTeam(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+    if (hpReadBuffer[id.x] <= 0)
+        AppendVisibleAgent(id.x, agent, deathClipDuration, false, false);
+    else
+        AppendVisibleAgent(id.x, agent, animationDuration, true, true);
+
+    agentBuffer[id.x] = agent;
+}
