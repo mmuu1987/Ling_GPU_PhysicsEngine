@@ -4,10 +4,14 @@ public struct MassGpuKernelSet_Stage5
 {
     public readonly int ClearGrid;
     public readonly int BuildSpatialHash;
-    public readonly int ClearRuntimeDefenderDensity;
-    public readonly int BuildRuntimeDefenderDensity;
-    public readonly int SelectRuntimeFlowTargets;
+    public readonly int ClearRuntimeAttackerFlowResources;
+    public readonly int BuildRuntimeAttackerTargetDensity;
+    public readonly int SelectRuntimeAttackerFlowTargets;
     public readonly int GenerateRuntimeAttackerFlowField;
+    public readonly int ClearRuntimeDefenderFlowResources;
+    public readonly int BuildRuntimeDefenderTargetDensity;
+    public readonly int SelectRuntimeDefenderFlowTargets;
+    public readonly int GenerateRuntimeDefenderFlowField;
     public readonly int ClearPendingDamage;
     public readonly int EvaluateStateAndAccumulateDamage;
     public readonly int ResolveDamageSimulateAndClassify;
@@ -16,10 +20,14 @@ public struct MassGpuKernelSet_Stage5
     private MassGpuKernelSet_Stage5(
         int clearGrid,
         int buildSpatialHash,
-        int clearRuntimeDefenderDensity,
-        int buildRuntimeDefenderDensity,
-        int selectRuntimeFlowTargets,
+        int clearRuntimeAttackerFlowResources,
+        int buildRuntimeAttackerTargetDensity,
+        int selectRuntimeAttackerFlowTargets,
         int generateRuntimeAttackerFlowField,
+        int clearRuntimeDefenderFlowResources,
+        int buildRuntimeDefenderTargetDensity,
+        int selectRuntimeDefenderFlowTargets,
+        int generateRuntimeDefenderFlowField,
         int clearPendingDamage,
         int evaluateStateAndAccumulateDamage,
         int resolveDamageSimulateAndClassify,
@@ -27,10 +35,14 @@ public struct MassGpuKernelSet_Stage5
     {
         ClearGrid = clearGrid;
         BuildSpatialHash = buildSpatialHash;
-        ClearRuntimeDefenderDensity = clearRuntimeDefenderDensity;
-        BuildRuntimeDefenderDensity = buildRuntimeDefenderDensity;
-        SelectRuntimeFlowTargets = selectRuntimeFlowTargets;
+        ClearRuntimeAttackerFlowResources = clearRuntimeAttackerFlowResources;
+        BuildRuntimeAttackerTargetDensity = buildRuntimeAttackerTargetDensity;
+        SelectRuntimeAttackerFlowTargets = selectRuntimeAttackerFlowTargets;
         GenerateRuntimeAttackerFlowField = generateRuntimeAttackerFlowField;
+        ClearRuntimeDefenderFlowResources = clearRuntimeDefenderFlowResources;
+        BuildRuntimeDefenderTargetDensity = buildRuntimeDefenderTargetDensity;
+        SelectRuntimeDefenderFlowTargets = selectRuntimeDefenderFlowTargets;
+        GenerateRuntimeDefenderFlowField = generateRuntimeDefenderFlowField;
         ClearPendingDamage = clearPendingDamage;
         EvaluateStateAndAccumulateDamage = evaluateStateAndAccumulateDamage;
         ResolveDamageSimulateAndClassify = resolveDamageSimulateAndClassify;
@@ -42,10 +54,14 @@ public struct MassGpuKernelSet_Stage5
         return new MassGpuKernelSet_Stage5(
             computeShader.FindKernel("ClearGrid"),
             computeShader.FindKernel("BuildSpatialHash"),
-            computeShader.FindKernel("ClearRuntimeDefenderDensity"),
-            computeShader.FindKernel("BuildRuntimeDefenderDensity"),
-            computeShader.FindKernel("SelectRuntimeFlowTargets"),
+            computeShader.FindKernel("ClearRuntimeAttackerFlowResources"),
+            computeShader.FindKernel("BuildRuntimeAttackerTargetDensity"),
+            computeShader.FindKernel("SelectRuntimeAttackerFlowTargets"),
             computeShader.FindKernel("GenerateRuntimeAttackerFlowField"),
+            computeShader.FindKernel("ClearRuntimeDefenderFlowResources"),
+            computeShader.FindKernel("BuildRuntimeDefenderTargetDensity"),
+            computeShader.FindKernel("SelectRuntimeDefenderFlowTargets"),
+            computeShader.FindKernel("GenerateRuntimeDefenderFlowField"),
             computeShader.FindKernel("ClearPendingDamage"),
             computeShader.FindKernel("EvaluateStateAndAccumulateDamage"),
             computeShader.FindKernel("ResolveDamageSimulateAndClassify"),
