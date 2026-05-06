@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: FarInstancedAgent_Stage6_Defdener
+  m_Shader: {fileID: 4800000, guid: ed9e468a87f84133ae6cf7452196d12b, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: a63884258dc521b4085d9bc96fe60c86, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _VATNormTex:
+        m_Texture: {fileID: 2800000, guid: 3695b6dd5a067d54b8c1bc2aee4dd5ce, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _VATPosTex:
+        m_Texture: {fileID: 2800000, guid: b1ae268e89e9b7b4bbe790838159c697, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AttackClipFrameCount: 16
+    - _AttackClipFrameRate: 30
+    - _AttackClipStartFrame: 36
+    - _DeathClipFrameCount: 15
+    - _DeathClipFrameRate: 30
+    - _DeathClipStartFrame: 52
+    - _IdleClipFrameCount: 20
+    - _IdleClipFrameRate: 30
+    - _IdleClipStartFrame: 0
+    - _MoveClipFrameCount: 16
+    - _MoveClipFrameRate: 30
+    - _MoveClipStartFrame: 20
+    - _VATFrameCount: 67
+    - _VATFrameRate: 30
+    - _VATRowsPerFrame: 1
+    - _VATTexHeight: 67
+    - _VATTexWidth: 4066
+    m_Colors:
+    - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

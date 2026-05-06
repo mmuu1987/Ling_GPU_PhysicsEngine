@@ -1,0 +1,30 @@
+﻿#pragma kernel ClearGrid
+#pragma kernel BuildSpatialHash
+
+#include "AgentDataCommon_Stage6.hlsl"
+
+[numthreads(64, 1, 1)]
+void ClearGrid(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= gridCellCount)
+        return;
+
+    gridCounts[id.x] = 0;
+}
+
+[numthreads(64, 1, 1)]
+void BuildSpatialHash(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count || !IsAliveIndex(id.x))
+        return;
+
+    uint cellIndex = CellToIndex(PositionToCell(agentBuffer[id.x].position));
+    uint slot;
+    InterlockedAdd(gridCounts[cellIndex], 1, slot);
+    if (slot < maxAgentsPerCell)
+        gridAgentIndices[cellIndex * maxAgentsPerCell + slot] = id.x;
+}
+

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e83e0b69f20012a45b241871518b1822, type: 3}
+  m_Name: Stage6DefenderRenderConfig
+  m_EditorClassIdentifier: 
+  vatProfile: {fileID: 11400000, guid: 391a46043edc3be45a9f2bec200f675a, type: 2}
+  nearMesh: {fileID: 4300000, guid: 49530f134b183c546a5cd62ba9dc1ed2, type: 2}
+  midMesh: {fileID: 4300000, guid: db2a4b402547afd41afc433760575880, type: 2}
+  farMesh: {fileID: 4300000, guid: db2a4b402547afd41afc433760575880, type: 2}
+  nearMaterial: {fileID: 2100000, guid: 7f075e4003194f89bb629659ee998983, type: 2}
+  midMaterial: {fileID: 2100000, guid: 8eada432343e460fa3d70e9ec3222c73, type: 2}
+  farMaterial: {fileID: 2100000, guid: 8eada432343e460fa3d70e9ec3222c73, type: 2}
