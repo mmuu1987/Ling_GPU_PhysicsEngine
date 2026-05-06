@@ -1,0 +1,111 @@
+#pragma kernel Clear
+#pragma kernel Paint
+#pragma kernel Visualize
+
+RWTexture2D<float4> FlowFieldData;
+RWTexture2D<float4> FlowFieldPreview;
+
+int2 TextureSize;
+float2 PreviousUV;
+float2 CurrentUV;
+float BrushRadiusUV;
+float BrushSpeed;
+float BrushStrength;
+int EraseMode;
+
+[numthreads(8, 8, 1)]
+void Clear(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)TextureSize.x || id.y >= (uint)TextureSize.y)
+        return;
+
+    FlowFieldData[int2(id.xy)] = 0.0;
+}
+
+float DistanceToSegment(float2 p, float2 a, float2 b)
+{
+    float2 ab = b - a;
+    float lenSqr = dot(ab, ab);
+    if (lenSqr <= 0.0000001)
+        return distance(p, b);
+
+    float t = saturate(dot(p - a, ab) / lenSqr);
+    return distance(p, a + ab * t);
+}
+
+[numthreads(8, 8, 1)]
+void Paint(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)TextureSize.x || id.y >= (uint)TextureSize.y)
+        return;
+
+    float2 textureSize = max(float2(TextureSize), float2(1.0, 1.0));
+    float2 uv = (float2(id.xy) + 0.5) / textureSize;
+    float dist = DistanceToSegment(uv, PreviousUV, CurrentUV);
+    if (dist > BrushRadiusUV)
+        return;
+
+    float2 stroke = CurrentUV - PreviousUV;
+    float strokeLen = length(stroke);
+    if (strokeLen <= 0.000001 && EraseMode == 0)
+        return;
+
+    float falloff = 1.0 - smoothstep(0.0, BrushRadiusUV, dist);
+    float influence = saturate(falloff * BrushStrength);
+    float4 oldValue = FlowFieldData[int2(id.xy)];
+
+    if (EraseMode != 0)
+    {
+        float4 erased = lerp(oldValue, 0.0, influence);
+        if (erased.w < 0.02)
+            erased = 0.0;
+        FlowFieldData[int2(id.xy)] = erased;
+        return;
+    }
+
+    float2 direction = stroke / strokeLen;
+    float2 oldDirection = oldValue.xy;
+    if (dot(oldDirection, oldDirection) <= 0.0001)
+        oldDirection = direction;
+
+    float2 mixedCandidate = lerp(normalize(oldDirection), direction, influence);
+    float2 mixedDirection = dot(mixedCandidate, mixedCandidate) > 0.0001 ? normalize(mixedCandidate) : direction;
+    float mixedSpeed = lerp(oldValue.z, saturate(BrushSpeed), influence);
+    float mixedWeight = saturate(max(oldValue.w, influence));
+    FlowFieldData[int2(id.xy)] = float4(mixedDirection, mixedSpeed, mixedWeight);
+}
+
+float3 HsvToRgb(float3 c)
+{
+    float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float3 p = abs(frac(c.xxx + k.xyz) * 6.0 - k.www);
+    return c.z * lerp(k.xxx, saturate(p - k.xxx), c.y);
+}
+
+[numthreads(8, 8, 1)]
+void Visualize(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)TextureSize.x || id.y >= (uint)TextureSize.y)
+        return;
+
+    float4 data = FlowFieldData[int2(id.xy)];
+    float2 direction = data.xy;
+    float speed = saturate(data.z);
+    float weight = saturate(data.w);
+
+    if (dot(direction, direction) <= 0.0001 || speed <= 0.001 || weight <= 0.001)
+    {
+        FlowFieldPreview[int2(id.xy)] = float4(0.01, 0.01, 0.012, 1.0);
+        return;
+    }
+
+    direction = normalize(direction);
+    float hue = atan2(direction.y, direction.x) / 6.2831853;
+    if (hue < 0.0)
+        hue += 1.0;
+
+    float saturation = lerp(0.35, 1.0, weight);
+    float value = lerp(0.18, 1.0, speed);
+    float3 rgb = HsvToRgb(float3(hue, saturation, value));
+    FlowFieldPreview[int2(id.xy)] = float4(rgb, 1.0);
+}

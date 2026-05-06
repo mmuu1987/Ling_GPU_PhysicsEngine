@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d45777456a3a30448be8501bec76ca5, type: 3}
+  m_Name: Stage6DefenderTeamConfig
+  m_EditorClassIdentifier: 
+  teamName: Defender
+  teamId: 1
+  teamColor: {r: 1, g: 1, b: 1, a: 1}
+  defaultEnemyTeamId: 0
+  behaviorMode: 3
+  guardRadius: 6
+  maxChaseDistance: 3000
+  unitConfig: {fileID: 11400000, guid: 50d992100f8147bcb76ea3cdad42e492, type: 2}
+  spawnConfig: {fileID: 11400000, guid: 9a15983c70b4488fa8396a44dcf7fdce, type: 2}
+  renderConfig: {fileID: 11400000, guid: 5bc675fbb8684f5fb911031f78a28fa5, type: 2}
+  flowFieldConfig: {fileID: 11400000, guid: a793de3cb8f74beda7a91e5f8505039f, type: 2}

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e5091db473fbbd7429b1be7d6f8a6041, type: 3}
+  m_Name: Stage6AttackerFlowFieldConfig
+  m_EditorClassIdentifier: 
+  enableNavigation: 1
+  paintedFlowFieldAsset: {fileID: 11400000, guid: ae746961d3684ba4ab6ff42c9a66f238, type: 2}
+  cellSize: 2
+  weight: 1
+  responsiveness: 6
+  useRuntimeDynamicFlow: 1
+  autoSizeRuntimeFlowField: 1
+  runtimePadding: 40
+  runtimeMaxResolution: 256
+  updateInterval: 10
+  sectorCount: 5
+  targetStopRadius: 2
+  minEnemiesPerTarget: 8
