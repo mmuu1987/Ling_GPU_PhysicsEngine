@@ -1,7 +1,10 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public partial class GPUInstancingManager_Stage6
+using static MassGpuShaderPropertyIds_Stage6;
+using DefenderMovementMode = GPUInstancingManager_Stage6.DefenderMovementMode;
+
+public sealed partial class MassGpuRuntime_Stage6
 {
     private void UploadInitialAgents()
     {
@@ -194,6 +197,6 @@ public partial class GPUInstancingManager_Stage6
 
         Graphics.DrawMeshInstancedIndirect(
             mesh, 0, material, renderBounds, argsBuffer, 0,
-            propertyBlock, shadowCastingMode, true, gameObject.layer);
+            propertyBlock, shadowCastingMode, true, owner.gameObject.layer);
     }
 }

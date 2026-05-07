@@ -1,12 +1,14 @@
 using UnityEngine;
-using UnityEngine.Rendering;
 
-public partial class GPUInstancingManager_Stage6
+using DefenderMovementMode = GPUInstancingManager_Stage6.DefenderMovementMode;
+using FlowFieldPreviewSnapshot = GPUInstancingManager_Stage6.FlowFieldPreviewSnapshot;
+
+public sealed partial class MassGpuRuntime_Stage6
 {
     private void BuildAndUploadFlowField()
     {
-        ReleaseBuffer(ref flowFieldDirectionsBuffer);
-        ReleaseBuffer(ref defenderFlowFieldDirectionsBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.flowFieldDirectionsBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.defenderFlowFieldDirectionsBuffer);
 
         if (!enableFlowFieldNavigation)
         {
@@ -331,12 +333,12 @@ public partial class GPUInstancingManager_Stage6
 
     private void CreateRuntimeDynamicFlowResources()
     {
-        ReleaseBuffer(ref runtimeAttackerTargetDensityBuffer);
-        ReleaseBuffer(ref runtimeAttackerFlowStatsBuffer);
-        ReleaseBuffer(ref runtimeAttackerFlowTargetsBuffer);
-        ReleaseBuffer(ref runtimeDefenderTargetDensityBuffer);
-        ReleaseBuffer(ref runtimeDefenderFlowStatsBuffer);
-        ReleaseBuffer(ref runtimeDefenderFlowTargetsBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.runtimeAttackerTargetDensityBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.runtimeAttackerFlowStatsBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.runtimeAttackerFlowTargetsBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.runtimeDefenderTargetDensityBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.runtimeDefenderFlowStatsBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.runtimeDefenderFlowTargetsBuffer);
         ReleaseRuntimeFlowPreviewTextures();
 
         int attackerCellCount = Mathf.Max(1, flowFieldResolutionX * flowFieldResolutionZ);
@@ -372,8 +374,8 @@ public partial class GPUInstancingManager_Stage6
 
     private void ReleaseRuntimeFlowPreviewTextures()
     {
-        ReleaseRuntimeFlowPreviewTexture(ref runtimeAttackerFlowPreviewTexture);
-        ReleaseRuntimeFlowPreviewTexture(ref runtimeDefenderFlowPreviewTexture);
+        ReleaseRuntimeFlowPreviewTexture(ref buffers.runtimeAttackerFlowPreviewTexture);
+        ReleaseRuntimeFlowPreviewTexture(ref buffers.runtimeDefenderFlowPreviewTexture);
     }
 
     private void ReleaseRuntimeFlowPreviewTexture(ref RenderTexture texture)
@@ -383,9 +385,9 @@ public partial class GPUInstancingManager_Stage6
 
         texture.Release();
         if (Application.isPlaying)
-            Destroy(texture);
+            Object.Destroy(texture);
         else
-            DestroyImmediate(texture);
+            Object.DestroyImmediate(texture);
         texture = null;
     }
 
@@ -638,7 +640,7 @@ public partial class GPUInstancingManager_Stage6
             return;
 
         runtimeDynamicAttackerFlowActive = false;
-        ReleaseBuffer(ref flowFieldDirectionsBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.flowFieldDirectionsBuffer);
 
         if (!enableFlowFieldNavigation)
         {
@@ -668,7 +670,7 @@ public partial class GPUInstancingManager_Stage6
             return;
 
         runtimeDynamicDefenderFlowActive = false;
-        ReleaseBuffer(ref defenderFlowFieldDirectionsBuffer);
+        MassGpuBufferSet_Stage6.ReleaseBuffer(ref buffers.defenderFlowFieldDirectionsBuffer);
 
         if (!enableFlowFieldNavigation || defenderMovementMode != DefenderMovementMode.UseDefenderFlowField)
         {

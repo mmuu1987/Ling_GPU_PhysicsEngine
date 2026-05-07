@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 /// Stage6 GPU instancing manager. Owns compute buffers, simulation dispatch, VAT material
 /// parameter upload, and indirect LOD drawing for the mass-agent demo.
 /// </summary>
-public partial class GPUInstancingManager_Stage6 : MonoBehaviour
+public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
 {
     public enum DefenderMovementMode
     {
@@ -217,7 +217,7 @@ public partial class GPUInstancingManager_Stage6 : MonoBehaviour
         18f,
         5f);
 
-    [SerializeField, HideInInspector] private bool splitTeamSettingsInitialized;
+    [SerializeField, HideInInspector] internal bool splitTeamSettingsInitialized;
     [Tooltip("攻击方方阵中心位置。默认建议放在左侧，让攻击方面向 +X。")]
     [HideInInspector]
     public Vector3 attackerSpawnCenter = new Vector3(-45f, 0f, 0f);
@@ -310,21 +310,21 @@ public partial class GPUInstancingManager_Stage6 : MonoBehaviour
 
     [Header("Stage 5 VAT Clip Windows")]
     [Tooltip("Idle 动作在 VAT 贴图中的起始帧和帧数。使用 VAT Profile 时自动填充。")]
-    public Vector2 idleClipFrameRange = new Vector2(0f, 30f);
+    [HideInInspector] public Vector2 idleClipFrameRange = new Vector2(0f, 30f);
     [Tooltip("Move/Engage 动作在 VAT 贴图中的起始帧和帧数。使用 VAT Profile 时自动填充。")]
-    public Vector2 moveClipFrameRange = new Vector2(0f, 30f);
+    [HideInInspector] public Vector2 moveClipFrameRange = new Vector2(0f, 30f);
     [Tooltip("Attack 动作在 VAT 贴图中的起始帧和帧数。使用 VAT Profile 时自动填充。")]
-    public Vector2 attackClipFrameRange = new Vector2(0f, 30f);
+    [HideInInspector] public Vector2 attackClipFrameRange = new Vector2(0f, 30f);
     [Tooltip("Death 动作在 VAT 贴图中的起始帧和帧数。使用 VAT Profile 时自动填充。")]
-    public Vector2 deathClipFrameRange = new Vector2(0f, 30f);
+    [HideInInspector] public Vector2 deathClipFrameRange = new Vector2(0f, 30f);
     [Tooltip("Idle 动作播放帧率。使用 VAT Profile 时自动填充。")]
-    public float idleClipFrameRate = 30f;
+    [HideInInspector] public float idleClipFrameRate = 30f;
     [Tooltip("Move/Engage 动作播放帧率。使用 VAT Profile 时自动填充。")]
-    public float moveClipFrameRate = 30f;
+    [HideInInspector] public float moveClipFrameRate = 30f;
     [Tooltip("Attack 动作播放帧率。使用 VAT Profile 时自动填充。")]
-    public float attackClipFrameRate = 30f;
+    [HideInInspector] public float attackClipFrameRate = 30f;
     [Tooltip("Death 动作播放帧率。使用 VAT Profile 时自动填充。")]
-    public float deathClipFrameRate = 30f;
+    [HideInInspector] public float deathClipFrameRate = 30f;
 
     [Header("Stage 4 Flow Field Navigation")]
     [Tooltip("是否启用流场导航。关闭后攻击方不会沿 Painted Flow Field 推进；防守方流场模式也会回退为原地防守。")]
@@ -406,373 +406,74 @@ public partial class GPUInstancingManager_Stage6 : MonoBehaviour
         public RenderTexture runtimePreviewTexture;
     }
 
-    [System.NonSerialized] private FlowFieldPreviewSnapshot flowFieldPreview = new FlowFieldPreviewSnapshot();
-    public FlowFieldPreviewSnapshot FlowFieldPreview
-    {
-        get
-        {
-            if (flowFieldPreview == null)
-                flowFieldPreview = new FlowFieldPreviewSnapshot();
+    private MassGpuRuntime_Stage6 runtime;
+    private MassGpuRuntime_Stage6 Runtime => runtime ??= new MassGpuRuntime_Stage6(this);
+    public FlowFieldPreviewSnapshot FlowFieldPreview => Runtime.FlowFieldPreview;
 
-            return flowFieldPreview;
-        }
-    }
-
-    private static readonly int DeltaTimeId = Shader.PropertyToID("deltaTime");
-    private static readonly int AnimationDurationId = Shader.PropertyToID("animationDuration");
-    private static readonly int FrameIndexId = Shader.PropertyToID("frameIndex");
-    private static readonly int LodCenterId = Shader.PropertyToID("lodCenter");
-    private static readonly int NearLodRadiusSqrId = Shader.PropertyToID("nearLodRadiusSqr");
-    private static readonly int MidLodRadiusSqrId = Shader.PropertyToID("midLodRadiusSqr");
-    private static readonly int EnableFrustumCullingId = Shader.PropertyToID("enableFrustumCulling");
-    private static readonly int CullingRadiusId = Shader.PropertyToID("cullingRadius");
-    private static readonly int FrustumPlanesId = Shader.PropertyToID("frustumPlanes");
-    private static readonly int NearAnimationIntervalId = Shader.PropertyToID("nearAnimationInterval");
-    private static readonly int MidAnimationIntervalId = Shader.PropertyToID("midAnimationInterval");
-    private static readonly int FarAnimationIntervalId = Shader.PropertyToID("farAnimationInterval");
-    private static readonly int AgentBufferId = Shader.PropertyToID("agentBuffer");
-    private static readonly int NearAttackerAgentIndicesId = Shader.PropertyToID("nearAttackerAgentIndices");
-    private static readonly int MidAttackerAgentIndicesId = Shader.PropertyToID("midAttackerAgentIndices");
-    private static readonly int FarAttackerAgentIndicesId = Shader.PropertyToID("farAttackerAgentIndices");
-    private static readonly int NearDefenderAgentIndicesId = Shader.PropertyToID("nearDefenderAgentIndices");
-    private static readonly int MidDefenderAgentIndicesId = Shader.PropertyToID("midDefenderAgentIndices");
-    private static readonly int FarDefenderAgentIndicesId = Shader.PropertyToID("farDefenderAgentIndices");
-    private static readonly int VisibleAgentIndicesId = Shader.PropertyToID("visibleAgentIndices");
-    private static readonly int GridCountsId = Shader.PropertyToID("gridCounts");
-    private static readonly int GridAgentIndicesId = Shader.PropertyToID("gridAgentIndices");
-    private static readonly int GridCountsReadBufferId = Shader.PropertyToID("gridCountsReadBuffer");
-    private static readonly int GridAgentIndicesReadBufferId = Shader.PropertyToID("gridAgentIndicesReadBuffer");
-    private static readonly int GridCellCountId = Shader.PropertyToID("gridCellCount");
-    private static readonly int GridResolutionId = Shader.PropertyToID("gridResolution");
-    private static readonly int GridOriginId = Shader.PropertyToID("gridOrigin");
-    private static readonly int GridWorldSizeId = Shader.PropertyToID("gridWorldSize");
-    private static readonly int CellSizeId = Shader.PropertyToID("cellSize");
-    private static readonly int MaxAgentsPerCellId = Shader.PropertyToID("maxAgentsPerCell");
-    private static readonly int AttackerAgentRadiusId = Shader.PropertyToID("attackerAgentRadius");
-    private static readonly int DefenderAgentRadiusId = Shader.PropertyToID("defenderAgentRadius");
-    private static readonly int AttackerSeparationStrengthId = Shader.PropertyToID("attackerSeparationStrength");
-    private static readonly int DefenderSeparationStrengthId = Shader.PropertyToID("defenderSeparationStrength");
-    private static readonly int AttackerVelocityDampingId = Shader.PropertyToID("attackerVelocityDamping");
-    private static readonly int DefenderVelocityDampingId = Shader.PropertyToID("defenderVelocityDamping");
-    private static readonly int AttackerMaxSpeedId = Shader.PropertyToID("attackerMaxSpeed");
-    private static readonly int DefenderMaxSpeedId = Shader.PropertyToID("defenderMaxSpeed");
-    private static readonly int BoundaryPaddingId = Shader.PropertyToID("boundaryPadding");
-    private static readonly int FlowFieldDirectionsId = Shader.PropertyToID("flowFieldDirections");
-    private static readonly int FlowFieldEnabledId = Shader.PropertyToID("flowFieldEnabled");
-    private static readonly int FlowFieldResolutionId = Shader.PropertyToID("flowFieldResolution");
-    private static readonly int FlowFieldOriginId = Shader.PropertyToID("flowFieldOrigin");
-    private static readonly int FlowFieldCellSizeId = Shader.PropertyToID("flowFieldCellSize");
-    private static readonly int FlowFieldWeightId = Shader.PropertyToID("flowFieldWeight");
-    private static readonly int FlowFieldResponsivenessId = Shader.PropertyToID("flowFieldResponsiveness");
-    private static readonly int RuntimeAttackerTargetDensityId = Shader.PropertyToID("runtimeAttackerTargetDensity");
-    private static readonly int RuntimeAttackerFlowStatsId = Shader.PropertyToID("runtimeAttackerFlowStats");
-    private static readonly int RuntimeAttackerFlowTargetsId = Shader.PropertyToID("runtimeAttackerFlowTargets");
-    private static readonly int RuntimeAttackerFlowPreviewTextureId = Shader.PropertyToID("runtimeAttackerFlowPreviewTexture");
-    private static readonly int RuntimeDefenderTargetDensityId = Shader.PropertyToID("runtimeDefenderTargetDensity");
-    private static readonly int RuntimeDefenderFlowStatsId = Shader.PropertyToID("runtimeDefenderFlowStats");
-    private static readonly int RuntimeDefenderFlowTargetsId = Shader.PropertyToID("runtimeDefenderFlowTargets");
-    private static readonly int RuntimeDefenderFlowPreviewTextureId = Shader.PropertyToID("runtimeDefenderFlowPreviewTexture");
-    private static readonly int RuntimeFlowPreviewModeId = Shader.PropertyToID("runtimeFlowPreviewMode");
-    private static readonly int RuntimeDynamicAttackerFlowEnabledId = Shader.PropertyToID("runtimeDynamicAttackerFlowEnabled");
-    private static readonly int RuntimeDynamicDefenderFlowEnabledId = Shader.PropertyToID("runtimeDynamicDefenderFlowEnabled");
-    private static readonly int DynamicFlowSectorCountId = Shader.PropertyToID("dynamicFlowSectorCount");
-    private static readonly int DynamicFlowTargetStopRadiusId = Shader.PropertyToID("dynamicFlowTargetStopRadius");
-    private static readonly int DynamicFlowMinDefendersPerTargetId = Shader.PropertyToID("dynamicFlowMinDefendersPerTarget");
-    private static readonly int DynamicDefenderFlowSectorCountId = Shader.PropertyToID("dynamicDefenderFlowSectorCount");
-    private static readonly int DynamicDefenderFlowTargetStopRadiusId = Shader.PropertyToID("dynamicDefenderFlowTargetStopRadius");
-    private static readonly int DynamicDefenderFlowMinAttackersPerTargetId = Shader.PropertyToID("dynamicDefenderFlowMinAttackersPerTarget");
-    private static readonly int DefenderFlowFieldDirectionsId = Shader.PropertyToID("defenderFlowFieldDirections");
-    private static readonly int DefenderFlowFieldEnabledId = Shader.PropertyToID("defenderFlowFieldEnabled");
-    private static readonly int DefenderFlowFieldResolutionId = Shader.PropertyToID("defenderFlowFieldResolution");
-    private static readonly int DefenderFlowFieldOriginId = Shader.PropertyToID("defenderFlowFieldOrigin");
-    private static readonly int DefenderFlowFieldCellSizeId = Shader.PropertyToID("defenderFlowFieldCellSize");
-    private static readonly int DefenderMovementModeId = Shader.PropertyToID("defenderMovementMode");
-    private static readonly int TeamIdBufferId = Shader.PropertyToID("teamIdBuffer");
-    private static readonly int HpBufferId = Shader.PropertyToID("hpBuffer");
-    private static readonly int TeamIdReadBufferId = Shader.PropertyToID("teamIdReadBuffer");
-    private static readonly int HpReadBufferId = Shader.PropertyToID("hpReadBuffer");
-    private static readonly int TargetAgentIndexBufferId = Shader.PropertyToID("targetAgentIndexBuffer");
-    private static readonly int AttackCooldownBufferId = Shader.PropertyToID("attackCooldownBuffer");
-    private static readonly int HomePositionReadBufferId = Shader.PropertyToID("homePositionReadBuffer");
-    private static readonly int PendingDamageBufferId = Shader.PropertyToID("pendingDamageBuffer");
-    private static readonly int PendingDamageReadBufferId = Shader.PropertyToID("pendingDamageReadBuffer");
-    private static readonly int EnableTwoTeamCombatId = Shader.PropertyToID("enableTwoTeamCombat");
-    private static readonly int BattleStartedId = Shader.PropertyToID("battleStarted");
-    private static readonly int AttackerCountId = Shader.PropertyToID("attackerCount");
-    private static readonly int AttackerTargetAcquireRadiusId = Shader.PropertyToID("attackerTargetAcquireRadius");
-    private static readonly int DefenderTargetAcquireRadiusId = Shader.PropertyToID("defenderTargetAcquireRadius");
-    private static readonly int AttackerAttackRangeId = Shader.PropertyToID("attackerAttackRange");
-    private static readonly int DefenderAttackRangeId = Shader.PropertyToID("defenderAttackRange");
-    private static readonly int AttackerAttackDamageId = Shader.PropertyToID("attackerAttackDamage");
-    private static readonly int DefenderAttackDamageId = Shader.PropertyToID("defenderAttackDamage");
-    private static readonly int AttackerAttackIntervalId = Shader.PropertyToID("attackerAttackInterval");
-    private static readonly int DefenderAttackIntervalId = Shader.PropertyToID("defenderAttackInterval");
-    private static readonly int DefenderGuardRadiusId = Shader.PropertyToID("defenderGuardRadius");
-    private static readonly int DefenderMaxChaseDistanceId = Shader.PropertyToID("defenderMaxChaseDistance");
-    private static readonly int DeathClipDurationId = Shader.PropertyToID("deathClipDuration");
-    private static readonly int VATFrameCountId = Shader.PropertyToID("_VATFrameCount");
-    private static readonly int VATFrameRateId = Shader.PropertyToID("_VATFrameRate");
-    private static readonly int IdleClipStartFrameId = Shader.PropertyToID("_IdleClipStartFrame");
-    private static readonly int IdleClipFrameCountId = Shader.PropertyToID("_IdleClipFrameCount");
-    private static readonly int IdleClipFrameRateId = Shader.PropertyToID("_IdleClipFrameRate");
-    private static readonly int MoveClipStartFrameId = Shader.PropertyToID("_MoveClipStartFrame");
-    private static readonly int MoveClipFrameCountId = Shader.PropertyToID("_MoveClipFrameCount");
-    private static readonly int MoveClipFrameRateId = Shader.PropertyToID("_MoveClipFrameRate");
-    private static readonly int AttackClipStartFrameId = Shader.PropertyToID("_AttackClipStartFrame");
-    private static readonly int AttackClipFrameCountId = Shader.PropertyToID("_AttackClipFrameCount");
-    private static readonly int AttackClipFrameRateId = Shader.PropertyToID("_AttackClipFrameRate");
-    private static readonly int DeathClipStartFrameId = Shader.PropertyToID("_DeathClipStartFrame");
-    private static readonly int DeathClipFrameCountId = Shader.PropertyToID("_DeathClipFrameCount");
-    private static readonly int DeathClipFrameRateId = Shader.PropertyToID("_DeathClipFrameRate");
-    private static readonly int VATPosTexId = Shader.PropertyToID("_VATPosTex");
-    private static readonly int VATNormTexId = Shader.PropertyToID("_VATNormTex");
-    private static readonly int VATTexWidthId = Shader.PropertyToID("_VATTexWidth");
-    private static readonly int VATTexHeightId = Shader.PropertyToID("_VATTexHeight");
-    private static readonly int VATRowsPerFrameId = Shader.PropertyToID("_VATRowsPerFrame");
-
-    private readonly Plane[] frustumPlanes = new Plane[6];
-    private readonly Vector4[] frustumPlaneVectors = new Vector4[6];
-
-    private ComputeBuffer agentBuffer;
-    private ComputeBuffer gridCountsBuffer;
-    private ComputeBuffer gridAgentIndicesBuffer;
-    private ComputeBuffer flowFieldDirectionsBuffer;
-    private ComputeBuffer defenderFlowFieldDirectionsBuffer;
-    private ComputeBuffer runtimeAttackerTargetDensityBuffer;
-    private ComputeBuffer runtimeAttackerFlowStatsBuffer;
-    private ComputeBuffer runtimeAttackerFlowTargetsBuffer;
-    private ComputeBuffer runtimeDefenderTargetDensityBuffer;
-    private ComputeBuffer runtimeDefenderFlowStatsBuffer;
-    private ComputeBuffer runtimeDefenderFlowTargetsBuffer;
-    private ComputeBuffer teamIdBuffer;
-    private ComputeBuffer hpBuffer;
-    private ComputeBuffer targetAgentIndexBuffer;
-    private ComputeBuffer attackCooldownBuffer;
-    private ComputeBuffer homePositionBuffer;
-    private ComputeBuffer pendingDamageBuffer;
-
-    private ComputeBuffer nearAttackerAgentIndexBuffer;
-    private ComputeBuffer midAttackerAgentIndexBuffer;
-    private ComputeBuffer farAttackerAgentIndexBuffer;
-    private ComputeBuffer nearDefenderAgentIndexBuffer;
-    private ComputeBuffer midDefenderAgentIndexBuffer;
-    private ComputeBuffer farDefenderAgentIndexBuffer;
-
-    private ComputeBuffer nearAttackerArgsBuffer;
-    private ComputeBuffer midAttackerArgsBuffer;
-    private ComputeBuffer farAttackerArgsBuffer;
-    private ComputeBuffer nearDefenderArgsBuffer;
-    private ComputeBuffer midDefenderArgsBuffer;
-    private ComputeBuffer farDefenderArgsBuffer;
-
-    private MaterialPropertyBlock nearAttackerPropertyBlock;
-    private MaterialPropertyBlock midAttackerPropertyBlock;
-    private MaterialPropertyBlock farAttackerPropertyBlock;
-    private MaterialPropertyBlock nearDefenderPropertyBlock;
-    private MaterialPropertyBlock midDefenderPropertyBlock;
-    private MaterialPropertyBlock farDefenderPropertyBlock;
-
-    private Mesh runtimeAttackerNearMesh;
-    private Mesh runtimeAttackerMidMesh;
-    private Mesh runtimeAttackerFarMesh;
-    private Mesh runtimeDefenderNearMesh;
-    private Mesh runtimeDefenderMidMesh;
-    private Mesh runtimeDefenderFarMesh;
-    private Mesh runtimeGeneratedFarMesh;
-    private Material runtimeAttackerNearMaterial;
-    private Material runtimeAttackerMidMaterial;
-    private Material runtimeAttackerFarMaterial;
-    private Material runtimeDefenderNearMaterial;
-    private Material runtimeDefenderMidMaterial;
-    private Material runtimeDefenderFarMaterial;
-    private RenderTexture runtimeAttackerFlowPreviewTexture;
-    private RenderTexture runtimeDefenderFlowPreviewTexture;
-
-    private Bounds renderBounds;
-
-    private MassGpuShaderSet_Stage6 kernels;
-    private readonly MassGpuDispatchScheduler_Stage6 dispatchScheduler = new MassGpuDispatchScheduler_Stage6();
-
-    private int agentThreadGroupsX;
-    private int gridThreadGroupsX;
-
-    private int gridResolutionX;
-    private int gridResolutionZ;
-    private int gridCellCount;
-    private Vector2 activeWorldSize;
-    private Vector2 gridOrigin;
-    private int flowFieldResolutionX = 1;
-    private int flowFieldResolutionZ = 1;
-    private Vector2 flowFieldOrigin;
-    private float activeFlowFieldCellSize = 2f;
-    private int defenderFlowFieldResolutionX = 1;
-    private int defenderFlowFieldResolutionZ = 1;
-    private Vector2 defenderFlowFieldOrigin;
-    private float activeDefenderFlowFieldCellSize = 2f;
-    private float nextDynamicFlowUpdateTime;
-    private float nextDefenderDynamicFlowUpdateTime;
-    private bool runtimeDynamicAttackerFlowActive;
-    private bool runtimeDynamicDefenderFlowActive;
-    private float lastRuntimeDynamicFlowUpdateTime = -1f;
-    private float lastRuntimeDynamicDefenderFlowUpdateTime = -1f;
-
-    private float AnimationDuration => vatFrameCount / Mathf.Max(vatFrameRate, 0.0001f);
-    private int FlowFieldThreadGroupsX => Mathf.CeilToInt(Mathf.Max(1, flowFieldResolutionX * flowFieldResolutionZ) / 64f);
-    private int DefenderFlowFieldThreadGroupsX => Mathf.CeilToInt(Mathf.Max(1, defenderFlowFieldResolutionX * defenderFlowFieldResolutionZ) / 64f);
 
     private void Start()
     {
-        MigrateLegacyTeamSettingsIfNeeded();
-        if (applyConfigAssetsOnStart)
-            ApplyConfigAssetsToManager();
+        Runtime.Initialize();
+    }
 
-        attackerSettings.Normalize();
-        defenderSettings.Normalize();
-        InitializeBuffers();
+    private void Update()
+    {
+        runtime?.Tick();
+    }
+
+    private void OnDisable()
+    {
+        runtime?.Release();
+        runtime = null;
     }
 
     public void StartBattle()
     {
-        battleStarted = true;
-        nextDynamicFlowUpdateTime = Time.time;
-        nextDefenderDynamicFlowUpdateTime = Time.time;
+        Runtime.StartBattle();
     }
 
     public void StopBattle()
     {
-        battleStarted = false;
-        runtimeDynamicAttackerFlowActive = false;
-        runtimeDynamicDefenderFlowActive = false;
-        RestorePaintedAttackerFlowField("Battle stopped; attacker flow field restored to painted fallback.");
-        RestorePaintedDefenderFlowField("Battle stopped; defender flow field restored to painted fallback.");
+        Runtime.StopBattle();
     }
 
     public void ResetBattleStarted()
     {
-        battleStarted = false;
-        runtimeDynamicAttackerFlowActive = false;
-        runtimeDynamicDefenderFlowActive = false;
-        RestorePaintedAttackerFlowField("Battle reset; attacker flow field restored to painted fallback.");
-        RestorePaintedDefenderFlowField("Battle reset; defender flow field restored to painted fallback.");
+        Runtime.ResetBattleStarted();
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    public void ApplyConfigAssetsToManager()
+    {
+        Runtime.ApplyConfigAssetsToManager();
+    }
 
     [ContextMenu("Stage6/Rebuild Flow Field")]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    private void MigrateLegacyTeamSettingsIfNeeded()
+    public void RebuildFlowField()
     {
-        if (splitTeamSettingsInitialized)
-            return;
-
-        attackerSettings = TeamCombatSettings.Create(
-            attackerSpawnCenter,
-            attackerSpawnSize,
-            targetAcquireRadius,
-            attackRange,
-            attackDamage,
-            attackInterval,
-            maxHp,
-            maxSpeed,
-            agentRadius,
-            separationStrength,
-            velocityDamping);
-
-        defenderSettings = TeamCombatSettings.Create(
-            defenderSpawnCenter,
-            defenderSpawnSize,
-            Mathf.Max(0.1f, defenderAggroRadius),
-            attackRange,
-            attackDamage,
-            attackInterval,
-            maxHp,
-            maxSpeed,
-            agentRadius,
-            separationStrength,
-            velocityDamping);
-
-        splitTeamSettingsInitialized = true;
+        Runtime.RebuildFlowField();
     }
+
+    [ContextMenu("Stage6/Rebuild Flow Field Preview")]
+    public void RebuildFlowFieldPreview()
+    {
+        Runtime.RebuildFlowFieldPreview();
+    }
+
+    public bool TryApplyVatProfile(bool logWarnings = true)
+    {
+        return Runtime.TryApplyVatProfile(logWarnings);
+    }
+
+    public bool ApplyVatProfileToAssignedMaterials(bool logWarnings = true)
+    {
+        return Runtime.ApplyVatProfileToAssignedMaterials(logWarnings);
+    }
+
+    public string GetVatProfileStatus()
+    {
+        return Runtime.GetVatProfileStatus();
+    }
+
 
 #if UNITY_EDITOR
 
@@ -787,7 +488,7 @@ public partial class GPUInstancingManager_Stage6 : MonoBehaviour
     private void OnValidate()
     {
         TryApplyVatProfile(false);
-        MigrateLegacyTeamSettingsIfNeeded();
+        Runtime.MigrateLegacyTeamSettingsIfNeeded();
 
         instanceCount = Mathf.Max(1, instanceCount);
         shadowCastingRadius = Mathf.Max(0f, shadowCastingRadius);

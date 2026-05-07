@@ -1,27 +1,29 @@
 using System.Runtime.InteropServices;
 using UnityEngine;
-using UnityEngine.Rendering;
 
-public partial class GPUInstancingManager_Stage6
+using static MassGpuShaderPropertyIds_Stage6;
+using AgentData = GPUInstancingManager_Stage6.AgentData;
+
+public sealed partial class MassGpuRuntime_Stage6
 {
     private void InitializeBuffers()
     {
         if (!TryApplyVatProfile(true))
         {
-            enabled = false;
+            owner.enabled = false;
             return;
         }
 
         if (instanceMesh == null || instanceMaterial == null)
         {
             Debug.LogError("[GPUInstancingManager_Stage6] Missing Mesh or Material.");
-            enabled = false;
+            owner.enabled = false;
             return;
         }
 
         if (!ValidateRequiredComputeShaders())
         {
-            enabled = false;
+            owner.enabled = false;
             return;
         }
 
@@ -305,60 +307,18 @@ public partial class GPUInstancingManager_Stage6
         }
     }
 
-    private void OnDisable()
-    {
-        ReleaseBuffers();
-    }
-
     private void ReleaseBuffers()
     {
         runtimeDynamicAttackerFlowActive = false;
         runtimeDynamicDefenderFlowActive = false;
 
-        ReleaseBuffer(ref agentBuffer);
-        ReleaseBuffer(ref gridCountsBuffer);
-        ReleaseBuffer(ref gridAgentIndicesBuffer);
-        ReleaseBuffer(ref flowFieldDirectionsBuffer);
-        ReleaseBuffer(ref defenderFlowFieldDirectionsBuffer);
-        ReleaseBuffer(ref runtimeAttackerTargetDensityBuffer);
-        ReleaseBuffer(ref runtimeAttackerFlowStatsBuffer);
-        ReleaseBuffer(ref runtimeAttackerFlowTargetsBuffer);
-        ReleaseBuffer(ref runtimeDefenderTargetDensityBuffer);
-        ReleaseBuffer(ref runtimeDefenderFlowStatsBuffer);
-        ReleaseBuffer(ref runtimeDefenderFlowTargetsBuffer);
-        ReleaseBuffer(ref teamIdBuffer);
-        ReleaseBuffer(ref hpBuffer);
-        ReleaseBuffer(ref targetAgentIndexBuffer);
-        ReleaseBuffer(ref attackCooldownBuffer);
-        ReleaseBuffer(ref homePositionBuffer);
-        ReleaseBuffer(ref pendingDamageBuffer);
-        ReleaseBuffer(ref nearAttackerAgentIndexBuffer);
-        ReleaseBuffer(ref midAttackerAgentIndexBuffer);
-        ReleaseBuffer(ref farAttackerAgentIndexBuffer);
-        ReleaseBuffer(ref nearDefenderAgentIndexBuffer);
-        ReleaseBuffer(ref midDefenderAgentIndexBuffer);
-        ReleaseBuffer(ref farDefenderAgentIndexBuffer);
-        ReleaseBuffer(ref nearAttackerArgsBuffer);
-        ReleaseBuffer(ref midAttackerArgsBuffer);
-        ReleaseBuffer(ref farAttackerArgsBuffer);
-        ReleaseBuffer(ref nearDefenderArgsBuffer);
-        ReleaseBuffer(ref midDefenderArgsBuffer);
-        ReleaseBuffer(ref farDefenderArgsBuffer);
+        buffers.ReleaseAll();
         ReleaseRuntimeFlowPreviewTextures();
 
         if (runtimeGeneratedFarMesh != null)
         {
-            Destroy(runtimeGeneratedFarMesh);
+            Object.Destroy(runtimeGeneratedFarMesh);
             runtimeGeneratedFarMesh = null;
         }
-    }
-
-    private static void ReleaseBuffer(ref ComputeBuffer buffer)
-    {
-        if (buffer == null)
-            return;
-
-        buffer.Release();
-        buffer = null;
     }
 }
