@@ -1,7 +1,9 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public partial class GPUInstancingManager_Stage6
+using static MassGpuShaderPropertyIds_Stage6;
+
+public sealed partial class MassGpuRuntime_Stage6
 {
     private void SyncVatClipWindows(Material material)
     {
@@ -38,7 +40,7 @@ public partial class GPUInstancingManager_Stage6
         if (!vatProfile.IsValid(out string error))
         {
             if (logWarnings)
-                Debug.LogError($"[GPUInstancingManager_Stage6] VAT Profile '{vatProfile.name}' is invalid: {error}", this);
+                Debug.LogError($"[GPUInstancingManager_Stage6] VAT Profile '{vatProfile.name}' is invalid: {error}", owner);
 
             return false;
         }
@@ -68,7 +70,7 @@ public partial class GPUInstancingManager_Stage6
         if (!defenderVatProfile.IsValid(out string error))
         {
             if (logWarnings)
-                Debug.LogError($"[GPUInstancingManager_Stage6] Defender VAT Profile '{defenderVatProfile.name}' is invalid: {error}", this);
+                Debug.LogError($"[GPUInstancingManager_Stage6] Defender VAT Profile '{defenderVatProfile.name}' is invalid: {error}", owner);
 
             return false;
         }

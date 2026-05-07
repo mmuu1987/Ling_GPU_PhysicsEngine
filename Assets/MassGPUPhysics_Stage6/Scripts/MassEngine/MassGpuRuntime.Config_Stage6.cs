@@ -1,7 +1,9 @@
 using UnityEngine;
-using UnityEngine.Rendering;
 
-public partial class GPUInstancingManager_Stage6
+using DefenderMovementMode = GPUInstancingManager_Stage6.DefenderMovementMode;
+using TeamCombatSettings = GPUInstancingManager_Stage6.TeamCombatSettings;
+
+public sealed partial class MassGpuRuntime_Stage6
 {
     public void ApplyConfigAssetsToManager()
     {
