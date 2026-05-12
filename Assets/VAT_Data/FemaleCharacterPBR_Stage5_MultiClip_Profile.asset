@@ -15,10 +15,16 @@ MonoBehaviour:
   cleanMesh: {fileID: 4300000, guid: 49530f134b183c546a5cd62ba9dc1ed2, type: 2}
   positionTexture: {fileID: 2800000, guid: b1ae268e89e9b7b4bbe790838159c697, type: 2}
   normalTexture: {fileID: 2800000, guid: 3695b6dd5a067d54b8c1bc2aee4dd5ce, type: 2}
+  midLodMesh: {fileID: 4300000, guid: 6ddcc556835e27c47b72665e492c6a00, type: 2}
+  midLodPositionTexture: {fileID: 2800000, guid: 9c736cdbe3644ea4d90bacc79b141bad, type: 2}
+  midLodNormalTexture: {fileID: 2800000, guid: 3763613cca924524da448532a0eaa58d, type: 2}
+  midLodTextureWidth: 2018
+  midLodTextureHeight: 67
+  midLodRowsPerFrame: 1
   lowLodMesh: {fileID: 4300000, guid: db2a4b402547afd41afc433760575880, type: 2}
   lowLodPositionTexture: {fileID: 2800000, guid: f767d02b216b3c144bd62bb2b8cb5c25, type: 2}
   lowLodNormalTexture: {fileID: 2800000, guid: 3cbdf5ca0ac27f648a441f258cf12bea, type: 2}
-  lowLodTextureWidth: 1010
+  lowLodTextureWidth: 39
   lowLodTextureHeight: 67
   lowLodRowsPerFrame: 1
   textureWidth: 4066

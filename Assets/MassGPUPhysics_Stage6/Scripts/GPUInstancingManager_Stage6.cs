@@ -21,7 +21,11 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
         DensityTarget = 1
     }
 
-    [Header("Stage6 Config Assets")]
+    [Header("Stage6 Scenario")]
+    [Tooltip("战场配置资产。指定后 Manager 从 Scenario 读取双方 TeamConfig 和战斗流程参数。")]
+    public Stage6ScenarioConfig_Stage6 scenarioConfig;
+
+    [Header("Stage6 Config Assets (Legacy / Override)")]
     [Tooltip("Apply assigned Stage6 team config assets before runtime buffers are created.")]
     public bool applyConfigAssetsOnStart = true;
     [Tooltip("When enabled, team Spawn Config unit counts drive Instance Count and Attacker Count.")]
@@ -130,7 +134,6 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
     [Header("Instancing")]
     [Tooltip("实例总数量。数值越大 GPU 负载和显存占用越高；双阵营模式下会按 Attacker Count 划分攻防双方。")]
     [Min(1)] public int instanceCount = 100000;
-    [Tooltip("VAT 数据配置资产。拖入后会自动应用 Mesh、VAT 贴图、帧数、帧率和四段动作窗口。")]
     [HideInInspector] public VATProfile_Stage5 vatProfile;
     [Tooltip("近距离使用的完整实例网格。使用 VAT Profile 时会自动填充。")]
     [HideInInspector] public Mesh instanceMesh;
@@ -174,19 +177,19 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
 
     [Header("Spawn")]
     [Tooltip("单阵营调试生成区域。启用 Two-Team Combat 时，主要使用攻击方/防守方各自的 Spawn Center 和 Spawn Size。")]
-    public Vector3 spawnArea = new Vector3(100f, 0f, 100f);
+    [HideInInspector] public Vector3 spawnArea = new Vector3(100f, 0f, 100f);
     [Tooltip("单阵营调试用：开启后个体更集中，便于观察碰撞和分离。双阵营方阵生成不会使用这个开关。")]
-    public bool spawnClusterForCollisionDemo = true;
+    [HideInInspector] public bool spawnClusterForCollisionDemo = true;
     [Tooltip("单阵营集中生成半径。越小越拥挤，越容易触发 Separation。双阵营方阵生成不会使用这个值。")]
-    [Min(0.01f)] public float clusteredSpawnRadius = 60f;
+    [HideInInspector, Min(0.01f)] public float clusteredSpawnRadius = 60f;
 
     [Header("Stage 5 Two-Team Combat")]
     [Tooltip("是否启用双阵营战斗。开启后按攻击方/防守方方阵生成；关闭后走单阵营随机/集中生成逻辑。")]
-    public bool enableTwoTeamCombat = true;
+    [HideInInspector] public bool enableTwoTeamCombat = true;
     [Tooltip("战斗是否已经开始。未开始时双方只站队播放 Idle，不寻敌、不移动、不攻击；可通过 StartBattle/StopBattle 控制。")]
     public bool battleStarted;
     [Tooltip("防守方开战后的移动模式。Hold Position No Separation：原地防守、不执行分离；Use Defender Flow Field：使用独立防守方流场推进。")]
-    public DefenderMovementMode defenderMovementMode = DefenderMovementMode.HoldPositionNoSeparation;
+    [HideInInspector] public DefenderMovementMode defenderMovementMode = DefenderMovementMode.HoldPositionNoSeparation;
     [Tooltip("攻击方数量。0 表示全部是防守方；等于 Instance Count 表示全部是攻击方。")]
     [HideInInspector, Min(0)] public int attackerCount = 50000;
     [Header("Attacker Team")]
@@ -297,10 +300,6 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
     [Min(0f)] public float cullingRadius = 2f;
 
     [Header("Animation")]
-    [Tooltip("VAT 总帧数。使用 VAT Profile 时会自动填充；手动模式下需与 VAT 贴图数据一致。")]
-    [Min(1f)] public float vatFrameCount = 30f;
-    [Tooltip("VAT 全局帧率。使用 VAT Profile 时会自动填充；影响动画播放速度。")]
-    [Min(1f)] public float vatFrameRate = 30f;
     [Tooltip("近处 Agent 每隔多少帧推进一次动画。1 表示每帧更新，动画最流畅。")]
     [Min(1)] public int nearAnimationInterval = 1;
     [Tooltip("中距离 Agent 动画降频间隔。值越大越省性能，但动画越不连续。")]
@@ -328,7 +327,7 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
 
     [Header("Stage 4 Flow Field Navigation")]
     [Tooltip("是否启用流场导航。关闭后攻击方不会沿 Painted Flow Field 推进；防守方流场模式也会回退为原地防守。")]
-    public bool enableFlowFieldNavigation = true;
+    [HideInInspector] public bool enableFlowFieldNavigation = true;
     [Tooltip("流场格子大小，用于创建或适配 Painted Flow Field。越小路径更细，但数据量和编辑成本更高。")]
     [HideInInspector, Min(0.25f)] public float flowFieldCellSize = 2f;
     [Tooltip("跟随流场方向的响应速度。越大转向越快；太大在急弯或拥挤处容易左右摆动。")]
@@ -406,6 +405,24 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
         public RenderTexture runtimePreviewTexture;
     }
 
+    [System.Serializable]
+    public sealed class BattleTelemetry
+    {
+        public bool isValid;
+        public int attackerTotal;
+        public int defenderTotal;
+        public int attackerAlive;
+        public int defenderAlive;
+        public int AttackerDead => attackerTotal - attackerAlive;
+        public int DefenderDead => defenderTotal - defenderAlive;
+        public float battleElapsedTime;
+        public bool battleRunning;
+        public float lastUpdateTime = -1f;
+    }
+
+    private readonly BattleTelemetry telemetry = new BattleTelemetry();
+    public BattleTelemetry Telemetry => telemetry;
+
     private MassGpuRuntime_Stage6 runtime;
     private MassGpuRuntime_Stage6 Runtime => runtime ??= new MassGpuRuntime_Stage6(this);
     public FlowFieldPreviewSnapshot FlowFieldPreview => Runtime.FlowFieldPreview;
@@ -440,6 +457,16 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
     public void ResetBattleStarted()
     {
         Runtime.ResetBattleStarted();
+    }
+
+    public void ResetScenario()
+    {
+        Runtime.ResetScenario();
+    }
+
+    public void ApplyScenarioConfig()
+    {
+        Runtime.ApplyScenarioConfig();
     }
 
     public void ApplyConfigAssetsToManager()
@@ -478,13 +505,6 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
 #if UNITY_EDITOR
 
 
-    private void OnGUI()
-    {
-        if (GUI.Button(new Rect(0f, 0f, 100f, 100f), "test"))
-        {
-            StartBattle();
-        }
-    }
     private void OnValidate()
     {
         TryApplyVatProfile(false);
@@ -494,8 +514,6 @@ public sealed class GPUInstancingManager_Stage6 : MonoBehaviour
         shadowCastingRadius = Mathf.Max(0f, shadowCastingRadius);
         midLodRadius = Mathf.Max(midLodRadius, shadowCastingRadius + 0.01f);
         cullingRadius = Mathf.Max(0f, cullingRadius);
-        vatFrameCount = Mathf.Max(1f, vatFrameCount);
-        vatFrameRate = Mathf.Max(1f, vatFrameRate);
         nearAnimationInterval = Mathf.Max(1, nearAnimationInterval);
         midAnimationInterval = Mathf.Max(1, midAnimationInterval);
         farAnimationInterval = Mathf.Max(1, farAnimationInterval);

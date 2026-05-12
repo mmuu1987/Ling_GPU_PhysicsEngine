@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: Stage7AttackerUnitConfig
+  m_EditorClassIdentifier: 
+  unitTypeName: Attacker Sword
+  unitTypeClassName: MassGPUPhysics.Stage7.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 1c9fde17bda0dc04ab271abff8399af3, type: 2}
+  movementConfig: {fileID: 11400000, guid: e5b544c4e0f3eb14ba5c10ba44de3829, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 55b7ba309dcaf4b489bc2975dba762a4, type: 2}
+  animationConfig: {fileID: 11400000, guid: 77c7937105ee53347ac53c2c01c0f8b6, type: 2}
+  combatConfig: {fileID: 11400000, guid: f0de0a27aa716ba45a1c05ed2f7157b5, type: 2}
+  renderConfig: {fileID: 11400000, guid: 80b5bb4ea4ba3194bb83d5721541e001, type: 2}

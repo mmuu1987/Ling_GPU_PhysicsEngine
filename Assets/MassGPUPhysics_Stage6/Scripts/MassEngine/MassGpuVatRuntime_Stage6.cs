@@ -35,7 +35,12 @@ public sealed partial class MassGpuRuntime_Stage6
     private bool TryApplyAttackerVatProfile(bool logWarnings)
     {
         if (vatProfile == null)
-            return true;
+        {
+            if (logWarnings)
+                Debug.LogError("[GPUInstancingManager_Stage6] Missing required VAT Profile. Assign a VAT Profile before running Stage6.", owner);
+
+            return false;
+        }
 
         if (!vatProfile.IsValid(out string error))
         {
@@ -49,8 +54,8 @@ public sealed partial class MassGpuRuntime_Stage6
         if (vatProfile.HasLowLod)
             midInstanceMesh = vatProfile.lowLodMesh;
 
-        vatFrameCount = Mathf.Max(1, vatProfile.totalFrameCount);
-        vatFrameRate = Mathf.Max(1, vatProfile.frameRate);
+        runtimeVatFrameCount = Mathf.Max(1, vatProfile.totalFrameCount);
+        runtimeVatFrameRate = Mathf.Max(1, vatProfile.frameRate);
         idleClipFrameRange = vatProfile.idle.ToRange();
         moveClipFrameRange = vatProfile.move.ToRange();
         attackClipFrameRange = vatProfile.attack.ToRange();
@@ -89,9 +94,9 @@ public sealed partial class MassGpuRuntime_Stage6
 
         if (vatProfile != null && vatProfile.IsValid(out string ignoredError))
         {
-            MassGpuDrawUtility_Stage6.SyncVatMaterial(instanceMaterial, vatFrameCount, vatFrameRate, VATFrameCountId, VATFrameRateId);
-            MassGpuDrawUtility_Stage6.SyncVatMaterial(midInstanceMaterial, vatFrameCount, vatFrameRate, VATFrameCountId, VATFrameRateId);
-            MassGpuDrawUtility_Stage6.SyncVatMaterial(farInstanceMaterial, vatFrameCount, vatFrameRate, VATFrameCountId, VATFrameRateId);
+            MassGpuDrawUtility_Stage6.SyncVatMaterial(instanceMaterial, runtimeVatFrameCount, runtimeVatFrameRate, VATFrameCountId, VATFrameRateId);
+            MassGpuDrawUtility_Stage6.SyncVatMaterial(midInstanceMaterial, runtimeVatFrameCount, runtimeVatFrameRate, VATFrameCountId, VATFrameRateId);
+            MassGpuDrawUtility_Stage6.SyncVatMaterial(farInstanceMaterial, runtimeVatFrameCount, runtimeVatFrameRate, VATFrameCountId, VATFrameRateId);
             SyncVatClipWindows(instanceMaterial);
             SyncVatClipWindows(midInstanceMaterial);
             SyncVatClipWindows(farInstanceMaterial);
@@ -133,7 +138,7 @@ public sealed partial class MassGpuRuntime_Stage6
     public string GetVatProfileStatus()
     {
         string attackerStatus = vatProfile == null
-            ? "No VAT Profile assigned. Manual VAT fields are used for attacker/default rendering."
+            ? "Missing required VAT Profile. Stage6 will not initialize until one is assigned."
             : vatProfile.IsValid(out string error)
             ? $"VAT Profile ready: {vatProfile.name}"
             : $"VAT Profile invalid: {error}";
@@ -173,9 +178,9 @@ public sealed partial class MassGpuRuntime_Stage6
 
     private void SyncVatMaterialGroup(Material nearMaterial, Material midMaterial, Material farMaterial)
     {
-        MassGpuDrawUtility_Stage6.SyncVatMaterial(nearMaterial, vatFrameCount, vatFrameRate, VATFrameCountId, VATFrameRateId);
-        MassGpuDrawUtility_Stage6.SyncVatMaterial(midMaterial, vatFrameCount, vatFrameRate, VATFrameCountId, VATFrameRateId);
-        MassGpuDrawUtility_Stage6.SyncVatMaterial(farMaterial, vatFrameCount, vatFrameRate, VATFrameCountId, VATFrameRateId);
+        MassGpuDrawUtility_Stage6.SyncVatMaterial(nearMaterial, runtimeVatFrameCount, runtimeVatFrameRate, VATFrameCountId, VATFrameRateId);
+        MassGpuDrawUtility_Stage6.SyncVatMaterial(midMaterial, runtimeVatFrameCount, runtimeVatFrameRate, VATFrameCountId, VATFrameRateId);
+        MassGpuDrawUtility_Stage6.SyncVatMaterial(farMaterial, runtimeVatFrameCount, runtimeVatFrameRate, VATFrameCountId, VATFrameRateId);
     }
 
     private void SyncVatProfileToMaterials()

@@ -26,6 +26,8 @@ public sealed class MassGpuRuntimeContext_Stage6
 
     public int agentThreadGroupsX;
     public int gridThreadGroupsX;
+    public float runtimeVatFrameCount = 1f;
+    public float runtimeVatFrameRate = 30f;
     public int gridResolutionX;
     public int gridResolutionZ;
     public int gridCellCount;

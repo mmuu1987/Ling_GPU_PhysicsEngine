@@ -22,11 +22,16 @@ namespace MassGPUPhysics.Stage5
         private ClipBakeSlot attackSlot = new ClipBakeSlot("Attack", true);
         private ClipBakeSlot deathSlot = new ClipBakeSlot("Death", false);
 
-        [Header("Low LOD Bake")]
+        [Header("LOD Bake")]
+        private bool bakeMidLod = true;
+        private float midLodTriangleRatio = 0.5f;
+        private int midLodMaxVertices = 2400;
+        private string midLodSuffix = "_MidLOD";
         private bool bakeLowLod = true;
         private float lowLodTriangleRatio = 0.25f;
         private int lowLodMaxVertices = 1200;
         private string lowLodSuffix = "_LowLOD";
+        private VATProfile_Stage5 lodTargetProfile;
 
         [MenuItem("MassGPUPhysics/Stage5/VAT Baker")]
         public static void ShowWindow()
@@ -51,13 +56,16 @@ namespace MassGPUPhysics.Stage5
             EditorGUILayout.HelpBox("Only Move is required. Empty Idle/Attack/Death slots reuse Move and emit a warning.", MessageType.Info);
 
             EditorGUILayout.Space();
-            GUILayout.Label("Low LOD VAT Bake", EditorStyles.boldLabel);
-            bakeLowLod = EditorGUILayout.Toggle("Bake Low LOD", bakeLowLod);
-            using (new EditorGUI.DisabledScope(!bakeLowLod))
+            GUILayout.Label("LOD VAT Bake", EditorStyles.boldLabel);
+            DrawLodBakeSettings("Mid LOD", ref bakeMidLod, ref midLodTriangleRatio, ref midLodMaxVertices, ref midLodSuffix);
+            DrawLodBakeSettings("Low LOD", ref bakeLowLod, ref lowLodTriangleRatio, ref lowLodMaxVertices, ref lowLodSuffix);
+            lodTargetProfile = (VATProfile_Stage5)EditorGUILayout.ObjectField("Existing VAT Profile", lodTargetProfile, typeof(VATProfile_Stage5), false);
+            using (new EditorGUILayout.HorizontalScope())
             {
-                lowLodTriangleRatio = EditorGUILayout.Slider("Vertex Keep Ratio", lowLodTriangleRatio, 0.02f, 1f);
-                lowLodMaxVertices = Mathf.Max(0, EditorGUILayout.IntField("Max Vertices", lowLodMaxVertices));
-                lowLodSuffix = EditorGUILayout.TextField("Asset Suffix", lowLodSuffix);
+                if (GUILayout.Button("Bake Mid LOD VAT Only", GUILayout.Height(28)) && ValidateLodOnlyInputs())
+                    BakeLodOnly(VatLodKind.Mid);
+                if (GUILayout.Button("Bake Low LOD VAT Only", GUILayout.Height(28)) && ValidateLodOnlyInputs())
+                    BakeLodOnly(VatLodKind.Low);
             }
 
             showExtraRenderers = EditorGUILayout.Foldout(showExtraRenderers, "Extra MeshRenderers (non-skinned)");
@@ -79,6 +87,18 @@ namespace MassGPUPhysics.Stage5
                 slot.useCustomFrameRate = EditorGUILayout.Toggle("Custom Frame Rate", slot.useCustomFrameRate);
                 using (new EditorGUI.DisabledScope(!slot.useCustomFrameRate))
                     slot.frameRateOverride = Mathf.Max(1, EditorGUILayout.IntField("Frame Rate Override", slot.frameRateOverride));
+            }
+        }
+
+        private static void DrawLodBakeSettings(string label, ref bool includeInFullBake, ref float vertexKeepRatio, ref int maxVertices, ref string assetSuffix)
+        {
+            using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+            {
+                GUILayout.Label(label, EditorStyles.boldLabel);
+                includeInFullBake = EditorGUILayout.Toggle("Include In Full Bake", includeInFullBake);
+                vertexKeepRatio = EditorGUILayout.Slider("Vertex Keep Ratio", vertexKeepRatio, 0.02f, 1f);
+                maxVertices = Mathf.Max(0, EditorGUILayout.IntField("Max Vertices", maxVertices));
+                assetSuffix = EditorGUILayout.TextField("Asset Suffix", assetSuffix);
             }
         }
 
@@ -118,9 +138,34 @@ namespace MassGPUPhysics.Stage5
                 return false;
             }
 
+            NormalizeLodBakeSettings();
+            return true;
+        }
+
+        private bool ValidateLodOnlyInputs()
+        {
+            if (lodTargetProfile == null)
+            {
+                EditorUtility.DisplayDialog("Error", "Please assign an Existing VAT Profile.", "OK");
+                return false;
+            }
+
+            if (!lodTargetProfile.IsValid(out string error))
+            {
+                EditorUtility.DisplayDialog("Error", error, "OK");
+                return false;
+            }
+
+            NormalizeLodBakeSettings();
+            return true;
+        }
+
+        private void NormalizeLodBakeSettings()
+        {
+            midLodTriangleRatio = Mathf.Clamp(midLodTriangleRatio, 0.02f, 1f);
+            midLodMaxVertices = Mathf.Max(0, midLodMaxVertices);
             lowLodTriangleRatio = Mathf.Clamp(lowLodTriangleRatio, 0.02f, 1f);
             lowLodMaxVertices = Mathf.Max(0, lowLodMaxVertices);
-            return true;
         }
 
         private void Bake()
@@ -172,11 +217,14 @@ namespace MassGPUPhysics.Stage5
                 normTex.Apply();
 
                 Mesh cleanMesh = BuildCleanMesh(instObj, smrs, instMRs, instMFs, totalVertices);
-                LowLodBakeResult lowLodResult = bakeLowLod
-                    ? BuildLowLodBakeResult(cleanMesh, posColors, normColors, texWidth, rowsPerFrame, totalFrameCount)
+                LodBakeResult midLodResult = bakeMidLod
+                    ? BuildLodBakeResult(cleanMesh, posColors, normColors, texWidth, rowsPerFrame, totalFrameCount, GetLodSettings(VatLodKind.Mid))
+                    : null;
+                LodBakeResult lowLodResult = bakeLowLod
+                    ? BuildLodBakeResult(cleanMesh, posColors, normColors, texWidth, rowsPerFrame, totalFrameCount, GetLodSettings(VatLodKind.Low))
                     : null;
 
-                SaveAssets(posTex, normTex, cleanMesh, lowLodResult, clips, texWidth, texHeight, rowsPerFrame, totalFrameCount, smrs.Length, instMRs, totalVertices);
+                SaveAssets(posTex, normTex, cleanMesh, midLodResult, lowLodResult, clips, texWidth, texHeight, rowsPerFrame, totalFrameCount, smrs.Length, instMRs, totalVertices);
             }
             finally
             {
@@ -184,6 +232,51 @@ namespace MassGPUPhysics.Stage5
                 DestroyImmediate(instObj);
                 DestroyImmediate(tempBakedMesh);
             }
+        }
+
+        private void BakeLodOnly(VatLodKind kind)
+        {
+            VATProfile_Stage5 profile = lodTargetProfile;
+            LodBakeSettings settings = GetLodSettings(kind);
+            Color[] fullPosColors;
+            Color[] fullNormColors;
+
+            try
+            {
+                fullPosColors = ReadVatTexturePixels(profile.positionTexture, profile.textureWidth, profile.textureHeight, "position");
+                fullNormColors = ReadVatTexturePixels(profile.normalTexture, profile.textureWidth, profile.textureHeight, "normal");
+            }
+            catch (System.Exception ex)
+            {
+                EditorUtility.DisplayDialog("Error", ex.Message, "OK");
+                return;
+            }
+
+            LodBakeResult lodResult;
+            try
+            {
+                EditorUtility.DisplayProgressBar($"Baking Stage5 {settings.label} VAT", $"Generating {settings.label} mesh and VAT textures", 0.5f);
+                lodResult = BuildLodBakeResult(
+                    profile.cleanMesh,
+                    fullPosColors,
+                    fullNormColors,
+                    profile.textureWidth,
+                    profile.rowsPerFrame,
+                    profile.totalFrameCount,
+                    settings);
+            }
+            finally
+            {
+                EditorUtility.ClearProgressBar();
+            }
+
+            if (lodResult == null)
+            {
+                EditorUtility.DisplayDialog($"Stage5 {settings.label} VAT Bake", $"{settings.label} bake did not produce a valid result. Check the Console for details.", "OK");
+                return;
+            }
+
+            SaveLodOnlyAssets(profile, lodResult, settings);
         }
 
         private ClipBakeInfo[] BuildClipInfos()
@@ -483,7 +576,8 @@ namespace MassGPUPhysics.Stage5
             Texture2D posTex,
             Texture2D normTex,
             Mesh cleanMesh,
-            LowLodBakeResult lowLodResult,
+            LodBakeResult midLodResult,
+            LodBakeResult lowLodResult,
             ClipBakeInfo[] clips,
             int texWidth,
             int texHeight,
@@ -507,27 +601,11 @@ namespace MassGPUPhysics.Stage5
             CreateOrReplaceAsset(normTex, normPath);
             CreateOrReplaceAsset(cleanMesh, cleanMeshPath);
 
-            string lowLodStats = "Low LOD: disabled";
-            if (lowLodResult != null)
-            {
-                string validSuffix = SanitizeFileName(string.IsNullOrWhiteSpace(lowLodSuffix) ? "_LowLOD" : lowLodSuffix);
-                string lowPosPath = folderPath + "/" + baseName + validSuffix + "_Pos.asset";
-                string lowNormPath = folderPath + "/" + baseName + validSuffix + "_Norm.asset";
-                string lowMeshPath = folderPath + "/" + SanitizeFileName(targetGameObject.name.Replace("(Clone)", "")) + validSuffix + "_Mesh.asset";
+            string meshBaseName = SanitizeFileName(targetGameObject.name.Replace("(Clone)", ""));
+            string midLodStats = SaveLodAssets(folderPath, baseName, meshBaseName, midLodResult, GetLodSettings(VatLodKind.Mid));
+            string lowLodStats = SaveLodAssets(folderPath, baseName, meshBaseName, lowLodResult, GetLodSettings(VatLodKind.Low));
 
-                CreateOrReplaceAsset(lowLodResult.positionTexture, lowPosPath);
-                CreateOrReplaceAsset(lowLodResult.normalTexture, lowNormPath);
-                CreateOrReplaceAsset(lowLodResult.mesh, lowMeshPath);
-
-                lowLodStats =
-                    $"Low LOD Vertices: {lowLodResult.mesh.vertexCount}\n" +
-                    $"Low LOD Triangles: {lowLodResult.mesh.triangles.Length / 3}\n" +
-                    $"Low LOD Texture Width: {lowLodResult.textureWidth}\n" +
-                    $"Low LOD Texture Height: {lowLodResult.textureHeight}\n" +
-                    $"Low LOD Rows Per Frame: {lowLodResult.rowsPerFrame}";
-            }
-
-            VATProfile_Stage5 profile = CreateProfile(posTex, normTex, cleanMesh, lowLodResult, clips, texWidth, texHeight, rowsPerFrame, totalFrameCount);
+            VATProfile_Stage5 profile = CreateProfile(posTex, normTex, cleanMesh, midLodResult, lowLodResult, clips, texWidth, texHeight, rowsPerFrame, totalFrameCount);
             CreateOrReplaceAsset(profile, profilePath);
 
             AssetDatabase.SaveAssets();
@@ -545,6 +623,7 @@ namespace MassGPUPhysics.Stage5
                 $"SMRs: {smrCount}\n" +
                 $"MRs (extra): {instMRs.Count}\n" +
                 $"Total Vertices: {totalVertices}\n\n" +
+                $"{midLodStats}\n\n" +
                 $"{lowLodStats}\n\n" +
                 $"Drag the generated VAT Profile onto GPUInstancingManager_Stage5.\n" +
                 $"Profile: {profilePath}\n\n" +
@@ -554,11 +633,64 @@ namespace MassGPUPhysics.Stage5
             EditorGUIUtility.PingObject(AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(profilePath));
         }
 
+        private string SaveLodAssets(string folderPath, string profileBaseName, string meshBaseName, LodBakeResult lodResult, LodBakeSettings settings)
+        {
+            if (lodResult == null)
+                return $"{settings.label}: disabled";
+
+            string validSuffix = SanitizeFileName(settings.suffix);
+            string posPath = folderPath + "/" + profileBaseName + validSuffix + "_Pos.asset";
+            string normPath = folderPath + "/" + profileBaseName + validSuffix + "_Norm.asset";
+            string meshPath = folderPath + "/" + meshBaseName + validSuffix + "_Mesh.asset";
+
+            CreateOrReplaceAsset(lodResult.positionTexture, posPath);
+            CreateOrReplaceAsset(lodResult.normalTexture, normPath);
+            CreateOrReplaceAsset(lodResult.mesh, meshPath);
+
+            return BuildLodStats(settings.label, lodResult);
+        }
+
+        private void SaveLodOnlyAssets(VATProfile_Stage5 profile, LodBakeResult lodResult, LodBakeSettings settings)
+        {
+            string folderPath = "Assets/" + saveFolderName;
+            if (!AssetDatabase.IsValidFolder(folderPath))
+                AssetDatabase.CreateFolder("Assets", saveFolderName);
+
+            string validSuffix = SanitizeFileName(settings.suffix);
+            string baseName = MakeProfileBaseName(profile);
+            string meshBaseName = MakeMeshBaseName(profile.cleanMesh);
+
+            string posPath = folderPath + "/" + baseName + validSuffix + "_Pos.asset";
+            string normPath = folderPath + "/" + baseName + validSuffix + "_Norm.asset";
+            string meshPath = folderPath + "/" + meshBaseName + validSuffix + "_Mesh.asset";
+
+            CreateOrReplaceAsset(lodResult.positionTexture, posPath);
+            CreateOrReplaceAsset(lodResult.normalTexture, normPath);
+            CreateOrReplaceAsset(lodResult.mesh, meshPath);
+
+            AssignLodToProfile(profile, lodResult, settings.kind);
+            EditorUtility.SetDirty(profile);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            EditorUtility.DisplayDialog(
+                $"Stage5 {settings.label} VAT Bake Complete",
+                $"{settings.label} baking complete.\n\n" +
+                BuildLodStats(settings.label, lodResult) + "\n\n" +
+                $"Updated Profile: {AssetDatabase.GetAssetPath(profile)}\n" +
+                $"Saved to: {folderPath}",
+                "OK");
+
+            EditorGUIUtility.PingObject(profile);
+        }
+
         private VATProfile_Stage5 CreateProfile(
             Texture2D posTex,
             Texture2D normTex,
             Mesh cleanMesh,
-            LowLodBakeResult lowLodResult,
+            LodBakeResult midLodResult,
+            LodBakeResult lowLodResult,
             ClipBakeInfo[] clips,
             int texWidth,
             int texHeight,
@@ -579,17 +711,44 @@ namespace MassGPUPhysics.Stage5
             profile.attack = ToProfileWindow(clips[2]);
             profile.death = ToProfileWindow(clips[3]);
 
-            if (lowLodResult != null)
-            {
-                profile.lowLodMesh = lowLodResult.mesh;
-                profile.lowLodPositionTexture = lowLodResult.positionTexture;
-                profile.lowLodNormalTexture = lowLodResult.normalTexture;
-                profile.lowLodTextureWidth = lowLodResult.textureWidth;
-                profile.lowLodTextureHeight = lowLodResult.textureHeight;
-                profile.lowLodRowsPerFrame = lowLodResult.rowsPerFrame;
-            }
+            AssignLodToProfile(profile, midLodResult, VatLodKind.Mid);
+            AssignLodToProfile(profile, lowLodResult, VatLodKind.Low);
 
             return profile;
+        }
+
+        private static void AssignLodToProfile(VATProfile_Stage5 profile, LodBakeResult lodResult, VatLodKind kind)
+        {
+            if (profile == null || lodResult == null)
+                return;
+
+            if (kind == VatLodKind.Mid)
+            {
+                profile.midLodMesh = lodResult.mesh;
+                profile.midLodPositionTexture = lodResult.positionTexture;
+                profile.midLodNormalTexture = lodResult.normalTexture;
+                profile.midLodTextureWidth = lodResult.textureWidth;
+                profile.midLodTextureHeight = lodResult.textureHeight;
+                profile.midLodRowsPerFrame = lodResult.rowsPerFrame;
+                return;
+            }
+
+            profile.lowLodMesh = lodResult.mesh;
+            profile.lowLodPositionTexture = lodResult.positionTexture;
+            profile.lowLodNormalTexture = lodResult.normalTexture;
+            profile.lowLodTextureWidth = lodResult.textureWidth;
+            profile.lowLodTextureHeight = lodResult.textureHeight;
+            profile.lowLodRowsPerFrame = lodResult.rowsPerFrame;
+        }
+
+        private static string BuildLodStats(string label, LodBakeResult lodResult)
+        {
+            return
+                $"{label} Vertices: {lodResult.mesh.vertexCount}\n" +
+                $"{label} Triangles: {lodResult.mesh.triangles.Length / 3}\n" +
+                $"{label} Texture Width: {lodResult.textureWidth}\n" +
+                $"{label} Texture Height: {lodResult.textureHeight}\n" +
+                $"{label} Rows Per Frame: {lodResult.rowsPerFrame}";
         }
 
         private static VATProfile_Stage5.VATClipWindow ToProfileWindow(ClipBakeInfo clip)
@@ -619,25 +778,91 @@ namespace MassGPUPhysics.Stage5
             AssetDatabase.CreateAsset(asset, path);
         }
 
+        private static Color[] ReadVatTexturePixels(Texture2D texture, int expectedWidth, int expectedHeight, string label)
+        {
+            if (texture == null)
+                throw new System.InvalidOperationException($"Profile is missing the full LOD VAT {label} texture.");
+
+            if (texture.width != expectedWidth || texture.height != expectedHeight)
+            {
+                throw new System.InvalidOperationException(
+                    $"Profile full LOD VAT {label} texture size mismatch. " +
+                    $"Texture is {texture.width}x{texture.height}, profile expects {expectedWidth}x{expectedHeight}.");
+            }
+
+            try
+            {
+                return texture.GetPixels();
+            }
+            catch (UnityException ex)
+            {
+                throw new System.InvalidOperationException(
+                    $"Cannot read the full LOD VAT {label} texture pixels. Re-bake the full VAT asset or make the texture readable. {ex.Message}");
+            }
+        }
+
+        private string MakeProfileBaseName(VATProfile_Stage5 profile)
+        {
+            string baseName = profile.name;
+            if (baseName.EndsWith("_Profile", System.StringComparison.Ordinal))
+                baseName = baseName.Substring(0, baseName.Length - "_Profile".Length);
+
+            return SanitizeFileName(baseName);
+        }
+
+        private string MakeMeshBaseName(Mesh cleanMesh)
+        {
+            string baseName = cleanMesh != null ? cleanMesh.name : "LowLOD";
+            if (baseName.EndsWith("_CleanMesh", System.StringComparison.Ordinal))
+                baseName = baseName.Substring(0, baseName.Length - "_CleanMesh".Length);
+
+            return SanitizeFileName(baseName);
+        }
+
         private string SanitizeFileName(string fileName)
         {
             char[] invalid = Path.GetInvalidFileNameChars();
             return string.Concat(fileName.Select(c => invalid.Contains(c) ? '_' : c));
         }
 
-        private LowLodBakeResult BuildLowLodBakeResult(
+        private LodBakeSettings GetLodSettings(VatLodKind kind)
+        {
+            if (kind == VatLodKind.Mid)
+            {
+                return new LodBakeSettings
+                {
+                    kind = VatLodKind.Mid,
+                    label = "Mid LOD",
+                    vertexKeepRatio = midLodTriangleRatio,
+                    maxVertices = midLodMaxVertices,
+                    suffix = string.IsNullOrWhiteSpace(midLodSuffix) ? "_MidLOD" : midLodSuffix
+                };
+            }
+
+            return new LodBakeSettings
+            {
+                kind = VatLodKind.Low,
+                label = "Low LOD",
+                vertexKeepRatio = lowLodTriangleRatio,
+                maxVertices = lowLodMaxVertices,
+                suffix = string.IsNullOrWhiteSpace(lowLodSuffix) ? "_LowLOD" : lowLodSuffix
+            };
+        }
+
+        private LodBakeResult BuildLodBakeResult(
             Mesh sourceMesh,
             Color[] fullPosColors,
             Color[] fullNormColors,
             int fullTexWidth,
             int fullRowsPerFrame,
-            int frameCount)
+            int frameCount,
+            LodBakeSettings settings)
         {
             int[] sourceTriangles = sourceMesh.triangles;
             int sourceTriangleCount = sourceTriangles.Length / 3;
             if (sourceTriangleCount == 0)
             {
-                Debug.LogWarning("[VAT Baker Stage5] Low LOD skipped: source mesh has no triangles.");
+                Debug.LogWarning($"[VAT Baker Stage5] {settings.label} skipped: source mesh has no triangles.");
                 return null;
             }
 
@@ -645,9 +870,9 @@ namespace MassGPUPhysics.Stage5
             Vector3[] sourceNormals = sourceMesh.normals;
             Vector2[] sourceUVs = sourceMesh.uv;
 
-            int targetVertexCount = Mathf.Max(4, Mathf.RoundToInt(sourceVertices.Length * lowLodTriangleRatio));
-            if (lowLodMaxVertices > 0)
-                targetVertexCount = Mathf.Min(targetVertexCount, lowLodMaxVertices);
+            int targetVertexCount = Mathf.Max(4, Mathf.RoundToInt(sourceVertices.Length * settings.vertexKeepRatio));
+            if (settings.maxVertices > 0)
+                targetVertexCount = Mathf.Min(targetVertexCount, settings.maxVertices);
             targetVertexCount = Mathf.Min(targetVertexCount, sourceVertices.Length);
 
             int clusterResolution = FindClusterResolution(sourceVertices, sourceMesh.bounds, targetVertexCount);
@@ -687,13 +912,13 @@ namespace MassGPUPhysics.Stage5
 
             if (lowVertices.Count == 0 || lowTriangles.Count == 0)
             {
-                Debug.LogWarning("[VAT Baker Stage5] Low LOD skipped: reduction settings produced an empty mesh.");
+                Debug.LogWarning($"[VAT Baker Stage5] {settings.label} skipped: reduction settings produced an empty mesh.");
                 return null;
             }
 
             Mesh lowMesh = new Mesh
             {
-                name = sourceMesh.name + "_LowLOD",
+                name = sourceMesh.name + settings.suffix,
                 indexFormat = lowVertices.Count > 65535 ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16
             };
             lowMesh.SetVertices(lowVertices);
@@ -709,12 +934,12 @@ namespace MassGPUPhysics.Stage5
             int lowTexHeight = lowRowsPerFrame * frameCount;
             if (lowTexHeight > MaxTextureSize)
             {
-                Debug.LogWarning($"[VAT Baker Stage5] Low LOD skipped: texture height {lowTexHeight} exceeds {MaxTextureSize}.");
+                Debug.LogWarning($"[VAT Baker Stage5] {settings.label} skipped: texture height {lowTexHeight} exceeds {MaxTextureSize}.");
                 return null;
             }
 
-            Texture2D lowPosTex = CreateVatTexture(lowTexWidth, lowTexHeight, "Stage5 Low LOD VAT Pos");
-            Texture2D lowNormTex = CreateVatTexture(lowTexWidth, lowTexHeight, "Stage5 Low LOD VAT Norm");
+            Texture2D lowPosTex = CreateVatTexture(lowTexWidth, lowTexHeight, $"Stage5 {settings.label} VAT Pos");
+            Texture2D lowNormTex = CreateVatTexture(lowTexWidth, lowTexHeight, $"Stage5 {settings.label} VAT Norm");
             Color[] lowPosColors = new Color[lowTexWidth * lowTexHeight];
             Color[] lowNormColors = new Color[lowTexWidth * lowTexHeight];
 
@@ -735,8 +960,8 @@ namespace MassGPUPhysics.Stage5
             lowNormTex.SetPixels(lowNormColors);
             lowNormTex.Apply();
 
-            Debug.Log($"[VAT Baker Stage5] Low LOD generated: {sourceMesh.vertexCount} -> {lowVertexCount} vertices, {sourceTriangleCount} -> {lowTriangles.Count / 3} triangles.");
-            return new LowLodBakeResult
+            Debug.Log($"[VAT Baker Stage5] {settings.label} generated: {sourceMesh.vertexCount} -> {lowVertexCount} vertices, {sourceTriangleCount} -> {lowTriangles.Count / 3} triangles.");
+            return new LodBakeResult
             {
                 mesh = lowMesh,
                 positionTexture = lowPosTex,
@@ -920,7 +1145,22 @@ namespace MassGPUPhysics.Stage5
             public List<int> oldIndices;
         }
 
-        private sealed class LowLodBakeResult
+        private enum VatLodKind
+        {
+            Mid,
+            Low
+        }
+
+        private struct LodBakeSettings
+        {
+            public VatLodKind kind;
+            public string label;
+            public float vertexKeepRatio;
+            public int maxVertices;
+            public string suffix;
+        }
+
+        private sealed class LodBakeResult
         {
             public Mesh mesh;
             public Texture2D positionTexture;

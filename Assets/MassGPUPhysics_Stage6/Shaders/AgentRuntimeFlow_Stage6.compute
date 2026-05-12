@@ -36,22 +36,17 @@ void BuildRuntimeAttackerTargetDensity(uint3 id : SV_DispatchThreadID)
     if (runtimeDynamicAttackerFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
         return;
 
-    uint count;
-    uint stride;
-    agentBuffer.GetDimensions(count, stride);
-    if (id.x >= count || id.x < (uint)attackerCount || !IsAliveIndex(id.x))
+    if (!IsValidAgentIndex(id.x) || id.x < (uint)attackerCount || !IsAliveIndex(id.x))
         return;
 
-    AgentData agent = agentBuffer[id.x];
-    int2 cell = PositionToFlowFieldCell(agent.position);
+    float2 position = agentPositionReadBuffer[id.x];
+    int2 cell = PositionXzToFlowFieldCell(position);
     uint cellIndex = FlowFieldCellToIndex(cell);
     uint ignoredDensity;
     InterlockedAdd(runtimeAttackerTargetDensity[cellIndex], 1u, ignoredDensity);
 
     int ignoredStats;
     InterlockedAdd(runtimeAttackerFlowStats[0], 1, ignoredStats);
-    InterlockedAdd(runtimeAttackerFlowStats[1], (int)round(agent.position.x * 100.0), ignoredStats);
-    InterlockedAdd(runtimeAttackerFlowStats[2], (int)round(agent.position.z * 100.0), ignoredStats);
 }
 
 [numthreads(1, 1, 1)]
@@ -220,22 +215,17 @@ void BuildRuntimeDefenderTargetDensity(uint3 id : SV_DispatchThreadID)
     if (runtimeDynamicDefenderFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
         return;
 
-    uint count;
-    uint stride;
-    agentBuffer.GetDimensions(count, stride);
-    if (id.x >= count || id.x >= (uint)attackerCount || !IsAliveIndex(id.x))
+    if (!IsValidAgentIndex(id.x) || id.x >= (uint)attackerCount || !IsAliveIndex(id.x))
         return;
 
-    AgentData agent = agentBuffer[id.x];
-    int2 cell = PositionToDefenderFlowFieldCell(agent.position);
+    float2 position = agentPositionReadBuffer[id.x];
+    int2 cell = PositionXzToDefenderFlowFieldCell(position);
     uint cellIndex = DefenderFlowFieldCellToIndex(cell);
     uint ignoredDensity;
     InterlockedAdd(runtimeDefenderTargetDensity[cellIndex], 1u, ignoredDensity);
 
     int ignoredStats;
     InterlockedAdd(runtimeDefenderFlowStats[0], 1, ignoredStats);
-    InterlockedAdd(runtimeDefenderFlowStats[1], (int)round(agent.position.x * 100.0), ignoredStats);
-    InterlockedAdd(runtimeDefenderFlowStats[2], (int)round(agent.position.z * 100.0), ignoredStats);
 }
 
 [numthreads(1, 1, 1)]

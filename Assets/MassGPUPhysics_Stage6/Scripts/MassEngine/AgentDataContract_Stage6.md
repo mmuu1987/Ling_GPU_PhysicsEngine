@@ -36,7 +36,8 @@ Stage6 combat data is intentionally kept out of `AgentData` so rendering shaders
 | `targetAgentIndexBuffer` | `int` | Current target, `-1` when none. |
 | `attackCooldownBuffer` | `float` | Remaining attack cooldown. |
 | `homePositionBuffer` | `Vector3` / `float3` | Defender guard/home position and spawn anchor. |
-| `pendingDamageBuffer` | `int` | Per-frame accumulated damage resolved after the state pass. |
+| `agentPositionReadBuffer` / `agentPositionBuffer` | `Vector2` / `float2` | Compact XZ position snapshot used by spatial hash, runtime flow, and combat neighborhood scans. |
+| `pendingDamageReadBuffer` / `pendingDamageBuffer` | `int` | Double-buffered damage. The merged combat pass resolves the read buffer and accumulates next-frame damage into the write buffer. |
 
 Current `currentState` values:
 

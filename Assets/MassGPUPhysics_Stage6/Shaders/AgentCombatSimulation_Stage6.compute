@@ -1,117 +1,27 @@
-﻿#pragma kernel ClearPendingDamage
-#pragma kernel EvaluateStateAndAccumulateDamage
-#pragma kernel ResolveDamageSimulateAndClassify
+#pragma kernel ClearPendingDamage
+#pragma kernel SimulateCombatAndAccumulateDamage
 
 #include "AgentDataCommon_Stage6.hlsl"
+
+void StoreAgent(uint index, AgentData agent)
+{
+    agentBuffer[index] = agent;
+    agentPositionBuffer[index] = agent.position.xz;
+}
 
 [numthreads(64, 1, 1)]
 void ClearPendingDamage(uint3 id : SV_DispatchThreadID)
 {
-    uint count;
-    uint stride;
-    agentBuffer.GetDimensions(count, stride);
-    if (id.x >= count)
+    if (!IsValidAgentIndex(id.x))
         return;
 
     pendingDamageBuffer[id.x] = 0;
 }
 
 [numthreads(64, 1, 1)]
-void EvaluateStateAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
+void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 {
-    uint count;
-    uint stride;
-    agentBuffer.GetDimensions(count, stride);
-    if (id.x >= count)
-        return;
-
-    AgentData agent = agentBuffer[id.x];
-    if (!IsAliveIndex(id.x))
-    {
-        targetAgentIndexBuffer[id.x] = -1;
-        attackCooldownBuffer[id.x] = 0.0;
-        agent.currentState = STATE_DEAD;
-        agentBuffer[id.x] = agent;
-        return;
-    }
-
-    if (battleStarted == 0)
-    {
-        targetAgentIndexBuffer[id.x] = -1;
-        attackCooldownBuffer[id.x] = 0.0;
-        agent.velocity = 0.0;
-        SetAgentState(agent, STATE_IDLE);
-        agentBuffer[id.x] = agent;
-        return;
-    }
-
-    float dt = SafeDt();
-    float cooldown = max(0.0, attackCooldownBuffer[id.x] - dt);
-    int targetIndex = targetAgentIndexBuffer[id.x];
-
-    if (!CurrentTargetIsValid(id.x, agent, targetIndex))
-    {
-        float searchRadius = GetTargetAcquireRadius(id.x);
-        targetIndex = FindNearestEnemy(id.x, agent, searchRadius);
-    }
-
-    int nextState = STATE_MOVE;
-    if (targetIndex >= 0)
-    {
-        AgentData target = agentBuffer[(uint)targetIndex];
-        float2 toTarget = target.position.xz - agent.position.xz;
-        float distSqr = dot(toTarget, toTarget);
-        float activeAttackRange = GetAttackRange(id.x);
-        float attackRangeSqr = activeAttackRange * activeAttackRange;
-
-        if (distSqr <= attackRangeSqr)
-        {
-            nextState = STATE_ATTACK;
-            if (cooldown <= 0.0)
-            {
-                int ignored;
-                InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], max(1, GetAttackDamage(id.x)), ignored);
-                cooldown = GetAttackInterval(id.x);
-            }
-        }
-        else
-        {
-            nextState = STATE_ENGAGE;
-        }
-    }
-    else if (IsDefender(id.x))
-    {
-        if (defenderMovementMode == DEFENDER_MODE_HOLD_POSITION)
-        {
-            nextState = STATE_IDLE;
-        }
-        else if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
-        {
-            nextState = STATE_MOVE;
-        }
-        else
-        {
-            float2 toHome = homePositionReadBuffer[id.x].xz - agent.position.xz;
-            nextState = dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius ? STATE_MOVE : STATE_IDLE;
-        }
-    }
-
-    if (nextState != agent.currentState)
-        agent.currentAnimationTime = 0.0;
-
-    agent.currentState = nextState;
-    attackCooldownBuffer[id.x] = cooldown;
-    targetAgentIndexBuffer[id.x] = targetIndex;
-    agentBuffer[id.x] = agent;
-}
-
-[numthreads(64, 1, 1)]
-void ResolveDamageSimulateAndClassify(uint3 id : SV_DispatchThreadID)
-{
-    uint count;
-    uint stride;
-    agentBuffer.GetDimensions(count, stride);
-    if (id.x >= count)
+    if (!IsValidAgentIndex(id.x))
         return;
 
     AgentData agent = agentBuffer[id.x];
@@ -124,15 +34,11 @@ void ResolveDamageSimulateAndClassify(uint3 id : SV_DispatchThreadID)
         agent.velocity = 0.0;
 
         if (hpBuffer[id.x] <= 0)
-        {
             SetAgentState(agent, STATE_DEAD);
-        }
         else
-        {
             SetAgentState(agent, STATE_IDLE);
-        }
 
-        agentBuffer[id.x] = agent;
+        StoreAgent(id.x, agent);
         return;
     }
 
@@ -146,53 +52,73 @@ void ResolveDamageSimulateAndClassify(uint3 id : SV_DispatchThreadID)
         agent.velocity = 0.0;
         targetAgentIndexBuffer[id.x] = -1;
         attackCooldownBuffer[id.x] = 0.0;
-
-        agentBuffer[id.x] = agent;
+        StoreAgent(id.x, agent);
         return;
     }
 
-    float2 desiredDirection = 0.0;
+    float cooldown = max(0.0, attackCooldownBuffer[id.x] - dt);
     int targetIndex = targetAgentIndexBuffer[id.x];
+    float searchRadius = GetTargetAcquireRadius(id.x);
+    bool needsTargetSearch = !CurrentTargetIsValid(id.x, agent, targetIndex);
+    NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, needsTargetSearch);
+
+    if (needsTargetSearch)
+        targetIndex = neighborhood.nearestEnemyIndex;
+
+    int nextState = STATE_MOVE;
+    float2 desiredDirection = 0.0;
     bool isDefender = IsDefender(id.x);
     bool defenderHoldingPosition = isDefender && defenderMovementMode == DEFENDER_MODE_HOLD_POSITION;
+
     if (targetIndex >= 0 && IsAliveIndexRw((uint)targetIndex))
     {
-        AgentData target = agentBuffer[(uint)targetIndex];
-        float2 toTarget = target.position.xz - agent.position.xz;
+        float2 toTarget = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
         float distSqr = dot(toTarget, toTarget);
+        float activeAttackRange = GetAttackRange(id.x);
+        float attackRangeSqr = activeAttackRange * activeAttackRange;
 
         if (isDefender && defenderMovementMode != DEFENDER_MODE_FLOW_FIELD && !defenderHoldingPosition)
         {
             float2 fromHome = agent.position.xz - homePositionReadBuffer[id.x].xz;
             float chaseSqr = defenderMaxChaseDistance * defenderMaxChaseDistance;
             if (dot(fromHome, fromHome) > chaseSqr)
-            {
-                targetAgentIndexBuffer[id.x] = -1;
-                SetAgentState(agent, STATE_MOVE);
-            }
+                targetIndex = -1;
         }
 
-        if (targetAgentIndexBuffer[id.x] >= 0)
+        if (targetIndex >= 0)
         {
-            FaceDirection(agent, toTarget);
-            float activeAttackRange = GetAttackRange(id.x);
-            if (!defenderHoldingPosition && distSqr > activeAttackRange * activeAttackRange)
-                desiredDirection = normalize(toTarget);
+            if (distSqr <= attackRangeSqr)
+            {
+                FaceDirection(agent, toTarget);
+                nextState = STATE_ATTACK;
+                if (cooldown <= 0.0)
+                {
+                    int ignored;
+                    InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], max(1, GetAttackDamage(id.x)), ignored);
+                    cooldown = GetAttackInterval(id.x);
+                }
+            }
+            else
+            {
+                nextState = STATE_ENGAGE;
+                if (!defenderHoldingPosition)
+                    desiredDirection = normalize(toTarget);
+            }
         }
     }
 
-    if (targetAgentIndexBuffer[id.x] < 0)
+    if (targetIndex < 0)
     {
         if (isDefender)
         {
             if (defenderHoldingPosition)
             {
-                SetAgentState(agent, STATE_IDLE);
+                nextState = STATE_IDLE;
             }
             else if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
             {
                 desiredDirection = SampleDefenderFlowDirection(agent.position);
-                SetAgentState(agent, dot(desiredDirection, desiredDirection) > 0.0001 ? STATE_MOVE : STATE_IDLE);
+                nextState = dot(desiredDirection, desiredDirection) > 0.0001 ? STATE_MOVE : STATE_IDLE;
             }
             else
             {
@@ -200,29 +126,36 @@ void ResolveDamageSimulateAndClassify(uint3 id : SV_DispatchThreadID)
                 if (dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius)
                 {
                     desiredDirection = normalize(toHome);
-                    SetAgentState(agent, STATE_MOVE);
+                    nextState = STATE_MOVE;
                 }
                 else
                 {
-                    SetAgentState(agent, STATE_IDLE);
+                    nextState = STATE_IDLE;
                 }
             }
         }
         else
         {
             desiredDirection = SampleFlowDirection(agent.position);
+            nextState = dot(desiredDirection, desiredDirection) > 0.0001 ? STATE_MOVE : STATE_IDLE;
         }
     }
+
+    if (nextState != agent.currentState)
+        agent.currentAnimationTime = 0.0;
+
+    agent.currentState = nextState;
+    attackCooldownBuffer[id.x] = cooldown;
+    targetAgentIndexBuffer[id.x] = targetIndex;
 
     if (defenderHoldingPosition)
     {
         agent.velocity = 0.0;
-        agentBuffer[id.x] = agent;
+        StoreAgent(id.x, agent);
         return;
     }
 
-    float2 separation = AccumulateSeparation(id.x, agent);
-    agent.velocity.xz += separation * GetSeparationStrength(id.x) * dt;
+    agent.velocity.xz += neighborhood.separation * GetSeparationStrength(id.x) * dt;
     agent.velocity *= saturate(1.0 - GetVelocityDamping(id.x) * dt);
 
     if (agent.currentState == STATE_ATTACK)
@@ -243,6 +176,5 @@ void ResolveDamageSimulateAndClassify(uint3 id : SV_DispatchThreadID)
     if (dot(agent.velocity.xz, agent.velocity.xz) > 0.0001 && agent.currentState != STATE_ATTACK)
         FaceDirection(agent, agent.velocity.xz);
 
-    agentBuffer[id.x] = agent;
+    StoreAgent(id.x, agent);
 }
-

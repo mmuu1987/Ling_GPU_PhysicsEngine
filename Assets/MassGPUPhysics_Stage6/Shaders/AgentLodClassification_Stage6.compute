@@ -5,10 +5,7 @@
 [numthreads(64, 1, 1)]
 void ClassifyVisibleAgentsByTeam(uint3 id : SV_DispatchThreadID)
 {
-    uint count;
-    uint stride;
-    agentBuffer.GetDimensions(count, stride);
-    if (id.x >= count)
+    if (!IsValidAgentIndex(id.x))
         return;
 
     AgentData agent = agentBuffer[id.x];

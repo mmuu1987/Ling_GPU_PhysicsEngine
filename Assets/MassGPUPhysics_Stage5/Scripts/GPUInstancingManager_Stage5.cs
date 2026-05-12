@@ -665,7 +665,7 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         runtimeAttackerFarMesh = farInstanceMesh != null ? farInstanceMesh : runtimeGeneratedFarMesh;
         runtimeDefenderNearMesh = defenderInstanceMesh != null ? defenderInstanceMesh : runtimeAttackerNearMesh;
         runtimeDefenderMidMesh = defenderMidInstanceMesh != null ? defenderMidInstanceMesh :
-            (defenderVatProfile != null && defenderVatProfile.HasLowLod ? defenderVatProfile.lowLodMesh : runtimeAttackerMidMesh);
+            (defenderVatProfile != null && TryGetProfileMidMesh(defenderVatProfile, out Mesh defenderProfileMidMesh) ? defenderProfileMidMesh : runtimeAttackerMidMesh);
         runtimeDefenderFarMesh = defenderFarInstanceMesh != null ? defenderFarInstanceMesh : runtimeAttackerFarMesh;
 
         runtimeAttackerNearMaterial = instanceMaterial;
@@ -830,8 +830,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         }
 
         instanceMesh = vatProfile.cleanMesh;
-        if (vatProfile.HasLowLod)
-            midInstanceMesh = vatProfile.lowLodMesh;
+        if (TryGetProfileMidMesh(vatProfile, out Mesh profileMidMesh))
+            midInstanceMesh = profileMidMesh;
 
         vatFrameCount = Mathf.Max(1, vatProfile.totalFrameCount);
         vatFrameRate = Mathf.Max(1, vatProfile.frameRate);
@@ -860,8 +860,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         }
 
         defenderInstanceMesh = defenderVatProfile.cleanMesh;
-        if (defenderVatProfile.HasLowLod)
-            defenderMidInstanceMesh = defenderVatProfile.lowLodMesh;
+        if (TryGetProfileMidMesh(defenderVatProfile, out Mesh profileMidMesh))
+            defenderMidInstanceMesh = profileMidMesh;
 
         return true;
     }
@@ -881,16 +881,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
             SyncVatClipWindows(farInstanceMaterial);
 
             SyncVatMaterialLayout(instanceMaterial, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
-            if (vatProfile.HasLowLod)
-            {
-                SyncVatMaterialLayout(midInstanceMaterial, vatProfile.lowLodPositionTexture, vatProfile.lowLodNormalTexture, vatProfile.lowLodTextureWidth, vatProfile.lowLodTextureHeight, vatProfile.lowLodRowsPerFrame);
-                SyncVatMaterialLayout(farInstanceMaterial, vatProfile.lowLodPositionTexture, vatProfile.lowLodNormalTexture, vatProfile.lowLodTextureWidth, vatProfile.lowLodTextureHeight, vatProfile.lowLodRowsPerFrame);
-            }
-            else
-            {
-                SyncVatMaterialLayout(midInstanceMaterial, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
-                SyncVatMaterialLayout(farInstanceMaterial, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
-            }
+            SyncVatMaterialLayoutForLod(midInstanceMaterial, vatProfile, 1);
+            SyncVatMaterialLayoutForLod(farInstanceMaterial, vatProfile, 2);
         }
 
         if (defenderVatProfile != null && defenderVatProfile.IsValid(out string ignoredDefenderError))
@@ -899,16 +891,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
             SyncVatMaterialProfileMetadata(defenderMidInstanceMaterial, defenderVatProfile);
             SyncVatMaterialProfileMetadata(defenderFarInstanceMaterial, defenderVatProfile);
             SyncVatMaterialLayout(defenderInstanceMaterial, defenderVatProfile.positionTexture, defenderVatProfile.normalTexture, defenderVatProfile.textureWidth, defenderVatProfile.textureHeight, defenderVatProfile.rowsPerFrame);
-            if (defenderVatProfile.HasLowLod)
-            {
-                SyncVatMaterialLayout(defenderMidInstanceMaterial, defenderVatProfile.lowLodPositionTexture, defenderVatProfile.lowLodNormalTexture, defenderVatProfile.lowLodTextureWidth, defenderVatProfile.lowLodTextureHeight, defenderVatProfile.lowLodRowsPerFrame);
-                SyncVatMaterialLayout(defenderFarInstanceMaterial, defenderVatProfile.lowLodPositionTexture, defenderVatProfile.lowLodNormalTexture, defenderVatProfile.lowLodTextureWidth, defenderVatProfile.lowLodTextureHeight, defenderVatProfile.lowLodRowsPerFrame);
-            }
-            else
-            {
-                SyncVatMaterialLayout(defenderMidInstanceMaterial, defenderVatProfile.positionTexture, defenderVatProfile.normalTexture, defenderVatProfile.textureWidth, defenderVatProfile.textureHeight, defenderVatProfile.rowsPerFrame);
-                SyncVatMaterialLayout(defenderFarInstanceMaterial, defenderVatProfile.positionTexture, defenderVatProfile.normalTexture, defenderVatProfile.textureWidth, defenderVatProfile.textureHeight, defenderVatProfile.rowsPerFrame);
-            }
+            SyncVatMaterialLayoutForLod(defenderMidInstanceMaterial, defenderVatProfile, 1);
+            SyncVatMaterialLayoutForLod(defenderFarInstanceMaterial, defenderVatProfile, 2);
         }
 
         return true;
@@ -968,8 +952,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
             return;
 
         SyncVatMaterialLayout(runtimeAttackerNearMaterial, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
-        SyncVatMaterialLayout(runtimeAttackerMidMaterial, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
-        SyncVatMaterialLayout(runtimeAttackerFarMaterial, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
+        SyncVatMaterialLayoutForLod(runtimeAttackerMidMaterial, vatProfile, 1);
+        SyncVatMaterialLayoutForLod(runtimeAttackerFarMaterial, vatProfile, 2);
     }
 
     private void SyncVatProfileToPropertyBlocks()
@@ -980,16 +964,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         SyncVatPropertyBlock(nearAttackerPropertyBlock, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
         SyncVatPropertyBlockProfileMetadata(nearAttackerPropertyBlock, vatProfile);
 
-        if (vatProfile.HasLowLod)
-        {
-            SyncVatPropertyBlock(midAttackerPropertyBlock, vatProfile.lowLodPositionTexture, vatProfile.lowLodNormalTexture, vatProfile.lowLodTextureWidth, vatProfile.lowLodTextureHeight, vatProfile.lowLodRowsPerFrame);
-            SyncVatPropertyBlock(farAttackerPropertyBlock, vatProfile.lowLodPositionTexture, vatProfile.lowLodNormalTexture, vatProfile.lowLodTextureWidth, vatProfile.lowLodTextureHeight, vatProfile.lowLodRowsPerFrame);
-        }
-        else
-        {
-            SyncVatPropertyBlock(midAttackerPropertyBlock, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
-            SyncVatPropertyBlock(farAttackerPropertyBlock, vatProfile.positionTexture, vatProfile.normalTexture, vatProfile.textureWidth, vatProfile.textureHeight, vatProfile.rowsPerFrame);
-        }
+        SyncVatPropertyBlockForLod(midAttackerPropertyBlock, vatProfile, 1);
+        SyncVatPropertyBlockForLod(farAttackerPropertyBlock, vatProfile, 2);
 
         SyncVatPropertyBlockProfileMetadata(midAttackerPropertyBlock, vatProfile);
         SyncVatPropertyBlockProfileMetadata(farAttackerPropertyBlock, vatProfile);
@@ -1005,8 +981,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         SyncVatMaterialProfileMetadata(runtimeDefenderMidMaterial, profile);
         SyncVatMaterialProfileMetadata(runtimeDefenderFarMaterial, profile);
         SyncVatMaterialLayout(runtimeDefenderNearMaterial, profile.positionTexture, profile.normalTexture, profile.textureWidth, profile.textureHeight, profile.rowsPerFrame);
-        SyncVatMaterialLayout(runtimeDefenderMidMaterial, profile.positionTexture, profile.normalTexture, profile.textureWidth, profile.textureHeight, profile.rowsPerFrame);
-        SyncVatMaterialLayout(runtimeDefenderFarMaterial, profile.positionTexture, profile.normalTexture, profile.textureWidth, profile.textureHeight, profile.rowsPerFrame);
+        SyncVatMaterialLayoutForLod(runtimeDefenderMidMaterial, profile, 1);
+        SyncVatMaterialLayoutForLod(runtimeDefenderFarMaterial, profile, 2);
     }
 
     private void SyncDefenderVatProfileToPropertyBlocks()
@@ -1018,16 +994,8 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         SyncVatPropertyBlock(nearDefenderPropertyBlock, profile.positionTexture, profile.normalTexture, profile.textureWidth, profile.textureHeight, profile.rowsPerFrame);
         SyncVatPropertyBlockProfileMetadata(nearDefenderPropertyBlock, profile);
 
-        if (profile.HasLowLod)
-        {
-            SyncVatPropertyBlock(midDefenderPropertyBlock, profile.lowLodPositionTexture, profile.lowLodNormalTexture, profile.lowLodTextureWidth, profile.lowLodTextureHeight, profile.lowLodRowsPerFrame);
-            SyncVatPropertyBlock(farDefenderPropertyBlock, profile.lowLodPositionTexture, profile.lowLodNormalTexture, profile.lowLodTextureWidth, profile.lowLodTextureHeight, profile.lowLodRowsPerFrame);
-        }
-        else
-        {
-            SyncVatPropertyBlock(midDefenderPropertyBlock, profile.positionTexture, profile.normalTexture, profile.textureWidth, profile.textureHeight, profile.rowsPerFrame);
-            SyncVatPropertyBlock(farDefenderPropertyBlock, profile.positionTexture, profile.normalTexture, profile.textureWidth, profile.textureHeight, profile.rowsPerFrame);
-        }
+        SyncVatPropertyBlockForLod(midDefenderPropertyBlock, profile, 1);
+        SyncVatPropertyBlockForLod(farDefenderPropertyBlock, profile, 2);
 
         SyncVatPropertyBlockProfileMetadata(midDefenderPropertyBlock, profile);
         SyncVatPropertyBlockProfileMetadata(farDefenderPropertyBlock, profile);
@@ -1105,6 +1073,92 @@ public class GPUInstancingManager_Stage5 : MonoBehaviour
         block.SetFloat(VATTexWidthId, Mathf.Max(1, textureWidth));
         block.SetFloat(VATTexHeightId, Mathf.Max(1, textureHeight));
         block.SetFloat(VATRowsPerFrameId, Mathf.Max(1, rowsPerFrame));
+    }
+
+    private static bool TryGetProfileMidMesh(VATProfile_Stage5 profile, out Mesh mesh)
+    {
+        mesh = null;
+        if (profile == null)
+            return false;
+
+        if (profile.HasMidLod)
+        {
+            mesh = profile.midLodMesh;
+            return true;
+        }
+
+        if (profile.HasLowLod)
+        {
+            mesh = profile.lowLodMesh;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static void SyncVatMaterialLayoutForLod(Material material, VATProfile_Stage5 profile, int lodLevel)
+    {
+        if (profile == null)
+            return;
+
+        if (TryGetVatLayoutForLod(profile, lodLevel, out Texture positionTexture, out Texture normalTexture, out int textureWidth, out int textureHeight, out int rowsPerFrame))
+            SyncVatMaterialLayout(material, positionTexture, normalTexture, textureWidth, textureHeight, rowsPerFrame);
+    }
+
+    private static void SyncVatPropertyBlockForLod(MaterialPropertyBlock block, VATProfile_Stage5 profile, int lodLevel)
+    {
+        if (profile == null)
+            return;
+
+        if (TryGetVatLayoutForLod(profile, lodLevel, out Texture positionTexture, out Texture normalTexture, out int textureWidth, out int textureHeight, out int rowsPerFrame))
+            SyncVatPropertyBlock(block, positionTexture, normalTexture, textureWidth, textureHeight, rowsPerFrame);
+    }
+
+    private static bool TryGetVatLayoutForLod(
+        VATProfile_Stage5 profile,
+        int lodLevel,
+        out Texture positionTexture,
+        out Texture normalTexture,
+        out int textureWidth,
+        out int textureHeight,
+        out int rowsPerFrame)
+    {
+        if (lodLevel == 1 && profile.HasMidLod)
+        {
+            positionTexture = profile.midLodPositionTexture;
+            normalTexture = profile.midLodNormalTexture;
+            textureWidth = profile.midLodTextureWidth;
+            textureHeight = profile.midLodTextureHeight;
+            rowsPerFrame = profile.midLodRowsPerFrame;
+            return true;
+        }
+
+        if (lodLevel > 0 && profile.HasLowLod)
+        {
+            positionTexture = profile.lowLodPositionTexture;
+            normalTexture = profile.lowLodNormalTexture;
+            textureWidth = profile.lowLodTextureWidth;
+            textureHeight = profile.lowLodTextureHeight;
+            rowsPerFrame = profile.lowLodRowsPerFrame;
+            return true;
+        }
+
+        if (lodLevel > 1 && profile.HasMidLod)
+        {
+            positionTexture = profile.midLodPositionTexture;
+            normalTexture = profile.midLodNormalTexture;
+            textureWidth = profile.midLodTextureWidth;
+            textureHeight = profile.midLodTextureHeight;
+            rowsPerFrame = profile.midLodRowsPerFrame;
+            return true;
+        }
+
+        positionTexture = profile.positionTexture;
+        normalTexture = profile.normalTexture;
+        textureWidth = profile.textureWidth;
+        textureHeight = profile.textureHeight;
+        rowsPerFrame = profile.rowsPerFrame;
+        return profile.IsValid(out string ignoredError);
     }
 
     private void BindComputeBuffers(int kernel)

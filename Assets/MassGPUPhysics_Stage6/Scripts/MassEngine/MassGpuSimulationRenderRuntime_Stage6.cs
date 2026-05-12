@@ -6,6 +6,8 @@ using DefenderMovementMode = GPUInstancingManager_Stage6.DefenderMovementMode;
 
 public sealed partial class MassGpuRuntime_Stage6
 {
+    private Camera cachedMainCamera;
+
     private void UploadInitialAgents()
     {
         MassAgentSpawnUtility_Stage6.CombatSpawnData initialData = MassAgentSpawnUtility_Stage6.BuildInitialCombatData(
@@ -24,12 +26,15 @@ public sealed partial class MassGpuRuntime_Stage6
             AnimationDuration);
 
         agentBuffer.SetData(initialData.Agents);
+        agentPositionReadBuffer.SetData(initialData.AgentPositions);
+        agentPositionWriteBuffer.SetData(initialData.AgentPositions);
         teamIdBuffer.SetData(initialData.TeamIds);
         hpBuffer.SetData(initialData.Hp);
         targetAgentIndexBuffer.SetData(initialData.TargetAgentIndices);
         attackCooldownBuffer.SetData(initialData.AttackCooldowns);
         homePositionBuffer.SetData(initialData.HomePositions);
-        pendingDamageBuffer.SetData(initialData.PendingDamage);
+        pendingDamageReadBuffer.SetData(initialData.PendingDamage);
+        pendingDamageWriteBuffer.SetData(initialData.PendingDamage);
     }
 
     private void Update()
@@ -43,14 +48,20 @@ public sealed partial class MassGpuRuntime_Stage6
         bool rebuildRuntimeDefenderFlow = ConsumeRuntimeDynamicDefenderFlowRebuildRequest();
         dispatchScheduler.DispatchSimulation(
             kernels,
+            agentPositionReadBuffer,
+            agentPositionWriteBuffer,
+            pendingDamageReadBuffer,
+            pendingDamageWriteBuffer,
             gridThreadGroupsX,
             agentThreadGroupsX,
             FlowFieldThreadGroupsX,
             DefenderFlowFieldThreadGroupsX,
             rebuildRuntimeAttackerFlow,
             rebuildRuntimeDefenderFlow);
+        buffers.SwapSimulationBuffers();
         CopyVisibleCountsToArgs();
         DrawLods();
+        UpdateTelemetry();
     }
 
     private void ResetAppendCounters()
@@ -66,75 +77,139 @@ public sealed partial class MassGpuRuntime_Stage6
     private void UploadFrameParameters()
     {
         Vector3 center = GetLodCenter();
-
-        kernels.SetFloat(DeltaTimeId, Time.deltaTime);
-        kernels.SetFloat(AnimationDurationId, AnimationDuration);
-        kernels.SetInt(FrameIndexId, Time.frameCount);
-
-        kernels.SetVector(LodCenterId, center);
-        kernels.SetFloat(NearLodRadiusSqrId, shadowCastingRadius * shadowCastingRadius);
-        kernels.SetFloat(MidLodRadiusSqrId, midLodRadius * midLodRadius);
-        kernels.SetInt(EnableFrustumCullingId, enableFrustumCulling ? 1 : 0);
-        kernels.SetFloat(CullingRadiusId, cullingRadius);
-        kernels.SetInt(NearAnimationIntervalId, nearAnimationInterval);
-        kernels.SetInt(MidAnimationIntervalId, midAnimationInterval);
-        kernels.SetInt(FarAnimationIntervalId, farAnimationInterval);
-
-        kernels.SetInt(GridCellCountId, gridCellCount);
-        kernels.SetInts(GridResolutionId, gridResolutionX, gridResolutionZ);
-        kernels.SetVector(GridOriginId, new Vector4(gridOrigin.x, gridOrigin.y, 0f, 0f));
-        kernels.SetVector(GridWorldSizeId, new Vector4(activeWorldSize.x, activeWorldSize.y, 0f, 0f));
-        kernels.SetFloat(CellSizeId, cellSize);
-        kernels.SetInt(MaxAgentsPerCellId, maxAgentsPerCell);
-        kernels.SetFloat(AttackerAgentRadiusId, attackerSettings.agentRadius);
-        kernels.SetFloat(DefenderAgentRadiusId, defenderSettings.agentRadius);
-        kernels.SetFloat(AttackerSeparationStrengthId, attackerSettings.separationStrength);
-        kernels.SetFloat(DefenderSeparationStrengthId, defenderSettings.separationStrength);
-        kernels.SetFloat(AttackerVelocityDampingId, attackerSettings.velocityDamping);
-        kernels.SetFloat(DefenderVelocityDampingId, defenderSettings.velocityDamping);
-        kernels.SetFloat(AttackerMaxSpeedId, attackerSettings.maxSpeed);
-        kernels.SetFloat(DefenderMaxSpeedId, defenderSettings.maxSpeed);
-        kernels.SetFloat(BoundaryPaddingId, boundaryPadding);
-        kernels.SetInt(FlowFieldEnabledId, enableFlowFieldNavigation && flowFieldDirectionsBuffer != null ? 1 : 0);
-        kernels.SetInts(FlowFieldResolutionId, flowFieldResolutionX, flowFieldResolutionZ);
-        kernels.SetVector(FlowFieldOriginId, new Vector4(flowFieldOrigin.x, flowFieldOrigin.y, 0f, 0f));
-        kernels.SetFloat(FlowFieldCellSizeId, activeFlowFieldCellSize);
-        kernels.SetFloat(FlowFieldWeightId, flowFieldWeight);
-        kernels.SetFloat(FlowFieldResponsivenessId, flowFieldResponsiveness);
-        kernels.SetInt(RuntimeFlowPreviewModeId, (int)runtimeFlowPreviewMode);
-        kernels.SetInt(RuntimeDynamicAttackerFlowEnabledId, ShouldUseRuntimeDynamicAttackerFlowField() ? 1 : 0);
-        kernels.SetInt(RuntimeDynamicDefenderFlowEnabledId, ShouldUseRuntimeDynamicDefenderFlowField() ? 1 : 0);
-        kernels.SetInt(DynamicFlowSectorCountId, dynamicFlowSectorCount);
-        kernels.SetFloat(DynamicFlowTargetStopRadiusId, dynamicFlowTargetStopRadius);
-        kernels.SetInt(DynamicFlowMinDefendersPerTargetId, dynamicFlowMinDefendersPerTarget);
-        kernels.SetInt(DynamicDefenderFlowSectorCountId, dynamicDefenderFlowSectorCount);
-        kernels.SetFloat(DynamicDefenderFlowTargetStopRadiusId, dynamicDefenderFlowTargetStopRadius);
-        kernels.SetInt(DynamicDefenderFlowMinAttackersPerTargetId, dynamicDefenderFlowMinAttackersPerTarget);
+        float dt = Time.deltaTime;
+        float activeAnimationDuration = AnimationDuration;
+        int frameIndex = Time.frameCount;
+        int activeAgentCount = Mathf.Max(1, instanceCount);
+        int activeAttackerCount = Mathf.Clamp(attackerCount, 0, instanceCount);
+        bool attackerRuntimeFlowEnabled = ShouldUseRuntimeDynamicAttackerFlowField();
+        bool defenderRuntimeFlowEnabled = ShouldUseRuntimeDynamicDefenderFlowField();
+        bool attackerFlowEnabled = enableFlowFieldNavigation && flowFieldDirectionsBuffer != null;
         bool defenderFlowEnabled = enableFlowFieldNavigation &&
                                    defenderMovementMode == DefenderMovementMode.UseDefenderFlowField &&
                                    defenderFlowFieldDirectionsBuffer != null;
-        kernels.SetInt(DefenderMovementModeId, defenderFlowEnabled ? (int)DefenderMovementMode.UseDefenderFlowField : (int)DefenderMovementMode.HoldPositionNoSeparation);
-        kernels.SetInt(DefenderFlowFieldEnabledId, defenderFlowEnabled ? 1 : 0);
-        kernels.SetInts(DefenderFlowFieldResolutionId, defenderFlowFieldResolutionX, defenderFlowFieldResolutionZ);
-        kernels.SetVector(DefenderFlowFieldOriginId, new Vector4(defenderFlowFieldOrigin.x, defenderFlowFieldOrigin.y, 0f, 0f));
-        kernels.SetFloat(DefenderFlowFieldCellSizeId, activeDefenderFlowFieldCellSize);
-        kernels.SetInt(EnableTwoTeamCombatId, enableTwoTeamCombat ? 1 : 0);
-        kernels.SetInt(BattleStartedId, battleStarted ? 1 : 0);
-        kernels.SetInt(AttackerCountId, Mathf.Clamp(attackerCount, 0, instanceCount));
-        kernels.SetFloat(AttackerTargetAcquireRadiusId, attackerSettings.targetAcquireRadius);
-        kernels.SetFloat(DefenderTargetAcquireRadiusId, defenderSettings.targetAcquireRadius);
-        kernels.SetFloat(AttackerAttackRangeId, attackerSettings.attackRange);
-        kernels.SetFloat(DefenderAttackRangeId, defenderSettings.attackRange);
-        kernels.SetInt(AttackerAttackDamageId, attackerSettings.attackDamage);
-        kernels.SetInt(DefenderAttackDamageId, defenderSettings.attackDamage);
-        kernels.SetFloat(AttackerAttackIntervalId, attackerSettings.attackInterval);
-        kernels.SetFloat(DefenderAttackIntervalId, defenderSettings.attackInterval);
-        kernels.SetFloat(DefenderGuardRadiusId, defenderGuardRadius);
-        kernels.SetFloat(DefenderMaxChaseDistanceId, defenderMaxChaseDistance);
-        kernels.SetFloat(DeathClipDurationId, deathClipDuration);
 
         UpdateFrustumPlanes();
-        kernels.SetVectorArray(FrustumPlanesId, frustumPlaneVectors);
+
+        UploadSpatialHashParameters(activeAgentCount);
+        UploadRuntimeFlowParameters(activeAgentCount, activeAttackerCount, attackerRuntimeFlowEnabled, defenderRuntimeFlowEnabled);
+        UploadCombatSimulationParameters(activeAgentCount, activeAttackerCount, attackerFlowEnabled, defenderFlowEnabled, dt);
+        UploadLodClassificationParameters(activeAgentCount, center, dt, activeAnimationDuration, frameIndex);
+    }
+
+    private void UploadSpatialHashParameters(int activeAgentCount)
+    {
+        ComputeShader shader = kernels.SpatialHashShader;
+        shader.SetInt(AgentCountId, activeAgentCount);
+        shader.SetInt(GridCellCountId, gridCellCount);
+        shader.SetInts(GridResolutionId, gridResolutionX, gridResolutionZ);
+        shader.SetVector(GridOriginId, new Vector4(gridOrigin.x, gridOrigin.y, 0f, 0f));
+        shader.SetFloat(CellSizeId, cellSize);
+        shader.SetInt(MaxAgentsPerCellId, maxAgentsPerCell);
+    }
+
+    private void UploadRuntimeFlowParameters(
+        int activeAgentCount,
+        int activeAttackerCount,
+        bool attackerRuntimeFlowEnabled,
+        bool defenderRuntimeFlowEnabled)
+    {
+        ComputeShader shader = kernels.RuntimeFlowShader;
+        shader.SetInt(AgentCountId, activeAgentCount);
+        shader.SetInt(EnableTwoTeamCombatId, enableTwoTeamCombat ? 1 : 0);
+        shader.SetInt(BattleStartedId, battleStarted ? 1 : 0);
+        shader.SetInt(AttackerCountId, activeAttackerCount);
+        shader.SetInts(FlowFieldResolutionId, flowFieldResolutionX, flowFieldResolutionZ);
+        shader.SetVector(FlowFieldOriginId, new Vector4(flowFieldOrigin.x, flowFieldOrigin.y, 0f, 0f));
+        shader.SetFloat(FlowFieldCellSizeId, activeFlowFieldCellSize);
+        shader.SetInts(DefenderFlowFieldResolutionId, defenderFlowFieldResolutionX, defenderFlowFieldResolutionZ);
+        shader.SetVector(DefenderFlowFieldOriginId, new Vector4(defenderFlowFieldOrigin.x, defenderFlowFieldOrigin.y, 0f, 0f));
+        shader.SetFloat(DefenderFlowFieldCellSizeId, activeDefenderFlowFieldCellSize);
+        shader.SetInt(RuntimeFlowPreviewModeId, (int)runtimeFlowPreviewMode);
+        shader.SetInt(RuntimeDynamicAttackerFlowEnabledId, attackerRuntimeFlowEnabled ? 1 : 0);
+        shader.SetInt(RuntimeDynamicDefenderFlowEnabledId, defenderRuntimeFlowEnabled ? 1 : 0);
+        shader.SetInt(DynamicFlowSectorCountId, dynamicFlowSectorCount);
+        shader.SetFloat(DynamicFlowTargetStopRadiusId, dynamicFlowTargetStopRadius);
+        shader.SetInt(DynamicFlowMinDefendersPerTargetId, dynamicFlowMinDefendersPerTarget);
+        shader.SetInt(DynamicDefenderFlowSectorCountId, dynamicDefenderFlowSectorCount);
+        shader.SetFloat(DynamicDefenderFlowTargetStopRadiusId, dynamicDefenderFlowTargetStopRadius);
+        shader.SetInt(DynamicDefenderFlowMinAttackersPerTargetId, dynamicDefenderFlowMinAttackersPerTarget);
+    }
+
+    private void UploadCombatSimulationParameters(
+        int activeAgentCount,
+        int activeAttackerCount,
+        bool attackerFlowEnabled,
+        bool defenderFlowEnabled,
+        float dt)
+    {
+        ComputeShader shader = kernels.CombatSimulationShader;
+        shader.SetInt(AgentCountId, activeAgentCount);
+        shader.SetFloat(DeltaTimeId, dt);
+        shader.SetInt(GridCellCountId, gridCellCount);
+        shader.SetInts(GridResolutionId, gridResolutionX, gridResolutionZ);
+        shader.SetVector(GridOriginId, new Vector4(gridOrigin.x, gridOrigin.y, 0f, 0f));
+        shader.SetVector(GridWorldSizeId, new Vector4(activeWorldSize.x, activeWorldSize.y, 0f, 0f));
+        shader.SetFloat(CellSizeId, cellSize);
+        shader.SetInt(MaxAgentsPerCellId, maxAgentsPerCell);
+        shader.SetFloat(AttackerAgentRadiusId, attackerSettings.agentRadius);
+        shader.SetFloat(DefenderAgentRadiusId, defenderSettings.agentRadius);
+        shader.SetFloat(AttackerSeparationStrengthId, attackerSettings.separationStrength);
+        shader.SetFloat(DefenderSeparationStrengthId, defenderSettings.separationStrength);
+        shader.SetFloat(AttackerVelocityDampingId, attackerSettings.velocityDamping);
+        shader.SetFloat(DefenderVelocityDampingId, defenderSettings.velocityDamping);
+        shader.SetFloat(AttackerMaxSpeedId, attackerSettings.maxSpeed);
+        shader.SetFloat(DefenderMaxSpeedId, defenderSettings.maxSpeed);
+        shader.SetFloat(BoundaryPaddingId, boundaryPadding);
+        shader.SetInt(FlowFieldEnabledId, attackerFlowEnabled ? 1 : 0);
+        shader.SetInts(FlowFieldResolutionId, flowFieldResolutionX, flowFieldResolutionZ);
+        shader.SetVector(FlowFieldOriginId, new Vector4(flowFieldOrigin.x, flowFieldOrigin.y, 0f, 0f));
+        shader.SetFloat(FlowFieldCellSizeId, activeFlowFieldCellSize);
+        shader.SetFloat(FlowFieldWeightId, flowFieldWeight);
+        shader.SetFloat(FlowFieldResponsivenessId, flowFieldResponsiveness);
+        shader.SetInt(DefenderMovementModeId, defenderFlowEnabled ? (int)DefenderMovementMode.UseDefenderFlowField : (int)DefenderMovementMode.HoldPositionNoSeparation);
+        shader.SetInt(DefenderFlowFieldEnabledId, defenderFlowEnabled ? 1 : 0);
+        shader.SetInts(DefenderFlowFieldResolutionId, defenderFlowFieldResolutionX, defenderFlowFieldResolutionZ);
+        shader.SetVector(DefenderFlowFieldOriginId, new Vector4(defenderFlowFieldOrigin.x, defenderFlowFieldOrigin.y, 0f, 0f));
+        shader.SetFloat(DefenderFlowFieldCellSizeId, activeDefenderFlowFieldCellSize);
+        shader.SetInt(EnableTwoTeamCombatId, enableTwoTeamCombat ? 1 : 0);
+        shader.SetInt(BattleStartedId, battleStarted ? 1 : 0);
+        shader.SetInt(AttackerCountId, activeAttackerCount);
+        shader.SetFloat(AttackerTargetAcquireRadiusId, attackerSettings.targetAcquireRadius);
+        shader.SetFloat(DefenderTargetAcquireRadiusId, defenderSettings.targetAcquireRadius);
+        shader.SetFloat(AttackerAttackRangeId, attackerSettings.attackRange);
+        shader.SetFloat(DefenderAttackRangeId, defenderSettings.attackRange);
+        shader.SetInt(AttackerAttackDamageId, attackerSettings.attackDamage);
+        shader.SetInt(DefenderAttackDamageId, defenderSettings.attackDamage);
+        shader.SetFloat(AttackerAttackIntervalId, attackerSettings.attackInterval);
+        shader.SetFloat(DefenderAttackIntervalId, defenderSettings.attackInterval);
+        shader.SetFloat(DefenderGuardRadiusId, defenderGuardRadius);
+        shader.SetFloat(DefenderMaxChaseDistanceId, defenderMaxChaseDistance);
+    }
+
+    private void UploadLodClassificationParameters(
+        int activeAgentCount,
+        Vector3 center,
+        float dt,
+        float activeAnimationDuration,
+        int frameIndex)
+    {
+        ComputeShader shader = kernels.LodClassificationShader;
+        shader.SetInt(AgentCountId, activeAgentCount);
+        shader.SetFloat(DeltaTimeId, dt);
+        shader.SetFloat(AnimationDurationId, activeAnimationDuration);
+        shader.SetInt(FrameIndexId, frameIndex);
+        shader.SetVector(LodCenterId, center);
+        shader.SetFloat(NearLodRadiusSqrId, shadowCastingRadius * shadowCastingRadius);
+        shader.SetFloat(MidLodRadiusSqrId, midLodRadius * midLodRadius);
+        shader.SetInt(EnableFrustumCullingId, enableFrustumCulling ? 1 : 0);
+        shader.SetFloat(CullingRadiusId, cullingRadius);
+        shader.SetInt(NearAnimationIntervalId, nearAnimationInterval);
+        shader.SetInt(MidAnimationIntervalId, midAnimationInterval);
+        shader.SetInt(FarAnimationIntervalId, farAnimationInterval);
+        shader.SetInt(EnableTwoTeamCombatId, enableTwoTeamCombat ? 1 : 0);
+        shader.SetFloat(DeathClipDurationId, deathClipDuration);
+        shader.SetVectorArray(FrustumPlanesId, frustumPlaneVectors);
     }
 
     private Vector3 GetLodCenter()
@@ -148,7 +223,13 @@ public sealed partial class MassGpuRuntime_Stage6
 
     private Camera GetActiveCullingCamera()
     {
-        return cullingCamera != null ? cullingCamera : Camera.main;
+        if (cullingCamera != null)
+            return cullingCamera;
+
+        if (cachedMainCamera == null || !cachedMainCamera.isActiveAndEnabled)
+            cachedMainCamera = Camera.main;
+
+        return cachedMainCamera;
     }
 
     private void UpdateFrustumPlanes()

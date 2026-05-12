@@ -9,6 +9,14 @@ public sealed class VATProfile_Stage5 : ScriptableObject
     public Texture2D positionTexture;
     public Texture2D normalTexture;
 
+    [Header("Mid LOD")]
+    public Mesh midLodMesh;
+    public Texture2D midLodPositionTexture;
+    public Texture2D midLodNormalTexture;
+    public int midLodTextureWidth;
+    public int midLodTextureHeight;
+    public int midLodRowsPerFrame;
+
     [Header("Low LOD")]
     public Mesh lowLodMesh;
     public Texture2D lowLodPositionTexture;
@@ -29,6 +37,14 @@ public sealed class VATProfile_Stage5 : ScriptableObject
     public VATClipWindow move;
     public VATClipWindow attack;
     public VATClipWindow death;
+
+    public bool HasMidLod =>
+        midLodMesh != null &&
+        midLodPositionTexture != null &&
+        midLodNormalTexture != null &&
+        midLodTextureWidth > 0 &&
+        midLodTextureHeight > 0 &&
+        midLodRowsPerFrame > 0;
 
     public bool HasLowLod =>
         lowLodMesh != null &&

@@ -3,6 +3,7 @@ using UnityEngine;
 internal static class MassGpuShaderPropertyIds_Stage6
 {
     public static readonly int DeltaTimeId = Shader.PropertyToID("deltaTime");
+    public static readonly int AgentCountId = Shader.PropertyToID("agentCount");
     public static readonly int AnimationDurationId = Shader.PropertyToID("animationDuration");
     public static readonly int FrameIndexId = Shader.PropertyToID("frameIndex");
     public static readonly int LodCenterId = Shader.PropertyToID("lodCenter");
@@ -15,6 +16,8 @@ internal static class MassGpuShaderPropertyIds_Stage6
     public static readonly int MidAnimationIntervalId = Shader.PropertyToID("midAnimationInterval");
     public static readonly int FarAnimationIntervalId = Shader.PropertyToID("farAnimationInterval");
     public static readonly int AgentBufferId = Shader.PropertyToID("agentBuffer");
+    public static readonly int AgentPositionReadBufferId = Shader.PropertyToID("agentPositionReadBuffer");
+    public static readonly int AgentPositionBufferId = Shader.PropertyToID("agentPositionBuffer");
     public static readonly int NearAttackerAgentIndicesId = Shader.PropertyToID("nearAttackerAgentIndices");
     public static readonly int MidAttackerAgentIndicesId = Shader.PropertyToID("midAttackerAgentIndices");
     public static readonly int FarAttackerAgentIndicesId = Shader.PropertyToID("farAttackerAgentIndices");
