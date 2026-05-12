@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e701000e, type: 3}
+  m_Name: Stage7ShaderConfig
+  m_EditorClassIdentifier: 
+  spatialHashShader: {fileID: 7200000, guid: 7988f00e54a85cd44b3cba343e2f24d1, type: 3}
+  runtimeFlowShader: {fileID: 7200000, guid: 0d7a3f16661466f4a9afeeaa491c347c, type: 3}
+  combatSimulationShader: {fileID: 7200000, guid: 79e52f9c40245924db5b507171e4a0a3, type: 3}
+  lodClassificationShader: {fileID: 7200000, guid: 74899bb940eb73d4997dd2a13b913d51, type: 3}

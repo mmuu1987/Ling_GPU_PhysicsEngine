@@ -18,8 +18,7 @@ public struct MassGpuShaderSet_Stage6
     public readonly int SelectRuntimeDefenderFlowTargets;
     public readonly int GenerateRuntimeDefenderFlowField;
     public readonly int ClearPendingDamage;
-    public readonly int EvaluateStateAndAccumulateDamage;
-    public readonly int ResolveDamageSimulateAndClassify;
+    public readonly int SimulateCombatAndAccumulateDamage;
     public readonly int ClassifyVisibleAgentsByTeam;
 
     private MassGpuShaderSet_Stage6(
@@ -38,8 +37,7 @@ public struct MassGpuShaderSet_Stage6
         int selectRuntimeDefenderFlowTargets,
         int generateRuntimeDefenderFlowField,
         int clearPendingDamage,
-        int evaluateStateAndAccumulateDamage,
-        int resolveDamageSimulateAndClassify,
+        int simulateCombatAndAccumulateDamage,
         int classifyVisibleAgentsByTeam)
     {
         SpatialHashShader = spatialHashShader;
@@ -58,8 +56,7 @@ public struct MassGpuShaderSet_Stage6
         SelectRuntimeDefenderFlowTargets = selectRuntimeDefenderFlowTargets;
         GenerateRuntimeDefenderFlowField = generateRuntimeDefenderFlowField;
         ClearPendingDamage = clearPendingDamage;
-        EvaluateStateAndAccumulateDamage = evaluateStateAndAccumulateDamage;
-        ResolveDamageSimulateAndClassify = resolveDamageSimulateAndClassify;
+        SimulateCombatAndAccumulateDamage = simulateCombatAndAccumulateDamage;
         ClassifyVisibleAgentsByTeam = classifyVisibleAgentsByTeam;
     }
 
@@ -103,48 +100,8 @@ public struct MassGpuShaderSet_Stage6
             runtimeFlowShader.FindKernel("SelectRuntimeDefenderFlowTargets"),
             runtimeFlowShader.FindKernel("GenerateRuntimeDefenderFlowField"),
             combatSimulationShader.FindKernel("ClearPendingDamage"),
-            combatSimulationShader.FindKernel("EvaluateStateAndAccumulateDamage"),
-            combatSimulationShader.FindKernel("ResolveDamageSimulateAndClassify"),
+            combatSimulationShader.FindKernel("SimulateCombatAndAccumulateDamage"),
             lodClassificationShader.FindKernel("ClassifyVisibleAgentsByTeam"));
     }
 
-    public void SetFloat(int id, float value)
-    {
-        SpatialHashShader.SetFloat(id, value);
-        RuntimeFlowShader.SetFloat(id, value);
-        CombatSimulationShader.SetFloat(id, value);
-        LodClassificationShader.SetFloat(id, value);
-    }
-
-    public void SetInt(int id, int value)
-    {
-        SpatialHashShader.SetInt(id, value);
-        RuntimeFlowShader.SetInt(id, value);
-        CombatSimulationShader.SetInt(id, value);
-        LodClassificationShader.SetInt(id, value);
-    }
-
-    public void SetInts(int id, int x, int y)
-    {
-        SpatialHashShader.SetInts(id, x, y);
-        RuntimeFlowShader.SetInts(id, x, y);
-        CombatSimulationShader.SetInts(id, x, y);
-        LodClassificationShader.SetInts(id, x, y);
-    }
-
-    public void SetVector(int id, Vector4 value)
-    {
-        SpatialHashShader.SetVector(id, value);
-        RuntimeFlowShader.SetVector(id, value);
-        CombatSimulationShader.SetVector(id, value);
-        LodClassificationShader.SetVector(id, value);
-    }
-
-    public void SetVectorArray(int id, Vector4[] values)
-    {
-        SpatialHashShader.SetVectorArray(id, values);
-        RuntimeFlowShader.SetVectorArray(id, values);
-        CombatSimulationShader.SetVectorArray(id, values);
-        LodClassificationShader.SetVectorArray(id, values);
-    }
 }

@@ -18,7 +18,7 @@ MonoBehaviour:
   maxSpeed: 2
   targetAcquireRadius: 18
   attackRange: 2
-  attackDamage: 25
+  attackDamage: 10
   attackInterval: 0.8
   agentRadius: 1
   separationStrength: 5

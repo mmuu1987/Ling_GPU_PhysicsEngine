@@ -15,13 +15,10 @@ void ClearGrid(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void BuildSpatialHash(uint3 id : SV_DispatchThreadID)
 {
-    uint count;
-    uint stride;
-    agentBuffer.GetDimensions(count, stride);
-    if (id.x >= count || !IsAliveIndex(id.x))
+    if (!IsValidAgentIndex(id.x) || !IsAliveIndex(id.x))
         return;
 
-    uint cellIndex = CellToIndex(PositionToCell(agentBuffer[id.x].position));
+    uint cellIndex = CellToIndex(PositionXzToCell(agentPositionReadBuffer[id.x]));
     uint slot;
     InterlockedAdd(gridCounts[cellIndex], 1, slot);
     if (slot < maxAgentsPerCell)

@@ -20,6 +20,8 @@ struct AgentData
 };
 
 RWStructuredBuffer<AgentData> agentBuffer;
+StructuredBuffer<float2> agentPositionReadBuffer;
+RWStructuredBuffer<float2> agentPositionBuffer;
 RWStructuredBuffer<uint> gridCounts;
 RWStructuredBuffer<uint> gridAgentIndices;
 StructuredBuffer<uint> gridCountsReadBuffer;
@@ -53,6 +55,7 @@ AppendStructuredBuffer<uint> midDefenderAgentIndices;
 AppendStructuredBuffer<uint> farDefenderAgentIndices;
 
 float deltaTime;
+int agentCount;
 float animationDuration;
 uint frameIndex;
 
@@ -135,6 +138,11 @@ bool IsInsideFrustum(float3 position)
     return true;
 }
 
+bool IsValidAgentIndex(uint index)
+{
+    return index < (uint)max(agentCount, 0);
+}
+
 float SafeDt()
 {
     return min(deltaTime, 0.05);
@@ -159,13 +167,18 @@ void SetAgentState(inout AgentData agent, int state)
     agent.currentState = state;
 }
 
-int2 PositionToCell(float3 position)
+int2 PositionXzToCell(float2 positionXZ)
 {
-    float2 local = (position.xz - gridOrigin) / max(cellSize, 0.0001);
+    float2 local = (positionXZ - gridOrigin) / max(cellSize, 0.0001);
     int2 cell = (int2)floor(local);
     cell.x = clamp(cell.x, 0, gridResolution.x - 1);
     cell.y = clamp(cell.y, 0, gridResolution.y - 1);
     return cell;
+}
+
+int2 PositionToCell(float3 position)
+{
+    return PositionXzToCell(position.xz);
 }
 
 uint CellToIndex(int2 cell)
@@ -173,13 +186,18 @@ uint CellToIndex(int2 cell)
     return (uint)(cell.y * gridResolution.x + cell.x);
 }
 
-int2 PositionToFlowFieldCell(float3 position)
+int2 PositionXzToFlowFieldCell(float2 positionXZ)
 {
-    float2 local = (position.xz - flowFieldOrigin) / max(flowFieldCellSize, 0.0001);
+    float2 local = (positionXZ - flowFieldOrigin) / max(flowFieldCellSize, 0.0001);
     int2 cell = (int2)floor(local);
     cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
     cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
     return cell;
+}
+
+int2 PositionToFlowFieldCell(float3 position)
+{
+    return PositionXzToFlowFieldCell(position.xz);
 }
 
 uint FlowFieldCellToIndex(int2 cell)
@@ -197,13 +215,18 @@ float2 FlowFieldCellCenter(int2 cell)
     return flowFieldOrigin + ((float2)cell + 0.5) * flowFieldCellSize;
 }
 
-int2 PositionToDefenderFlowFieldCell(float3 position)
+int2 PositionXzToDefenderFlowFieldCell(float2 positionXZ)
 {
-    float2 local = (position.xz - defenderFlowFieldOrigin) / max(defenderFlowFieldCellSize, 0.0001);
+    float2 local = (positionXZ - defenderFlowFieldOrigin) / max(defenderFlowFieldCellSize, 0.0001);
     int2 cell = (int2)floor(local);
     cell.x = clamp(cell.x, 0, defenderFlowFieldResolution.x - 1);
     cell.y = clamp(cell.y, 0, defenderFlowFieldResolution.y - 1);
     return cell;
+}
+
+int2 PositionToDefenderFlowFieldCell(float3 position)
+{
+    return PositionXzToDefenderFlowFieldCell(position.xz);
 }
 
 uint DefenderFlowFieldCellToIndex(int2 cell)
@@ -287,9 +310,24 @@ bool UsesDefenderSettings(uint index)
     return enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == 1;
 }
 
+int GetTeamId(uint index)
+{
+    return enableTwoTeamCombat != 0 ? teamIdReadBuffer[index] : 0;
+}
+
+bool IsDefenderTeam(int teamId)
+{
+    return enableTwoTeamCombat != 0 && teamId == 1;
+}
+
+float GetAgentRadiusForTeam(int teamId)
+{
+    return IsDefenderTeam(teamId) ? defenderAgentRadius : attackerAgentRadius;
+}
+
 float GetAgentRadius(uint index)
 {
-    return UsesDefenderSettings(index) ? defenderAgentRadius : attackerAgentRadius;
+    return GetAgentRadiusForTeam(GetTeamId(index));
 }
 
 float GetSeparationStrength(uint index)
@@ -394,40 +432,64 @@ bool IsEnemy(uint selfIndex, uint otherIndex)
 
 bool IsDefender(uint index)
 {
-    return enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == 1;
+    return IsDefenderTeam(GetTeamId(index));
+}
+
+bool IsKnownEnemyTeam(int selfTeamId, int otherTeamId)
+{
+    return enableTwoTeamCombat != 0 && selfTeamId != otherTeamId;
+}
+
+bool IsDefenderWithinChaseDistance(uint selfIndex, bool selfIsDefender, float3 selfPosition)
+{
+    if (!selfIsDefender || defenderMovementMode == DEFENDER_MODE_HOLD_POSITION || defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
+        return true;
+
+    float chaseSqr = defenderMaxChaseDistance * defenderMaxChaseDistance;
+    float2 fromHome = selfPosition.xz - homePositionReadBuffer[selfIndex].xz;
+    return dot(fromHome, fromHome) <= chaseSqr;
+}
+
+bool TargetDistanceAllowed(
+    bool selfIsDefender,
+    float distSqr,
+    float acquireRadiusSqr,
+    float attackRangeSqr,
+    bool defenderWithinChaseDistance)
+{
+    if (!selfIsDefender)
+        return distSqr <= acquireRadiusSqr;
+
+    if (defenderMovementMode == DEFENDER_MODE_HOLD_POSITION)
+        return distSqr <= attackRangeSqr;
+
+    if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
+        return distSqr <= acquireRadiusSqr;
+
+    return distSqr <= acquireRadiusSqr && defenderWithinChaseDistance;
 }
 
 bool TargetIsUsable(uint selfIndex, uint otherIndex, float distSqr, float3 selfPosition)
 {
-    if (selfIndex == otherIndex || !IsAliveIndex(otherIndex) || !IsEnemy(selfIndex, otherIndex))
+    if (selfIndex == otherIndex || !IsAliveIndexRw(otherIndex) || !IsEnemy(selfIndex, otherIndex))
         return false;
 
-    if (IsDefender(selfIndex))
-    {
-        if (defenderMovementMode == DEFENDER_MODE_HOLD_POSITION)
-        {
-            float defenderRange = GetAttackRange(selfIndex);
-            return distSqr <= defenderRange * defenderRange;
-        }
-
-        float defenderAcquireRadius = GetTargetAcquireRadius(selfIndex);
-        float aggroSqr = defenderAcquireRadius * defenderAcquireRadius;
-        if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
-            return distSqr <= aggroSqr;
-
-        float chaseSqr = defenderMaxChaseDistance * defenderMaxChaseDistance;
-        float2 fromHome = selfPosition.xz - homePositionReadBuffer[selfIndex].xz;
-        return distSqr <= aggroSqr && dot(fromHome, fromHome) <= chaseSqr;
-    }
-
+    int selfTeamId = GetTeamId(selfIndex);
+    bool selfIsDefender = IsDefenderTeam(selfTeamId);
     float acquireRadius = GetTargetAcquireRadius(selfIndex);
-    float acquireSqr = acquireRadius * acquireRadius;
-    return distSqr <= acquireSqr;
+    float attackRange = GetAttackRange(selfIndex);
+    return TargetDistanceAllowed(
+        selfIsDefender,
+        distSqr,
+        acquireRadius * acquireRadius,
+        attackRange * attackRange,
+        IsDefenderWithinChaseDistance(selfIndex, selfIsDefender, selfPosition));
 }
 
 int FindNearestEnemy(uint selfIndex, AgentData self, float maxRadius)
 {
-    int2 homeCell = PositionToCell(self.position);
+    float2 selfPosition = self.position.xz;
+    int2 homeCell = PositionXzToCell(selfPosition);
     float bestDistSqr = maxRadius * maxRadius;
     int bestIndex = -1;
 
@@ -447,8 +509,7 @@ int FindNearestEnemy(uint selfIndex, AgentData self, float maxRadius)
             for (uint i = 0; i < occupantCount; i++)
             {
                 uint otherIndex = gridAgentIndicesReadBuffer[cellIndex * maxAgentsPerCell + i];
-                AgentData other = agentBuffer[otherIndex];
-                float2 delta = other.position.xz - self.position.xz;
+                float2 delta = agentPositionReadBuffer[otherIndex] - selfPosition;
                 float distSqr = dot(delta, delta);
 
                 if (distSqr < bestDistSqr && TargetIsUsable(selfIndex, otherIndex, distSqr, self.position))
@@ -469,14 +530,30 @@ bool CurrentTargetIsValid(uint selfIndex, AgentData self, int targetIndex)
         return false;
 
     uint otherIndex = (uint)targetIndex;
-    AgentData other = agentBuffer[otherIndex];
-    float2 delta = other.position.xz - self.position.xz;
-    return TargetIsUsable(selfIndex, otherIndex, dot(delta, delta), self.position);
+    if (!IsValidAgentIndex(otherIndex) || !IsAliveIndexRw(otherIndex))
+        return false;
+
+    float2 delta = agentPositionReadBuffer[otherIndex] - self.position.xz;
+    int selfTeamId = GetTeamId(selfIndex);
+    int otherTeamId = GetTeamId(otherIndex);
+    if (!IsKnownEnemyTeam(selfTeamId, otherTeamId))
+        return false;
+
+    bool selfIsDefender = IsDefenderTeam(selfTeamId);
+    float acquireRadius = selfIsDefender ? defenderTargetAcquireRadius : attackerTargetAcquireRadius;
+    float attackRange = selfIsDefender ? defenderAttackRange : attackerAttackRange;
+    return TargetDistanceAllowed(
+        selfIsDefender,
+        dot(delta, delta),
+        acquireRadius * acquireRadius,
+        attackRange * attackRange,
+        IsDefenderWithinChaseDistance(selfIndex, selfIsDefender, self.position));
 }
 
 float2 AccumulateSeparation(uint selfIndex, AgentData agent)
 {
-    int2 homeCell = PositionToCell(agent.position);
+    float2 selfPosition = agent.position.xz;
+    int2 homeCell = PositionXzToCell(selfPosition);
     float selfRadius = GetAgentRadius(selfIndex);
     float2 separation = 0.0;
 
@@ -499,8 +576,7 @@ float2 AccumulateSeparation(uint selfIndex, AgentData agent)
                 if (otherIndex == selfIndex || !IsAliveIndexRw(otherIndex))
                     continue;
 
-                AgentData other = agentBuffer[otherIndex];
-                float2 delta = agent.position.xz - other.position.xz;
+                float2 delta = selfPosition - agentPositionReadBuffer[otherIndex];
                 float distSqr = dot(delta, delta);
                 float minDistance = selfRadius + GetAgentRadius(otherIndex);
                 float minDistanceSqr = minDistance * minDistance;
@@ -522,27 +598,111 @@ float2 AccumulateSeparation(uint selfIndex, AgentData agent)
     return separation;
 }
 
+struct NeighborhoodQueryResult
+{
+    int nearestEnemyIndex;
+    float nearestEnemyDistSqr;
+    float2 separation;
+};
+
+NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent, float maxTargetRadius, bool searchForEnemy)
+{
+    float2 selfPosition = agent.position.xz;
+    int2 homeCell = PositionXzToCell(selfPosition);
+    int selfTeamId = GetTeamId(selfIndex);
+    bool selfIsDefender = IsDefenderTeam(selfTeamId);
+    float selfRadius = GetAgentRadiusForTeam(selfTeamId);
+    float acquireRadiusSqr = maxTargetRadius * maxTargetRadius;
+    float attackRange = selfIsDefender ? defenderAttackRange : attackerAttackRange;
+    float attackRangeSqr = attackRange * attackRange;
+    bool defenderWithinChaseDistance = IsDefenderWithinChaseDistance(selfIndex, selfIsDefender, agent.position);
+
+    NeighborhoodQueryResult result;
+    result.nearestEnemyIndex = -1;
+    result.nearestEnemyDistSqr = acquireRadiusSqr;
+    result.separation = 0.0;
+
+    [unroll]
+    for (int dz = -1; dz <= 1; dz++)
+    {
+        [unroll]
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            int2 cell = homeCell + int2(dx, dz);
+            if (cell.x < 0 || cell.y < 0 || cell.x >= gridResolution.x || cell.y >= gridResolution.y)
+                continue;
+
+            uint cellIndex = CellToIndex(cell);
+            uint occupantCount = min(gridCountsReadBuffer[cellIndex], maxAgentsPerCell);
+
+            for (uint i = 0; i < occupantCount; i++)
+            {
+                uint otherIndex = gridAgentIndicesReadBuffer[cellIndex * maxAgentsPerCell + i];
+                if (otherIndex == selfIndex)
+                    continue;
+
+                if (!IsAliveIndexRw(otherIndex))
+                    continue;
+
+                float2 otherPosition = agentPositionReadBuffer[otherIndex];
+                float2 toOther = otherPosition - selfPosition;
+                float distSqr = dot(toOther, toOther);
+                int otherTeamId = GetTeamId(otherIndex);
+
+                if (searchForEnemy &&
+                    distSqr < result.nearestEnemyDistSqr &&
+                    IsKnownEnemyTeam(selfTeamId, otherTeamId) &&
+                    TargetDistanceAllowed(selfIsDefender, distSqr, acquireRadiusSqr, attackRangeSqr, defenderWithinChaseDistance))
+                {
+                    result.nearestEnemyDistSqr = distSqr;
+                    result.nearestEnemyIndex = (int)otherIndex;
+                }
+
+                float minDistance = selfRadius + GetAgentRadiusForTeam(otherTeamId);
+                float minDistanceSqr = minDistance * minDistance;
+                if (distSqr >= minDistanceSqr)
+                    continue;
+
+                float2 separationDelta = selfPosition - otherPosition;
+                if (distSqr < 0.000001)
+                {
+                    separationDelta = FallbackDirection(selfIndex) * 0.001;
+                    distSqr = dot(separationDelta, separationDelta);
+                }
+
+                float dist = max(sqrt(max(distSqr, 0.000001)), 0.0001);
+                result.separation += (separationDelta / dist) * (minDistance - dist);
+            }
+        }
+    }
+
+    return result;
+}
+
 void AppendVisibleAgent(uint index, inout AgentData agent, float duration, bool loop, bool includeFar)
 {
-    if (!IsInsideFrustum(agent.position))
-        return;
-
     bool isDefender = enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == 1;
     float3 offset = agent.position - lodCenter;
     offset.y = 0.0;
     float distSqr = dot(offset, offset);
+    bool isNear = distSqr <= nearLodRadiusSqr;
+    bool isMid = !isNear && distSqr <= midLodRadiusSqr;
+    int animationInterval = isNear ? nearAnimationInterval : (isMid ? midAnimationInterval : farAnimationInterval);
 
-    if (distSqr <= nearLodRadiusSqr)
+    UpdateAnimationTime(agent, animationInterval, duration, loop);
+
+    if (!IsInsideFrustum(agent.position))
+        return;
+
+    if (isNear)
     {
-        UpdateAnimationTime(agent, nearAnimationInterval, duration, loop);
         if (isDefender)
             nearDefenderAgentIndices.Append(index);
         else
             nearAttackerAgentIndices.Append(index);
     }
-    else if (distSqr <= midLodRadiusSqr)
+    else if (isMid)
     {
-        UpdateAnimationTime(agent, midAnimationInterval, duration, loop);
         if (isDefender)
             midDefenderAgentIndices.Append(index);
         else
@@ -550,7 +710,6 @@ void AppendVisibleAgent(uint index, inout AgentData agent, float duration, bool 
     }
     else if (includeFar)
     {
-        UpdateAnimationTime(agent, farAnimationInterval, duration, loop);
         if (isDefender)
             farDefenderAgentIndices.Append(index);
         else

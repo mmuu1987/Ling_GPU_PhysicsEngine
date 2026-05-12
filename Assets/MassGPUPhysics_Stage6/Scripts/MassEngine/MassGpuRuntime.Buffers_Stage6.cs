@@ -57,6 +57,8 @@ public sealed partial class MassGpuRuntime_Stage6
         EnableInstancing(runtimeDefenderFarMaterial);
 
         agentBuffer = new ComputeBuffer(instanceCount, Marshal.SizeOf<AgentData>());
+        agentPositionReadBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 2);
+        agentPositionWriteBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 2);
         gridCountsBuffer = new ComputeBuffer(gridCellCount, sizeof(uint));
         gridAgentIndicesBuffer = new ComputeBuffer(gridCellCount * maxAgentsPerCell, sizeof(uint));
         teamIdBuffer = new ComputeBuffer(instanceCount, sizeof(int));
@@ -64,7 +66,8 @@ public sealed partial class MassGpuRuntime_Stage6
         targetAgentIndexBuffer = new ComputeBuffer(instanceCount, sizeof(int));
         attackCooldownBuffer = new ComputeBuffer(instanceCount, sizeof(float));
         homePositionBuffer = new ComputeBuffer(instanceCount, sizeof(float) * 3);
-        pendingDamageBuffer = new ComputeBuffer(instanceCount, sizeof(int));
+        pendingDamageReadBuffer = new ComputeBuffer(instanceCount, sizeof(int));
+        pendingDamageWriteBuffer = new ComputeBuffer(instanceCount, sizeof(int));
         nearAttackerAgentIndexBuffer = MassGpuDrawUtility_Stage6.CreateAppendIndexBuffer(instanceCount);
         midAttackerAgentIndexBuffer = MassGpuDrawUtility_Stage6.CreateAppendIndexBuffer(instanceCount);
         farAttackerAgentIndexBuffer = MassGpuDrawUtility_Stage6.CreateAppendIndexBuffer(instanceCount);
@@ -102,8 +105,7 @@ public sealed partial class MassGpuRuntime_Stage6
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.SelectRuntimeDefenderFlowTargets);
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.GenerateRuntimeDefenderFlowField);
         BindComputeBuffers(kernels.CombatSimulationShader, kernels.ClearPendingDamage);
-        BindComputeBuffers(kernels.CombatSimulationShader, kernels.EvaluateStateAndAccumulateDamage);
-        BindComputeBuffers(kernels.CombatSimulationShader, kernels.ResolveDamageSimulateAndClassify);
+        BindComputeBuffers(kernels.CombatSimulationShader, kernels.SimulateCombatAndAccumulateDamage);
         BindComputeBuffers(kernels.LodClassificationShader, kernels.ClassifyVisibleAgentsByTeam);
 
         nearAttackerPropertyBlock = MassGpuDrawUtility_Stage6.CreatePropertyBlock(agentBuffer, nearAttackerAgentIndexBuffer, AgentBufferId, VisibleAgentIndicesId);
@@ -179,6 +181,7 @@ public sealed partial class MassGpuRuntime_Stage6
 
             if (kernel == kernels.BuildSpatialHash)
             {
+                shader.SetBuffer(kernel, AgentPositionReadBufferId, agentPositionReadBuffer);
                 shader.SetBuffer(kernel, HpReadBufferId, hpBuffer);
                 shader.SetBuffer(kernel, GridCountsId, gridCountsBuffer);
                 shader.SetBuffer(kernel, GridAgentIndicesId, gridAgentIndicesBuffer);
@@ -198,6 +201,7 @@ public sealed partial class MassGpuRuntime_Stage6
 
             if (kernel == kernels.BuildRuntimeAttackerTargetDensity)
             {
+                shader.SetBuffer(kernel, AgentPositionReadBufferId, agentPositionReadBuffer);
                 shader.SetBuffer(kernel, HpReadBufferId, hpBuffer);
                 shader.SetBuffer(kernel, RuntimeAttackerTargetDensityId, runtimeAttackerTargetDensityBuffer);
                 shader.SetBuffer(kernel, RuntimeAttackerFlowStatsId, runtimeAttackerFlowStatsBuffer);
@@ -232,6 +236,7 @@ public sealed partial class MassGpuRuntime_Stage6
 
             if (kernel == kernels.BuildRuntimeDefenderTargetDensity)
             {
+                shader.SetBuffer(kernel, AgentPositionReadBufferId, agentPositionReadBuffer);
                 shader.SetBuffer(kernel, HpReadBufferId, hpBuffer);
                 shader.SetBuffer(kernel, RuntimeDefenderTargetDensityId, runtimeDefenderTargetDensityBuffer);
                 shader.SetBuffer(kernel, RuntimeDefenderFlowStatsId, runtimeDefenderFlowStatsBuffer);
@@ -261,25 +266,14 @@ public sealed partial class MassGpuRuntime_Stage6
         {
             if (kernel == kernels.ClearPendingDamage)
             {
-                shader.SetBuffer(kernel, PendingDamageBufferId, pendingDamageBuffer);
+                shader.SetBuffer(kernel, PendingDamageBufferId, pendingDamageWriteBuffer);
                 return;
             }
 
-            if (kernel == kernels.EvaluateStateAndAccumulateDamage)
+            if (kernel == kernels.SimulateCombatAndAccumulateDamage)
             {
-                shader.SetBuffer(kernel, GridCountsReadBufferId, gridCountsBuffer);
-                shader.SetBuffer(kernel, GridAgentIndicesReadBufferId, gridAgentIndicesBuffer);
-                shader.SetBuffer(kernel, TeamIdReadBufferId, teamIdBuffer);
-                shader.SetBuffer(kernel, HpReadBufferId, hpBuffer);
-                shader.SetBuffer(kernel, TargetAgentIndexBufferId, targetAgentIndexBuffer);
-                shader.SetBuffer(kernel, AttackCooldownBufferId, attackCooldownBuffer);
-                shader.SetBuffer(kernel, HomePositionReadBufferId, homePositionBuffer);
-                shader.SetBuffer(kernel, PendingDamageBufferId, pendingDamageBuffer);
-                return;
-            }
-
-            if (kernel == kernels.ResolveDamageSimulateAndClassify)
-            {
+                shader.SetBuffer(kernel, AgentPositionReadBufferId, agentPositionReadBuffer);
+                shader.SetBuffer(kernel, AgentPositionBufferId, agentPositionWriteBuffer);
                 shader.SetBuffer(kernel, GridCountsReadBufferId, gridCountsBuffer);
                 shader.SetBuffer(kernel, GridAgentIndicesReadBufferId, gridAgentIndicesBuffer);
                 shader.SetBuffer(kernel, TeamIdReadBufferId, teamIdBuffer);
@@ -287,7 +281,8 @@ public sealed partial class MassGpuRuntime_Stage6
                 shader.SetBuffer(kernel, TargetAgentIndexBufferId, targetAgentIndexBuffer);
                 shader.SetBuffer(kernel, AttackCooldownBufferId, attackCooldownBuffer);
                 shader.SetBuffer(kernel, HomePositionReadBufferId, homePositionBuffer);
-                shader.SetBuffer(kernel, PendingDamageReadBufferId, pendingDamageBuffer);
+                shader.SetBuffer(kernel, PendingDamageBufferId, pendingDamageWriteBuffer);
+                shader.SetBuffer(kernel, PendingDamageReadBufferId, pendingDamageReadBuffer);
                 shader.SetBuffer(kernel, FlowFieldDirectionsId, flowFieldDirectionsBuffer);
                 shader.SetBuffer(kernel, DefenderFlowFieldDirectionsId, defenderFlowFieldDirectionsBuffer);
                 return;

@@ -29,6 +29,8 @@ public sealed class GPUInstancingManagerStage6Editor : Editor
         DrawDefaultInspector();
 
         var manager = (GPUInstancingManager_Stage6)target;
+        DrawScenarioTools(manager);
+        DrawScenarioGizmoTools(manager);
         DrawStage6ConfigTools(manager);
         DrawResolvedConfigSummary(manager);
         DrawDefenderMovementWarnings(manager);
@@ -47,13 +49,68 @@ public sealed class GPUInstancingManagerStage6Editor : Editor
         return Application.isPlaying && manager != null && manager.showFlowFieldPreview;
     }
 
-    private static void DrawStage6ConfigTools(GPUInstancingManager_Stage6 manager)
+    private static void DrawScenarioTools(GPUInstancingManager_Stage6 manager)
+    {
+        if (manager.scenarioConfig == null)
+            return;
+
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField("Scenario", EditorStyles.boldLabel);
+
+        var sc = manager.scenarioConfig;
+        EditorGUILayout.HelpBox(
+            $"\"{sc.scenarioName}\"\n" +
+            $"Attacker: {(sc.attackerTeamConfig != null ? sc.attackerTeamConfig.teamName : "—")}  |  " +
+            $"Defender: {(sc.defenderTeamConfig != null ? sc.defenderTeamConfig.teamName : "—")}\n" +
+            $"Auto Apply: {sc.autoApplyOnStart}  |  Auto Start: {sc.autoStartBattle}  |  Telemetry: {sc.showBattleTelemetry}",
+            MessageType.None);
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            if (GUILayout.Button("Apply Scenario Config"))
+            {
+                Undo.RecordObject(manager, "Apply Scenario Config");
+                manager.ApplyScenarioConfig();
+                EditorUtility.SetDirty(manager);
+            }
+
+            using (new EditorGUI.DisabledScope(!Application.isPlaying))
+            {
+                if (GUILayout.Button("Reset Scenario", GUILayout.Width(120f)))
+                    manager.ResetScenario();
+            }
+        }
+    }
+
+    private static void DrawScenarioGizmoTools(GPUInstancingManager_Stage6 manager)
     {
         EditorGUILayout.Space(8f);
-        EditorGUILayout.LabelField("Stage6 Config Assets", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("Scene Gizmos", EditorStyles.boldLabel);
+
+        Stage6ScenarioGizmos_Stage6 gizmos = manager.GetComponent<Stage6ScenarioGizmos_Stage6>();
+        if (gizmos != null)
+        {
+            EditorGUILayout.HelpBox("Scenario spawn and flow-field gizmos are enabled on this GameObject.", MessageType.None);
+            return;
+        }
+
+        if (GUILayout.Button("Add Scenario Gizmos Component"))
+        {
+            Stage6ScenarioGizmos_Stage6 added = Undo.AddComponent<Stage6ScenarioGizmos_Stage6>(manager.gameObject);
+            added.manager = manager;
+            EditorUtility.SetDirty(added);
+        }
+    }
+
+    private static void DrawStage6ConfigTools(GPUInstancingManager_Stage6 manager)
+    {
+        bool scenarioActive = manager.scenarioConfig != null;
+
+        EditorGUILayout.Space(8f);
+        EditorGUILayout.LabelField(scenarioActive ? "Stage6 Config Assets (overridden by Scenario)" : "Stage6 Config Assets", EditorStyles.boldLabel);
 
         bool hasConfig = manager.attackerTeamConfig != null || manager.defenderTeamConfig != null;
-        using (new EditorGUI.DisabledScope(!hasConfig))
+        using (new EditorGUI.DisabledScope(!hasConfig || scenarioActive))
         {
             if (GUILayout.Button("Apply Stage6 Config Assets"))
             {
@@ -63,8 +120,8 @@ public sealed class GPUInstancingManagerStage6Editor : Editor
             }
         }
 
-        if (!hasConfig)
-            EditorGUILayout.HelpBox("Assign attacker/defender Team Config assets to start moving setup data out of the manager.", MessageType.Info);
+        if (!hasConfig && !scenarioActive)
+            EditorGUILayout.HelpBox("Assign a Scenario Config (recommended) or attacker/defender Team Config assets.", MessageType.Info);
     }
 
     private static void DrawResolvedConfigSummary(GPUInstancingManager_Stage6 manager)
@@ -98,7 +155,7 @@ public sealed class GPUInstancingManagerStage6Editor : Editor
         EditorGUILayout.LabelField("VAT Profile", EditorStyles.boldLabel);
 
         MessageType messageType = manager.vatProfile == null
-            ? MessageType.Info
+            ? MessageType.Error
             : manager.vatProfile.IsValid(out string ignoredError) ? MessageType.None : MessageType.Warning;
         EditorGUILayout.HelpBox(manager.GetVatProfileStatus(), messageType);
 

@@ -5,6 +5,7 @@ public static class MassAgentSpawnUtility_Stage6
     public struct CombatSpawnData
     {
         public GPUInstancingManager_Stage6.AgentData[] Agents;
+        public Vector2[] AgentPositions;
         public int[] TeamIds;
         public int[] Hp;
         public int[] TargetAgentIndices;
@@ -67,6 +68,7 @@ public static class MassAgentSpawnUtility_Stage6
         var data = new CombatSpawnData
         {
             Agents = new GPUInstancingManager_Stage6.AgentData[safeCount],
+            AgentPositions = new Vector2[safeCount],
             TeamIds = new int[safeCount],
             Hp = new int[safeCount],
             TargetAgentIndices = new int[safeCount],
@@ -112,6 +114,7 @@ public static class MassAgentSpawnUtility_Stage6
             };
 
             data.TeamIds[i] = enableTwoTeamCombat && !isAttacker ? 1 : 0;
+            data.AgentPositions[i] = new Vector2(position.x, position.z);
             data.Hp[i] = isAttacker ? safeAttackerHp : safeDefenderHp;
             data.TargetAgentIndices[i] = -1;
             data.AttackCooldowns[i] = Random.Range(0f, Mathf.Max(0.01f, animationDuration));

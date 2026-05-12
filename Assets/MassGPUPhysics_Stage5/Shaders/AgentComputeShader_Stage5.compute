@@ -540,25 +540,28 @@ float2 AccumulateSeparation(uint selfIndex, AgentData agent)
 
 void AppendVisibleAgent(uint index, inout AgentData agent, float duration, bool loop, bool includeFar)
 {
-    if (!IsInsideFrustum(agent.position))
-        return;
-
     bool isDefender = enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == 1;
     float3 offset = agent.position - lodCenter;
     offset.y = 0.0;
     float distSqr = dot(offset, offset);
+    bool isNear = distSqr <= nearLodRadiusSqr;
+    bool isMid = !isNear && distSqr <= midLodRadiusSqr;
+    int animationInterval = isNear ? nearAnimationInterval : (isMid ? midAnimationInterval : farAnimationInterval);
 
-    if (distSqr <= nearLodRadiusSqr)
+    UpdateAnimationTime(agent, animationInterval, duration, loop);
+
+    if (!IsInsideFrustum(agent.position))
+        return;
+
+    if (isNear)
     {
-        UpdateAnimationTime(agent, nearAnimationInterval, duration, loop);
         if (isDefender)
             nearDefenderAgentIndices.Append(index);
         else
             nearAttackerAgentIndices.Append(index);
     }
-    else if (distSqr <= midLodRadiusSqr)
+    else if (isMid)
     {
-        UpdateAnimationTime(agent, midAnimationInterval, duration, loop);
         if (isDefender)
             midDefenderAgentIndices.Append(index);
         else
@@ -566,7 +569,6 @@ void AppendVisibleAgent(uint index, inout AgentData agent, float duration, bool 
     }
     else if (includeFar)
     {
-        UpdateAnimationTime(agent, farAnimationInterval, duration, loop);
         if (isDefender)
             farDefenderAgentIndices.Append(index);
         else

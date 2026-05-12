@@ -3,6 +3,8 @@ using UnityEngine;
 public sealed class MassGpuBufferSet_Stage6
 {
     public ComputeBuffer agentBuffer;
+    public ComputeBuffer agentPositionReadBuffer;
+    public ComputeBuffer agentPositionWriteBuffer;
     public ComputeBuffer gridCountsBuffer;
     public ComputeBuffer gridAgentIndicesBuffer;
     public ComputeBuffer flowFieldDirectionsBuffer;
@@ -18,7 +20,8 @@ public sealed class MassGpuBufferSet_Stage6
     public ComputeBuffer targetAgentIndexBuffer;
     public ComputeBuffer attackCooldownBuffer;
     public ComputeBuffer homePositionBuffer;
-    public ComputeBuffer pendingDamageBuffer;
+    public ComputeBuffer pendingDamageReadBuffer;
+    public ComputeBuffer pendingDamageWriteBuffer;
 
     public ComputeBuffer nearAttackerAgentIndexBuffer;
     public ComputeBuffer midAttackerAgentIndexBuffer;
@@ -64,9 +67,22 @@ public sealed class MassGpuBufferSet_Stage6
         ComputeBuffer.CopyCount(farDefenderAgentIndexBuffer, farDefenderArgsBuffer, sizeof(uint));
     }
 
+    public void SwapSimulationBuffers()
+    {
+        ComputeBuffer positionTemp = agentPositionReadBuffer;
+        agentPositionReadBuffer = agentPositionWriteBuffer;
+        agentPositionWriteBuffer = positionTemp;
+
+        ComputeBuffer damageTemp = pendingDamageReadBuffer;
+        pendingDamageReadBuffer = pendingDamageWriteBuffer;
+        pendingDamageWriteBuffer = damageTemp;
+    }
+
     public void ReleaseAll()
     {
         ReleaseBuffer(ref agentBuffer);
+        ReleaseBuffer(ref agentPositionReadBuffer);
+        ReleaseBuffer(ref agentPositionWriteBuffer);
         ReleaseBuffer(ref gridCountsBuffer);
         ReleaseBuffer(ref gridAgentIndicesBuffer);
         ReleaseBuffer(ref flowFieldDirectionsBuffer);
@@ -82,7 +98,8 @@ public sealed class MassGpuBufferSet_Stage6
         ReleaseBuffer(ref targetAgentIndexBuffer);
         ReleaseBuffer(ref attackCooldownBuffer);
         ReleaseBuffer(ref homePositionBuffer);
-        ReleaseBuffer(ref pendingDamageBuffer);
+        ReleaseBuffer(ref pendingDamageReadBuffer);
+        ReleaseBuffer(ref pendingDamageWriteBuffer);
         ReleaseBuffer(ref nearAttackerAgentIndexBuffer);
         ReleaseBuffer(ref midAttackerAgentIndexBuffer);
         ReleaseBuffer(ref farAttackerAgentIndexBuffer);

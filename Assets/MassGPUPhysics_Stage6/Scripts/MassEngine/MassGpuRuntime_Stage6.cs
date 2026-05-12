@@ -22,12 +22,23 @@ public sealed partial class MassGpuRuntime_Stage6
     public void Initialize()
     {
         MigrateLegacyTeamSettingsIfNeeded();
-        if (applyConfigAssetsOnStart)
+
+        bool scenarioApplied = false;
+        if (scenarioConfig != null && scenarioConfig.autoApplyOnStart)
+        {
+            ApplyScenarioConfig();
+            scenarioApplied = true;
+        }
+
+        if (!scenarioApplied && applyConfigAssetsOnStart)
             ApplyConfigAssetsToManager();
 
         attackerSettings.Normalize();
         defenderSettings.Normalize();
         InitializeBuffers();
+
+        if (scenarioConfig != null && scenarioConfig.autoStartBattle)
+            StartBattle();
     }
 
     public void Tick()
@@ -65,6 +76,17 @@ public sealed partial class MassGpuRuntime_Stage6
         RestorePaintedDefenderFlowField("Battle reset; defender flow field restored to painted fallback.");
     }
 
+    public void ResetScenario()
+    {
+        battleStarted = false;
+        runtimeDynamicAttackerFlowActive = false;
+        runtimeDynamicDefenderFlowActive = false;
+        ResetTelemetryState();
+        ReleaseBuffers();
+        Initialize();
+        Debug.Log("[GPUInstancingManager_Stage6] Scenario reset: buffers released, re-initialized, all units respawned.");
+    }
+
     public void MigrateLegacyTeamSettingsIfNeeded()
     {
         if (splitTeamSettingsInitialized)
@@ -99,10 +121,11 @@ public sealed partial class MassGpuRuntime_Stage6
         splitTeamSettingsInitialized = true;
     }
 
-    private float AnimationDuration => vatFrameCount / Mathf.Max(vatFrameRate, 0.0001f);
+    private float AnimationDuration => runtimeVatFrameCount / Mathf.Max(runtimeVatFrameRate, 0.0001f);
     private int FlowFieldThreadGroupsX => Mathf.CeilToInt(Mathf.Max(1, flowFieldResolutionX * flowFieldResolutionZ) / 64f);
     private int DefenderFlowFieldThreadGroupsX => Mathf.CeilToInt(Mathf.Max(1, defenderFlowFieldResolutionX * defenderFlowFieldResolutionZ) / 64f);
 
+    private Stage6ScenarioConfig_Stage6 scenarioConfig { get => owner.scenarioConfig; set => owner.scenarioConfig = value; }
     private bool applyConfigAssetsOnStart { get => owner.applyConfigAssetsOnStart; set => owner.applyConfigAssetsOnStart = value; }
     private bool applyConfigUnitCounts { get => owner.applyConfigUnitCounts; set => owner.applyConfigUnitCounts = value; }
     private Stage6TeamConfig_Stage6 attackerTeamConfig { get => owner.attackerTeamConfig; set => owner.attackerTeamConfig = value; }
@@ -166,8 +189,6 @@ public sealed partial class MassGpuRuntime_Stage6
     private bool enableFrustumCulling { get => owner.enableFrustumCulling; set => owner.enableFrustumCulling = value; }
     private Camera cullingCamera { get => owner.cullingCamera; set => owner.cullingCamera = value; }
     private float cullingRadius { get => owner.cullingRadius; set => owner.cullingRadius = value; }
-    private float vatFrameCount { get => owner.vatFrameCount; set => owner.vatFrameCount = value; }
-    private float vatFrameRate { get => owner.vatFrameRate; set => owner.vatFrameRate = value; }
     private int nearAnimationInterval { get => owner.nearAnimationInterval; set => owner.nearAnimationInterval = value; }
     private int midAnimationInterval { get => owner.midAnimationInterval; set => owner.midAnimationInterval = value; }
     private int farAnimationInterval { get => owner.farAnimationInterval; set => owner.farAnimationInterval = value; }
@@ -223,6 +244,8 @@ public sealed partial class MassGpuRuntime_Stage6
     private MassGpuShaderSet_Stage6 kernels { get => context.kernels; set => context.kernels = value; }
     private int agentThreadGroupsX { get => context.agentThreadGroupsX; set => context.agentThreadGroupsX = value; }
     private int gridThreadGroupsX { get => context.gridThreadGroupsX; set => context.gridThreadGroupsX = value; }
+    private float runtimeVatFrameCount { get => context.runtimeVatFrameCount; set => context.runtimeVatFrameCount = value; }
+    private float runtimeVatFrameRate { get => context.runtimeVatFrameRate; set => context.runtimeVatFrameRate = value; }
     private int gridResolutionX { get => context.gridResolutionX; set => context.gridResolutionX = value; }
     private int gridResolutionZ { get => context.gridResolutionZ; set => context.gridResolutionZ = value; }
     private int gridCellCount { get => context.gridCellCount; set => context.gridCellCount = value; }
@@ -244,6 +267,8 @@ public sealed partial class MassGpuRuntime_Stage6
     private float lastRuntimeDynamicDefenderFlowUpdateTime { get => context.lastRuntimeDynamicDefenderFlowUpdateTime; set => context.lastRuntimeDynamicDefenderFlowUpdateTime = value; }
 
     private ComputeBuffer agentBuffer { get => buffers.agentBuffer; set => buffers.agentBuffer = value; }
+    private ComputeBuffer agentPositionReadBuffer { get => buffers.agentPositionReadBuffer; set => buffers.agentPositionReadBuffer = value; }
+    private ComputeBuffer agentPositionWriteBuffer { get => buffers.agentPositionWriteBuffer; set => buffers.agentPositionWriteBuffer = value; }
     private ComputeBuffer gridCountsBuffer { get => buffers.gridCountsBuffer; set => buffers.gridCountsBuffer = value; }
     private ComputeBuffer gridAgentIndicesBuffer { get => buffers.gridAgentIndicesBuffer; set => buffers.gridAgentIndicesBuffer = value; }
     private ComputeBuffer flowFieldDirectionsBuffer { get => buffers.flowFieldDirectionsBuffer; set => buffers.flowFieldDirectionsBuffer = value; }
@@ -259,7 +284,8 @@ public sealed partial class MassGpuRuntime_Stage6
     private ComputeBuffer targetAgentIndexBuffer { get => buffers.targetAgentIndexBuffer; set => buffers.targetAgentIndexBuffer = value; }
     private ComputeBuffer attackCooldownBuffer { get => buffers.attackCooldownBuffer; set => buffers.attackCooldownBuffer = value; }
     private ComputeBuffer homePositionBuffer { get => buffers.homePositionBuffer; set => buffers.homePositionBuffer = value; }
-    private ComputeBuffer pendingDamageBuffer { get => buffers.pendingDamageBuffer; set => buffers.pendingDamageBuffer = value; }
+    private ComputeBuffer pendingDamageReadBuffer { get => buffers.pendingDamageReadBuffer; set => buffers.pendingDamageReadBuffer = value; }
+    private ComputeBuffer pendingDamageWriteBuffer { get => buffers.pendingDamageWriteBuffer; set => buffers.pendingDamageWriteBuffer = value; }
     private ComputeBuffer nearAttackerAgentIndexBuffer { get => buffers.nearAttackerAgentIndexBuffer; set => buffers.nearAttackerAgentIndexBuffer = value; }
     private ComputeBuffer midAttackerAgentIndexBuffer { get => buffers.midAttackerAgentIndexBuffer; set => buffers.midAttackerAgentIndexBuffer = value; }
     private ComputeBuffer farAttackerAgentIndexBuffer { get => buffers.farAttackerAgentIndexBuffer; set => buffers.farAttackerAgentIndexBuffer = value; }

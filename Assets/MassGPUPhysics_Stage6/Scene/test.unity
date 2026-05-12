@@ -471,6 +471,8 @@ GameObject:
   - component: {fileID: 1453234965}
   - component: {fileID: 1453234969}
   - component: {fileID: 1453234970}
+  - component: {fileID: 1453234971}
+  - component: {fileID: 1453234972}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -608,6 +610,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8f966f882bf44bc29a9d88a92f1edfdb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  scenarioConfig: {fileID: 11400000, guid: c41fcee6e0e526641aa66bfec3dd0468, type: 2}
   applyConfigAssetsOnStart: 1
   applyConfigUnitCounts: 1
   attackerTeamConfig: {fileID: 11400000, guid: fd92aeb453d11df48907ae07eaf7abcd, type: 2}
@@ -693,8 +696,6 @@ MonoBehaviour:
   enableFrustumCulling: 1
   cullingCamera: {fileID: 0}
   cullingRadius: 2
-  vatFrameCount: 188
-  vatFrameRate: 30
   nearAnimationInterval: 1
   midAnimationInterval: 2
   farAnimationInterval: 4
@@ -712,7 +713,7 @@ MonoBehaviour:
   flowFieldWeight: 1
   paintedFlowFieldAsset: {fileID: 11400000, guid: ae746961d3684ba4ab6ff42c9a66f238, type: 2}
   defenderPaintedFlowFieldAsset: {fileID: 11400000, guid: eb6e426717e44383852a9c68c28841ea, type: 2}
-  showFlowFieldPreview: 1
+  showFlowFieldPreview: 0
   flowFieldPreviewStride: 2
   autoSizeRuntimeAttackerFlowField: 1
   runtimeFlowFieldPadding: 40
@@ -760,6 +761,45 @@ MonoBehaviour:
   FlyFastMultiplier: 3
   ZoomSensitivity: 1
   AltRightDragZoomSensitivity: 0.01
+--- !u!114 &1453234971
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1453234964}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 99caaef3605f45e2a59e84cbe6058e20, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  manager: {fileID: 1453234969}
+  scenarioOverride: {fileID: 11400000, guid: c41fcee6e0e526641aa66bfec3dd0468, type: 2}
+  drawSpawnAreas: 1
+  drawLabels: 1
+  spawnFillAlpha: 0.12
+  spawnOutlineAlpha: 0.9
+  labelYOffset: 2
+  fallbackAttackerColor: {r: 0.95, g: 0.22, b: 0.16, a: 1}
+  fallbackDefenderColor: {r: 0.16, g: 0.44, b: 1, a: 1}
+  drawFlowFieldBounds: 1
+  drawFlowFieldGrid: 1
+  flowFieldGridStride: 8
+  preferPaintedFlowFieldBounds: 1
+  attackerFlowFieldColor: {r: 1, g: 0.72, b: 0.12, a: 1}
+  defenderFlowFieldColor: {r: 0.08, g: 0.9, b: 0.72, a: 1}
+--- !u!114 &1453234972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1453234964}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c712d65543f7684f825e301d1ab3bc2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

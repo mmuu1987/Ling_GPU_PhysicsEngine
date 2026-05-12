@@ -5,6 +5,22 @@ using TeamCombatSettings = GPUInstancingManager_Stage6.TeamCombatSettings;
 
 public sealed partial class MassGpuRuntime_Stage6
 {
+    public void ApplyScenarioConfig()
+    {
+        if (scenarioConfig == null)
+            return;
+
+        if (scenarioConfig.attackerTeamConfig != null)
+            attackerTeamConfig = scenarioConfig.attackerTeamConfig;
+        if (scenarioConfig.defenderTeamConfig != null)
+            defenderTeamConfig = scenarioConfig.defenderTeamConfig;
+
+        applyConfigUnitCounts = scenarioConfig.applyUnitCounts;
+        enableTwoTeamCombat = scenarioConfig.enableTwoTeamCombat;
+
+        ApplyConfigAssetsToManager();
+    }
+
     public void ApplyConfigAssetsToManager()
     {
         MigrateLegacyTeamSettingsIfNeeded();

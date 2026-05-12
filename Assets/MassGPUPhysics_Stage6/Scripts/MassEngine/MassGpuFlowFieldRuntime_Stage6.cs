@@ -534,7 +534,7 @@ public sealed partial class MassGpuRuntime_Stage6
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.BuildRuntimeDefenderTargetDensity);
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.SelectRuntimeDefenderFlowTargets);
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.GenerateRuntimeDefenderFlowField);
-        BindComputeBuffers(kernels.CombatSimulationShader, kernels.ResolveDamageSimulateAndClassify);
+        BindComputeBuffers(kernels.CombatSimulationShader, kernels.SimulateCombatAndAccumulateDamage);
     }
 
     private bool ShouldUseRuntimeDynamicAttackerFlowField()
@@ -661,7 +661,7 @@ public sealed partial class MassGpuRuntime_Stage6
 
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.SelectRuntimeAttackerFlowTargets);
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.GenerateRuntimeAttackerFlowField);
-        BindComputeBuffers(kernels.CombatSimulationShader, kernels.ResolveDamageSimulateAndClassify);
+        BindComputeBuffers(kernels.CombatSimulationShader, kernels.SimulateCombatAndAccumulateDamage);
     }
 
     private void RestorePaintedDefenderFlowField(string status)
@@ -692,6 +692,6 @@ public sealed partial class MassGpuRuntime_Stage6
 
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.SelectRuntimeDefenderFlowTargets);
         BindComputeBuffers(kernels.RuntimeFlowShader, kernels.GenerateRuntimeDefenderFlowField);
-        BindComputeBuffers(kernels.CombatSimulationShader, kernels.ResolveDamageSimulateAndClassify);
+        BindComputeBuffers(kernels.CombatSimulationShader, kernels.SimulateCombatAndAccumulateDamage);
     }
 }
