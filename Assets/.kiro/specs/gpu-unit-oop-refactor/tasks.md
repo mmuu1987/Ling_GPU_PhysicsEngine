@@ -109,6 +109,20 @@
     PlayMode +4（渲染桶计数/幽灵清场/行军速度一致性/暂停冻结）
   - 遗留未做（登记）：SelectFlowTargets 并行化（用户已降优先级）、PlayMode 队伍交错
     fixture（TG-05）、密度每平米 GPU 金值测试（TG-01）、≥128 人跨组测试（TG-06）
+    ——以上四项已于 2026-07-27 白天批（item 18）全部完成
+
+- [x] 18. 白天查漏补缺批（2026-07-27，用户授权自主任务；前四笔提交后进行）
+  - SelectRuntime*FlowTargets 并行化：每扇区 64 线程组 groupshared 归约，
+    残局兜底移入 Generate（需跨扇区视野）；派发组数 = clamp(sectorCount,1,8)
+  - 新 PlayMode 金值测试 ×3：DynamicSectorSelectionSteersFlowAtEnemyCluster
+    （扇区路径+兜底路径+stats 契约）、DensityMapCountsAliveAgentsPerCell（TG-01，
+    含死亡剔除）、InterleavedTeamsAcrossThreadGroupsFightAndClassifyCorrectly
+    （TG-05+TG-06：256 人交错队伍跨 4 线程组，战损双向+分类计数）
+  - fixture 参数化：BuildScenario(attackers, defenders) + 动态流场/密度阈值旋钮
+  - CameraControls 清理（原 item 13 待办）：SceneViewCamera 四件套去 _Stage7 后缀、
+    MyCameraManager_Stage7→RigCameraManager、LocalRotationAndScale_Stage7→
+    CameraMouseOrbit（guid 全保持；场景在用的 MyCameraManager/LocalRotationAndScale
+    不动）
 
 ## 待办（需要在 Unity 编辑器内完成）
 
@@ -130,8 +144,8 @@
 
 - [ ] 13. 未来扩展（不阻塞当前版本）
   - N 队 N 流场（数组化 flowFieldDirections 并按队伍派发）
-  - SelectRuntimeFlowTargets 并行化（分 sector reduction）
-  - CameraControls 中 *_Stage7 后缀类的改名清理（与 MyCameraManager 撞名，需合并）
+  - ~~SelectRuntimeFlowTargets 并行化~~（2026-07-27 完成，见 item 18）
+  - ~~CameraControls 改名清理~~（2026-07-27 完成，见 item 18）
 
 ## Notes
 

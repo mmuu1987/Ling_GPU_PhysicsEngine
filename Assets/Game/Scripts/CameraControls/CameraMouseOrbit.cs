@@ -1,10 +1,10 @@
 using UnityEngine;
 
 /// <summary>
-/// Orbit camera component used by MyCameraManager_Stage7.
+/// Orbit camera component used by RigCameraManager.
 /// It keeps the camera on a sphere around Target and updates yaw, pitch, and distance.
 /// </summary>
-public class LocalRotationAndScale_Stage7 : MonoBehaviour
+public class CameraMouseOrbit : MonoBehaviour
 {
     public Transform Target;
     public float Distance = 5f;

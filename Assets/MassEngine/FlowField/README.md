@@ -29,8 +29,8 @@
 
 - **Z 收敛**：扇区内每格目标 Z 向该扇区敌方密度质心插值 35%——歼灭一条走廊后幸存
   攻方会转向存活敌群，而不是永远停在质心 X 线上发呆
-- **残局兜底**：所有扇区敌方数都低于 min 阈值时，Select 发出全局质心目标——
-  20 万打 35 个残兵的仗一定能收尾
+- **残局兜底**：所有扇区敌方数都低于 min 阈值时（stats[3]==0），Generate 直接以
+  全局质心（stats[1]/[2] 位置和 ÷ 存活数）为目标——20 万打 35 个残兵的仗一定能收尾
 - **停止半径下限**：生效停止半径 = max(配置值, 0.75×流场格)——目标线两侧不再出现
   "永动搓衣机"抖动带
 
@@ -46,10 +46,14 @@
 扇区数/停止半径/最小敌方数（动态选点）。
 每 Agent 的流场权重与响应速度在 **MovementConfig**（按兵种，走 settings 通道）。
 
-## 已知瓶颈
+## 选点并行化（2026-07-27）
 
-`SelectRuntime*FlowTargets` 是 numthreads(1,1,1) 串行扫描 O(res²)——
-这就是重建必须节流的原因。并行化（分扇区 reduction）是登记在案的未来项。
+`SelectRuntime*FlowTargets` 已并行化：每扇区一个 64 线程组跨步扫描本扇区格子，
+groupshared 树形归约后由 0 号线程写目标槽、InterlockedAdd 累加 stats[3]。
+派发组数 = clamp(sectorCount, 1, 8)。旧实现是 numthreads(1,1,1) 串行扫全网格
+（最多 8×256×256 次迭代），是动态重建帧的尖刺来源；重建节流仍保留（省带宽），
+但不再是刚需。残局兜底因需要跨扇区视野而移入 Generate（见上）。
+金值测试：PlayMode `DynamicSectorSelectionSteersFlowAtEnemyCluster` 锁定两条路径。
 
 ## 如何验证
 

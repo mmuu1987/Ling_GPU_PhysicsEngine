@@ -58,58 +58,70 @@ void BuildRuntimeAttackerTargetDensity(uint3 id : SV_DispatchThreadID)
     InterlockedAdd(runtimeAttackerFlowStats[2], (int)round(position.y), ignoredStats);
 }
 
-[numthreads(1, 1, 1)]
-void SelectRuntimeAttackerFlowTargets(uint3 id : SV_DispatchThreadID)
-{
-    if (runtimeDynamicAttackerFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
-        return;
+// Parallel per-sector target selection: one 64-thread group per sector strides the
+// sector's cells, then a groupshared tree reduction. Replaces a single-thread scan
+// of the whole grid (up to 8 x 256 x 256 serial iterations = a visible frame spike
+// on every dynamic rebuild). The endgame fallback needs a view across ALL sectors,
+// which no longer exists inside this per-sector kernel; it moved into
+// GenerateRuntime*FlowField (stats[3] == 0 there means "no sector met the bar").
+groupshared uint gsSectorDensitySum[64];
+groupshared float2 gsSectorPositionSum[64];
 
-    if (runtimeAttackerFlowStats[0] <= 0)
-        return;
+[numthreads(64, 1, 1)]
+void SelectRuntimeAttackerFlowTargets(uint3 groupId : SV_GroupID, uint groupThreadIndex : SV_GroupIndex)
+{
+    bool active = runtimeDynamicAttackerFlowEnabled != 0 && enableTwoTeamCombat != 0 && battleStarted != 0
+        && runtimeAttackerFlowStats[0] > 0;
 
     uint sectorCount = (uint)clamp(dynamicFlowSectorCount, 1, 8);
-    int targetCount = 0;
+    uint sectorIndex = groupId.x;
+    active = active && sectorIndex < sectorCount;
 
-    for (uint sectorIndex = 0u; sectorIndex < sectorCount; sectorIndex++)
+    uint localDensity = 0u;
+    float2 localPositionSum = 0.0;
+    if (active)
     {
         int minZ = (int)((sectorIndex * (uint)flowFieldResolution.y) / sectorCount);
         int maxZ = (int)(((sectorIndex + 1u) * (uint)flowFieldResolution.y) / sectorCount);
-        uint sectorDefenderCount = 0u;
-        float2 sectorPositionSum = 0.0;
-
-        for (int z = minZ; z < maxZ; z++)
+        uint rowWidth = (uint)flowFieldResolution.x;
+        uint cellsInSector = (uint)max(0, maxZ - minZ) * rowWidth;
+        for (uint i = groupThreadIndex; i < cellsInSector; i += 64u)
         {
-            for (int x = 0; x < flowFieldResolution.x; x++)
+            int2 cell = int2((int)(i % rowWidth), minZ + (int)(i / rowWidth));
+            uint density = runtimeAttackerTargetDensity[FlowFieldCellToIndex(cell)];
+            if (density > 0u)
             {
-                int2 cell = int2(x, z);
-                uint density = runtimeAttackerTargetDensity[FlowFieldCellToIndex(cell)];
-                if (density == 0u)
-                    continue;
-
-                sectorDefenderCount += density;
-                sectorPositionSum += FlowFieldCellCenter(cell) * (float)density;
+                localDensity += density;
+                localPositionSum += FlowFieldCellCenter(cell) * (float)density;
             }
         }
-
-        if (sectorDefenderCount < (uint)max(1, dynamicFlowMinDefendersPerTarget))
-            continue;
-
-        float2 target = sectorPositionSum / max(1.0, (float)sectorDefenderCount);
-        runtimeAttackerFlowTargets[sectorIndex] = float4(target.x, target.y, (float)sectorDefenderCount, 1.0);
-        targetCount++;
-        runtimeAttackerFlowStats[3] = targetCount;
     }
 
-    if (targetCount == 0)
+    gsSectorDensitySum[groupThreadIndex] = localDensity;
+    gsSectorPositionSum[groupThreadIndex] = localPositionSum;
+    GroupMemoryBarrierWithGroupSync();
+
+    [unroll]
+    for (uint stride = 32u; stride > 0u; stride >>= 1u)
     {
-        // Endgame fallback: survivors below the per-sector threshold must still be
-        // hunted down or a 200k-vs-35 battle never concludes (the whole army idles).
-        // Emit one global-centroid target into every sector slot.
-        float aliveCount = max(1.0, (float)runtimeAttackerFlowStats[0]);
-        float2 globalCentroid = float2((float)runtimeAttackerFlowStats[1], (float)runtimeAttackerFlowStats[2]) / aliveCount;
-        for (uint fallbackIndex = 0u; fallbackIndex < sectorCount; fallbackIndex++)
-            runtimeAttackerFlowTargets[fallbackIndex] = float4(globalCentroid.x, globalCentroid.y, aliveCount, 1.0);
-        runtimeAttackerFlowStats[3] = (int)sectorCount;
+        if (groupThreadIndex < stride)
+        {
+            gsSectorDensitySum[groupThreadIndex] += gsSectorDensitySum[groupThreadIndex + stride];
+            gsSectorPositionSum[groupThreadIndex] += gsSectorPositionSum[groupThreadIndex + stride];
+        }
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    if (groupThreadIndex == 0u && active)
+    {
+        uint sectorDefenderCount = gsSectorDensitySum[0];
+        if (sectorDefenderCount >= (uint)max(1, dynamicFlowMinDefendersPerTarget))
+        {
+            float2 target = gsSectorPositionSum[0] / max(1.0, (float)sectorDefenderCount);
+            runtimeAttackerFlowTargets[sectorIndex] = float4(target.x, target.y, (float)sectorDefenderCount, 1.0);
+            int ignoredTargetCount;
+            InterlockedAdd(runtimeAttackerFlowStats[3], 1, ignoredTargetCount);
+        }
     }
 }
 
@@ -166,45 +178,56 @@ void GenerateRuntimeAttackerFlowField(uint3 id : SV_DispatchThreadID)
     }
 
     int targetCount = clamp(runtimeAttackerFlowStats[3], 0, 8);
-    if (targetCount <= 0)
-    {
-        flowFieldDirections[id.x] = 0.0;
-        if (flowPreviewEnabled != 0)
-            runtimeAttackerFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
-        return;
-    }
-
     uint sectorCount = (uint)clamp(dynamicFlowSectorCount, 1, 8);
     uint currentSectorU = min(((uint)z * sectorCount) / max(1u, (uint)flowFieldResolution.y), sectorCount - 1u);
     int currentSector = (int)currentSectorU;
     int sectorCountInt = (int)sectorCount;
-    int selectedSector = -1;
-    if (runtimeAttackerFlowTargets[currentSector].w > 0.0)
+    int selectedSector = currentSector;
+    float4 selectedTarget;
+
+    if (targetCount <= 0)
     {
-        selectedSector = currentSector;
+        // Endgame fallback (moved from the Select kernel when it went parallel):
+        // survivors below every sector threshold must still be hunted down or a
+        // 200k-vs-35 battle never concludes. Steer every cell at the global centroid
+        // accumulated in stats[1]/[2] (1m precision position sums).
+        float aliveCount = max(1.0, (float)aliveDefenderCount);
+        selectedTarget = float4(
+            (float)runtimeAttackerFlowStats[1] / aliveCount,
+            (float)runtimeAttackerFlowStats[2] / aliveCount,
+            aliveCount,
+            1.0);
     }
     else
     {
-        for (int radius = 1; radius < 8 && selectedSector < 0; radius++)
+        selectedSector = -1;
+        if (runtimeAttackerFlowTargets[currentSector].w > 0.0)
         {
-            int lower = currentSector - radius;
-            int upper = currentSector + radius;
-            if (lower >= 0 && runtimeAttackerFlowTargets[lower].w > 0.0)
-                selectedSector = lower;
-            if (selectedSector < 0 && upper < sectorCountInt && runtimeAttackerFlowTargets[upper].w > 0.0)
-                selectedSector = upper;
+            selectedSector = currentSector;
         }
-    }
+        else
+        {
+            for (int radius = 1; radius < 8 && selectedSector < 0; radius++)
+            {
+                int lower = currentSector - radius;
+                int upper = currentSector + radius;
+                if (lower >= 0 && runtimeAttackerFlowTargets[lower].w > 0.0)
+                    selectedSector = lower;
+                if (selectedSector < 0 && upper < sectorCountInt && runtimeAttackerFlowTargets[upper].w > 0.0)
+                    selectedSector = upper;
+            }
+        }
 
-    if (selectedSector < 0)
-    {
-        flowFieldDirections[id.x] = 0.0;
-        if (flowPreviewEnabled != 0)
-            runtimeAttackerFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
-        return;
-    }
+        if (selectedSector < 0)
+        {
+            flowFieldDirections[id.x] = 0.0;
+            if (flowPreviewEnabled != 0)
+                runtimeAttackerFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
+            return;
+        }
 
-    float4 selectedTarget = runtimeAttackerFlowTargets[selectedSector];
+        selectedTarget = runtimeAttackerFlowTargets[selectedSector];
+    }
     int sectorMinZ = (int)(((uint)selectedSector * (uint)flowFieldResolution.y) / sectorCount);
     int sectorMaxZ = (int)((((uint)selectedSector + 1u) * (uint)flowFieldResolution.y) / sectorCount);
     float targetX = selectedTarget.x;
@@ -291,55 +314,61 @@ void BuildRuntimeDefenderTargetDensity(uint3 id : SV_DispatchThreadID)
     InterlockedAdd(runtimeDefenderFlowStats[2], (int)round(position.y), ignoredStats);
 }
 
-[numthreads(1, 1, 1)]
-void SelectRuntimeDefenderFlowTargets(uint3 id : SV_DispatchThreadID)
+[numthreads(64, 1, 1)]
+void SelectRuntimeDefenderFlowTargets(uint3 groupId : SV_GroupID, uint groupThreadIndex : SV_GroupIndex)
 {
-    if (runtimeDynamicDefenderFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
-        return;
-
-    if (runtimeDefenderFlowStats[0] <= 0)
-        return;
+    bool active = runtimeDynamicDefenderFlowEnabled != 0 && enableTwoTeamCombat != 0 && battleStarted != 0
+        && runtimeDefenderFlowStats[0] > 0;
 
     uint sectorCount = (uint)clamp(dynamicDefenderFlowSectorCount, 1, 8);
-    int targetCount = 0;
+    uint sectorIndex = groupId.x;
+    active = active && sectorIndex < sectorCount;
 
-    for (uint sectorIndex = 0u; sectorIndex < sectorCount; sectorIndex++)
+    uint localDensity = 0u;
+    float2 localPositionSum = 0.0;
+    if (active)
     {
         int minZ = (int)((sectorIndex * (uint)defenderFlowFieldResolution.y) / sectorCount);
         int maxZ = (int)(((sectorIndex + 1u) * (uint)defenderFlowFieldResolution.y) / sectorCount);
-        uint sectorAttackerCount = 0u;
-        float2 sectorPositionSum = 0.0;
-
-        for (int z = minZ; z < maxZ; z++)
+        uint rowWidth = (uint)defenderFlowFieldResolution.x;
+        uint cellsInSector = (uint)max(0, maxZ - minZ) * rowWidth;
+        for (uint i = groupThreadIndex; i < cellsInSector; i += 64u)
         {
-            for (int x = 0; x < defenderFlowFieldResolution.x; x++)
+            int2 cell = int2((int)(i % rowWidth), minZ + (int)(i / rowWidth));
+            uint density = runtimeDefenderTargetDensity[DefenderFlowFieldCellToIndex(cell)];
+            if (density > 0u)
             {
-                int2 cell = int2(x, z);
-                uint density = runtimeDefenderTargetDensity[DefenderFlowFieldCellToIndex(cell)];
-                if (density == 0u)
-                    continue;
-
-                sectorAttackerCount += density;
-                sectorPositionSum += DefenderFlowFieldCellCenter(cell) * (float)density;
+                localDensity += density;
+                localPositionSum += DefenderFlowFieldCellCenter(cell) * (float)density;
             }
         }
-
-        if (sectorAttackerCount < (uint)max(1, dynamicDefenderFlowMinAttackersPerTarget))
-            continue;
-
-        float2 target = sectorPositionSum / max(1.0, (float)sectorAttackerCount);
-        runtimeDefenderFlowTargets[sectorIndex] = float4(target.x, target.y, (float)sectorAttackerCount, 1.0);
-        targetCount++;
-        runtimeDefenderFlowStats[3] = targetCount;
     }
 
-    if (targetCount == 0)
+    gsSectorDensitySum[groupThreadIndex] = localDensity;
+    gsSectorPositionSum[groupThreadIndex] = localPositionSum;
+    GroupMemoryBarrierWithGroupSync();
+
+    [unroll]
+    for (uint stride = 32u; stride > 0u; stride >>= 1u)
     {
-        float aliveCount = max(1.0, (float)runtimeDefenderFlowStats[0]);
-        float2 globalCentroid = float2((float)runtimeDefenderFlowStats[1], (float)runtimeDefenderFlowStats[2]) / aliveCount;
-        for (uint fallbackIndex = 0u; fallbackIndex < sectorCount; fallbackIndex++)
-            runtimeDefenderFlowTargets[fallbackIndex] = float4(globalCentroid.x, globalCentroid.y, aliveCount, 1.0);
-        runtimeDefenderFlowStats[3] = (int)sectorCount;
+        if (groupThreadIndex < stride)
+        {
+            gsSectorDensitySum[groupThreadIndex] += gsSectorDensitySum[groupThreadIndex + stride];
+            gsSectorPositionSum[groupThreadIndex] += gsSectorPositionSum[groupThreadIndex + stride];
+        }
+        GroupMemoryBarrierWithGroupSync();
+    }
+
+    if (groupThreadIndex == 0u && active)
+    {
+        uint sectorAttackerCount = gsSectorDensitySum[0];
+        if (sectorAttackerCount >= (uint)max(1, dynamicDefenderFlowMinAttackersPerTarget))
+        {
+            float2 target = gsSectorPositionSum[0] / max(1.0, (float)sectorAttackerCount);
+            runtimeDefenderFlowTargets[sectorIndex] = float4(target.x, target.y, (float)sectorAttackerCount, 1.0);
+            int ignoredTargetCount;
+            InterlockedAdd(runtimeDefenderFlowStats[3], 1, ignoredTargetCount);
+        }
     }
 }
 
@@ -393,45 +422,53 @@ void GenerateRuntimeDefenderFlowField(uint3 id : SV_DispatchThreadID)
     }
 
     int targetCount = clamp(runtimeDefenderFlowStats[3], 0, 8);
-    if (targetCount <= 0)
-    {
-        defenderFlowFieldDirections[id.x] = 0.0;
-        if (flowPreviewEnabled != 0)
-            runtimeDefenderFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
-        return;
-    }
-
     uint sectorCount = (uint)clamp(dynamicDefenderFlowSectorCount, 1, 8);
     uint currentSectorU = min(((uint)z * sectorCount) / max(1u, (uint)defenderFlowFieldResolution.y), sectorCount - 1u);
     int currentSector = (int)currentSectorU;
     int sectorCountInt = (int)sectorCount;
-    int selectedSector = -1;
-    if (runtimeDefenderFlowTargets[currentSector].w > 0.0)
+    int selectedSector = currentSector;
+    float4 selectedTarget;
+
+    if (targetCount <= 0)
     {
-        selectedSector = currentSector;
+        // Endgame fallback: same contract as the attacker field (see comment there).
+        float aliveCount = max(1.0, (float)aliveAttackerCount);
+        selectedTarget = float4(
+            (float)runtimeDefenderFlowStats[1] / aliveCount,
+            (float)runtimeDefenderFlowStats[2] / aliveCount,
+            aliveCount,
+            1.0);
     }
     else
     {
-        for (int radius = 1; radius < 8 && selectedSector < 0; radius++)
+        selectedSector = -1;
+        if (runtimeDefenderFlowTargets[currentSector].w > 0.0)
         {
-            int lower = currentSector - radius;
-            int upper = currentSector + radius;
-            if (lower >= 0 && runtimeDefenderFlowTargets[lower].w > 0.0)
-                selectedSector = lower;
-            if (selectedSector < 0 && upper < sectorCountInt && runtimeDefenderFlowTargets[upper].w > 0.0)
-                selectedSector = upper;
+            selectedSector = currentSector;
         }
-    }
+        else
+        {
+            for (int radius = 1; radius < 8 && selectedSector < 0; radius++)
+            {
+                int lower = currentSector - radius;
+                int upper = currentSector + radius;
+                if (lower >= 0 && runtimeDefenderFlowTargets[lower].w > 0.0)
+                    selectedSector = lower;
+                if (selectedSector < 0 && upper < sectorCountInt && runtimeDefenderFlowTargets[upper].w > 0.0)
+                    selectedSector = upper;
+            }
+        }
 
-    if (selectedSector < 0)
-    {
-        defenderFlowFieldDirections[id.x] = 0.0;
-        if (flowPreviewEnabled != 0)
-            runtimeDefenderFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
-        return;
-    }
+        if (selectedSector < 0)
+        {
+            defenderFlowFieldDirections[id.x] = 0.0;
+            if (flowPreviewEnabled != 0)
+                runtimeDefenderFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
+            return;
+        }
 
-    float4 selectedTarget = runtimeDefenderFlowTargets[selectedSector];
+        selectedTarget = runtimeDefenderFlowTargets[selectedSector];
+    }
     int sectorMinZ = (int)(((uint)selectedSector * (uint)defenderFlowFieldResolution.y) / sectorCount);
     int sectorMaxZ = (int)((((uint)selectedSector + 1u) * (uint)defenderFlowFieldResolution.y) / sectorCount);
     float targetX = selectedTarget.x;

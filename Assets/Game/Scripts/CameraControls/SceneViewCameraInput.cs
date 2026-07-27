@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public struct SceneViewCameraInput_Stage7
+public struct SceneViewCameraInput
 {
     public bool CanUseInput;
     public bool AltPressed;
@@ -30,11 +30,11 @@ public struct SceneViewCameraInput_Stage7
     public bool AnyMouseButtonUp => LeftUp || RightUp || MiddleUp;
 }
 
-public static class SceneViewCameraInputReader_Stage7
+public static class SceneViewCameraInputReader
 {
-    public static SceneViewCameraInput_Stage7 Read(SceneViewCameraSettings_Stage7 settings)
+    public static SceneViewCameraInput Read(SceneViewCameraSettings settings)
     {
-        return new SceneViewCameraInput_Stage7
+        return new SceneViewCameraInput
         {
             CanUseInput = IsMouseInsideInputArea(settings),
             AltPressed = Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt) || Input.GetKey(KeyCode.AltGr),
@@ -60,7 +60,7 @@ public static class SceneViewCameraInputReader_Stage7
         };
     }
 
-    private static bool IsMouseInsideInputArea(SceneViewCameraSettings_Stage7 settings)
+    private static bool IsMouseInsideInputArea(SceneViewCameraSettings settings)
     {
         if (!settings.RequireMouseInsideScreen)
             return true;

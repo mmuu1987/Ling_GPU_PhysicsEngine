@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-public static class SceneViewCameraBoundsUtility_Stage7
+public static class SceneViewCameraBoundsUtility
 {
     public static Bounds CalculateBounds(Transform target)
     {

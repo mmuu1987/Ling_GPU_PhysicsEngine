@@ -3,6 +3,7 @@ using System.Collections;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 
 namespace MassEngine.Tests
@@ -32,8 +33,17 @@ namespace MassEngine.Tests
         private float maxRenderDistance;
         private bool attackerFlowEnabled;
         private bool attackerFlowRebuild;
+        private bool attackerFlowDynamic;
         private int attackerFlowTargetMode;
         private Vector3 attackerFlowTargetPoint;
+        private int attackerFlowMinPerTarget = 8;
+        private int gridMaxAgentsPerCell = 16;
+
+        // Fixture population; BuildScenario overwrites these so a test can rebuild
+        // the whole rig at a larger scale (cross-thread-group coverage).
+        private int fixtureAttackerCount = AttackerCount;
+        private int fixtureTotalAgents = TotalAgents;
+        private MassGpuShaderSet shaderSet;
         private AgentData[] initialAgents;
         private int[] initialTeamIds;
         private int[] initialHp;
@@ -61,8 +71,9 @@ namespace MassEngine.Tests
 
             MassGpuShaderSet shaders = MassGpuShaderSet.Find(spatialHash, runtimeFlow, combat, lod);
             Assert.IsTrue(shaders.IsValid);
+            shaderSet = shaders;
 
-            BuildScenario();
+            BuildScenario(AttackerCount, DefenderCount);
             buffers = new MassGpuBufferManager();
             orchestrator = new ComputePipelineOrchestrator(shaders, buffers);
             buffers.Allocate(TotalAgents, 64, 16, 16, 16, registry.UnitTypeCount);
@@ -530,12 +541,195 @@ namespace MassEngine.Tests
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator DynamicSectorSelectionSteersFlowAtEnemyCluster()
+        {
+            // Golden test for the parallel per-sector Select kernel AND the endgame
+            // fallback that moved into Generate: both paths must aim the field at the
+            // enemy cluster near (6, 6).
+            AgentData[] agents = (AgentData[])initialAgents.Clone();
+            for (int i = 0; i < TotalAgents; i++)
+            {
+                bool attacker = initialTeamIds[i] == 0;
+                int lane = attacker ? i : i - AttackerCount;
+                agents[i].position = attacker
+                    ? new Vector3(-6f, 0f, lane * 1.5f - 2f)
+                    : new Vector3(6f, 0f, 5.5f + lane * 0.4f);
+                agents[i].velocity = Vector3.zero;
+            }
+            buffers.UploadInitialData(agents, initialTeamIds, initialHp, initialUnitTypeIndices);
+
+            attackerFlowEnabled = true;
+            attackerFlowRebuild = true;
+            attackerFlowDynamic = true;
+            attackerFlowTargetMode = 0;
+            attackerFlowMinPerTarget = 2; // 4 clustered defenders clear this bar
+            DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            int[] stats = new int[4];
+            buffers.runtimeAttackerFlowStatsBuffer.GetData(stats);
+            Assert.AreEqual(4, stats[0], "density build must count the 4 living defenders");
+            Assert.AreEqual(1, stats[3], "exactly one sector meets the min-agents bar");
+
+            Vector2[] directions = new Vector2[16 * 16];
+            buffers.flowFieldDirectionsBuffer.GetData(directions);
+            Vector2 westCell = directions[14 * 16 + 2]; // world (-5.5, 6.5), same sector as the cluster
+            Assert.Greater(westCell.x, 0.7f, "sector path: west cells must point east at the cluster, got " + westCell);
+
+            // Endgame fallback: raise the bar so no sector qualifies; Generate must
+            // steer at the global centroid instead of zeroing the field.
+            attackerFlowMinPerTarget = 50;
+            attackerFlowRebuild = true;
+            DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            buffers.runtimeAttackerFlowStatsBuffer.GetData(stats);
+            Assert.AreEqual(0, stats[3], "no sector may meet a bar of 50");
+            buffers.flowFieldDirectionsBuffer.GetData(directions);
+            westCell = directions[14 * 16 + 2];
+            Assert.Greater(westCell.x, 0.7f, "fallback path: west cells must point east at the centroid, got " + westCell);
+
+            attackerFlowEnabled = false;
+            attackerFlowRebuild = false;
+            attackerFlowDynamic = false;
+            attackerFlowMinPerTarget = 8;
+        }
+
+        [UnityTest]
+        public IEnumerator DensityMapCountsAliveAgentsPerCell()
+        {
+            // TG-01: the density map is the sole input of the per-square-meter crowd
+            // pressure; its cell counts must equal the number of LIVING agents inside.
+            DispatchOneFrame(battleStarted: false);
+            yield return null;
+
+            int[] map = ReadDensityMap();
+            int total = 0;
+            for (int i = 0; i < map.Length; i++)
+                total += map[i];
+            Assert.AreEqual(TotalAgents, total, "density map must count every living agent exactly once");
+            // Default layout: attackers at x=-0.5 (cell 7), defenders at x=0.5 (cell 8),
+            // z lanes 0/1.5/3/4.5 -> cells 8, 9, 11, 12.
+            int[] laneCells = { 8, 9, 11, 12 };
+            foreach (int zCell in laneCells)
+            {
+                Assert.AreEqual(1, map[zCell * 16 + 7], "attacker cell z=" + zCell);
+                Assert.AreEqual(1, map[zCell * 16 + 8], "defender cell z=" + zCell);
+            }
+
+            // Dead agents must vanish from the map.
+            int[] hp = (int[])initialHp.Clone();
+            for (int i = 0; i < TotalAgents; i++)
+            {
+                if (initialTeamIds[i] != 0)
+                    hp[i] = 0;
+            }
+            buffers.UploadInitialData(initialAgents, initialTeamIds, hp, initialUnitTypeIndices);
+            DispatchOneFrame(battleStarted: false);
+            yield return null;
+
+            map = ReadDensityMap();
+            total = 0;
+            for (int i = 0; i < map.Length; i++)
+                total += map[i];
+            Assert.AreEqual(AttackerCount, total, "dead defenders must not appear in the density map");
+            foreach (int zCell in laneCells)
+                Assert.AreEqual(0, map[zCell * 16 + 8], "dead defender cell z=" + zCell);
+        }
+
+        private int[] ReadDensityMap()
+        {
+            AsyncGPUReadbackRequest request = AsyncGPUReadback.Request(buffers.densityMapTexture);
+            request.WaitForCompletion();
+            Assert.IsFalse(request.hasError, "density map readback failed");
+            var data = request.GetData<int>();
+            int[] map = new int[data.Length];
+            data.CopyTo(map);
+            return map;
+        }
+
+        [UnityTest]
+        public IEnumerator InterleavedTeamsAcrossThreadGroupsFightAndClassifyCorrectly()
+        {
+            // TG-05 + TG-06: team ids interleaved per index (any surviving index-range
+            // team inference misfires) across 256 agents = four 64-thread groups.
+            buffers.ReleaseAll();
+            registry.ReleaseAll();
+            foreach (ScriptableObject asset in createdConfigs)
+            {
+                if (asset != null)
+                    Object.DestroyImmediate(asset);
+            }
+            Object.DestroyImmediate(scenario);
+
+            BuildScenario(128, 128);
+            buffers = new MassGpuBufferManager();
+            orchestrator = new ComputePipelineOrchestrator(shaderSet, buffers);
+            buffers.Allocate(fixtureTotalAgents, 64, 64, 16, 16, registry.UnitTypeCount);
+            registry.InitializeAll(buffers, orchestrator);
+            gridMaxAgentsPerCell = 64;
+
+            AgentData[] agents = new AgentData[fixtureTotalAgents];
+            int[] teamIds = new int[fixtureTotalAgents];
+            int[] hp = new int[fixtureTotalAgents];
+            int[] unitTypeIndices = new int[fixtureTotalAgents];
+            registry.GenerateAgents(agents);
+            for (int i = 0; i < fixtureTotalAgents; i++)
+            {
+                teamIds[i] = i % 2;
+                unitTypeIndices[i] = i % 2;
+                hp[i] = 100;
+                int lane = i / 2;
+                agents[i].position = new Vector3(teamIds[i] == 0 ? -0.5f : 0.5f, 0f, -7.5f + lane * 0.117f);
+                agents[i].velocity = Vector3.zero;
+            }
+            buffers.UploadInitialData(agents, teamIds, hp, unitTypeIndices);
+            settingsCache = new UnitTypeGpuSettings[registry.UnitTypeCount];
+            registry.FillGpuSettings(settingsCache);
+            buffers.UploadUnitTypeSettings(settingsCache);
+            dispatchedFrames = 0;
+
+            for (int frame = 0; frame < 40; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                if ((frame & 15) == 0)
+                    yield return null;
+            }
+
+            int[] resultHp = new int[fixtureTotalAgents];
+            buffers.combatBuffers.hpReadBuffer.GetData(resultHp);
+            int damagedEven = 0;
+            int damagedOdd = 0;
+            for (int i = 0; i < fixtureTotalAgents; i++)
+            {
+                if (resultHp[i] >= 100)
+                    continue;
+                if (i % 2 == 0)
+                    damagedEven++;
+                else
+                    damagedOdd++;
+            }
+            Assert.Greater(damagedEven, 32, "interleaved team 0 must take widespread damage across all thread groups");
+            Assert.Greater(damagedOdd, 32, "interleaved team 1 must take widespread damage across all thread groups");
+
+            int type0Instances = ReadInstanceCount(0, 0) + ReadInstanceCount(0, 1) + ReadInstanceCount(0, 2);
+            int type1Instances = ReadInstanceCount(1, 0) + ReadInstanceCount(1, 1) + ReadInstanceCount(1, 2);
+            Assert.AreEqual(128, type0Instances, "unit type 0 classify count (interleaved unitTypeIndexBuffer)");
+            Assert.AreEqual(128, type1Instances, "unit type 1 classify count (interleaved unitTypeIndexBuffer)");
+
+            gridMaxAgentsPerCell = 16;
+        }
+
         // ------------------------------------------------------------------
         // Helpers
         // ------------------------------------------------------------------
 
-        private void BuildScenario()
+        private void BuildScenario(int attackerCount, int defenderCount)
         {
+            fixtureAttackerCount = attackerCount;
+            fixtureTotalAgents = attackerCount + defenderCount;
+
             var created = new System.Collections.Generic.List<ScriptableObject>();
 
             UnitTypeConfig MakeType(int teamId, int count)
@@ -570,7 +764,7 @@ namespace MassEngine.Tests
             }
 
             scenario = ScriptableObject.CreateInstance<ScenarioConfig>();
-            scenario.unitTypes = new[] { MakeType(0, AttackerCount), MakeType(1, DefenderCount) };
+            scenario.unitTypes = new[] { MakeType(0, attackerCount), MakeType(1, defenderCount) };
             createdConfigs = created.ToArray();
 
             registry = new UnitTypeRegistry();
@@ -592,9 +786,9 @@ namespace MassEngine.Tests
                 // dispatches issued inside a single editor frame, which would freeze the
                 // staggered target-search phase.
                 frameIndex = ++dispatchedFrames,
-                totalAgentCount = TotalAgents,
+                totalAgentCount = fixtureTotalAgents,
                 unitTypeCount = registry.UnitTypeCount,
-                agentThreadGroupsX = 1,
+                agentThreadGroupsX = Mathf.Max(1, (fixtureTotalAgents + 63) / 64),
                 gridThreadGroupsX = 1,
                 battleStarted = battleStarted,
                 combatEnabled = true,
@@ -613,13 +807,14 @@ namespace MassEngine.Tests
                     origin = new Vector2(-8f, -8f),
                     worldSize = new Vector2(16f, 16f),
                     cellSize = 2f,
-                    maxAgentsPerCell = 16,
+                    maxAgentsPerCell = gridMaxAgentsPerCell,
                     boundaryPadding = 0.5f
                 },
                 attackerFlow = new TeamFlowFrameSettings
                 {
                     enabled = attackerFlowEnabled,
                     rebuildThisFrame = attackerFlowRebuild,
+                    dynamicFlowEnabled = attackerFlowDynamic,
                     threadGroupsX = 4,
                     resolutionX = 16,
                     resolutionZ = 16,
@@ -628,7 +823,7 @@ namespace MassEngine.Tests
                     targetMode = attackerFlowTargetMode,
                     targetPoint = attackerFlowTargetPoint,
                     sectorCount = 5,
-                    minAgentsPerTarget = 8
+                    minAgentsPerTarget = attackerFlowMinPerTarget
                 },
                 defenderFlow = new TeamFlowFrameSettings { enabled = false, resolutionX = 16, resolutionZ = 16, origin = new Vector2(-8f, -8f), cellSize = 1f },
                 lod = new LodFrameSettings
@@ -651,10 +846,10 @@ namespace MassEngine.Tests
 
         private int[] ReadStates()
         {
-            AgentData[] agents = new AgentData[TotalAgents];
+            AgentData[] agents = new AgentData[fixtureTotalAgents];
             buffers.agentBuffer.GetData(agents);
-            int[] states = new int[TotalAgents];
-            for (int i = 0; i < TotalAgents; i++)
+            int[] states = new int[fixtureTotalAgents];
+            for (int i = 0; i < fixtureTotalAgents; i++)
                 states[i] = agents[i].currentState;
             return states;
         }

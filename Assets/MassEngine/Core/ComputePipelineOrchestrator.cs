@@ -67,7 +67,8 @@ namespace MassEngine
             int flowGroups = Mathf.Max(1, context.attackerFlow.threadGroupsX);
             Dispatch(shaders.RuntimeFlowShader, shaders.ClearRuntimeAttackerFlowResources, flowGroups, "ClearRuntimeAttackerFlowResources");
             Dispatch(shaders.RuntimeFlowShader, shaders.BuildRuntimeAttackerTargetDensity, Mathf.Max(1, context.agentThreadGroupsX), "BuildRuntimeAttackerTargetDensity");
-            Dispatch(shaders.RuntimeFlowShader, shaders.SelectRuntimeAttackerFlowTargets, 1, "SelectRuntimeAttackerFlowTargets");
+            // One 64-thread group per sector (the kernel reduces its sector in groupshared memory).
+            Dispatch(shaders.RuntimeFlowShader, shaders.SelectRuntimeAttackerFlowTargets, Mathf.Clamp(context.attackerFlow.sectorCount, 1, 8), "SelectRuntimeAttackerFlowTargets");
             Dispatch(shaders.RuntimeFlowShader, shaders.GenerateRuntimeAttackerFlowField, flowGroups, "GenerateRuntimeAttackerFlowField");
         }
 
@@ -76,7 +77,7 @@ namespace MassEngine
             int flowGroups = Mathf.Max(1, context.defenderFlow.threadGroupsX);
             Dispatch(shaders.RuntimeFlowShader, shaders.ClearRuntimeDefenderFlowResources, flowGroups, "ClearRuntimeDefenderFlowResources");
             Dispatch(shaders.RuntimeFlowShader, shaders.BuildRuntimeDefenderTargetDensity, Mathf.Max(1, context.agentThreadGroupsX), "BuildRuntimeDefenderTargetDensity");
-            Dispatch(shaders.RuntimeFlowShader, shaders.SelectRuntimeDefenderFlowTargets, 1, "SelectRuntimeDefenderFlowTargets");
+            Dispatch(shaders.RuntimeFlowShader, shaders.SelectRuntimeDefenderFlowTargets, Mathf.Clamp(context.defenderFlow.sectorCount, 1, 8), "SelectRuntimeDefenderFlowTargets");
             Dispatch(shaders.RuntimeFlowShader, shaders.GenerateRuntimeDefenderFlowField, flowGroups, "GenerateRuntimeDefenderFlowField");
         }
 

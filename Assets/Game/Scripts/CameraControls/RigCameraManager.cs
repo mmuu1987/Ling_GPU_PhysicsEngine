@@ -5,7 +5,7 @@
 /// This MonoBehaviour keeps the serialized Unity entry point, while the input,
 /// bounds math, and camera rig behavior live in small focused classes.
 /// </summary>
-public class MyCameraManager_Stage7 : MonoBehaviour
+public class RigCameraManager : MonoBehaviour
 {
     [Header("Target")]
     public Transform Target;
@@ -29,8 +29,8 @@ public class MyCameraManager_Stage7 : MonoBehaviour
 
     private bool _lockInput;
     private Transform _point;
-    private LocalRotationAndScale_Stage7 _mouseOrbit;
-    private readonly SceneViewCameraRig_Stage7 _rig = new SceneViewCameraRig_Stage7();
+    private CameraMouseOrbit _mouseOrbit;
+    private readonly SceneViewCameraRig _rig = new SceneViewCameraRig();
 
     public Camera MainCamera => ControlledCamera;
 
@@ -39,7 +39,7 @@ public class MyCameraManager_Stage7 : MonoBehaviour
         EnsureCamera();
         if (ControlledCamera == null)
         {
-            Debug.LogError("[MyCameraManager_Stage7] No camera found. Assign ControlledCamera or enable CreateCameraIfMissing.");
+            Debug.LogError("[RigCameraManager] No camera found. Assign ControlledCamera or enable CreateCameraIfMissing.");
             enabled = false;
             return;
         }
@@ -48,9 +48,9 @@ public class MyCameraManager_Stage7 : MonoBehaviour
         _point = pointObject.transform;
         pointObject.hideFlags = HideFlags.DontSave;
 
-        _mouseOrbit = ControlledCamera.GetComponent<LocalRotationAndScale_Stage7>();
+        _mouseOrbit = ControlledCamera.GetComponent<CameraMouseOrbit>();
         if (_mouseOrbit == null)
-            _mouseOrbit = ControlledCamera.gameObject.AddComponent<LocalRotationAndScale_Stage7>();
+            _mouseOrbit = ControlledCamera.gameObject.AddComponent<CameraMouseOrbit>();
 
         _rig.Initialize(ControlledCamera, _point, _mouseOrbit, Target);
         UnlockInput();
@@ -88,8 +88,8 @@ public class MyCameraManager_Stage7 : MonoBehaviour
         if (ControlledCamera == null || _lockInput)
             return;
 
-        SceneViewCameraSettings_Stage7 settings = BuildSettings();
-        SceneViewCameraInput_Stage7 input = SceneViewCameraInputReader_Stage7.Read(settings);
+        SceneViewCameraSettings settings = BuildSettings();
+        SceneViewCameraInput input = SceneViewCameraInputReader.Read(settings);
         _rig.Tick(input, settings, Target);
     }
 
@@ -100,12 +100,12 @@ public class MyCameraManager_Stage7 : MonoBehaviour
 
     public static Bounds TransformBounds(Matrix4x4 matrix, Bounds bounds)
     {
-        return SceneViewCameraBoundsUtility_Stage7.TransformBounds(matrix, bounds);
+        return SceneViewCameraBoundsUtility.TransformBounds(matrix, bounds);
     }
 
-    private SceneViewCameraSettings_Stage7 BuildSettings()
+    private SceneViewCameraSettings BuildSettings()
     {
-        return new SceneViewCameraSettings_Stage7
+        return new SceneViewCameraSettings
         {
             RequireMouseInsideScreen = RequireMouseInsideScreen,
             NormalizedInputArea = NormalizedInputArea,

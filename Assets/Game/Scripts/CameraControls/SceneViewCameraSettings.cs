@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 [System.Serializable]
-public struct SceneViewCameraSettings_Stage7
+public struct SceneViewCameraSettings
 {
     public bool RequireMouseInsideScreen;
     public Rect NormalizedInputArea;

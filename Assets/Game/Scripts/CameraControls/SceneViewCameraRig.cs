@@ -1,10 +1,10 @@
 ﻿using UnityEngine;
 
-public sealed class SceneViewCameraRig_Stage7
+public sealed class SceneViewCameraRig
 {
     private Camera _camera;
     private Transform _point;
-    private LocalRotationAndScale_Stage7 _mouseOrbit;
+    private CameraMouseOrbit _mouseOrbit;
 
     private bool _orbiting;
     private bool _panning;
@@ -15,14 +15,14 @@ public sealed class SceneViewCameraRig_Stage7
     private float _freeLookX;
     private float _freeLookY;
 
-    public void Initialize(Camera camera, Transform point, LocalRotationAndScale_Stage7 mouseOrbit, Transform target)
+    public void Initialize(Camera camera, Transform point, CameraMouseOrbit mouseOrbit, Transform target)
     {
         _camera = camera;
         _point = point;
         _mouseOrbit = mouseOrbit;
 
         _point.position = target != null
-            ? SceneViewCameraBoundsUtility_Stage7.CalculateBounds(target).center
+            ? SceneViewCameraBoundsUtility.CalculateBounds(target).center
             : _camera.transform.position + _camera.transform.forward * _distance;
 
         _mouseOrbit.Target = _point;
@@ -31,7 +31,7 @@ public sealed class SceneViewCameraRig_Stage7
         SyncFreeLookAngles();
     }
 
-    public void Tick(SceneViewCameraInput_Stage7 input, SceneViewCameraSettings_Stage7 settings, Transform focusTarget)
+    public void Tick(SceneViewCameraInput input, SceneViewCameraSettings settings, Transform focusTarget)
     {
         if (_camera == null)
             return;
@@ -99,7 +99,7 @@ public sealed class SceneViewCameraRig_Stage7
         if (target == null || _camera == null)
             return;
 
-        Bounds bounds = SceneViewCameraBoundsUtility_Stage7.CalculateBounds(target);
+        Bounds bounds = SceneViewCameraBoundsUtility.CalculateBounds(target);
         _point.position = bounds.center;
 
         float fov = _camera.fieldOfView * Mathf.Deg2Rad;
@@ -118,7 +118,7 @@ public sealed class SceneViewCameraRig_Stage7
         }
     }
 
-    private void FreeLook(SceneViewCameraInput_Stage7 input, SceneViewCameraSettings_Stage7 settings)
+    private void FreeLook(SceneViewCameraInput input, SceneViewCameraSettings settings)
     {
         if (!_freeLooking)
         {
@@ -133,13 +133,13 @@ public sealed class SceneViewCameraRig_Stage7
 
         _freeLookX += mouseDelta.x * settings.FreeLookSensitivity * 0.1f;
         _freeLookY -= mouseDelta.y * settings.FreeLookSensitivity * 0.1f;
-        _freeLookY = LocalRotationAndScale_Stage7.ClampAngle(_freeLookY, -89f, 89f);
+        _freeLookY = CameraMouseOrbit.ClampAngle(_freeLookY, -89f, 89f);
         _camera.transform.rotation = Quaternion.Euler(_freeLookY, _freeLookX, 0f);
         _point.position = _camera.transform.position + _camera.transform.forward * _distance;
         _lastMousePosition = input.MousePosition;
     }
 
-    private void FlyMove(SceneViewCameraInput_Stage7 input, SceneViewCameraSettings_Stage7 settings)
+    private void FlyMove(SceneViewCameraInput input, SceneViewCameraSettings settings)
     {
         Vector3 move = Vector3.zero;
 
@@ -168,7 +168,7 @@ public sealed class SceneViewCameraRig_Stage7
         _point.position += offset;
     }
 
-    private void AltRightDragZoom(SceneViewCameraInput_Stage7 input, SceneViewCameraSettings_Stage7 settings)
+    private void AltRightDragZoom(SceneViewCameraInput input, SceneViewCameraSettings settings)
     {
         Vector3 mouseDelta = input.MousePosition - _lastMousePosition;
         float dragAmount = mouseDelta.x + mouseDelta.y;
@@ -186,7 +186,7 @@ public sealed class SceneViewCameraRig_Stage7
         _lastMousePosition = input.MousePosition;
     }
 
-    private void Pan(SceneViewCameraInput_Stage7 input, SceneViewCameraSettings_Stage7 settings)
+    private void Pan(SceneViewCameraInput input, SceneViewCameraSettings settings)
     {
         Vector3 delta = input.MousePosition - _lastMousePosition;
         Vector3 move =
@@ -221,7 +221,7 @@ public sealed class SceneViewCameraRig_Stage7
         _mouseOrbit.Distance = _distance;
     }
 
-    private void ZoomByMouseWheel(SceneViewCameraInput_Stage7 input, SceneViewCameraSettings_Stage7 settings)
+    private void ZoomByMouseWheel(SceneViewCameraInput input, SceneViewCameraSettings settings)
     {
         if (Mathf.Approximately(input.MouseWheel, 0f))
             return;
