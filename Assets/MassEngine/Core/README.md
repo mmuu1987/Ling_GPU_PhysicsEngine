@@ -56,7 +56,8 @@ cadence  = dirty（目标变更/初始化/StartBattle）立即重建
 参数之间存在物理耦合：兵力 ↔ 阵地面积 ↔ 世界 ↔ 格子 ↔ 流场。`ScenarioPhysics.Evaluate`
 是这本账的唯一权威：全局堆积密度、阵地越界、格子溢出、流场覆盖，任何一项越界都在
 初始化时给出**带具体建议数值**的警告（而不是让超载场景以"莫名卡死"的方式报错）。
-编辑器菜单 `MassEngine/Auto-Fit Scenario` 用同一本账一键把 world/grid/flow 写成自洽值
+编辑器菜单 `MassEngine/Auto-Fit Scenario` 先按默认 50m 阵前间距重排 team 0/1 出生中心，
+再用同一本账一键把 world/grid/flow 写成自洽值
 （编辑器写资产合法、带 Undo；运行时只读契约不变）。
 
 ## 如何验证

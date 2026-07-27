@@ -126,6 +126,36 @@ namespace MassEngine.Game.Tests
             Assert.That(controller.SimulationSpeed, Is.EqualTo(0.25f));
         }
 
+        [TestCase(10000)]
+        [TestCase(200000)]
+        public void CenteredDeploymentKeepsRequestedEdgeGapAcrossArmySizes(int unitCount)
+        {
+            SpawnConfig attackers = ScriptableObject.CreateInstance<SpawnConfig>();
+            SpawnConfig defenders = ScriptableObject.CreateInstance<SpawnConfig>();
+            try
+            {
+                attackers.unitCount = unitCount;
+                attackers.formationDensity = 0.5f;
+                attackers.formationAspect = 2f;
+                defenders.unitCount = unitCount;
+                defenders.formationDensity = 0.5f;
+                defenders.formationAspect = 2f;
+
+                const float requestedGap = 50f;
+                attackers.spawnCenter = WarSandboxFormationLayout.ResolveCenteredSpawnCenter(attackers, 0, requestedGap);
+                defenders.spawnCenter = WarSandboxFormationLayout.ResolveCenteredSpawnCenter(defenders, 1, requestedGap);
+
+                float attackerFrontEdge = attackers.spawnCenter.x + attackers.ResolveSpawnSize().x * 0.5f;
+                float defenderFrontEdge = defenders.spawnCenter.x - defenders.ResolveSpawnSize().x * 0.5f;
+                Assert.That(defenderFrontEdge - attackerFrontEdge, Is.EqualTo(requestedGap).Within(0.001f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(attackers);
+                Object.DestroyImmediate(defenders);
+            }
+        }
+
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
             MethodInfo method = typeof(MassEngineManager).GetMethod(

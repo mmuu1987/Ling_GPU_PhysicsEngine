@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -8,7 +9,9 @@ namespace MassEngine.Game.Editor
     /// centers from the scene's MassEngineManager, derives a consistent
     /// world / grid / flow-field parameter set via ScenarioPhysics (the same ledger
     /// the runtime warning uses) and writes it into the config assets with Undo.
-    /// Designer workflow: place spawn centers → set unit counts → Auto-Fit → Play.
+    /// Designer workflow: set unit counts / formation intent → Auto-Fit → Play.
+    /// Teams 0 and 1 are symmetrically re-centered from their resolved footprint so
+    /// their edge-to-edge engagement gap remains stable as head counts change.
     /// Spawn footprints themselves are runtime-derived from formationDensity and are
     /// NOT written here; manual spawnSize overrides are left untouched (they are intent).
     /// </summary>
@@ -16,6 +19,11 @@ namespace MassEngine.Game.Editor
     {
         [MenuItem("MassEngine/Auto-Fit Scenario")]
         public static void AutoFit()
+        {
+            AutoFit(WarSandboxFormationLayout.DefaultEngagementGap);
+        }
+
+        public static void AutoFit(float engagementGap)
         {
             MassEngineManager manager = Object.FindFirstObjectByType<MassEngineManager>();
             if (manager == null)
@@ -38,6 +46,9 @@ namespace MassEngine.Game.Editor
                 Debug.LogError("Auto-Fit: systemConfig.simulationConfig is not assigned; nothing to write to.", manager);
                 return;
             }
+
+            engagementGap = Mathf.Max(0f, engagementGap);
+            FitHostileSpawnCenters(manager.scenarioConfig.unitTypes, engagementGap);
 
             LodConfig lodConfig = system != null ? system.lodConfig : null;
             ScenarioPhysicsReport report = ScenarioPhysics.Evaluate(manager.scenarioConfig.unitTypes, simulation, flow, lodConfig);
@@ -66,6 +77,7 @@ namespace MassEngine.Game.Editor
                 report.SuggestedWorldSize.x + "x" + report.SuggestedWorldSize.y +
                 ", cellSize " + report.SuggestedCellSize +
                 ", maxAgentsPerCell " + report.SuggestedMaxAgentsPerCell + ", " + flowNote +
+                ", engagement gap " + engagementGap + "m" +
                 ". LOD radii are a camera/visual choice and were not changed — for large worlds consider raising " +
                 "LodConfig near/mid radii and setting maxRenderDistance.", manager);
 
@@ -75,6 +87,27 @@ namespace MassEngine.Game.Editor
                 Debug.LogWarning(after.Describe(), manager);
             else
                 Debug.Log("Scenario physics check after Auto-Fit: OK.", manager);
+        }
+
+        private static void FitHostileSpawnCenters(UnitTypeConfig[] unitTypes, float engagementGap)
+        {
+            var fittedSpawns = new HashSet<SpawnConfig>();
+            for (int i = 0; i < unitTypes.Length; i++)
+            {
+                UnitTypeConfig unitType = unitTypes[i];
+                SpawnConfig spawn = unitType != null ? unitType.spawnConfig : null;
+                if (spawn == null || !fittedSpawns.Add(spawn) || (unitType.teamId != 0 && unitType.teamId != 1))
+                    continue;
+
+                Vector3 fittedCenter = WarSandboxFormationLayout.ResolveCenteredSpawnCenter(
+                    spawn, unitType.teamId, engagementGap);
+                if (spawn.spawnCenter == fittedCenter)
+                    continue;
+
+                Undo.RecordObject(spawn, "Auto-Fit Army Deployment");
+                spawn.spawnCenter = fittedCenter;
+                EditorUtility.SetDirty(spawn);
+            }
         }
     }
 }

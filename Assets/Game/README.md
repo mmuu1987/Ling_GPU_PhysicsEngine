@@ -16,7 +16,7 @@
 | `Scripts/Gizmos/` | Scene 视图的阵型/流场/目标 Gizmo（ScenarioGizmos 挂场景物体上） |
 | `Scripts/CameraControls/` | 观战相机。场景在用：MyCameraManager（+其依赖 LocalRotationAndScale）。备用整洁版套件：RigCameraManager + SceneViewCameraRig/Input/Settings/BoundsUtility + CameraMouseOrbit（原 *_Stage7 副本，2026-07-27 已去后缀改名，暂无场景引用） |
 | `Editor/WarSandboxSampleCreator.cs` | 菜单 MassEngine/Create Sample Configs And Scene：一键生成可跑的示例场景与配置（非破坏式：已存在的资产不动） |
-| `Editor/WarSandboxEditorWindow.cs` | 菜单 MassEngine/War Sandbox Editor：编辑军团兵力、出生中心、密度和阵型，并调用 Auto-Fit |
+| `Editor/WarSandboxEditorWindow.cs` | 菜单 MassEngine/War Sandbox Editor：编辑军团兵力、密度和阵型，以固定交战间距自动布阵并调用 Auto-Fit |
 | `PerformanceBaseline.md` | 20k～400k 总单位的封版实测与产品档位 |
 
 ## 玩法（当前）
@@ -32,7 +32,9 @@
 遥测确认任一方归零后自动暂停并显示胜负。当前一张流场对应一个阵营，所以“军团”
 暂等同于攻/守两支大军；多军团独立导航需要未来的 groupId/多流场扩展。
 
-调参建议通过 `MassEngine/War Sandbox Editor`，再点 Auto-Fit；配置资产运行时严格只读。
+调参建议通过 `MassEngine/War Sandbox Editor`，设置“初始交战间距”（默认 50m）后再点
+`Auto-Fit 布阵与场景`。Auto-Fit 会根据人数、密度和阵面宽深比重新推导阵型纵深，
+将 team 0/1 对称布置并保持指定的阵型边缘间距，同时配平 world/grid/flow；配置资产运行时严格只读。
 
 ## 扩展这款游戏
 

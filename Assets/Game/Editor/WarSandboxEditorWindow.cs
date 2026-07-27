@@ -12,6 +12,7 @@ namespace MassEngine.Game.Editor
     {
         private MassEngineManager manager;
         private Vector2 scroll;
+        [SerializeField, Min(0f)] private float engagementGap = WarSandboxFormationLayout.DefaultEngagementGap;
 
         [MenuItem("MassEngine/War Sandbox Editor")]
         public static void Open()
@@ -28,7 +29,7 @@ namespace MassEngine.Game.Editor
         {
             EditorGUILayout.LabelField("战争沙盒编辑器", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "只编辑游戏意图：兵力、阵营、出生中心和阵型。世界/网格/流场由 Auto-Fit 配平；运行时不会写回这些资产。",
+                "只编辑游戏意图：兵力、阵营、出生中心和阵型。Auto-Fit 会保持固定阵前距离，并配平世界/网格/流场；运行时不会写回这些资产。",
                 MessageType.Info);
 
             manager = (MassEngineManager)EditorGUILayout.ObjectField("场景 Manager", manager, typeof(MassEngineManager), true);
@@ -73,9 +74,10 @@ namespace MassEngine.Game.Editor
         private void DrawToolbar()
         {
             EditorGUILayout.Space();
+            engagementGap = Mathf.Max(0f, EditorGUILayout.FloatField("初始交战间距（m）", engagementGap));
             EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Auto-Fit 场景"))
-                ScenarioAutoFit.AutoFit();
+            if (GUILayout.Button("Auto-Fit 布阵与场景"))
+                ScenarioAutoFit.AutoFit(engagementGap);
             if (GUILayout.Button("保存配置"))
             {
                 AssetDatabase.SaveAssets();
