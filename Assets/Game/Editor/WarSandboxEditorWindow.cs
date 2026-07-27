@@ -13,6 +13,8 @@ namespace MassEngine.Game.Editor
         private MassEngineManager manager;
         private Vector2 scroll;
         [SerializeField, Min(0f)] private float engagementGap = WarSandboxFormationLayout.DefaultEngagementGap;
+        [SerializeField] private WarSandboxScalePreset scalePreset = WarSandboxScalePreset.Standard10K;
+        [SerializeField, Min(1)] private int customUnitsPerTeam = 10000;
 
         [MenuItem("MassEngine/War Sandbox Editor")]
         public static void Open()
@@ -74,7 +76,36 @@ namespace MassEngine.Game.Editor
         private void DrawToolbar()
         {
             EditorGUILayout.Space();
+            scalePreset = (WarSandboxScalePreset)EditorGUILayout.Popup(
+                "战役规模", (int)scalePreset, WarSandboxScenarioPresets.DisplayNames);
+            if (scalePreset == WarSandboxScalePreset.Custom)
+                customUnitsPerTeam = Mathf.Max(1, EditorGUILayout.IntField("自定义每方兵力", customUnitsPerTeam));
+
+            WarSandboxPresetDefinition definition =
+                WarSandboxScenarioPresets.GetDefinition(scalePreset, customUnitsPerTeam);
             engagementGap = Mathf.Max(0f, EditorGUILayout.FloatField("初始交战间距（m）", engagementGap));
+            EditorGUILayout.HelpBox(definition.performanceNote, definition.messageType);
+
+            ScenarioConfig scenario = manager.scenarioConfig;
+            if (scenario != null)
+            {
+                int attackers = WarSandboxScenarioPresets.ResolveTeamUnitCount(scenario, 0);
+                int defenders = WarSandboxScenarioPresets.ResolveTeamUnitCount(scenario, 1);
+                EditorGUILayout.LabelField("当前双方兵力", attackers + " vs " + defenders);
+            }
+
+            SimulationConfig simulation = manager.systemConfig != null ? manager.systemConfig.simulationConfig : null;
+            if (simulation != null)
+            {
+                EditorGUILayout.LabelField(
+                    "当前世界尺寸",
+                    simulation.simulationWorldSize.x.ToString("F0") + " × " +
+                    simulation.simulationWorldSize.y.ToString("F0") + " m");
+            }
+
+            if (GUILayout.Button("应用预设并 Auto-Fit", GUILayout.Height(28f)))
+                ApplyPreset(definition);
+
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Auto-Fit 布阵与场景"))
                 ScenarioAutoFit.AutoFit(engagementGap);
@@ -87,6 +118,22 @@ namespace MassEngine.Game.Editor
                 Selection.activeObject = manager.gameObject;
             EditorGUILayout.EndHorizontal();
             EditorGUILayout.Space();
+        }
+
+        private void ApplyPreset(WarSandboxPresetDefinition definition)
+        {
+            ScenarioConfig scenario = manager != null ? manager.scenarioConfig : null;
+            if (scenario == null)
+            {
+                Debug.LogError("应用战役预设失败：当前 Manager 没有 ScenarioConfig。", manager);
+                return;
+            }
+
+            int undoGroup = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("Apply War Sandbox Preset");
+            WarSandboxScenarioPresets.ApplyPerTeamUnitCount(scenario, definition.unitsPerTeam);
+            ScenarioAutoFit.AutoFit(engagementGap);
+            Undo.CollapseUndoOperations(undoGroup);
         }
 
         private static void DrawArmy(int index, UnitTypeConfig unitType)

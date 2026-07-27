@@ -1,4 +1,5 @@
 using System.Reflection;
+using MassEngine.Game.Editor;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -163,6 +164,38 @@ namespace MassEngine.Game.Tests
             {
                 Object.DestroyImmediate(attackers);
                 Object.DestroyImmediate(defenders);
+            }
+        }
+
+        [Test]
+        public void ScalePresetPreservesUnitTypeSharesAndExactTeamTotals()
+        {
+            ScenarioConfig presetScenario = ScriptableObject.CreateInstance<ScenarioConfig>();
+            presetScenario.unitTypes = new[]
+            {
+                CreateUnitType("AttackersA", 0, 100, Vector3.zero),
+                CreateUnitType("AttackersB", 0, 300, Vector3.zero),
+                CreateUnitType("Defenders", 1, 80, Vector3.zero)
+            };
+
+            try
+            {
+                WarSandboxScenarioPresets.ApplyPerTeamUnitCount(presetScenario, 10000);
+
+                Assert.That(presetScenario.unitTypes[0].spawnConfig.unitCount, Is.EqualTo(2500));
+                Assert.That(presetScenario.unitTypes[1].spawnConfig.unitCount, Is.EqualTo(7500));
+                Assert.That(presetScenario.unitTypes[2].spawnConfig.unitCount, Is.EqualTo(10000));
+                Assert.That(WarSandboxScenarioPresets.ResolveTeamUnitCount(presetScenario, 0), Is.EqualTo(10000));
+                Assert.That(WarSandboxScenarioPresets.ResolveTeamUnitCount(presetScenario, 1), Is.EqualTo(10000));
+            }
+            finally
+            {
+                foreach (UnitTypeConfig unitType in presetScenario.unitTypes)
+                {
+                    Object.DestroyImmediate(unitType.spawnConfig);
+                    Object.DestroyImmediate(unitType);
+                }
+                Object.DestroyImmediate(presetScenario);
             }
         }
 

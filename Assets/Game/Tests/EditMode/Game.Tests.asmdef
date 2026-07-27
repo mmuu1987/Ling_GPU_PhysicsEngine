@@ -3,7 +3,8 @@
     "rootNamespace": "MassEngine.Game.Tests",
     "references": [
         "MassEngine",
-        "Game"
+        "Game",
+        "Game.Editor"
     ],
     "includePlatforms": [
         "Editor"
