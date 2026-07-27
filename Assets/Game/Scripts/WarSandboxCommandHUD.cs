@@ -88,17 +88,19 @@ namespace MassEngine.Game
             if (controller == null)
                 return;
 
+            bool compactLayout = Screen.height < 340f;
+            float controlHeight = compactLayout ? 20f : 24f;
             Rect panel = ResolvePanelRect();
             GUI.Box(panel, GUIContent.none);
-            GUILayout.BeginArea(new Rect(panel.x + 10f, panel.y + 8f, panel.width - 20f, panel.height - 16f));
+            GUILayout.BeginArea(new Rect(panel.x + 8f, panel.y + 6f, panel.width - 16f, panel.height - 12f));
 
-            GUILayout.Label("战争沙盒");
-            GUILayout.Label("阶段：" + FormatPhase(controller.Phase));
+            GUILayout.Label("战争沙盒", GUILayout.Height(compactLayout ? 17f : 20f));
+            GUILayout.Label("阶段：" + FormatPhase(controller.Phase), GUILayout.Height(compactLayout ? 17f : 20f));
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(controller.selectedTeam == 0, "攻方 [1]", GUI.skin.button))
+            if (GUILayout.Toggle(controller.selectedTeam == 0, "攻方 [1]", GUI.skin.button, GUILayout.Height(controlHeight)))
                 controller.SelectArmy(0);
-            if (GUILayout.Toggle(controller.selectedTeam == 1, "守方 [2]", GUI.skin.button))
+            if (GUILayout.Toggle(controller.selectedTeam == 1, "守方 [2]", GUI.skin.button, GUILayout.Height(controlHeight)))
                 controller.SelectArmy(1);
             GUILayout.EndHorizontal();
 
@@ -106,47 +108,51 @@ namespace MassEngine.Game
             if (selected != null)
             {
                 string order = selected.hasOrder ? FormatOrder(selected.currentOrder.type) : "未下令";
-                GUILayout.Label(selected.displayName + "  " + selected.initialUnitCount + " 人  |  " + order);
+                GUILayout.Label(
+                    selected.displayName + "  " + selected.initialUnitCount + " 人  |  " + order,
+                    GUILayout.Height(compactLayout ? 17f : 20f));
             }
 
-            GUILayout.Space(4f);
+            GUILayout.Space(compactLayout ? 1f : 4f);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("进攻 [A]"))
+            if (GUILayout.Button("进攻 [A]", GUILayout.Height(controlHeight)))
                 IssueAttack();
-            if (GUILayout.Button(awaitingMoveTarget ? "点击地面…" : "移动 [M]"))
+            if (GUILayout.Button(awaitingMoveTarget ? "点击地面…" : "移动 [M]", GUILayout.Height(controlHeight)))
                 awaitingMoveTarget = true;
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("原地防守 [H]"))
+            if (GUILayout.Button("原地防守 [H]", GUILayout.Height(controlHeight)))
                 IssueHold();
-            if (GUILayout.Button("撤回出生地 [R]"))
+            if (GUILayout.Button("撤回出生地 [R]", GUILayout.Height(controlHeight)))
                 IssueRetreat();
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(4f);
+            GUILayout.Space(compactLayout ? 1f : 4f);
             GUILayout.BeginHorizontal();
             string pauseLabel = controller.Phase == WarSandboxBattlePhase.Running ? "暂停 [Space]" : "继续 [Space]";
-            if (GUILayout.Button(pauseLabel))
+            if (GUILayout.Button(pauseLabel, GUILayout.Height(controlHeight)))
                 controller.TogglePause();
-            if (GUILayout.Button("重开"))
+            if (GUILayout.Button("重开", GUILayout.Height(controlHeight)))
             {
                 awaitingMoveTarget = false;
                 controller.ResetBattle();
             }
             GUILayout.EndHorizontal();
 
-            GUILayout.Label("速度");
+            GUILayout.Label("速度", GUILayout.Height(compactLayout ? 17f : 20f));
             GUILayout.BeginHorizontal();
-            DrawSpeedButton("0.5×", 0.5f);
-            DrawSpeedButton("1×", 1f);
-            DrawSpeedButton("2×", 2f);
-            DrawSpeedButton("4×", 4f);
+            DrawSpeedButton("0.5×", 0.5f, controlHeight);
+            DrawSpeedButton("1×", 1f, controlHeight);
+            DrawSpeedButton("2×", 2f, controlHeight);
+            DrawSpeedButton("4×", 4f, controlHeight);
             GUILayout.EndHorizontal();
 
             if (awaitingMoveTarget)
-                GUILayout.Label("下一次左键点击地面将下达移动命令；Esc 取消。");
-            else if (showHotkeys)
+                GUILayout.Label(
+                    "下一次左键点击地面将下达移动命令；Esc 取消。",
+                    GUILayout.Height(compactLayout ? 17f : 36f));
+            else if (showHotkeys && !compactLayout)
                 GUILayout.Label("1/2 选军团 · A进攻 · M移动 · H防守 · R撤退");
 
             GUILayout.EndArea();
@@ -170,10 +176,10 @@ namespace MassEngine.Game
             controller.IssueOrder(ArmyOrder.Retreat(controller.selectedTeam));
         }
 
-        private void DrawSpeedButton(string label, float speed)
+        private void DrawSpeedButton(string label, float speed, float height)
         {
             bool selected = Mathf.Approximately(controller.SimulationSpeed, speed);
-            if (GUILayout.Toggle(selected, label, GUI.skin.button) && !selected)
+            if (GUILayout.Toggle(selected, label, GUI.skin.button, GUILayout.Height(height)) && !selected)
                 controller.SetSimulationSpeed(speed);
         }
 
@@ -185,8 +191,10 @@ namespace MassEngine.Game
 
         private Rect ResolvePanelRect()
         {
-            float width = Mathf.Max(240f, panelWidth);
-            return new Rect(Mathf.Max(8f, Screen.width - width - 8f), 8f, width, 252f);
+            float width = Mathf.Min(Mathf.Max(240f, panelWidth), Mathf.Max(240f, Screen.width - 16f));
+            float preferredHeight = Screen.height < 340f ? 276f : 300f;
+            float height = Mathf.Min(preferredHeight, Mathf.Max(200f, Screen.height - 16f));
+            return new Rect(Mathf.Max(8f, Screen.width - width - 8f), 8f, width, height);
         }
 
         private void ResolveReferences()
