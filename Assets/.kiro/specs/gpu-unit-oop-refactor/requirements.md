@@ -49,7 +49,7 @@
 
 #### Acceptance Criteria
 
-1. THE FlowFieldVisualizer SHALL 在流场生成 kernel 中将流场数据写入预览 RenderTexture，并由 HUD 组件（Stage7FlowFieldPreviewHUD_Stage7）在运行时展示。
+1. THE FlowFieldVisualizer SHALL 在流场生成 kernel 中将流场数据写入预览 RenderTexture，并由 HUD 组件（FlowFieldPreviewHUD）在运行时展示。
 2. THE FlowFieldVisualizer SHALL 提供运行时开关（RuntimeFlowConfig.runtimeFlowPreviewEnabled），允许启用或禁用可视化。
 3. WHEN 可视化开关关闭时，THE 流场 kernel SHALL 跳过全部预览纹理写入（flowPreviewEnabled uniform 门控），不消耗额外的 GPU 写带宽。
 4. THE FlowFieldVisualizer SHALL 支持流场方向模式和密度目标模式两种预览（RuntimeFlowConfig.runtimeFlowPreviewMode）。

@@ -430,6 +430,7 @@ GameObject:
   - component: {fileID: 927799153}
   - component: {fileID: 927799152}
   - component: {fileID: 927799154}
+  - component: {fileID: 927799155}
   m_Layer: 0
   m_Name: MassEngineSystem
   m_TagString: Untagged
@@ -457,6 +458,20 @@ MonoBehaviour:
   enableGpuDispatch: 1
   rebuildRuntimeFlowEveryFrame: 0
   battleStarted: 1
+--- !u!114 &927799155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 927799151}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8867ea9e3ec33bf42a84959ac5093345, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  manager: {fileID: 927799152}
+  frameTimeSmoothing: 0.1
 --- !u!4 &927799153
 Transform:
   m_ObjectHideFlags: 0

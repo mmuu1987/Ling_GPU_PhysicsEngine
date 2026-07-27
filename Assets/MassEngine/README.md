@@ -86,8 +86,8 @@ C# 侧 `AgentStateMachine` 是该 GPU 语义的镜像规格（供测试与工具
 
 - 当前维护**两张**队伍流场（攻 0 / 防 1），teamId 只允许 0/1（非法值注册期报错）。
   N 队 N 流场需数组化 `flowFieldDirections`，属未来扩展。
-- `SelectRuntimeFlowTargets` 是单线程 kernel，`dynamicFlowUpdateInterval`
-  （默认 0.35s）是它的显式节流旋钮；每帧重建模式下它是主要瓶颈。
+- `SelectRuntimeFlowTargets` 已按扇区改为 64 线程组并行归约；
+  `dynamicFlowUpdateInterval`（默认 0.35s）仍是动态流场重建的显式节流旋钮。
 - **LOD 降频模拟已内建**：近/中/远层决策频率 1/2/4（LodConfig 可调），DPS/速度经 dt
   补偿与全帧率一致（有黄金测试）；位置仍每帧积分，视觉无步进。这是大规模（20 万+/边）
   的主性能杠杆。注意：模拟节奏依赖 lodCenter（相机），战局结果不具备镜头无关的严格确定性。

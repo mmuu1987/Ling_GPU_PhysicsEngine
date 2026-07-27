@@ -44,7 +44,7 @@ Stage7 现在的模块契约（`IUnitParameterContributor`）：
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│                     MassGpuSystemManager_Stage7                     │
+│                         MassEngineManager                           │
 │   场景入口：门控/节流、流场目标覆盖、遥测、生命周期                    │
 └───────┬──────────────┬───────────────┬──────────────┬──────────────┘
         │              │               │              │
@@ -205,5 +205,5 @@ PlayMode（Tests/PlayMode/Stage7GpuKernelTests.cs，真实 GPU 派发 + 回读�
   Stage7 相对 Stage6 的已知偏差项：DensityMap 阶段、每帧 settings 上传（N×112B，可忽略）、
   LOD 分类按兵种多次派发（每次全 Agent 扫描，兵种数小时可忽略）。
 - Shader 文件名仍带 _Stage6 后缀：改名会变更 GUID/引用，收益低于风险，暂保留。
-- SelectRuntimeFlowTargets 仍是单线程 kernel；在高 flowFieldResolution 或每帧重建模式下
-  是主要瓶颈，已由节流参数控制暴露面，未来可并行化（分 sector reduction）。
+- SelectRuntimeFlowTargets 已按扇区改为 64 线程组并行归约；残局兜底迁入 Generate
+  kernel 以获得跨扇区视野。高分辨率下仍由 dynamicFlowUpdateInterval 控制重建频率。

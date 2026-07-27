@@ -46,17 +46,17 @@
   - _Requirements: 5.2, 8.2, 9.1, 9.2, 9.3, 10.2, 10.3_
 
 - [x] 6. 场景入口与运行时状态
-  - MassGpuSystemManager_Stage7：流场门控三要素分解（enabled/reason/cadence）+
+  - MassEngineManager：流场门控三要素分解（enabled/reason/cadence）+
     dynamicFlowUpdateInterval 节流 + dirty 立即重建；点击目标为运行时覆盖
     （SetFlowTargetOverride，不触碰配置资产）；OnEnable/OnDisable 配对；
     分配签名重建守卫；ShaderSet fail-fast；frustum 无分配缓存
-  - Stage7ClickFlowTargetSetter 改为写运行时覆盖
+  - ClickFlowTargetSetter 改为写运行时覆盖
   - _Requirements: 1.3, 4.1, 4.2, 4.3_
 
 - [x] 7. 可观测性
-  - Stage7BattleTelemetry（AsyncGPUReadback 存活数/战斗时长/流场重建计数）+
-    Stage7BattleTelemetryHUD_Stage7
-  - Stage7FlowFieldPreviewHUD_Stage7（预览纹理展示；kernel 写入由
+  - BattleTelemetry（AsyncGPUReadback 存活数/战斗时长/流场重建计数）+
+    BattleTelemetryHUD
+  - FlowFieldPreviewHUD（预览纹理展示；kernel 写入由
     runtimeFlowPreviewEnabled 门控）
   - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
