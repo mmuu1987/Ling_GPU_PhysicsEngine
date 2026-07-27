@@ -19,6 +19,16 @@
 | `SimulationConfig.cs` / `MassEngineSystemConfig.cs` / `MassEngineShaderConfig.cs` | 全局配置资产类（世界尺寸/格子、系统配置聚合、shader 引用） |
 | `Shaders/AgentDataCommon.hlsl` | 所有 kernel 共享的声明与工具函数（结构体、缓冲、采样、状态推导、邻域查询） |
 
+## 游戏层运行时 API
+
+- `StartBattle()` / `PauseBattle()`：继续或暂停；Pause 保留当前军团命令
+- `StopBattle()`：停止并清除目标/导航覆盖
+- `ResetScenario()`：重建初始 GPU 战场
+- `SetFlowTargetOverride(teamId, point)`：设置队伍静态移动目标
+- `SetTeamNavigationOverride(teamId, enabled, dynamicTargeting)`：运行时切换防守、静态移动或动态进攻条令
+
+这些 API 只写 Manager 的运行时覆盖，不修改 `RuntimeFlowConfig`。
+
 ## 关键契约
 
 - **调度顺序**（`DispatchFrame`）：SpatialHash → RuntimeFlow(条件) → DensityMap →

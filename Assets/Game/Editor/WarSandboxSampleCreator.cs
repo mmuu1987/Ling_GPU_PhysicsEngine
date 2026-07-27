@@ -169,11 +169,16 @@ namespace MassEngine.Game.Editor
             manager.systemConfig = system;
             manager.shaderConfig = shaders;
             manager.enableGpuDispatch = true;
-            manager.battleStarted = true;
+            manager.battleStarted = false;
 
             ClickFlowTargetSetter clickSetter = systemObject.AddComponent<ClickFlowTargetSetter>();
             clickSetter.manager = manager;
             systemObject.AddComponent<BattleTelemetryHUD>().manager = manager;
+            WarSandboxBattleController battleController = systemObject.AddComponent<WarSandboxBattleController>();
+            battleController.manager = manager;
+            battleController.pauseOnStart = true;
+            WarSandboxCommandHUD commandHud = systemObject.AddComponent<WarSandboxCommandHUD>();
+            commandHud.controller = battleController;
 
             // Ground with a collider so click-to-set-target raycasts have something to hit.
             GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
@@ -188,6 +193,7 @@ namespace MassEngine.Game.Editor
             manager.cullingCamera = camera;
             manager.lodCenter = cameraObject.transform;
             clickSetter.raycastCamera = camera;
+            commandHud.commandCamera = camera;
 
             EditorSceneManager.SaveScene(scene, SampleScenePath);
         }

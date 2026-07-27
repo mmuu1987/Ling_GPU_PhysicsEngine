@@ -143,18 +143,25 @@
   - 文档：Simulation/README 决策流去 chase 残留 + 寻敌决策计数 + 巡航闭式解；
     design.md Select 并行化与巡航复合修正；tasks.md 场景/类名标识符更新
 
-## 待办（需要在 Unity 编辑器内完成）
+## 编辑器验收与游戏层续建
 
-- [ ] 10. 性能基线（Requirement 9.4）
+- [x] 10. 性能基线（Requirement 9.4；2026-07-27 用户实测验收并决定性能封版）
   - 用户目标：200000v200000（40 万）为基础规模；阶梯 25k→50k→100k→200k/边
-  - 10000v10000 记录帧时间，与 Stage6 同规模对照
-  - 已知偏差项见 design.md"已知偏差"；节流参数 dynamicFlowUpdateInterval 是显式旋钮
-  - 打开动态流场后，用固定种子录像对比战场行为（寻敌半径实际扩大、hold-position 防守方
-    开始互相推开、动画回绕周期变化都属于预期变更）
+  - 实测：10k/边 8.8ms 113FPS；50k/边 32.8ms 30FPS；100k/边 57.1ms 18FPS；
+    200k/边 85.4ms 12FPS。Stage6 数字对比由用户决定不再阻塞封版
+  - 50k/边起出现 GRID OVERFLOW，作为压力档已知正确性边界保留红色遥测
+  - 详细账目：Assets/Game/PerformanceBaseline.md
 
-- [ ] 11. 场景核对
+- [x] 11. 场景核对（2026-07-27 用户目检确认“感觉还行”）
   - Game/Scenes/WarSandbox.unity 在编辑器中 Play 验证：攻方沿流场推进、接战、遥测 HUD 数据合理
-  - 按需将 BattleTelemetryHUD / FlowFieldPreviewHUD 挂到场景 manager 上
+  - BattleTelemetryHUD 已挂到 manager；FlowFieldPreviewHUD 仍按需启用
+
+- [x] 20. 战争沙盒垂直切片 v0.1（2026-07-27）
+  - 游戏层 ArmyOrder + WarSandboxBattleController：两军选择、进攻、点击移动、原地防守、撤退
+  - MassEngineManager 新增只改运行时状态的队伍导航条令与“保留命令暂停”API
+  - WarSandboxCommandHUD：部署/交战/胜负、0.5×～4×、暂停、重开、快捷键
+  - MassEngine/War Sandbox Editor：兵力、阵营、出生中心、密度、宽深比与 Auto-Fit 入口
+  - 当前军团=阵营；多军团独立导航留待 groupId/多流场设计，不伪装为已支持
 
 - [x] 12. 目录全量搬迁（2026-07-26 完成）
   - 引擎 → Assets/MassEngine（8 模块 + Tests，每模块 README）；游戏层 → Assets/Game

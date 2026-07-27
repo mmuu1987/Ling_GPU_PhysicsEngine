@@ -10,15 +10,29 @@
 | `Scenes/WarSandbox.unity` | 主场景（原 Stage7_Test）：MassEngineSystem + 相机 |
 | `Settings/` | 全部配置资产：Scenario/System/Shader/Simulation/Lod/RuntimeFlow/RuntimeCombat + 攻/防两套兵种配置（UnitTypeConfig + 六个子配置各一套） |
 | `Scripts/ClickFlowTargetSetter.cs` | 点击地面 → `manager.SetFlowTargetOverride(teamId, point)`（运行时覆盖，不写资产）+ 可选自动开战 |
+| `Scripts/ArmyOrder.cs` | 游戏层军团命令与运行时状态：进攻、移动、防守、撤退 |
+| `Scripts/WarSandboxBattleController.cs` | 把军团意图接入引擎运行时导航 API，管理暂停、倍速、胜负与重开 |
+| `Scripts/WarSandboxCommandHUD.cs` | 右侧运行时指挥面板与快捷键；移动命令消费下一次地面点击 |
 | `Scripts/Gizmos/` | Scene 视图的阵型/流场/目标 Gizmo（ScenarioGizmos 挂场景物体上） |
 | `Scripts/CameraControls/` | 观战相机。场景在用：MyCameraManager（+其依赖 LocalRotationAndScale）。备用整洁版套件：RigCameraManager + SceneViewCameraRig/Input/Settings/BoundsUtility + CameraMouseOrbit（原 *_Stage7 副本，2026-07-27 已去后缀改名，暂无场景引用） |
 | `Editor/WarSandboxSampleCreator.cs` | 菜单 MassEngine/Create Sample Configs And Scene：一键生成可跑的示例场景与配置（非破坏式：已存在的资产不动） |
+| `Editor/WarSandboxEditorWindow.cs` | 菜单 MassEngine/War Sandbox Editor：编辑军团兵力、出生中心、密度和阵型，并调用 Auto-Fit |
+| `PerformanceBaseline.md` | 20k～400k 总单位的封版实测与产品档位 |
 
 ## 玩法（当前）
 
-进 Play（scene 里 battleStarted 默认开）→ 攻方沿流场压向守方 → 接战互殴。
-鼠标点地面 = 给攻方（teamId 按组件配置）下移动令。
-调参：直接改 `Settings/` 下资产，绝大多数参数下一帧生效。
+进 Play 后战场停在部署阶段。右侧面板选择攻方/守方并下令：
+
+- `A` 进攻：启用该队动态敌情流场
+- `M` 移动：下一次左键点击地面成为静态目标
+- `H` 原地防守：关闭该队导航，但保留近身接战
+- `R` 撤退：返回该队初始出生中心
+- `Space` 暂停/继续；面板可切 0.5×/1×/2×/4×；重开恢复初始战场
+
+遥测确认任一方归零后自动暂停并显示胜负。当前一张流场对应一个阵营，所以“军团”
+暂等同于攻/守两支大军；多军团独立导航需要未来的 groupId/多流场扩展。
+
+调参建议通过 `MassEngine/War Sandbox Editor`，再点 Auto-Fit；配置资产运行时严格只读。
 
 ## 扩展这款游戏
 
@@ -27,3 +41,8 @@
   （StartBattle/StopBattle/ResetScenario/SetFlowTargetOverride）驱动引擎
 - 战争沙盒编辑器（长期目标）：本层将来放编辑器 UI 与关卡序列化，
   引擎侧无需改动
+
+## 性能档位
+
+默认产品档为 10k vs 10k（实测 113 FPS）；50k vs 50k 是约 30 FPS 的大型战役档；
+100k/200k 每方属于压力与容量展示。详见 [PerformanceBaseline.md](PerformanceBaseline.md)。

@@ -16,6 +16,13 @@ namespace MassEngine
             public Vector3 point;
         }
 
+        private struct TeamNavigationOverride
+        {
+            public bool active;
+            public bool enabled;
+            public bool dynamicTargeting;
+        }
+
         private struct AllocationSignature
         {
             public int agentCount;
@@ -67,6 +74,7 @@ namespace MassEngine
         private UnitTypeGpuSettings[] gpuSettingsCache;
         private AllocationSignature allocationSignature;
         private readonly FlowTargetOverride[] flowTargetOverrides = new FlowTargetOverride[2];
+        private readonly TeamNavigationOverride[] teamNavigationOverrides = new TeamNavigationOverride[2];
         private readonly bool[] flowFieldDirty = { true, true };
         private readonly int[] lastFlowTargetHash = new int[2];
         private readonly float[] nextDynamicFlowRebuildTime = new float[2];
@@ -85,6 +93,7 @@ namespace MassEngine
         public UnitTypeRegistry UnitTypes { get { return unitTypeRegistry; } }
         public MassGpuBufferManager Buffers { get { return bufferManager; } }
         public BattleTelemetry Telemetry { get { return telemetry; } }
+        public bool IsBattleRunning { get { return battleStarted; } }
 
         private void OnEnable()
         {
@@ -273,18 +282,31 @@ namespace MassEngine
 
         public void StopBattle()
         {
+            PauseBattle();
+            ClearFlowTargetOverride(AttackerTeamId);
+            ClearFlowTargetOverride(DefenderTeamId);
+            ClearTeamNavigationOverride(AttackerTeamId);
+            ClearTeamNavigationOverride(DefenderTeamId);
+        }
+
+        /// <summary>
+        /// Pauses simulation and telemetry without discarding runtime army orders.
+        /// Use StopBattle when orders should be cleared as well.
+        /// </summary>
+        public void PauseBattle()
+        {
             battleStarted = false;
             battleStateApplied = false;
             if (telemetry != null)
                 telemetry.NotifyBattleStopped(Time.time);
-            ClearFlowTargetOverride(AttackerTeamId);
-            ClearFlowTargetOverride(DefenderTeamId);
         }
 
         public void ResetScenario()
         {
             ClearFlowTargetOverride(AttackerTeamId);
             ClearFlowTargetOverride(DefenderTeamId);
+            ClearTeamNavigationOverride(AttackerTeamId);
+            ClearTeamNavigationOverride(DefenderTeamId);
             if (telemetry != null)
                 telemetry.NotifyReset();
             Initialize();
@@ -312,6 +334,38 @@ namespace MassEngine
                 return;
 
             flowTargetOverrides[teamId] = default;
+            flowFieldDirty[teamId] = true;
+        }
+
+        /// <summary>
+        /// Overrides one team's navigation doctrine at runtime without mutating
+        /// RuntimeFlowConfig. enabled=false holds position; enabled=true routes through
+        /// that team's flow field. dynamicTargeting chooses enemy-driven targets when no
+        /// explicit point override is active.
+        /// </summary>
+        public void SetTeamNavigationOverride(int teamId, bool enabled, bool dynamicTargeting)
+        {
+            if (teamId < 0 || teamId >= teamNavigationOverrides.Length)
+            {
+                Debug.LogWarning("MassEngine: SetTeamNavigationOverride teamId " + teamId + " is invalid - the engine maintains teams 0 and 1 only.", this);
+                return;
+            }
+
+            teamNavigationOverrides[teamId] = new TeamNavigationOverride
+            {
+                active = true,
+                enabled = enabled,
+                dynamicTargeting = dynamicTargeting
+            };
+            flowFieldDirty[teamId] = true;
+        }
+
+        public void ClearTeamNavigationOverride(int teamId)
+        {
+            if (teamId < 0 || teamId >= teamNavigationOverrides.Length)
+                return;
+
+            teamNavigationOverrides[teamId] = default;
             flowFieldDirty[teamId] = true;
         }
 
@@ -398,7 +452,7 @@ namespace MassEngine
                 rebuildDensityMap = total > 0,
                 densityMapThreadGroupsX = densityMapThreadGroups,
                 densityMapThreadGroupsY = densityMapThreadGroups,
-                defenderMovementMode = Flow.defenderFlowFieldEnabled ? 1 : 0,
+                defenderMovementMode = ResolveTeamFlowEnabled(DefenderTeamId) ? 1 : 0,
                 defenderGuardRadius = RuntimeCombat.defenderGuardRadius,
                 localTargetSearchCellRadius = ComputeLocalTargetSearchCellRadius(),
                 flowPreviewEnabled = Flow.runtimeFlowPreviewEnabled,
@@ -446,8 +500,8 @@ namespace MassEngine
         private TeamFlowFrameSettings BuildTeamFlowSettings(int teamId, int flowThreadGroups, int flowResolution)
         {
             bool isAttacker = teamId == AttackerTeamId;
-            bool enabled = isAttacker ? Flow.flowFieldEnabled : Flow.defenderFlowFieldEnabled;
-            bool dynamicEnabled = isAttacker ? Flow.runtimeDynamicAttackerFlowEnabled : Flow.runtimeDynamicDefenderFlowEnabled;
+            bool enabled = ResolveTeamFlowEnabled(teamId);
+            bool dynamicEnabled = ResolveTeamDynamicTargeting(teamId);
             float dynamicInterval = isAttacker ? Flow.dynamicFlowUpdateInterval : Flow.dynamicDefenderFlowUpdateInterval;
 
             TeamFlowFrameSettings settings = new TeamFlowFrameSettings
@@ -530,6 +584,26 @@ namespace MassEngine
 
             settings.rebuildThisFrame = rebuild;
             return settings;
+        }
+
+        private bool ResolveTeamFlowEnabled(int teamId)
+        {
+            TeamNavigationOverride runtime = teamNavigationOverrides[teamId];
+            if (runtime.active)
+                return runtime.enabled;
+
+            return teamId == AttackerTeamId ? Flow.flowFieldEnabled : Flow.defenderFlowFieldEnabled;
+        }
+
+        private bool ResolveTeamDynamicTargeting(int teamId)
+        {
+            TeamNavigationOverride runtime = teamNavigationOverrides[teamId];
+            if (runtime.active)
+                return runtime.dynamicTargeting;
+
+            return teamId == AttackerTeamId
+                ? Flow.runtimeDynamicAttackerFlowEnabled
+                : Flow.runtimeDynamicDefenderFlowEnabled;
         }
 
         /// <summary>
