@@ -116,16 +116,20 @@ cadence  = dirty（目标变更/刚初始化）立即重建
          | rebuildRuntimeFlowEveryFrame 强制每帧
 ```
 
-静态目标只在 dirty 时重建一次。SelectRuntimeFlowTargets 是 numthreads(1,1,1) 的串行
-kernel，节流参数是它的显式性能旋钮。DensityMap 与流场重建解耦，每帧重建（拥挤压力每帧
-消费它）。
+静态目标只在 dirty 时重建一次。SelectRuntime*FlowTargets 已并行化（2026-07-27）：
+每扇区一个 64 线程组做 groupshared 归约，残局兜底移入 Generate（需跨扇区视野，
+stats[3]==0 触发）；节流参数保留为带宽旋钮而非刚需。DensityMap 与流场重建解耦，
+每帧重建（拥挤压力每帧消费它）。
 
 ### LOD 降频模拟（2026-07-26 新增）
 
 近/中/远层 Agent 的决策段每 1/2/4 帧执行一次（LodConfig.near/mid/farSimulationInterval）；
 非激活帧只做伤害结算+死亡判定+缓存速度位置积分+写回（双缓冲正确性要求）。冷却为累积制、
-冲量/转向用 dtSim=interval×dt 补偿，DPS 与速度与全帧率一致（PlayMode 黄金测试
-LodScaledSimulationPreservesKillCadence 锁定 ±20 帧）。错峰按 64 线程组对齐避免 warp 分歧。
+分离冲量用 dtSim=interval×dt 补偿；转向不能线性放大步长（阻尼×lerp 跨步长不可交换，
+线性补偿曾导致降频巡航快 ~19%），采用精确 N 步复合闭式解 v'=α^N·v+gain·T
+（α=damp×(1−steer)，N=1 逐位等价原公式）。DPS 与行军速度均有 PlayMode 黄金测试锁定
+（LodScaledSimulationPreservesKillCadence ±20 帧 / LodScaledSimulationPreservesTravelSpeed
+偏差 <15%）。错峰按 64 线程组对齐避免 warp 分歧。
 代价：战局对 lodCenter（相机位置）不再严格确定；远层目标获取延迟最高 interval×4 帧。
 
 ### hp / pendingDamage / position 双缓冲

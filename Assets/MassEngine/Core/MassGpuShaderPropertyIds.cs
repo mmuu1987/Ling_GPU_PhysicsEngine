@@ -13,6 +13,7 @@ namespace MassEngine
         public static readonly int EnableFrustumCullingId = Shader.PropertyToID("enableFrustumCulling");
         public static readonly int CullingRadiusId = Shader.PropertyToID("cullingRadius");
         public static readonly int MaxRenderDistanceSqrId = Shader.PropertyToID("maxRenderDistanceSqr");
+        public static readonly int FarIncludeDeadId = Shader.PropertyToID("farIncludeDead");
         public static readonly int FrustumPlanesId = Shader.PropertyToID("frustumPlanes");
         public static readonly int NearAnimationIntervalId = Shader.PropertyToID("nearAnimationInterval");
         public static readonly int MidAnimationIntervalId = Shader.PropertyToID("midAnimationInterval");

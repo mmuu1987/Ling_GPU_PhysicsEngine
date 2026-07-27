@@ -12,6 +12,9 @@ namespace MassEngine
     public sealed class MassGpuRenderDispatcher
     {
         private readonly MaterialPropertyBlock fallbackBlock = new MaterialPropertyBlock();
+        // One warning per unit-type x LOD batch: a silently skipped draw otherwise
+        // reads as "units teleport in and out at the LOD ring" with nothing to go on.
+        private readonly System.Collections.Generic.HashSet<int> reportedSkippedBatches = new System.Collections.Generic.HashSet<int>();
 
         public void Draw(UnitTypeRegistry registry, MassGpuBufferManager buffers, Bounds bounds)
         {
@@ -29,6 +32,7 @@ namespace MassEngine
                 {
                     DrawLod(
                         runtime,
+                        unitType.UnitTypeIndex,
                         lod,
                         buffers.agentBuffer,
                         buffers.GetVisibleIndexBuffer(unitType.UnitTypeIndex, lod),
@@ -38,12 +42,22 @@ namespace MassEngine
             }
         }
 
-        private void DrawLod(ResolvedUnitTypeRuntime runtime, int lodLevel, ComputeBuffer agentBuffer, ComputeBuffer visibleIndices, ComputeBuffer argsBuffer, Bounds bounds)
+        private void DrawLod(ResolvedUnitTypeRuntime runtime, int unitTypeIndex, int lodLevel, ComputeBuffer agentBuffer, ComputeBuffer visibleIndices, ComputeBuffer argsBuffer, Bounds bounds)
         {
             Mesh mesh = runtime.GetMesh(lodLevel);
             Material material = runtime.GetMaterial(lodLevel);
             if (mesh == null || material == null || agentBuffer == null || visibleIndices == null || argsBuffer == null)
+            {
+                int batchKey = unitTypeIndex * MassGpuBufferManager.LodLevels + lodLevel;
+                if (reportedSkippedBatches.Add(batchKey))
+                {
+                    Debug.LogWarning("MassEngine: draw skipped for unit type " + unitTypeIndex + " LOD " + lodLevel +
+                        " (missing: " + (mesh == null ? "mesh " : "") + (material == null ? "material " : "") +
+                        (agentBuffer == null ? "agentBuffer " : "") + (visibleIndices == null ? "visibleIndices " : "") +
+                        (argsBuffer == null ? "argsBuffer" : "") + ") - that tier renders nothing for this type.");
+                }
                 return;
+            }
 
             MaterialPropertyBlock block = runtime.GetBlock(lodLevel);
             if (block == null)

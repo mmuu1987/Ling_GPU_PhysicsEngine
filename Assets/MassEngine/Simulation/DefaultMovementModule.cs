@@ -48,6 +48,12 @@ namespace MassEngine
             hasRuntimeOverride = true;
         }
 
+        public void ClearTarget()
+        {
+            runtimeOverride = default;
+            hasRuntimeOverride = false;
+        }
+
         private FlowFieldTarget DeriveConfiguredTarget()
         {
             if (Config == null || !Config.useConfiguredFlowTarget)

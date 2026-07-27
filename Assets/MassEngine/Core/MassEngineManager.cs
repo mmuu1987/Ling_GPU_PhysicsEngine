@@ -23,6 +23,11 @@ namespace MassEngine
             public int maxAgentsPerCell;
             public int flowFieldResolution;
             public int unitTypeCount;
+            // Counts alone cannot see a scenario asset swap or a teamId edit: the GPU
+            // teamIdReadBuffer is uploaded once per Initialize, so those edits must
+            // change the signature or they silently never reach the GPU.
+            public int scenarioConfigId;
+            public int teamLayoutHash;
 
             public bool Equals(in AllocationSignature other)
             {
@@ -30,7 +35,9 @@ namespace MassEngine
                        gridCellCount == other.gridCellCount &&
                        maxAgentsPerCell == other.maxAgentsPerCell &&
                        flowFieldResolution == other.flowFieldResolution &&
-                       unitTypeCount == other.unitTypeCount;
+                       unitTypeCount == other.unitTypeCount &&
+                       scenarioConfigId == other.scenarioConfigId &&
+                       teamLayoutHash == other.teamLayoutHash;
             }
         }
 
@@ -68,6 +75,8 @@ namespace MassEngine
         private bool gpuDispatchBlockedByShaders;
         private bool battleStateApplied;
         private bool initialized;
+        private bool loggedSettingsCacheMismatch;
+        private float nextShaderProbeTime;
 
         private Plane[] cachedFrustumPlanes;
         private Vector4[] cachedFrustumVectors;
@@ -98,8 +107,30 @@ namespace MassEngine
                     StopBattle();
             }
 
-            if (!enableGpuDispatch || gpuDispatchBlockedByShaders)
+            if (!enableGpuDispatch)
                 return;
+
+            if (gpuDispatchBlockedByShaders)
+            {
+                // Cheap throttled probe (four null checks + HasKernel): the moment the
+                // shader config is completed at runtime the engine recovers on its own
+                // instead of demanding a manual ResetScenario.
+                if (Time.unscaledTime >= nextShaderProbeTime)
+                {
+                    nextShaderProbeTime = Time.unscaledTime + 1f;
+                    MassGpuShaderSet probe = MassGpuShaderSet.Find(
+                        shaderConfig != null ? shaderConfig.spatialHashShader : null,
+                        shaderConfig != null ? shaderConfig.runtimeFlowShader : null,
+                        shaderConfig != null ? shaderConfig.combatSimulationShader : null,
+                        shaderConfig != null ? shaderConfig.lodClassificationShader : null);
+                    if (probe.IsValid)
+                    {
+                        Debug.Log("MassEngine: shader config completed - reinitializing scenario.", this);
+                        Initialize();
+                    }
+                }
+                return;
+            }
 
             // Signature check BEFORE the allocation early-out: an initially empty or
             // invalid scenario must recover the moment its configs become valid.
@@ -124,7 +155,18 @@ namespace MassEngine
             renderDispatcher.Draw(unitTypeRegistry, bufferManager, ResolveRenderBounds());
 
             if (telemetry != null)
+            {
                 telemetry.Tick(bufferManager, Time.time);
+                if (telemetry.DeviceResetSuspected)
+                {
+                    // The sentinel written at allocation vanished from GPU memory: a
+                    // device reset/TDR wiped the buffers. All simulation state lives
+                    // only on the GPU, so the sole recovery is a full reinitialize.
+                    Debug.LogWarning("MassEngine: GPU buffer sentinel lost (device reset/driver restart suspected) - reinitializing scenario.", this);
+                    Initialize();
+                    return;
+                }
+            }
         }
 
         private void OnDisable()
@@ -144,6 +186,7 @@ namespace MassEngine
             }
 
             loggedSearchRadiusClamp = false;
+            loggedSettingsCacheMismatch = false;
             gpuDispatchBlockedByShaders = false;
 
             Release();
@@ -165,6 +208,17 @@ namespace MassEngine
             renderDispatcher = new MassGpuRenderDispatcher();
             telemetry = new BattleTelemetry();
 
+            if (gpuDispatchBlockedByShaders)
+            {
+                // Do not allocate the full GPU working set (tens to hundreds of MB at
+                // 400k agents) for a pipeline that cannot dispatch; the Update probe
+                // reinitializes the moment the shader config becomes valid.
+                allocationSignature = CurrentAllocationSignature();
+                initialized = true;
+                battleStateApplied = battleStarted;
+                return;
+            }
+
             // Physics ledger: an out-of-envelope scenario must announce itself with
             // concrete numbers instead of failing as an unexplained frame-rate collapse.
             ScenarioPhysicsReport physicsReport = ScenarioPhysics.Evaluate(
@@ -178,6 +232,11 @@ namespace MassEngine
             int gridCellCount = ComputeGridCellCount();
             int unitTypeCount = unitTypeRegistry.UnitTypeCount;
 
+            // Signature is recorded BEFORE allocation: if anything below throws (a user
+            // IUnitType override, an out-of-range buffer size), the next frame must not
+            // retry the whole Release+Allocate cycle until the configs actually change.
+            allocationSignature = CurrentAllocationSignature();
+
             bufferManager.Allocate(totalAgents, gridCellCount, Simulation.maxAgentsPerCell, Flow.flowFieldResolution, Flow.flowFieldResolution, unitTypeCount);
             unitTypeRegistry.InitializeAll(bufferManager, pipelineOrchestrator);
             UploadInitialAgents();
@@ -186,7 +245,6 @@ namespace MassEngine
             gpuSettingsCache = new UnitTypeGpuSettings[unitTypeCount];
             RefreshAndUploadUnitTypeSettings();
 
-            allocationSignature = CurrentAllocationSignature();
             flowFieldDirty[0] = true;
             flowFieldDirty[1] = true;
             nextDynamicFlowRebuildTime[0] = 0f;
@@ -288,7 +346,14 @@ namespace MassEngine
                 return;
 
             if (unitTypeRegistry.FillGpuSettings(gpuSettingsCache))
+            {
                 bufferManager.UploadUnitTypeSettings(gpuSettingsCache);
+            }
+            else if (!loggedSettingsCacheMismatch)
+            {
+                loggedSettingsCacheMismatch = true;
+                Debug.LogError("MassEngine: settings cache (" + gpuSettingsCache.Length + ") does not match the registry (" + unitTypeRegistry.UnitTypeCount + " unit types); per-frame parameter upload is stalled. Rebuild via ResetScenario()/Initialize().", this);
+            }
         }
 
         private void UploadInitialAgents()
@@ -357,6 +422,7 @@ namespace MassEngine
                     midLodRadius = Lod.midLodRadius,
                     cullingRadius = Lod.cullingRadius,
                     maxRenderDistance = Lod.maxRenderDistance,
+                    farIncludeDead = Lod.farIncludeDead,
                     frustumPlanes = BuildFrustumPlanes(),
                     nearAnimationInterval = Lod.nearAnimationInterval,
                     midAnimationInterval = Lod.midAnimationInterval,
@@ -576,6 +642,7 @@ namespace MassEngine
         {
             int agentCount = 0;
             int unitTypeCount = 0;
+            int teamLayoutHash = 17;
             if (scenarioConfig != null && scenarioConfig.unitTypes != null)
             {
                 for (int i = 0; i < scenarioConfig.unitTypes.Length; i++)
@@ -587,6 +654,7 @@ namespace MassEngine
                         continue;
                     agentCount += config.spawnConfig.unitCount;
                     unitTypeCount++;
+                    teamLayoutHash = teamLayoutHash * 31 + config.teamId;
                 }
             }
 
@@ -596,7 +664,9 @@ namespace MassEngine
                 gridCellCount = ComputeGridCellCount(),
                 maxAgentsPerCell = Simulation.maxAgentsPerCell,
                 flowFieldResolution = Flow.flowFieldResolution,
-                unitTypeCount = unitTypeCount
+                unitTypeCount = unitTypeCount,
+                scenarioConfigId = scenarioConfig != null ? scenarioConfig.GetInstanceID() : 0,
+                teamLayoutHash = teamLayoutHash
             };
         }
 

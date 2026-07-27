@@ -120,14 +120,50 @@ namespace MassEngine.Game
                 defenderColor,
                 neutralColor);
 
+            // Mirror the runtime rules so the gizmo never promises an order the GPU
+            // will not execute: a team's flow master switch must be ON, and only the
+            // FIRST unit type per team with an active target wins (see
+            // UnitTypeRegistry.TryGetConfiguredFlowTarget).
+            RuntimeFlowConfig flow = ResolveFlowConfig(sourceManager);
+            bool attackerFlowOn = flow == null || flow.flowFieldEnabled;
+            bool defenderFlowOn = flow != null && flow.defenderFlowFieldEnabled;
+            int attackerWinner = -1;
+            int defenderWinner = -1;
+            for (int i = 0; i < units.Count; i++)
+            {
+                ScenarioGizmoUnit unit = units[i];
+                if (unit.Movement == null || !unit.Movement.useConfiguredFlowTarget)
+                    continue;
+                if (unit.TeamId == 0 && attackerWinner < 0)
+                    attackerWinner = i;
+                else if (unit.TeamId == 1 && defenderWinner < 0)
+                    defenderWinner = i;
+            }
+
             for (int i = 0; i < units.Count; i++)
             {
                 ScenarioGizmoUnit unit = units[i];
                 if (drawSpawnAreas)
                     ScenarioGizmoDrawer.DrawSpawnArea(unit, spawnFillAlpha, spawnOutlineAlpha, drawLabels, labelYOffset);
                 if (drawConfiguredTargets)
-                    ScenarioGizmoDrawer.DrawConfiguredTarget(unit, labelYOffset + 1f);
+                {
+                    bool masterOn = unit.TeamId == 0 ? attackerFlowOn : (unit.TeamId == 1 && defenderFlowOn);
+                    bool isWinner = (unit.TeamId == 0 && i == attackerWinner) || (unit.TeamId == 1 && i == defenderWinner);
+                    string ignoredReason = !masterOn
+                        ? (unit.TeamId == 0 ? "flowFieldEnabled is OFF" : "defenderFlowFieldEnabled is OFF")
+                        : "shadowed by an earlier unit type on this team";
+                    ScenarioGizmoDrawer.DrawConfiguredTarget(unit, labelYOffset + 1f, masterOn && isWinner, ignoredReason);
+                }
             }
+        }
+
+        private RuntimeFlowConfig ResolveFlowConfig(MassEngineManager sourceManager)
+        {
+            if (systemOverride != null && systemOverride.runtimeFlowConfig != null)
+                return systemOverride.runtimeFlowConfig;
+            return sourceManager != null && sourceManager.systemConfig != null
+                ? sourceManager.systemConfig.runtimeFlowConfig
+                : null;
         }
 
         private static Texture ResolveAttackerPreviewTexture(MassEngineManager sourceManager)

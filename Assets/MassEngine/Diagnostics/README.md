@@ -13,5 +13,13 @@ HUD 还会在空间哈希格满溢出时显示红色告警（GRID OVERFLOW: N/fr
 
 注意：存活数来自异步回读，比仿真滞后几帧；这是特性不是缺陷。
 
+**设备重置看门狗（2026-07-27）**：全部仿真状态只存在于 GPU 缓冲（一次性上传，CPU 无副本），
+驱动重置/TDR 会把它整体抹掉且引擎表面上"还在跑"。分配时会向 spatialHashStats[3] 写入哨兵
+（`MassGpuBufferManager.DeviceResetSentinel`，无任何 kernel 触碰该槽）；遥测回读发现哨兵
+丢失即置 `BattleTelemetry.DeviceResetSuspected`，Manager 下一帧 LogWarning 并自动重建场景。
+
+HUD 的文本在 Repaint 事件按 4Hz 重建（快照本身 0.5s 才刷新一次）——它是稳态零分配
+主循环旁唯一的 UI，不允许它成为每帧 GC 源。
+
 性能基线测量流程：场景挂 BattleTelemetryHUD → 10000v10000 →
 记录帧时间（对比基准见引擎 README"已知边界"）。

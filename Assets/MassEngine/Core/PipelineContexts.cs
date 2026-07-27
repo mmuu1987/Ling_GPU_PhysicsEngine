@@ -46,6 +46,7 @@ namespace MassEngine
         public float midLodRadius;
         public float cullingRadius;
         public float maxRenderDistance;
+        public bool farIncludeDead;
         public Vector4[] frustumPlanes;
         public int nearAnimationInterval;
         public int midAnimationInterval;

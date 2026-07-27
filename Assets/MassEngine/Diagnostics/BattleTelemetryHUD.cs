@@ -16,6 +16,12 @@ namespace MassEngine
 
         private float smoothedDeltaTime;
         private GUIStyle style;
+        // OnGUI runs at least twice per frame; rebuilding the text each call was the
+        // engine's only steady-state managed allocation. Rebuild at 4 Hz instead.
+        private readonly System.Text.StringBuilder textBuilder = new System.Text.StringBuilder(256);
+        private readonly GUIContent cachedContent = new GUIContent();
+        private float nextTextRefreshTime;
+        private bool cachedOverflowAlert;
 
         private void Reset()
         {
@@ -32,6 +38,10 @@ namespace MassEngine
             if (manager == null || manager.Telemetry == null)
                 return;
 
+            // Explicit-rect GUI needs no Layout event; skipping it halves the calls.
+            if (Event.current.type != EventType.Repaint)
+                return;
+
             if (style == null)
             {
                 style = new GUIStyle(GUI.skin.label)
@@ -43,22 +53,30 @@ namespace MassEngine
             }
 
             BattleTelemetrySnapshot snapshot = manager.Telemetry.Snapshot;
-            float frameMs = smoothedDeltaTime * 1000f;
-            float fps = smoothedDeltaTime > 0f ? 1f / smoothedDeltaTime : 0f;
-
-            string text =
-                "MassEngine  " + frameMs.ToString("F1") + " ms (" + fps.ToString("F0") + " fps)\n" +
-                (snapshot.valid
-                    ? "Attackers " + snapshot.aliveAttackers + "  |  Defenders " + snapshot.aliveDefenders + "  /  " + snapshot.totalAgents + "\n"
-                    : "Attackers -  |  Defenders -  (sampling...)\n") +
-                "Battle " + snapshot.battleSeconds.ToString("F1") + " s   FlowRebuilds A:" + snapshot.attackerFlowRebuilds + " D:" + snapshot.defenderFlowRebuilds +
-                (snapshot.gridOverflowPerFrame > 0
-                    ? "\n<color=#ff5050>GRID OVERFLOW: " + snapshot.gridOverflowPerFrame + "/frame - raise maxAgentsPerCell or cellSize!</color>"
-                    : "");
-
             bool overflowAlert = snapshot.gridOverflowPerFrame > 0;
+
+            if (Time.unscaledTime >= nextTextRefreshTime || overflowAlert != cachedOverflowAlert)
+            {
+                nextTextRefreshTime = Time.unscaledTime + 0.25f;
+                cachedOverflowAlert = overflowAlert;
+
+                float frameMs = smoothedDeltaTime * 1000f;
+                float fps = smoothedDeltaTime > 0f ? 1f / smoothedDeltaTime : 0f;
+
+                textBuilder.Length = 0;
+                textBuilder.Append("MassEngine  ").Append(frameMs.ToString("F1")).Append(" ms (").Append(fps.ToString("F0")).Append(" fps)\n");
+                if (snapshot.valid)
+                    textBuilder.Append("Attackers ").Append(snapshot.aliveAttackers).Append("  |  Defenders ").Append(snapshot.aliveDefenders).Append("  /  ").Append(snapshot.totalAgents).Append('\n');
+                else
+                    textBuilder.Append("Attackers -  |  Defenders -  (sampling...)\n");
+                textBuilder.Append("Battle ").Append(snapshot.battleSeconds.ToString("F1")).Append(" s   FlowRebuilds A:").Append(snapshot.attackerFlowRebuilds).Append(" D:").Append(snapshot.defenderFlowRebuilds);
+                if (overflowAlert)
+                    textBuilder.Append("\n<color=#ff5050>GRID OVERFLOW: ").Append(snapshot.gridOverflowPerFrame).Append("/frame - raise maxAgentsPerCell or cellSize!</color>");
+                cachedContent.text = textBuilder.ToString();
+            }
+
             GUI.Box(new Rect(8f, 8f, 360f, overflowAlert ? 80f : 64f), GUIContent.none);
-            GUI.Label(new Rect(16f, 12f, 352f, overflowAlert ? 76f : 60f), text, style);
+            GUI.Label(new Rect(16f, 12f, 352f, overflowAlert ? 76f : 60f), cachedContent, style);
         }
     }
 }

@@ -29,7 +29,13 @@ namespace MassEngine
             }
         }
 
-        public void Register(IUnitType unitType)
+        /// <summary>
+        /// Engine-internal: types must be registered through RegisterFromScenario so
+        /// that buffer slices, GPU settings cache and allocation signature stay in
+        /// sync. To add unit types at runtime, edit ScenarioConfig.unitTypes and call
+        /// MassEngineManager.ResetScenario()/Initialize().
+        /// </summary>
+        internal void Register(IUnitType unitType)
         {
             if (unitType == null)
                 return;
@@ -157,6 +163,7 @@ namespace MassEngine
                 FlowFieldTarget candidate = unitType.MovementModule.Target;
                 if (candidate.active)
                 {
+                    WarnShadowedTargets(teamId, i);
                     target = candidate;
                     return true;
                 }
@@ -164,6 +171,23 @@ namespace MassEngine
 
             target = default;
             return false;
+        }
+
+        // The engine keeps ONE flow field per team, so only the first active target on
+        // a team wins. A second configured target would otherwise be ignored with no
+        // trace - warn once per (team, shadowed type).
+        private readonly System.Collections.Generic.HashSet<int> warnedShadowedTargets = new System.Collections.Generic.HashSet<int>();
+
+        private void WarnShadowedTargets(int teamId, int winnerIndex)
+        {
+            for (int i = winnerIndex + 1; i < registeredTypes.Count; i++)
+            {
+                IUnitType other = registeredTypes[i];
+                if (other.TeamId != teamId || other.MovementModule == null || !other.MovementModule.Target.active)
+                    continue;
+                if (warnedShadowedTargets.Add(teamId * 1024 + i))
+                    Debug.LogWarning("MassEngine: unit type " + i + " (team " + teamId + ") declares a flow target but is shadowed by unit type " + winnerIndex + " - only the first active target per team takes effect. Use MassEngineManager.SetFlowTargetOverride for runtime orders.");
+            }
         }
 
         public void ReleaseAll()

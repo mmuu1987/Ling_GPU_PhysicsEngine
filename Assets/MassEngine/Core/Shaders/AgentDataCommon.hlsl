@@ -123,6 +123,7 @@ float midLodRadiusSqr;
 int enableFrustumCulling;
 float cullingRadius;
 float maxRenderDistanceSqr; // 0 = unlimited
+int farIncludeDead; // 1 = corpses render in the far tier too (no 120m corpse pop line)
 float4 frustumPlanes[6];
 
 int nearAnimationInterval;
@@ -887,17 +888,27 @@ void AppendVisibleAgentForUnitType(uint index, inout AgentData agent)
     bool isNear = distSqr <= nearLodRadiusSqr;
     bool isMid = !isNear && distSqr <= midLodRadiusSqr;
     int animationInterval = isNear ? nearAnimationInterval : (isMid ? midAnimationInterval : farAnimationInterval);
-    bool includeFar = IsAliveIndex(index);
+    // Without farIncludeDead the mid->far boundary is a hard corpse pop line: bodies
+    // render inside it and vanish beyond it as the camera moves.
+    bool includeFar = farIncludeDead != 0 || IsAliveIndex(index);
 
     UpdateAnimationTime(index, agent, animationInterval);
 
-    // Visibility budget: on km-scale battlefields agents beyond this range are
-    // sub-pixel; dropping them caps the worst-case visible instance count.
-    if (maxRenderDistanceSqr > 0.0 && distSqr > maxRenderDistanceSqr)
-        return;
+    // The near ring is the only shadow-casting tier and the same visible list feeds
+    // every camera and the ShadowCaster pass: culling it against the main camera's
+    // frustum makes shadows of off-screen/behind-camera units pop at the screen edge.
+    // Its instance count is bounded by pi*nearRadius^2*density, so exempting it from
+    // both distance and frustum culling is cheap; mid/far stay culled.
+    if (!isNear)
+    {
+        // Visibility budget: on km-scale battlefields agents beyond this range are
+        // sub-pixel; dropping them caps the worst-case visible instance count.
+        if (maxRenderDistanceSqr > 0.0 && distSqr > maxRenderDistanceSqr)
+            return;
 
-    if (!IsInsideFrustum(agent.position))
-        return;
+        if (!IsInsideFrustum(agent.position))
+            return;
+    }
 
     if (isNear)
         nearVisibleAgentIndices.Append(index);

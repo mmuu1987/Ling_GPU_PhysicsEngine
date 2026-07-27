@@ -43,6 +43,13 @@ namespace MassEngine
 
         public BattleTelemetrySnapshot Snapshot { get { return snapshot; } }
 
+        /// <summary>
+        /// True when a stats readback returned data without the allocation sentinel:
+        /// GPU buffer memory was wiped (device reset/TDR). The manager reinitializes
+        /// the scenario when it sees this.
+        /// </summary>
+        public bool DeviceResetSuspected { get; private set; }
+
         public BattleTelemetry(float sampleInterval = 0.5f)
         {
             this.sampleInterval = Mathf.Max(0.1f, sampleInterval);
@@ -121,6 +128,8 @@ namespace MassEngine
             NativeArray<int> stats = request.GetData<int>();
             if (stats.Length > 0)
                 snapshot.gridOverflowPerFrame = stats[0];
+            if (stats.Length > 3 && stats[3] != MassGpuBufferManager.DeviceResetSentinel)
+                DeviceResetSuspected = true;
         }
 
         private void OnHpReadback(AsyncGPUReadbackRequest request, float sampleTime)

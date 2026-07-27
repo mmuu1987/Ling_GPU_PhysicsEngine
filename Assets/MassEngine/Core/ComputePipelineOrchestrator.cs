@@ -131,6 +131,7 @@ namespace MassEngine
             shaders.SetFloat(CullingRadiusId, Mathf.Max(0f, context.lod.cullingRadius));
             float maxRender = Mathf.Max(0f, context.lod.maxRenderDistance);
             shaders.SetFloat(MaxRenderDistanceSqrId, maxRender * maxRender);
+            shaders.SetInt(FarIncludeDeadId, context.lod.farIncludeDead ? 1 : 0);
             shaders.SetInt(NearAnimationIntervalId, Mathf.Max(1, context.lod.nearAnimationInterval));
             shaders.SetInt(MidAnimationIntervalId, Mathf.Max(1, context.lod.midAnimationInterval));
             shaders.SetInt(FarAnimationIntervalId, Mathf.Max(1, context.lod.farAnimationInterval));

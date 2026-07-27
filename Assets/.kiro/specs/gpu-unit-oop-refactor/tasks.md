@@ -124,6 +124,25 @@
     CameraMouseOrbit（guid 全保持；场景在用的 MyCameraManager/LocalRotationAndScale
     不动）
 
+- [x] 19. 第二轮缺陷挖掘消化（2026-07-27 白天，5 个夜间未覆盖维度：生命周期/渲染/
+  API/编辑器/文档漂移；20 条发现证伪 1 条，存活 19 条全部处置）
+  - 生命周期：shader 缺失阻断改为可自恢复（Update 每秒廉价重探测 + 阻断期跳过全量
+    缓冲分配）；GPU device reset 看门狗（spatialHashStats[3] 哨兵 + 遥测回读校验 +
+    自动重建）；Initialize 签名提前落盘（异常不再逐帧重试风暴）+ 网格索引容量 long
+    守卫；AllocationSignature 增加 scenarioConfigId + teamLayoutHash（资产替换/
+    teamId 热改经签名路径触发完整重建）
+  - 渲染：近景层豁免视锥/距离剔除（唯一投影层，屏幕边缘阴影不再消失）；两个 agent
+    shader 补 DepthOnly + DepthNormals pass（SSAO/DoF/深度效果不再穿透单位）；
+    LodConfig.farIncludeDead=true（120m 尸体消失线可关）；DrawLod 缺槽位一次性告警
+  - API：UnitTypeRegistry.Register 改 internal（游戏层误用即静默停摆的陷阱面）+
+    FillGpuSettings 失配一次性 LogError；IMovementModule 补 ClearTarget + 语义
+    XML 文档 + 同队被遮蔽目标一次性告警
+  - 编辑器：示例创建器出生点按脚印推导 + 新建资产走账本配平 + 场景覆盖确认对话框；
+    BattleTelemetryHUD 改 Repaint-only + 4Hz 缓存重建（消除稳态每帧 GC 分配）；
+    ScenarioGizmos 目标球按运行时规则渲染（主开关关/被遮蔽 → 灰色 + ignored 标注）
+  - 文档：Simulation/README 决策流去 chase 残留 + 寻敌决策计数 + 巡航闭式解；
+    design.md Select 并行化与巡航复合修正；tasks.md 场景/类名标识符更新
+
 ## 待办（需要在 Unity 编辑器内完成）
 
 - [ ] 10. 性能基线（Requirement 9.4）
@@ -134,8 +153,8 @@
     开始互相推开、动画回绕周期变化都属于预期变更）
 
 - [ ] 11. 场景核对
-  - Stage7_Test.unity 在编辑器中 Play 验证：攻方沿流场推进、接战、遥测 HUD 数据合理
-  - 按需将 Stage7BattleTelemetryHUD / Stage7FlowFieldPreviewHUD 挂到场景 manager 上
+  - Game/Scenes/WarSandbox.unity 在编辑器中 Play 验证：攻方沿流场推进、接战、遥测 HUD 数据合理
+  - 按需将 BattleTelemetryHUD / FlowFieldPreviewHUD 挂到场景 manager 上
 
 - [x] 12. 目录全量搬迁（2026-07-26 完成）
   - 引擎 → Assets/MassEngine（8 模块 + Tests，每模块 README）；游戏层 → Assets/Game

@@ -476,5 +476,130 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             }
             ENDHLSL
         }
+
+        // =========================================================
+        // Pass: DepthOnly - fills the URP depth prepass / _CameraDepthTexture.
+        // Without it depth-primed renderers and depth-based effects (SSAO with
+        // Source=Depth, depth of field, motion blur) see straight through every
+        // agent. Vertex path = ShadowCaster without the shadow bias.
+        // =========================================================
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode"="DepthOnly" }
+
+            ZWrite On
+            ColorMask R
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma vertex DepthOnlyVertex
+            #pragma fragment DepthOnlyFragment
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
+            #pragma target 4.5
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                uint vertexID : SV_VertexID;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            Varyings DepthOnlyVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+                #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+                {
+                    float2 vatUV = GetVATUV(input.vertexID, _GlobalAnimationTime, _GlobalCurrentState);
+                    float3 vatPos = SAMPLE_TEXTURE2D_LOD(_VATPosTex, sampler_point_clamp, vatUV, 0).rgb;
+                    input.positionOS = float4(vatPos, 1.0);
+                }
+                #endif
+
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                return output;
+            }
+
+            half4 DepthOnlyFragment(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return 0;
+            }
+            ENDHLSL
+        }
+
+        // =========================================================
+        // Pass: DepthNormals - fills _CameraNormalsTexture. The shipped
+        // PC_Renderer runs SSAO with Source=DepthNormals: agents missing this
+        // pass simply do not exist for ambient occlusion.
+        // =========================================================
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode"="DepthNormals" }
+
+            ZWrite On
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma vertex DepthNormalsVertex
+            #pragma fragment DepthNormalsFragment
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
+            #pragma target 4.5
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                uint vertexID : SV_VertexID;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float3 normalWS : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            Varyings DepthNormalsVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+                #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+                {
+                    float2 vatUV = GetVATUV(input.vertexID, _GlobalAnimationTime, _GlobalCurrentState);
+                    float3 vatPos = SAMPLE_TEXTURE2D_LOD(_VATPosTex, sampler_point_clamp, vatUV, 0).rgb;
+                    float3 vatNorm = SAMPLE_TEXTURE2D_LOD(_VATNormTex, sampler_point_clamp, vatUV, 0).rgb;
+                    input.positionOS = float4(vatPos, 1.0);
+                    input.normalOS = normalize(vatNorm);
+                }
+                #endif
+
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                return output;
+            }
+
+            half4 DepthNormalsFragment(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return half4(normalize(input.normalWS), 0.0);
+            }
+            ENDHLSL
+        }
     }
 }

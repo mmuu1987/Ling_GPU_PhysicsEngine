@@ -31,23 +31,13 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
         Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
         LOD 80
 
-        Pass
-        {
-            Name "ForwardNoShadow"
-            Tags { "LightMode"="UniversalForward" }
+        // Shared across ForwardNoShadow / DepthOnly / DepthNormals (same layout as
+        // LitInstancedAgentShader): VAT sampling, agent buffers and the procedural
+        // instancing setup live here once.
+        HLSLINCLUDE
+        #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            HLSLPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            #pragma multi_compile_instancing
-            #pragma instancing_options procedural:setup
-            #pragma multi_compile_fog
-            #pragma target 4.5
-
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
-
-            TEXTURE2D(_VATPosTex);
+        TEXTURE2D(_VATPosTex);
             TEXTURE2D(_VATNormTex);
             SAMPLER(sampler_point_clamp);
             TEXTURE2D(_BaseMap);
@@ -90,24 +80,6 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 static float _GlobalAnimationTime;
                 static int _GlobalCurrentState;
             #endif
-
-            struct Attributes
-            {
-                float4 positionOS : POSITION;
-                float3 normalOS : NORMAL;
-                float2 uv : TEXCOORD0;
-                uint vertexID : SV_VertexID;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
-
-            struct Varyings
-            {
-                float4 positionCS : SV_POSITION;
-                float3 normalWS : TEXCOORD0;
-                float2 uv : TEXCOORD1;
-                half fogFactor : TEXCOORD2;
-                UNITY_VERTEX_INPUT_INSTANCE_ID
-            };
 
             float4x4 CreateEulerRotationMatrix(float3 euler)
             {
@@ -197,6 +169,40 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                     _GlobalCurrentState = data.currentState;
                 #endif
             }
+        ENDHLSL
+
+        Pass
+        {
+            Name "ForwardNoShadow"
+            Tags { "LightMode"="UniversalForward" }
+
+            HLSLPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
+            #pragma multi_compile_fog
+            #pragma target 4.5
+
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                float2 uv : TEXCOORD0;
+                uint vertexID : SV_VertexID;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float3 normalWS : TEXCOORD0;
+                float2 uv : TEXCOORD1;
+                half fogFactor : TEXCOORD2;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
 
             Varyings vert(Attributes input)
             {
@@ -232,6 +238,131 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 half3 finalColor = albedo * max(directLight + ambient, half3(0.25, 0.25, 0.25));
                 finalColor = MixFog(finalColor, input.fogFactor);
                 return half4(finalColor, 1.0);
+            }
+            ENDHLSL
+        }
+
+        // =========================================================
+        // Pass: DepthOnly - fills the URP depth prepass / _CameraDepthTexture.
+        // Without it depth-primed renderers and depth-based effects (SSAO with
+        // Source=Depth, depth of field, motion blur) see straight through every
+        // agent. Vertex path = ShadowCaster without the shadow bias.
+        // =========================================================
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode"="DepthOnly" }
+
+            ZWrite On
+            ColorMask R
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma vertex DepthOnlyVertex
+            #pragma fragment DepthOnlyFragment
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
+            #pragma target 4.5
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                uint vertexID : SV_VertexID;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            Varyings DepthOnlyVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+                #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+                {
+                    float2 vatUV = GetVATUV(input.vertexID, _GlobalAnimationTime, _GlobalCurrentState);
+                    float3 vatPos = SAMPLE_TEXTURE2D_LOD(_VATPosTex, sampler_point_clamp, vatUV, 0).rgb;
+                    input.positionOS = float4(vatPos, 1.0);
+                }
+                #endif
+
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                return output;
+            }
+
+            half4 DepthOnlyFragment(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return 0;
+            }
+            ENDHLSL
+        }
+
+        // =========================================================
+        // Pass: DepthNormals - fills _CameraNormalsTexture. The shipped
+        // PC_Renderer runs SSAO with Source=DepthNormals: agents missing this
+        // pass simply do not exist for ambient occlusion.
+        // =========================================================
+        Pass
+        {
+            Name "DepthNormals"
+            Tags { "LightMode"="DepthNormals" }
+
+            ZWrite On
+            Cull Back
+
+            HLSLPROGRAM
+            #pragma vertex DepthNormalsVertex
+            #pragma fragment DepthNormalsFragment
+            #pragma multi_compile_instancing
+            #pragma instancing_options procedural:setup
+            #pragma target 4.5
+
+            struct Attributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS : NORMAL;
+                uint vertexID : SV_VertexID;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct Varyings
+            {
+                float4 positionCS : SV_POSITION;
+                float3 normalWS : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            Varyings DepthNormalsVertex(Attributes input)
+            {
+                Varyings output = (Varyings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+                #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+                {
+                    float2 vatUV = GetVATUV(input.vertexID, _GlobalAnimationTime, _GlobalCurrentState);
+                    float3 vatPos = SAMPLE_TEXTURE2D_LOD(_VATPosTex, sampler_point_clamp, vatUV, 0).rgb;
+                    float3 vatNorm = SAMPLE_TEXTURE2D_LOD(_VATNormTex, sampler_point_clamp, vatUV, 0).rgb;
+                    input.positionOS = float4(vatPos, 1.0);
+                    input.normalOS = normalize(vatNorm);
+                }
+                #endif
+
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
+                output.normalWS = TransformObjectToWorldNormal(input.normalOS);
+                return output;
+            }
+
+            half4 DepthNormalsFragment(Varyings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                return half4(normalize(input.normalWS), 0.0);
             }
             ENDHLSL
         }

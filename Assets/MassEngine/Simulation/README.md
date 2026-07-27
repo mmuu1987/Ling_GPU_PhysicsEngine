@@ -16,7 +16,11 @@
 - **伤害结算/死亡判定/缓冲写回每帧执行**（双缓冲交换的正确性要求）
 - **冷却为累积制**（cooldown += interval 保留余数），任何步长下攻击周期精确等于 attackInterval
 - 错峰按 64 线程组对齐（IsSimulationActiveFrame），整组同分支，GPU 真省时间；
-  寻敌分帧（%4）与激活帧自然对齐（区间取 1/2/4 时零冲突）
+  寻敌按**决策通道计数**分批（ShouldSearchForLocalTarget），与降频节奏解耦，
+  任何 interval 下寻敌频率一致
+- **巡航速度跨步长一致**：阻尼与转向 lerp 不可交换，转向采用精确 N 步复合闭式解
+  v' = α^N·v + gain·T（α = damp×(1−steer)，N=1 时与逐帧公式逐位等价）——
+  1/4 帧率下行军速度与全帧率严格一致（黄金测试 LodScaledSimulationPreservesTravelSpeed）
 
 ## 每帧决策流（单 Agent 视角）
 
@@ -24,11 +28,12 @@
 1. 结算上帧伤害：hp = hpRead快照 - pendingDamageRead → 写 hpWrite   [每帧]
 2. hp≤0 → Dead（终态，清目标/冷却/速度）并返回                      [每帧]
    ── 非激活帧到此走轻路径：位置积分+写回后返回 ──
-3. 目标维护：现有目标失效则按分帧节奏（每4帧一批）从空间哈希重新寻敌
+3. 目标维护：现有目标失效则按决策通道计数分批（每 4 个决策通道一批）从空间哈希重新寻敌
 4. 攻击判定：距离≤attackRange（或曾攻击且≤退出半径）→ Attack，
    冷却归零时 InterlockedAdd 伤害进目标的 pendingDamageWrite
 5. 无目标 → 队伍行为：攻方采流场（零向量时吸引力兜底直奔配置目标）；
-   守方按模式：HOLD原地 / FLOW_FIELD采守方流场（追击受 chase 半径约束）
+   守方按模式：HOLD 原地驻守（接战迟滞见语义要点）/ FLOW_FIELD 采守方流场
+   （索敌只受 aggro 半径限制；旧的 chase 追击距离参数已整链删除）
 6. 状态推导：ResolveAliveState（Attack > Engage > Move > Idle）
 7. 合力与积分：分离+密度避让+车道偏置 → 转向/限速 → 位移 → 边界反弹
 ```

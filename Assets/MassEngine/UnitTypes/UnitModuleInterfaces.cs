@@ -28,8 +28,17 @@ namespace MassEngine
     {
         MovementConfig Config { get; }
         FlowFieldTarget Target { get; }
+        /// <summary>
+        /// Runtime target override. The engine keeps ONE flow field per team, so only
+        /// the FIRST registered unit type on a team with an active target takes effect
+        /// (shadowed targets get a one-shot warning). For runtime orders prefer
+        /// MassEngineManager.SetFlowTargetOverride(teamId, point).
+        /// </summary>
         void SetTargetPoint(Vector3 point);
+        /// <inheritdoc cref="SetTargetPoint"/>
         void SetTargetArea(Vector3 center, Vector3 size);
+        /// <summary>Drops the runtime override so the config-authored target applies again.</summary>
+        void ClearTarget();
     }
 
     public interface IFlockingModule : IUnitParameterContributor

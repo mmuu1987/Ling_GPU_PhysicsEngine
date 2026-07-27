@@ -46,6 +46,9 @@ namespace MassEngine
 
         public bool IsAllocated { get { return agentBuffer != null && AgentCount > 0; } }
 
+        /// <summary>Written into spatialHashStats[3] at allocation; vanishing means a GPU device reset wiped buffer memory.</summary>
+        public const int DeviceResetSentinel = 0x4D455631;
+
         public ComputeBuffer GetVisibleIndexBuffer(int unitTypeIndex, int lodLevel)
         {
             int index = unitTypeIndex * LodLevels + lodLevel;
@@ -85,6 +88,16 @@ namespace MassEngine
             agentPositionReadBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 2);
             agentPositionWriteBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 2);
             gridCountsBuffer = new ComputeBuffer(GridCellCount, sizeof(int));
+            long gridIndexCapacity = (long)GridCellCount * MaxAgentsPerCell;
+            if (gridIndexCapacity > int.MaxValue / sizeof(int))
+            {
+                // A mis-scaled world (huge size / tiny cell) must fail loudly here, not
+                // as an int-overflow ArgumentException deep inside ComputeBuffer.
+                Debug.LogError("MassEngine: grid index buffer would need " + gridIndexCapacity + " entries (cells " + GridCellCount + " x perCell " + MaxAgentsPerCell + "); refusing to allocate. Shrink simulationWorldSize or raise cellSize.");
+                ReleaseAll();
+                return;
+            }
+
             gridAgentIndicesBuffer = new ComputeBuffer(GridCellCount * MaxAgentsPerCell, sizeof(int));
             flowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
             defenderFlowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
@@ -97,7 +110,10 @@ namespace MassEngine
             unitTypeIndexBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             unitTypeSettingsBuffer = new ComputeBuffer(UnitTypeCount, UnitTypeGpuSettings.StrideBytes);
             spatialHashStatsBuffer = new ComputeBuffer(4, sizeof(int));
-            spatialHashStatsBuffer.SetData(new int[4]);
+            // stats[3] carries a sentinel no kernel ever writes: if a telemetry readback
+            // sees it gone, GPU memory was wiped (device reset/TDR) and the manager
+            // reinitializes. Slots 1-2 stay reserved; slot 0 is the overflow counter.
+            spatialHashStatsBuffer.SetData(new[] { 0, 0, 0, DeviceResetSentinel });
             runtimeAttackerFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             runtimeDefenderFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             densityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);

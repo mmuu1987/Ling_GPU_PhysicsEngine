@@ -83,16 +83,21 @@ namespace MassEngine.Game
             Graphics.DrawMeshNow(mesh, matrix);
         }
 
-        public static void DrawConfiguredTarget(ScenarioGizmoUnit unit, float labelYOffset)
+        public static void DrawConfiguredTarget(ScenarioGizmoUnit unit, float labelYOffset, bool effective, string ignoredReason)
         {
             if (!unit.IsValid || unit.Movement == null || !unit.Movement.useConfiguredFlowTarget)
                 return;
 
-            Color color = WithAlpha(unit.Color, 0.95f);
+            // Ignored targets stay visible but visibly dead: gray + reason, so the
+            // designer never lines up an army against a marker the GPU will not obey.
+            Color baseColor = effective ? unit.Color : Color.gray;
+            Color color = WithAlpha(baseColor, effective ? 0.95f : 0.45f);
+            string suffix = effective ? string.Empty : $"\n(ignored: {ignoredReason})";
+
             if (unit.Movement.flowTargetMode == FlowFieldTargetMode.Area)
             {
-                DrawRect(unit.Movement.targetAreaCenter, unit.Movement.targetAreaSize, WithAlpha(unit.Color, 0.08f), color, 0.08f);
-                DrawLabel(unit.Movement.targetAreaCenter + Vector3.up * labelYOffset, $"{unit.RoleName} Target Area", color);
+                DrawRect(unit.Movement.targetAreaCenter, unit.Movement.targetAreaSize, WithAlpha(baseColor, effective ? 0.08f : 0.03f), color, 0.08f);
+                DrawLabel(unit.Movement.targetAreaCenter + Vector3.up * labelYOffset, $"{unit.RoleName} Target Area{suffix}", color);
                 return;
             }
 
@@ -100,7 +105,7 @@ namespace MassEngine.Game
             Gizmos.color = color;
             Gizmos.DrawSphere(point, 0.75f);
             DrawCircleOutline(point, 2f, color);
-            DrawLabel(point + Vector3.up * labelYOffset, $"{unit.RoleName} Target Point", color);
+            DrawLabel(point + Vector3.up * labelYOffset, $"{unit.RoleName} Target Point{suffix}", color);
         }
 
         private static void DrawRect(Vector3 center, Vector3 size, Color fillColor, Color outlineColor, float height)

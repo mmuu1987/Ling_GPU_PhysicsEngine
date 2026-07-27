@@ -26,8 +26,8 @@ namespace MassEngine.Game.Editor
             EnsureDirectory(SettingsDirectory);
             EnsureDirectory(SceneDirectory);
 
-            UnitTypeConfig attacker = CreateUnitType("AttackerUnitConfig", "Attacker Sword", 0, new Vector3(-45f, 0f, 0f));
-            UnitTypeConfig defender = CreateUnitType("DefenderUnitConfig", "Defender Sword", 1, new Vector3(35f, 0f, 0f));
+            UnitTypeConfig attacker = CreateUnitType("AttackerUnitConfig", "Attacker Sword", 0, -1f);
+            UnitTypeConfig defender = CreateUnitType("DefenderUnitConfig", "Defender Sword", 1, 1f);
 
             ScenarioConfig scenario = LoadOrCreate<ScenarioConfig>("ScenarioConfig", out bool scenarioCreated);
             if (scenarioCreated || scenario.unitTypes == null || scenario.unitTypes.Length == 0)
@@ -36,8 +36,49 @@ namespace MassEngine.Game.Editor
                 EditorUtility.SetDirty(scenario);
             }
 
-            MassEngineSystemConfig system = CreateSystemConfig();
+            MassEngineSystemConfig system = CreateSystemConfig(out SimulationConfig simulation, out bool simulationCreated, out RuntimeFlowConfig flowConfig, out bool flowCreated, out LodConfig lodConfig);
             MassEngineShaderConfig shaders = CreateShaderConfig();
+
+            // A fresh sample must pass the engine's own physics ledger on first Play:
+            // fit NEWLY created world/flow configs with the same suggestions the
+            // Auto-Fit menu uses. Existing (user-tuned) assets stay untouched.
+            if (simulationCreated || flowCreated)
+            {
+                ScenarioPhysicsReport fit = ScenarioPhysics.Evaluate(scenario.unitTypes, simulation, flowConfig, lodConfig);
+                if (simulationCreated)
+                {
+                    simulation.simulationWorldSize = fit.SuggestedWorldSize;
+                    simulation.cellSize = fit.SuggestedCellSize;
+                    simulation.maxAgentsPerCell = fit.SuggestedMaxAgentsPerCell;
+                    EditorUtility.SetDirty(simulation);
+                }
+                if (flowCreated && flowConfig != null)
+                {
+                    flowConfig.flowFieldResolution = fit.SuggestedFlowResolution;
+                    flowConfig.flowFieldCellSize = fit.SuggestedFlowCellSize;
+                    flowConfig.flowFieldOrigin = fit.SuggestedFlowOrigin;
+                    EditorUtility.SetDirty(flowConfig);
+                }
+
+                ScenarioPhysicsReport check = ScenarioPhysics.Evaluate(scenario.unitTypes, simulation, flowConfig, lodConfig);
+                if (check.HasIssues)
+                    Debug.LogWarning("Sample scenario still flags ledger issues after auto-fit:\n" + check.Describe());
+            }
+
+            // The scene file is the only destructive write in this menu: overwriting a
+            // scene the user has decorated must be an explicit choice.
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(SampleScenePath) != null && !Application.isBatchMode &&
+                !EditorUtility.DisplayDialog(
+                    "WarSandboxSample.unity already exists",
+                    "Rebuilding will overwrite the sample scene and discard any manual edits in it. Config assets are never overwritten either way.",
+                    "Rebuild Scene",
+                    "Keep Existing Scene"))
+            {
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+                Debug.Log("MassEngine sample configs ensured; existing scene kept at " + SampleScenePath);
+                return;
+            }
 
             CreateScene(scenario, system, shaders);
 
@@ -46,14 +87,18 @@ namespace MassEngine.Game.Editor
             Debug.Log("MassEngine sample scene written to " + SampleScenePath + ". Assign VAT profiles / materials on the RenderConfig assets to see units rendered.");
         }
 
-        private static UnitTypeConfig CreateUnitType(string assetName, string displayName, int teamId, Vector3 spawnCenter)
+        private static UnitTypeConfig CreateUnitType(string assetName, string displayName, int teamId, float sideSign)
         {
             SpawnConfig spawn = LoadOrCreate<SpawnConfig>(assetName + "_Spawn", out bool spawnCreated);
             if (spawnCreated)
             {
                 spawn.unitCount = 10000;
-                spawn.spawnCenter = spawnCenter;
-                // footprint auto-derives from unitCount / formationDensity
+                // Spawn centers derive from the auto footprint (depth along X): half the
+                // formation depth plus a 15m engagement gap keeps hostile spawn rects
+                // from overlapping - hardcoded centers violated the physics ledger the
+                // moment the footprint grew past them.
+                Vector3 footprint = spawn.ResolveSpawnSize();
+                spawn.spawnCenter = new Vector3(sideSign * (footprint.x * 0.5f + 15f), 0f, 0f);
                 EditorUtility.SetDirty(spawn);
             }
 
@@ -81,14 +126,17 @@ namespace MassEngine.Game.Editor
             return unitType;
         }
 
-        private static MassEngineSystemConfig CreateSystemConfig()
+        private static MassEngineSystemConfig CreateSystemConfig(out SimulationConfig simulation, out bool simulationCreated, out RuntimeFlowConfig flow, out bool flowCreated, out LodConfig lod)
         {
             MassEngineSystemConfig system = LoadOrCreate<MassEngineSystemConfig>("MassEngineSystemConfig", out bool created);
+            simulation = LoadOrCreate<SimulationConfig>("SimulationConfig", out simulationCreated);
+            flow = LoadOrCreate<RuntimeFlowConfig>("RuntimeFlowConfig", out flowCreated);
+            lod = LoadOrCreate<LodConfig>("LodConfig", out _);
             if (created || system.simulationConfig == null)
             {
-                system.simulationConfig = LoadOrCreate<SimulationConfig>("SimulationConfig", out _);
-                system.lodConfig = LoadOrCreate<LodConfig>("LodConfig", out _);
-                system.runtimeFlowConfig = LoadOrCreate<RuntimeFlowConfig>("RuntimeFlowConfig", out _);
+                system.simulationConfig = simulation;
+                system.lodConfig = lod;
+                system.runtimeFlowConfig = flow;
                 system.runtimeCombatConfig = LoadOrCreate<RuntimeCombatConfig>("RuntimeCombatConfig", out _);
                 EditorUtility.SetDirty(system);
             }
