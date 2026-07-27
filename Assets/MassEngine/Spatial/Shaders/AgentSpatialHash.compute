@@ -1,0 +1,39 @@
+﻿#pragma kernel ClearGrid
+#pragma kernel BuildSpatialHash
+
+#include "../../Core/Shaders/AgentDataCommon.hlsl"
+
+[numthreads(64, 1, 1)]
+void ClearGrid(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= gridCellCount)
+        return;
+
+    gridCounts[id.x] = 0;
+    if (id.x == 0)
+        spatialHashStats[0] = 0;
+}
+
+[numthreads(64, 1, 1)]
+void BuildSpatialHash(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count || !IsAliveIndex(id.x))
+        return;
+
+    uint cellIndex = CellToIndex(PositionXzToCell(agentPositionReadBuffer[id.x]));
+    uint slot;
+    InterlockedAdd(gridCounts[cellIndex], 1, slot);
+    if (slot < maxAgentsPerCell)
+    {
+        gridAgentIndices[cellIndex * maxAgentsPerCell + slot] = id.x;
+    }
+    else
+    {
+        int ignored;
+        InterlockedAdd(spatialHashStats[0], 1, ignored);
+    }
+}
+

@@ -1,0 +1,344 @@
+#pragma kernel ClearPendingDamage
+#pragma kernel ClearDensityMap
+#pragma kernel BuildDensityMap
+#pragma kernel SimulateCombatAndAccumulateDamage
+
+#include "../../Core/Shaders/AgentDataCommon.hlsl"
+
+void StoreAgent(uint index, AgentData agent)
+{
+    agentBuffer[index] = agent;
+    agentPositionBuffer[index] = agent.position.xz;
+}
+
+[numthreads(8, 8, 1)]
+void ClearDensityMap(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)flowFieldResolution.x || id.y >= (uint)flowFieldResolution.y)
+        return;
+
+    densityMapWrite[int2(id.x, id.y)] = 0u;
+}
+
+[numthreads(64, 1, 1)]
+void BuildDensityMap(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count || !IsAliveIndex(id.x))
+        return;
+
+    int2 cell = PositionToFlowFieldCell(agentBuffer[id.x].position);
+    uint original;
+    InterlockedAdd(densityMapWrite[cell], 1u, original);
+}
+
+[numthreads(64, 1, 1)]
+void ClearPendingDamage(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    pendingDamageBuffer[id.x] = 0;
+}
+
+// Per-frame combat + locomotion resolution. hp is double buffered:
+// this kernel reads its OWN hp from hpReadBuffer (snapshot), applies the damage that was
+// accumulated for it LAST frame (pendingDamageReadBuffer), and writes the result to
+// hpBuffer. Every other hp lookup in the pipeline uses the snapshot.
+[numthreads(64, 1, 1)]
+void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+    float dt = SafeDt();
+    int hpSelf = hpReadBuffer[id.x];
+
+    if (battleStarted == 0)
+    {
+        targetAgentIndexBuffer[id.x] = -1;
+        attackCooldownBuffer[id.x] = 0.0;
+        agent.velocity = 0.0;
+        hpBuffer[id.x] = hpSelf;
+
+        if (hpSelf <= 0)
+            SetAgentState(agent, STATE_DEAD);
+        else
+            SetCrowdState(agent, STATE_IDLE);
+
+        StoreAgent(id.x, agent);
+        return;
+    }
+
+    int damage = pendingDamageReadBuffer[id.x];
+    if (damage > 0 && hpSelf > 0)
+        hpSelf = max(0, hpSelf - damage);
+    hpBuffer[id.x] = hpSelf;
+
+    if (hpSelf <= 0)
+    {
+        // Dead has absolute priority and is terminal.
+        SetAgentState(agent, STATE_DEAD);
+        agent.velocity = 0.0;
+        targetAgentIndexBuffer[id.x] = -1;
+        attackCooldownBuffer[id.x] = 0.0;
+        StoreAgent(id.x, agent);
+        return;
+    }
+
+    // ------------------------------------------------------------------
+    // LOD-scaled simulation cadence: mid/far agents run the expensive DECISION
+    // pass every 2nd/4th frame. Between decision frames the agent still settles
+    // damage (above), integrates its cached velocity (below) and writes itself
+    // through so positions stay per-frame smooth and the buffer swap stays sound.
+    // Rate-dependent quantities in the decision pass use dtSim = interval * dt,
+    // so attack DPS and steering rates match full-rate simulation.
+    // ------------------------------------------------------------------
+    int simInterval = GetSimulationInterval(agent.position);
+    if (!IsSimulationActiveFrame(id.x, simInterval))
+    {
+        agent.position += agent.velocity * dt;
+        ApplyBounds(agent);
+        StoreAgent(id.x, agent);
+        return;
+    }
+    float dtSim = dt * simInterval;
+
+    UnitTypeSettings settings = GetUnitSettings(id.x);
+    // Accumulator cooldown (carry the remainder instead of resetting) so the attack
+    // period stays exactly attackInterval at ANY simulation cadence.
+    float cooldown = attackCooldownBuffer[id.x] - dtSim;
+    int targetIndex = targetAgentIndexBuffer[id.x];
+    float searchRadius = settings.targetAcquireRadius;
+    bool targetIsValid = CurrentTargetIsValid(id.x, agent, targetIndex);
+    bool searchForEnemy = !targetIsValid && ShouldSearchForLocalTarget(id.x, simInterval);
+    NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy);
+
+    if (!targetIsValid)
+    {
+        targetIndex = -1;
+        if (searchForEnemy)
+            targetIndex = neighborhood.nearestEnemyIndex;
+    }
+
+    float2 desiredDirection = 0.0;
+    bool isDefender = IsDefenderTeam(id.x);
+    bool defenderHoldingPosition = isDefender && defenderMovementMode == DEFENDER_MODE_HOLD_POSITION;
+    bool wasAttacking = agent.currentState == STATE_ATTACK;
+    bool inAttackHold = false;
+    bool hasEngageTarget = false;
+
+    if (targetIndex >= 0 && IsAliveIndex((uint)targetIndex))
+    {
+        float2 toTarget = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
+        float distSqr = dot(toTarget, toTarget);
+        float activeAttackRange = settings.attackRange;
+        float attackRangeSqr = activeAttackRange * activeAttackRange;
+        float attackExitRange = AttackExitRange(id.x);
+        float attackExitRangeSqr = attackExitRange * attackExitRange;
+
+        // (chase-leash enforcement lives in TargetIsUsable / CurrentTargetIsValid)
+        {
+            inAttackHold = distSqr <= attackRangeSqr || (wasAttacking && distSqr <= attackExitRangeSqr);
+            if (inAttackHold)
+            {
+                SmoothFaceDirectionDt(agent, toTarget, max(0.2, settings.agentRadius * 0.5), 240.0, dtSim);
+                if (cooldown <= 0.0)
+                {
+                    // Settle EVERY elapsed attack period, not just one: with LOD cadence
+                    // dtSim can exceed attackInterval, and a one-strike cap would make a
+                    // unit's DPS depend on its distance to the camera.
+                    float interval = max(0.01, settings.attackInterval);
+                    int strikes = min(4, 1 + (int)floor(-cooldown / interval));
+                    int ignored;
+                    InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], max(1, settings.attackDamage) * strikes, ignored);
+                    cooldown += strikes * interval;
+                }
+            }
+            else
+            {
+                hasEngageTarget = true;
+                if (!defenderHoldingPosition)
+                    desiredDirection = normalize(toTarget);
+            }
+        }
+    }
+
+    if (targetIndex < 0)
+    {
+        if (isDefender)
+        {
+            if (defenderHoldingPosition)
+            {
+                // no locomotion goal; separation below still resolves overlap
+            }
+            else if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
+            {
+                desiredDirection = SampleDefenderFlowDirection(id.x, agent.position);
+                if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
+                    defenderFlowTargetMode != FLOW_TARGET_NONE &&
+                    settings.attractionStrength > 0.0)
+                {
+                    // Attraction fallback: when the flow field yields no direction (not yet
+                    // generated, or outside coverage) steer straight at the configured target.
+                    float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, defenderFlowTargetMode, defenderFlowTargetPoint, defenderFlowTargetArea);
+                    float stopRadius = max(0.0, dynamicDefenderFlowTargetStopRadius);
+                    if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
+                        desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
+                }
+            }
+            else
+            {
+                float2 toHome = homePositionReadBuffer[id.x].xz - agent.position.xz;
+                if (dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius)
+                    desiredDirection = normalize(toHome);
+            }
+        }
+        else
+        {
+            desiredDirection = SampleFlowDirection(id.x, agent.position);
+            if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
+                attackerFlowTargetMode != FLOW_TARGET_NONE &&
+                settings.attractionStrength > 0.0)
+            {
+                float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, attackerFlowTargetMode, attackerFlowTargetPoint, attackerFlowTargetArea);
+                float stopRadius = max(0.0, dynamicFlowTargetStopRadius);
+                if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
+                    desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
+            }
+        }
+    }
+
+    bool hasMoveDirection = dot(desiredDirection, desiredDirection) > 0.0001;
+    int nextState = ResolveAliveState(inAttackHold, hasEngageTarget, hasMoveDirection);
+    SetCrowdState(agent, nextState);
+    if (!inAttackHold)
+        cooldown = max(0.0, cooldown);
+    attackCooldownBuffer[id.x] = cooldown;
+    targetAgentIndexBuffer[id.x] = targetIndex;
+
+    float2 tacticalDirection = desiredDirection;
+    bool hasTacticalDirection = dot(tacticalDirection, tacticalDirection) > 0.0001;
+    DensityPressureSample densityPressure = ComputeDensityPressure(id.x, agent.position, desiredDirection);
+    // A charger committed to a target must not be shoved off it by crowd avoidance:
+    // the enemy formation IS a density wall, and full-strength avoidance made agents
+    // veer away right in front of their victim.
+    if (hasEngageTarget)
+        densityPressure.avoidance *= 0.35;
+
+    // Deflect, never reverse: unbounded avoidance flipped rear ranks into full-speed
+    // retreat from the melee. Idle agents (no desired direction) keep full diffusion.
+    float desiredLenBefore = length(desiredDirection);
+    float avoidanceLen = length(densityPressure.avoidance);
+    float avoidanceCap = desiredLenBefore > 0.0001 ? 0.8 * desiredLenBefore : 1.0;
+    if (avoidanceLen > avoidanceCap)
+        densityPressure.avoidance *= avoidanceCap / max(avoidanceLen, 0.0001);
+    desiredDirection += densityPressure.avoidance;
+    float desiredLenSqr = dot(desiredDirection, desiredDirection);
+    if (desiredLenSqr > 1.0)
+        desiredDirection *= rsqrt(desiredLenSqr);
+
+    if (agent.currentState != STATE_DEAD && dot(desiredDirection, desiredDirection) > 0.0001)
+        desiredDirection = ApplyStableLaneBias(id.x, id.x, desiredDirection, densityPressure.pressure);
+
+    float2 separationForce = neighborhood.separation;
+    float contactSeparationScale = agent.currentState == STATE_ATTACK ? 0.18 : lerp(1.0, 1.7, saturate(densityPressure.centerPressure));
+    agent.velocity.xz += separationForce * settings.separationStrength * contactSeparationScale * dtSim;
+
+    // Damping compounds EXACTLY like N per-frame applications; a linearized
+    // (1 - d*dtSim) drifted the damp/steer equilibrium ~20% between LOD cadences.
+    float dampPerFrame = saturate(1.0 - settings.velocityDamping * dt);
+    bool steersThisFrame = agent.currentState != STATE_ATTACK &&
+                           !defenderHoldingPosition &&
+                           dot(desiredDirection, desiredDirection) > 0.0001;
+    if (!steersThisFrame)
+        agent.velocity *= pow(dampPerFrame, (float)simInterval);
+
+    if (defenderHoldingPosition)
+    {
+        // Hold-position defenders keep separation (overlap resolution) but never chase a
+        // locomotion goal; their displacement is clamped to the guard radius around home.
+        if (inAttackHold)
+            agent.velocity.xz *= saturate(1.0 - 28.0 * dtSim);
+
+        float maxHoldSpeed = inAttackHold ? max(0.05, settings.maxSpeed * 0.08) : max(0.05, settings.maxSpeed * 0.25);
+        float holdSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
+        if (holdSpeedSqr > maxHoldSpeed * maxHoldSpeed)
+            agent.velocity.xz *= maxHoldSpeed * rsqrt(holdSpeedSqr);
+
+        agent.position += agent.velocity * dt;
+
+        float2 fromHome = agent.position.xz - homePositionReadBuffer[id.x].xz;
+        float guardSqr = defenderGuardRadius * defenderGuardRadius;
+        float fromHomeSqr = dot(fromHome, fromHome);
+        if (fromHomeSqr > guardSqr && fromHomeSqr > 0.0001)
+        {
+            float2 clamped = fromHome * (defenderGuardRadius * rsqrt(fromHomeSqr));
+            agent.position.x = homePositionReadBuffer[id.x].x + clamped.x;
+            agent.position.z = homePositionReadBuffer[id.x].z + clamped.y;
+        }
+
+        ApplyBounds(agent);
+        StoreAgent(id.x, agent);
+        return;
+    }
+
+    if (agent.currentState == STATE_ATTACK)
+    {
+        agent.velocity.xz *= saturate(1.0 - 28.0 * dtSim);
+        float maxContactSpeed = max(0.05, settings.maxSpeed * 0.08);
+        float contactSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
+        if (contactSpeedSqr > maxContactSpeed * maxContactSpeed)
+            agent.velocity.xz *= maxContactSpeed * rsqrt(contactSpeedSqr);
+    }
+    else if (dot(desiredDirection, desiredDirection) > 0.0001)
+    {
+        float steerRate = agent.currentState == STATE_ENGAGE
+            ? 10.0
+            : settings.flowFieldResponsiveness * saturate(settings.flowFieldWeight);
+        float queueSlowdown = agent.currentState == STATE_ENGAGE ? 0.35 : 0.75;
+        float minQueueSpeed = agent.currentState == STATE_ENGAGE ? 0.35 : 0.08;
+        float jamSpeedScale = max(minQueueSpeed, saturate(1.0 - densityPressure.aheadPressure * queueSlowdown));
+        float targetSpeed = settings.maxSpeed * AgentSpeedMultiplier(id.x, id.x) * densityPressure.speedScale * jamSpeedScale;
+
+        // Exact N-step composition of the per-frame (damp -> lerp) sequence:
+        // v' = alpha^N v + s*T*(1-alpha^N)/(1-alpha), alpha = damp*(1-s).
+        // At N=1 this is identical to the old damp-then-lerp; at any N the cruise
+        // equilibrium matches full rate exactly (travel-speed golden test).
+        float steerPerFrame = saturate(steerRate * dt);
+        float alpha = dampPerFrame * (1.0 - steerPerFrame);
+        float alphaN = pow(alpha, (float)simInterval);
+        float gain = steerPerFrame * (alpha < 0.9999 ? (1.0 - alphaN) / max(1.0 - alpha, 0.0001) : (float)simInterval);
+        agent.velocity.xz = agent.velocity.xz * alphaN + desiredDirection * (targetSpeed * gain);
+        agent.velocity.y = 0.0;
+        SmoothFaceDirectionDt(agent, hasTacticalDirection ? tacticalDirection : desiredDirection, 0.05, 360.0, dtSim);
+    }
+
+    agent.velocity = ClampVelocity(id.x, agent.velocity);
+    if (agent.currentState == STATE_MOVE || agent.currentState == STATE_ENGAGE)
+    {
+        float queueSlowdown = agent.currentState == STATE_ENGAGE ? 0.35 : 0.75;
+        float minQueueSpeed = agent.currentState == STATE_ENGAGE ? 0.35 : 0.08;
+        float jamSpeedScale = max(minQueueSpeed, saturate(1.0 - densityPressure.aheadPressure * queueSlowdown));
+        float maxLocomotionSpeed = settings.maxSpeed * max(0.08, densityPressure.speedScale * jamSpeedScale);
+        float locomotionSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
+        if (locomotionSpeedSqr > maxLocomotionSpeed * maxLocomotionSpeed)
+            agent.velocity.xz *= maxLocomotionSpeed * rsqrt(locomotionSpeedSqr);
+    }
+    agent.position += agent.velocity * dt;
+    ApplyBounds(agent);
+
+    if (!hasTacticalDirection && dot(agent.velocity.xz, agent.velocity.xz) > 0.25 && agent.currentState != STATE_ATTACK)
+        SmoothFaceDirectionDt(agent, agent.velocity.xz, 0.05, 180.0, dtSim);
+
+    StoreAgent(id.x, agent);
+}

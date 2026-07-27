@@ -1,0 +1,23 @@
+#pragma kernel ClassifyVisibleAgentsForUnitType
+
+#include "../../Core/Shaders/AgentDataCommon.hlsl"
+
+// Dispatched once per registered unit type with classifyUnitTypeIndex set and the
+// near/mid/far append buffers of that unit type bound. Each agent belongs to exactly one
+// unit type, so animation time is still advanced exactly once per agent per frame.
+[numthreads(64, 1, 1)]
+void ClassifyVisibleAgentsForUnitType(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    if (unitTypeIndexReadBuffer[id.x] != classifyUnitTypeIndex)
+        return;
+
+    AgentData agent = agentBuffer[id.x];
+    AppendVisibleAgentForUnitType(id.x, agent);
+    agentBuffer[id.x] = agent;
+}

@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010009, type: 3}
+  m_Name: SystemConfig
+  m_EditorClassIdentifier: 
+  simulationConfig: {fileID: 11400000, guid: cf1fccc103690b9489640140875ccdaf, type: 2}
+  lodConfig: {fileID: 11400000, guid: 76f62f29a804c3d4aa767ca5a508c3a0, type: 2}
+  runtimeFlowConfig: {fileID: 11400000, guid: c63088ce2a7c1be4095b744153c68b09, type: 2}
+  runtimeCombatConfig: {fileID: 11400000, guid: 7a511705cb140d346a082ee4b06860eb, type: 2}
