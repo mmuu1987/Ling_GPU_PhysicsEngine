@@ -32,6 +32,10 @@ namespace MassEngine.Game
         public WarSandboxBattlePhase Phase { get { return phase; } }
         public float SimulationSpeed { get { return simulationSpeed; } }
         public ArmyRuntimeState SelectedArmy { get { return GetArmy(selectedTeam); } }
+        public BattleTelemetrySnapshot TelemetrySnapshot
+        {
+            get { return manager != null && manager.Telemetry != null ? manager.Telemetry.Snapshot : default; }
+        }
 
         private void Reset()
         {
@@ -130,6 +134,40 @@ namespace MassEngine.Game
             manager.StartBattle();
             phase = WarSandboxBattlePhase.Running;
             return true;
+        }
+
+        public bool StartDefaultBattle()
+        {
+            if (!initialized)
+                RebuildArmyStates();
+
+            bool issuedAnyOrder = false;
+            for (int teamId = 0; teamId < armies.Length; teamId++)
+            {
+                if (armies[teamId].initialUnitCount > 0)
+                    issuedAnyOrder |= IssueOrder(ArmyOrder.Attack(teamId));
+            }
+
+            return issuedAnyOrder;
+        }
+
+        public bool RestartWithDefaultOrders()
+        {
+            ResetBattle();
+            return StartDefaultBattle();
+        }
+
+        public int GetAliveUnitCount(int teamId)
+        {
+            ArmyRuntimeState army = GetArmy(teamId);
+            if (army == null)
+                return 0;
+
+            BattleTelemetrySnapshot snapshot = TelemetrySnapshot;
+            if (!snapshot.valid)
+                return army.initialUnitCount;
+
+            return teamId == 0 ? snapshot.aliveAttackers : snapshot.aliveDefenders;
         }
 
         public void StartOrResumeBattle()

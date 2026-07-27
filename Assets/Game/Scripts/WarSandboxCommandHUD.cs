@@ -64,6 +64,8 @@ namespace MassEngine.Game
                 IssueRetreat();
             if (Input.GetKeyDown(KeyCode.Space))
                 controller.TogglePause();
+            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                StartOrRestartDefaultBattle();
             if (Input.GetKeyDown(KeyCode.Escape))
                 awaitingMoveTarget = false;
 
@@ -96,6 +98,7 @@ namespace MassEngine.Game
 
             GUILayout.Label("战争沙盒", GUILayout.Height(compactLayout ? 17f : 20f));
             GUILayout.Label("阶段：" + FormatPhase(controller.Phase), GUILayout.Height(compactLayout ? 17f : 20f));
+            GUILayout.Label(FormatForceSummary(), GUILayout.Height(compactLayout ? 17f : 20f));
 
             GUILayout.BeginHorizontal();
             if (GUILayout.Toggle(controller.selectedTeam == 0, "攻方 [1]", GUI.skin.button, GUILayout.Height(controlHeight)))
@@ -130,9 +133,20 @@ namespace MassEngine.Game
 
             GUILayout.Space(compactLayout ? 1f : 4f);
             GUILayout.BeginHorizontal();
-            string pauseLabel = controller.Phase == WarSandboxBattlePhase.Running ? "暂停 [Space]" : "继续 [Space]";
-            if (GUILayout.Button(pauseLabel, GUILayout.Height(controlHeight)))
-                controller.TogglePause();
+            if (IsPreOrPostBattle(controller.Phase))
+            {
+                string startLabel = controller.Phase == WarSandboxBattlePhase.Setup
+                    ? "双方开战 [Enter]"
+                    : "再来一局 [Enter]";
+                if (GUILayout.Button(startLabel, GUILayout.Height(controlHeight)))
+                    StartOrRestartDefaultBattle();
+            }
+            else
+            {
+                string pauseLabel = controller.Phase == WarSandboxBattlePhase.Running ? "暂停 [Space]" : "继续 [Space]";
+                if (GUILayout.Button(pauseLabel, GUILayout.Height(controlHeight)))
+                    controller.TogglePause();
+            }
             if (GUILayout.Button("重开", GUILayout.Height(controlHeight)))
             {
                 awaitingMoveTarget = false;
@@ -153,7 +167,7 @@ namespace MassEngine.Game
                     "下一次左键点击地面将下达移动命令；Esc 取消。",
                     GUILayout.Height(compactLayout ? 17f : 36f));
             else if (showHotkeys && !compactLayout)
-                GUILayout.Label("1/2 选军团 · A进攻 · M移动 · H防守 · R撤退");
+                GUILayout.Label("Enter双方开战 · 1/2选军 · A进攻 · M移动 · H防守 · R撤退");
 
             GUILayout.EndArea();
         }
@@ -174,6 +188,15 @@ namespace MassEngine.Game
         {
             awaitingMoveTarget = false;
             controller.IssueOrder(ArmyOrder.Retreat(controller.selectedTeam));
+        }
+
+        private void StartOrRestartDefaultBattle()
+        {
+            awaitingMoveTarget = false;
+            if (IsTerminalPhase(controller.Phase))
+                controller.RestartWithDefaultOrders();
+            else if (controller.Phase == WarSandboxBattlePhase.Setup)
+                controller.StartDefaultBattle();
         }
 
         private void DrawSpeedButton(string label, float speed, float height)
@@ -215,6 +238,28 @@ namespace MassEngine.Game
                 case ArmyOrderType.Retreat: return "撤退";
                 default: return "未下令";
             }
+        }
+
+        private string FormatForceSummary()
+        {
+            ArmyRuntimeState attackers = controller.GetArmy(0);
+            ArmyRuntimeState defenders = controller.GetArmy(1);
+            int attackerInitial = attackers != null ? attackers.initialUnitCount : 0;
+            int defenderInitial = defenders != null ? defenders.initialUnitCount : 0;
+            return "兵力  攻 " + controller.GetAliveUnitCount(0) + "/" + attackerInitial +
+                   "  |  守 " + controller.GetAliveUnitCount(1) + "/" + defenderInitial;
+        }
+
+        private static bool IsPreOrPostBattle(WarSandboxBattlePhase value)
+        {
+            return value == WarSandboxBattlePhase.Setup || IsTerminalPhase(value);
+        }
+
+        private static bool IsTerminalPhase(WarSandboxBattlePhase value)
+        {
+            return value == WarSandboxBattlePhase.AttackerVictory ||
+                   value == WarSandboxBattlePhase.DefenderVictory ||
+                   value == WarSandboxBattlePhase.Draw;
         }
 
         private static string FormatPhase(WarSandboxBattlePhase value)

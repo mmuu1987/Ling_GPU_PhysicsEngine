@@ -126,6 +126,16 @@ namespace MassEngine.Game.Tests
             Assert.That(controller.SimulationSpeed, Is.EqualTo(0.25f));
         }
 
+        [Test]
+        public void DefaultBattleOrdersBothArmiesToAttack()
+        {
+            Assert.That(controller.StartDefaultBattle(), Is.True);
+            Assert.That(controller.Phase, Is.EqualTo(WarSandboxBattlePhase.Running));
+            Assert.That(controller.GetArmy(0).currentOrder.type, Is.EqualTo(ArmyOrderType.Attack));
+            Assert.That(controller.GetArmy(1).currentOrder.type, Is.EqualTo(ArmyOrderType.Attack));
+            Assert.That(manager.IsBattleRunning, Is.True);
+        }
+
         [TestCase(10000)]
         [TestCase(200000)]
         public void CenteredDeploymentKeepsRequestedEdgeGapAcrossArmySizes(int unitCount)
