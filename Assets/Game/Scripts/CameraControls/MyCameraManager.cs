@@ -25,6 +25,11 @@ public class MyCameraManager : MonoBehaviour
     public float FlyFastMultiplier = 3f;
     public float ZoomSensitivity = 10f;
     public float AltRightDragZoomSensitivity = 0.01f;
+    [Min(0.1f)] public float MinZoomDistance = 2f;
+    [Min(1f)] public float MaxZoomDistance = 2500f;
+    [Min(1f)] public float MaxTranslationPerFrame = 200f;
+    [Min(100f)] public float MaxWorldCoordinate = 5000f;
+    [Min(1f)] public float MaxMouseDeltaPerFrame = 80f;
 
     private bool _lockInput;
     private bool _orbiting;
@@ -36,11 +41,15 @@ public class MyCameraManager : MonoBehaviour
     private float _distance = 5f;
     private float _freeLookX;
     private float _freeLookY;
+    private Vector3 _lastSafeCameraPosition;
+    private Vector3 _lastSafePointPosition;
+    private bool _reportedInvalidTransform;
 
     public Camera MainCamera => ControlledCamera;
 
     protected virtual void Start()
     {
+        SanitizeSettings();
         EnsureCamera();
         if (ControlledCamera == null)
         {
@@ -63,8 +72,35 @@ public class MyCameraManager : MonoBehaviour
         _mouseOrbit.Target = _point;
         _mouseOrbit.Distance = _distance;
         _mouseOrbit.enabled = false;
+        _distance = Mathf.Clamp(
+            Vector3.Distance(ControlledCamera.transform.position, _point.position),
+            MinZoomDistance,
+            MaxZoomDistance);
+        _lastSafeCameraPosition = CameraMotionSafety.ClampWorldPosition(
+            ControlledCamera.transform.position, MaxWorldCoordinate);
+        _lastSafePointPosition = CameraMotionSafety.ClampWorldPosition(_point.position, MaxWorldCoordinate);
         SyncFreeLookAngles();
         UnlockInput();
+    }
+
+    private void OnValidate()
+    {
+        SanitizeSettings();
+    }
+
+    private void SanitizeSettings()
+    {
+        PanSensitivity = Mathf.Max(0f, PanSensitivity);
+        FreeLookSensitivity = Mathf.Max(0f, FreeLookSensitivity);
+        FlyMoveSpeed = Mathf.Max(0f, FlyMoveSpeed);
+        FlyFastMultiplier = Mathf.Clamp(FlyFastMultiplier, 1f, 10f);
+        ZoomSensitivity = Mathf.Clamp(ZoomSensitivity, 0f, 20f);
+        AltRightDragZoomSensitivity = Mathf.Max(0f, AltRightDragZoomSensitivity);
+        MinZoomDistance = Mathf.Max(0.1f, MinZoomDistance);
+        MaxZoomDistance = Mathf.Max(MinZoomDistance, MaxZoomDistance);
+        MaxTranslationPerFrame = Mathf.Max(1f, MaxTranslationPerFrame);
+        MaxWorldCoordinate = Mathf.Max(100f, MaxWorldCoordinate);
+        MaxMouseDeltaPerFrame = Mathf.Max(1f, MaxMouseDeltaPerFrame);
     }
 
     private void EnsureCamera()
@@ -96,7 +132,14 @@ public class MyCameraManager : MonoBehaviour
 
     private void Update()
     {
+        RecoverInvalidTransform();
         HandleInput();
+    }
+
+    private void LateUpdate()
+    {
+        RecoverInvalidTransform();
+        CaptureSafeTransform();
     }
 
     private void HandleInput()
@@ -195,21 +238,21 @@ public class MyCameraManager : MonoBehaviour
         if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
             speed *= FlyFastMultiplier;
 
-        Vector3 offset = move.normalized * (speed * Time.deltaTime);
-        ControlledCamera.transform.position += offset;
-        _point.position += offset;
+        float safeDeltaTime = Mathf.Clamp(Time.unscaledDeltaTime, 0f, 0.1f);
+        Vector3 offset = move.normalized * (Mathf.Clamp(speed, 0f, 500f) * safeDeltaTime);
+        ApplyTranslation(offset, true);
     }
 
     private void AltRightDragZoom()
     {
-        Vector3 mouseDelta = Input.mousePosition - _lastMousePosition;
+        Vector3 mouseDelta = ClampMouseDelta(Input.mousePosition - _lastMousePosition);
         float dragAmount = mouseDelta.x + mouseDelta.y;
         if (Mathf.Abs(dragAmount) > 0.001f)
         {
             float scaledDistance = Mathf.Max(_distance, 1f);
             Vector3 offset = ControlledCamera.transform.forward * (dragAmount * AltRightDragZoomSensitivity * scaledDistance);
-            ControlledCamera.transform.position += offset;
-            _distance = Mathf.Max(Vector3.Distance(ControlledCamera.transform.position, _point.position), 0.01f);
+            ApplyTranslation(offset, false);
+            UpdateOrbitDistanceFromCamera();
 
             if (_mouseOrbit != null)
                 _mouseOrbit.Distance = _distance;
@@ -220,13 +263,12 @@ public class MyCameraManager : MonoBehaviour
 
     private void Pan()
     {
-        Vector3 delta = Input.mousePosition - _lastMousePosition;
+        Vector3 delta = ClampMouseDelta(Input.mousePosition - _lastMousePosition);
         Vector3 move =
             -ControlledCamera.transform.right * (delta.x * PanSensitivity * _distance) -
             ControlledCamera.transform.up * (delta.y * PanSensitivity * _distance);
 
-        ControlledCamera.transform.position += move;
-        _point.position += move;
+        ApplyTranslation(move, true);
         _lastMousePosition = Input.mousePosition;
     }
 
@@ -249,7 +291,10 @@ public class MyCameraManager : MonoBehaviour
 
     private void UpdateOrbitDistanceFromCamera()
     {
-        _distance = Mathf.Max(Vector3.Distance(ControlledCamera.transform.position, _point.position), 0.01f);
+        _distance = Mathf.Clamp(
+            Vector3.Distance(ControlledCamera.transform.position, _point.position),
+            MinZoomDistance,
+            MaxZoomDistance);
         _mouseOrbit.Distance = _distance;
     }
 
@@ -259,9 +304,11 @@ public class MyCameraManager : MonoBehaviour
         if (Mathf.Approximately(mouseWheel, 0f))
             return;
 
-        Vector3 offset = ControlledCamera.transform.forward * (mouseWheel * ZoomSensitivity * Mathf.Max(_distance, 1f));
-        ControlledCamera.transform.position += offset;
-        _distance = Mathf.Max(Vector3.Distance(ControlledCamera.transform.position, _point.position), 0.01f);
+        float newDistance = CameraMotionSafety.ResolveZoomDistance(
+            _distance, mouseWheel, ZoomSensitivity, MinZoomDistance, MaxZoomDistance);
+        Vector3 nextPosition = _point.position - ControlledCamera.transform.forward * newDistance;
+        ControlledCamera.transform.position = CameraMotionSafety.ClampWorldPosition(nextPosition, MaxWorldCoordinate);
+        _distance = newDistance;
 
         if (_mouseOrbit != null)
             _mouseOrbit.Distance = _distance;
@@ -272,15 +319,30 @@ public class MyCameraManager : MonoBehaviour
         if (Target == null)
             return;
 
-        Bounds bounds = CalculateBounds(Target);
-        _point.position = bounds.center;
+        FocusBounds(CalculateBounds(Target));
+    }
+
+    public void FocusBounds(Bounds bounds)
+    {
+        if (ControlledCamera == null || _point == null)
+            return;
+
+        Vector3 center = CameraMotionSafety.ClampWorldPosition(bounds.center, MaxWorldCoordinate);
+        _point.position = center;
 
         float fov = ControlledCamera.fieldOfView * Mathf.Deg2Rad;
         float objectSize = Mathf.Max(bounds.extents.x, bounds.extents.y, bounds.extents.z) * 2f;
-        _distance = Mathf.Max(objectSize / Mathf.Sin(fov * 0.5f), 0.5f);
+        float sine = Mathf.Max(0.01f, Mathf.Sin(Mathf.Clamp(fov * 0.5f, 0.01f, 1.5f)));
+        _distance = Mathf.Clamp(objectSize / sine, MinZoomDistance, MaxZoomDistance);
 
-        ControlledCamera.transform.position = bounds.center - ControlledCamera.transform.forward * _distance;
-        ControlledCamera.transform.LookAt(bounds.center);
+        ControlledCamera.transform.position = CameraMotionSafety.ClampWorldPosition(
+            center - ControlledCamera.transform.forward * _distance,
+            MaxWorldCoordinate);
+        ControlledCamera.transform.LookAt(center);
+        ControlledCamera.farClipPlane = Mathf.Clamp(
+            Mathf.Max(ControlledCamera.farClipPlane, _distance + objectSize),
+            100f,
+            MaxWorldCoordinate * 2f);
         SyncFreeLookAngles();
 
         if (_mouseOrbit != null)
@@ -289,6 +351,17 @@ public class MyCameraManager : MonoBehaviour
             _mouseOrbit.Distance = _distance;
             _mouseOrbit.RestRotationInfo();
         }
+
+        CaptureSafeTransform();
+    }
+
+    public void FocusTacticalBounds(Bounds bounds)
+    {
+        if (ControlledCamera == null)
+            return;
+
+        ControlledCamera.transform.rotation = Quaternion.Euler(55f, 0f, 0f);
+        FocusBounds(bounds);
     }
 
     private bool IsMouseInsideInputArea()
@@ -359,6 +432,68 @@ public class MyCameraManager : MonoBehaviour
         Vector3 angles = ControlledCamera.transform.eulerAngles;
         _freeLookX = angles.y;
         _freeLookY = angles.x;
+    }
+
+    private Vector3 ClampMouseDelta(Vector3 delta)
+    {
+        delta.x = Mathf.Clamp(delta.x, -MaxMouseDeltaPerFrame, MaxMouseDeltaPerFrame);
+        delta.y = Mathf.Clamp(delta.y, -MaxMouseDeltaPerFrame, MaxMouseDeltaPerFrame);
+        return delta;
+    }
+
+    private void ApplyTranslation(Vector3 offset, bool movePoint)
+    {
+        offset = CameraMotionSafety.ClampStep(offset, MaxTranslationPerFrame);
+        ControlledCamera.transform.position = CameraMotionSafety.ClampWorldPosition(
+            ControlledCamera.transform.position + offset,
+            MaxWorldCoordinate);
+        if (movePoint)
+        {
+            _point.position = CameraMotionSafety.ClampWorldPosition(
+                _point.position + offset,
+                MaxWorldCoordinate);
+        }
+    }
+
+    private void RecoverInvalidTransform()
+    {
+        if (ControlledCamera == null || _point == null)
+            return;
+
+        bool cameraValid = CameraMotionSafety.IsFinite(ControlledCamera.transform.position);
+        bool pointValid = CameraMotionSafety.IsFinite(_point.position);
+        bool distanceValid = CameraMotionSafety.IsFinite(_distance);
+        if (cameraValid && pointValid && distanceValid)
+            return;
+
+        ControlledCamera.transform.position = CameraMotionSafety.IsFinite(_lastSafeCameraPosition)
+            ? _lastSafeCameraPosition
+            : Vector3.zero;
+        _point.position = CameraMotionSafety.IsFinite(_lastSafePointPosition)
+            ? _lastSafePointPosition
+            : ControlledCamera.transform.position + ControlledCamera.transform.forward * MinZoomDistance;
+        _distance = Mathf.Clamp(
+            Vector3.Distance(ControlledCamera.transform.position, _point.position),
+            MinZoomDistance,
+            MaxZoomDistance);
+
+        if (!_reportedInvalidTransform)
+        {
+            _reportedInvalidTransform = true;
+            Debug.LogWarning("[MyCameraManager] Invalid camera transform was rejected and restored to the last safe position.", this);
+        }
+    }
+
+    private void CaptureSafeTransform()
+    {
+        if (ControlledCamera == null || _point == null ||
+            !CameraMotionSafety.IsFinite(ControlledCamera.transform.position) ||
+            !CameraMotionSafety.IsFinite(_point.position))
+            return;
+
+        _lastSafeCameraPosition = ControlledCamera.transform.position;
+        _lastSafePointPosition = _point.position;
+        _reportedInvalidTransform = false;
     }
 
     private void OnDestroy()

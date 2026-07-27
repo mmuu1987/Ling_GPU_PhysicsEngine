@@ -199,6 +199,30 @@ namespace MassEngine.Game.Tests
             }
         }
 
+        [Test]
+        public void CameraZoomRejectsInputSpikesAndAlwaysStaysBounded()
+        {
+            float distance = 100f;
+            for (int i = 0; i < 1000; i++)
+            {
+                float wheelSpike = i % 2 == 0 ? float.MaxValue : float.MinValue;
+                distance = CameraMotionSafety.ResolveZoomDistance(distance, wheelSpike, 10f, 2f, 2500f);
+                Assert.That(float.IsNaN(distance) || float.IsInfinity(distance), Is.False);
+                Assert.That(distance, Is.InRange(2f, 2500f));
+            }
+        }
+
+        [Test]
+        public void CameraMotionRejectsNonFiniteAndClampsSingleFrameTravel()
+        {
+            Vector3 invalid = new Vector3(float.NaN, float.PositiveInfinity, 1f);
+            Assert.That(CameraMotionSafety.ClampStep(invalid, 200f), Is.EqualTo(Vector3.zero));
+            Assert.That(CameraMotionSafety.ClampWorldPosition(invalid, 5000f), Is.EqualTo(Vector3.zero));
+
+            Vector3 clamped = CameraMotionSafety.ClampStep(new Vector3(10000f, 0f, 0f), 200f);
+            Assert.That(clamped.magnitude, Is.EqualTo(200f).Within(0.001f));
+        }
+
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
             MethodInfo method = typeof(MassEngineManager).GetMethod(

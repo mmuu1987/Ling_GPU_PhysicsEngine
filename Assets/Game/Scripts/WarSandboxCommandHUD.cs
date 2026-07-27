@@ -20,6 +20,9 @@ namespace MassEngine.Game
         private bool awaitingMoveTarget;
         private ClickFlowTargetSetter legacyClickSetter;
         private bool legacyClickSetterWasEnabled;
+        private MyCameraManager cameraManager;
+        private string commandFeedback;
+        private float feedbackUntil;
 
         private void Reset()
         {
@@ -50,24 +53,41 @@ namespace MassEngine.Game
             if (controller == null)
                 return;
 
+            bool cameraNavigation =
+                Input.GetMouseButton(1) ||
+                Input.GetMouseButton(2) ||
+                Input.GetKey(KeyCode.LeftAlt) ||
+                Input.GetKey(KeyCode.RightAlt);
+
             if (Input.GetKeyDown(KeyCode.Alpha1))
                 controller.SelectArmy(0);
             if (Input.GetKeyDown(KeyCode.Alpha2))
                 controller.SelectArmy(1);
-            if (Input.GetKeyDown(KeyCode.A))
-                IssueAttack();
-            if (Input.GetKeyDown(KeyCode.M))
-                awaitingMoveTarget = true;
-            if (Input.GetKeyDown(KeyCode.H))
-                IssueHold();
-            if (Input.GetKeyDown(KeyCode.R))
-                IssueRetreat();
+            if (!cameraNavigation)
+            {
+                if (Input.GetKeyDown(KeyCode.A))
+                    IssueAttack();
+                if (Input.GetKeyDown(KeyCode.M))
+                    BeginMoveOrder();
+                if (Input.GetKeyDown(KeyCode.H))
+                    IssueHold();
+                if (Input.GetKeyDown(KeyCode.R))
+                    IssueRetreat();
+            }
             if (Input.GetKeyDown(KeyCode.Space))
                 controller.TogglePause();
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                 StartOrRestartDefaultBattle();
             if (Input.GetKeyDown(KeyCode.Escape))
                 awaitingMoveTarget = false;
+            if (Input.GetKeyDown(KeyCode.F1))
+                FocusArmy(0);
+            if (Input.GetKeyDown(KeyCode.F2))
+                FocusArmy(1);
+            if (Input.GetKeyDown(KeyCode.F3))
+                FocusBattlefield();
+            if (Input.GetKeyDown(KeyCode.F))
+                FocusArmy(controller.selectedTeam);
 
             if (!awaitingMoveTarget || !Input.GetMouseButtonDown(0) || IsMouseOverPanel())
                 return;
@@ -81,7 +101,10 @@ namespace MassEngine.Game
                 return;
 
             if (controller.IssueOrder(ArmyOrder.Move(controller.selectedTeam, hit.point)))
+            {
                 awaitingMoveTarget = false;
+                SetFeedback(FormatTeamName(controller.selectedTeam) + "：移动目标已更新");
+            }
         }
 
         private void OnGUI()
@@ -89,6 +112,8 @@ namespace MassEngine.Game
             ResolveReferences();
             if (controller == null)
                 return;
+
+            DrawWorldOrderMarkers();
 
             bool compactLayout = Screen.height < 340f;
             float controlHeight = compactLayout ? 20f : 24f;
@@ -121,7 +146,7 @@ namespace MassEngine.Game
             if (GUILayout.Button("进攻 [A]", GUILayout.Height(controlHeight)))
                 IssueAttack();
             if (GUILayout.Button(awaitingMoveTarget ? "点击地面…" : "移动 [M]", GUILayout.Height(controlHeight)))
-                awaitingMoveTarget = true;
+                BeginMoveOrder();
             GUILayout.EndHorizontal();
 
             GUILayout.BeginHorizontal();
@@ -151,6 +176,8 @@ namespace MassEngine.Game
             {
                 awaitingMoveTarget = false;
                 controller.ResetBattle();
+                FocusBattlefield();
+                SetFeedback("战场已重置");
             }
             GUILayout.EndHorizontal();
 
@@ -162,12 +189,26 @@ namespace MassEngine.Game
             DrawSpeedButton("4×", 4f, controlHeight);
             GUILayout.EndHorizontal();
 
+            if (!compactLayout)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("攻方镜头 [F1]", GUILayout.Height(controlHeight)))
+                    FocusArmy(0);
+                if (GUILayout.Button("守方镜头 [F2]", GUILayout.Height(controlHeight)))
+                    FocusArmy(1);
+                if (GUILayout.Button("全景 [F3]", GUILayout.Height(controlHeight)))
+                    FocusBattlefield();
+                GUILayout.EndHorizontal();
+            }
+
             if (awaitingMoveTarget)
                 GUILayout.Label(
                     "下一次左键点击地面将下达移动命令；Esc 取消。",
                     GUILayout.Height(compactLayout ? 17f : 36f));
+            else if (Time.unscaledTime < feedbackUntil)
+                GUILayout.Label(commandFeedback, GUILayout.Height(compactLayout ? 17f : 20f));
             else if (showHotkeys && !compactLayout)
-                GUILayout.Label("Enter双方开战 · 1/2选军 · A进攻 · M移动 · H防守 · R撤退");
+                GUILayout.Label("F当前/F1攻/F2守/F3全景 · Enter开战 · A/M/H/R下令");
 
             GUILayout.EndArea();
         }
@@ -175,28 +216,40 @@ namespace MassEngine.Game
         private void IssueAttack()
         {
             awaitingMoveTarget = false;
-            controller.IssueOrder(ArmyOrder.Attack(controller.selectedTeam));
+            if (controller.IssueOrder(ArmyOrder.Attack(controller.selectedTeam)))
+                SetFeedback(FormatTeamName(controller.selectedTeam) + "：进攻");
+        }
+
+        private void BeginMoveOrder()
+        {
+            awaitingMoveTarget = true;
+            SetFeedback(FormatTeamName(controller.selectedTeam) + "：请选择移动目标");
         }
 
         private void IssueHold()
         {
             awaitingMoveTarget = false;
-            controller.IssueOrder(ArmyOrder.Hold(controller.selectedTeam));
+            if (controller.IssueOrder(ArmyOrder.Hold(controller.selectedTeam)))
+                SetFeedback(FormatTeamName(controller.selectedTeam) + "：原地防守");
         }
 
         private void IssueRetreat()
         {
             awaitingMoveTarget = false;
-            controller.IssueOrder(ArmyOrder.Retreat(controller.selectedTeam));
+            if (controller.IssueOrder(ArmyOrder.Retreat(controller.selectedTeam)))
+                SetFeedback(FormatTeamName(controller.selectedTeam) + "：撤回出生地");
         }
 
         private void StartOrRestartDefaultBattle()
         {
             awaitingMoveTarget = false;
+            bool started = false;
             if (IsTerminalPhase(controller.Phase))
-                controller.RestartWithDefaultOrders();
+                started = controller.RestartWithDefaultOrders();
             else if (controller.Phase == WarSandboxBattlePhase.Setup)
-                controller.StartDefaultBattle();
+                started = controller.StartDefaultBattle();
+            if (started)
+                SetFeedback("双方已下达进攻命令");
         }
 
         private void DrawSpeedButton(string label, float speed, float height)
@@ -215,7 +268,7 @@ namespace MassEngine.Game
         private Rect ResolvePanelRect()
         {
             float width = Mathf.Min(Mathf.Max(240f, panelWidth), Mathf.Max(240f, Screen.width - 16f));
-            float preferredHeight = Screen.height < 340f ? 276f : 300f;
+            float preferredHeight = Screen.height < 340f ? 276f : 324f;
             float height = Mathf.Min(preferredHeight, Mathf.Max(200f, Screen.height - 16f));
             return new Rect(Mathf.Max(8f, Screen.width - width - 8f), 8f, width, height);
         }
@@ -226,6 +279,130 @@ namespace MassEngine.Game
                 controller = GetComponent<WarSandboxBattleController>();
             if (commandCamera == null && controller != null && controller.manager != null)
                 commandCamera = controller.manager.cullingCamera;
+            if (cameraManager == null)
+                cameraManager = FindFirstObjectByType<MyCameraManager>();
+        }
+
+        private void FocusArmy(int teamId)
+        {
+            ResolveReferences();
+            if (cameraManager == null || !TryResolveArmyBounds(teamId, out Bounds bounds))
+                return;
+
+            controller.SelectArmy(teamId);
+            cameraManager.FocusTacticalBounds(bounds);
+            SetFeedback("镜头聚焦：" + FormatTeamName(teamId));
+        }
+
+        private void FocusBattlefield()
+        {
+            ResolveReferences();
+            if (cameraManager == null || controller.manager == null)
+                return;
+
+            SimulationConfig simulation = controller.manager.systemConfig != null
+                ? controller.manager.systemConfig.simulationConfig
+                : null;
+            Bounds bounds;
+            if (simulation != null)
+            {
+                Vector2 size = simulation.simulationWorldSize;
+                bounds = new Bounds(Vector3.zero, new Vector3(size.x, 40f, size.y));
+            }
+            else if (!TryResolveCombinedArmyBounds(out bounds))
+            {
+                return;
+            }
+
+            cameraManager.FocusTacticalBounds(bounds);
+            SetFeedback("镜头：全战场");
+        }
+
+        private bool TryResolveArmyBounds(int teamId, out Bounds bounds)
+        {
+            bounds = default;
+            if (controller == null || controller.manager == null ||
+                controller.manager.scenarioConfig == null ||
+                controller.manager.scenarioConfig.unitTypes == null)
+                return false;
+
+            bool found = false;
+            UnitTypeConfig[] unitTypes = controller.manager.scenarioConfig.unitTypes;
+            for (int i = 0; i < unitTypes.Length; i++)
+            {
+                UnitTypeConfig unitType = unitTypes[i];
+                SpawnConfig spawn = unitType != null ? unitType.spawnConfig : null;
+                if (spawn == null || unitType.teamId != teamId)
+                    continue;
+
+                Vector3 size = spawn.ResolveSpawnSize();
+                Bounds spawnBounds = new Bounds(
+                    spawn.spawnCenter,
+                    new Vector3(Mathf.Max(1f, size.x), 30f, Mathf.Max(1f, size.z)));
+                if (!found)
+                {
+                    bounds = spawnBounds;
+                    found = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(spawnBounds);
+                }
+            }
+
+            return found;
+        }
+
+        private bool TryResolveCombinedArmyBounds(out Bounds bounds)
+        {
+            bool hasAttackers = TryResolveArmyBounds(0, out Bounds attackers);
+            bool hasDefenders = TryResolveArmyBounds(1, out Bounds defenders);
+            bounds = hasAttackers ? attackers : defenders;
+            if (hasAttackers && hasDefenders)
+                bounds.Encapsulate(defenders);
+            return hasAttackers || hasDefenders;
+        }
+
+        private void DrawWorldOrderMarkers()
+        {
+            Camera targetCamera = commandCamera != null ? commandCamera : Camera.main;
+            if (targetCamera == null)
+                return;
+
+            DrawArmyMarker(targetCamera, controller.GetArmy(0), new Color(1f, 0.35f, 0.25f));
+            DrawArmyMarker(targetCamera, controller.GetArmy(1), new Color(0.3f, 0.6f, 1f));
+        }
+
+        private static void DrawArmyMarker(Camera targetCamera, ArmyRuntimeState army, Color color)
+        {
+            if (army == null || !army.hasOrder || !army.currentOrder.hasTarget)
+                return;
+
+            Vector3 screen = targetCamera.WorldToScreenPoint(army.currentOrder.target);
+            if (screen.z <= 0f)
+                return;
+
+            float x = screen.x;
+            float y = Screen.height - screen.y;
+            Color previous = GUI.color;
+            GUI.color = color;
+            GUI.Box(new Rect(x - 9f, y - 1f, 18f, 2f), GUIContent.none);
+            GUI.Box(new Rect(x - 1f, y - 9f, 2f, 18f), GUIContent.none);
+            GUI.Label(
+                new Rect(x + 10f, y - 11f, 150f, 22f),
+                army.displayName + " " + FormatOrder(army.currentOrder.type));
+            GUI.color = previous;
+        }
+
+        private void SetFeedback(string text)
+        {
+            commandFeedback = text;
+            feedbackUntil = Time.unscaledTime + 2f;
+        }
+
+        private static string FormatTeamName(int teamId)
+        {
+            return teamId == 0 ? "攻方" : "守方";
         }
 
         private static string FormatOrder(ArmyOrderType type)
