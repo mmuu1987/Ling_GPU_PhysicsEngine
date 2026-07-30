@@ -34,7 +34,7 @@ public class LocalRotationAndScale : MonoBehaviour
     {
         Vector3 angles = transform.eulerAngles;
         _x = angles.y;
-        _y = angles.x;
+        _y = CameraMotionSafety.NormalizeSignedAngle(angles.x);
     }
 
     private void OnEnable()
@@ -63,6 +63,7 @@ public class LocalRotationAndScale : MonoBehaviour
         Transform cameraTransform = _camera != null ? _camera.transform : transform;
         _y = cameraTransform.localEulerAngles.x;
         _x = cameraTransform.localEulerAngles.y;
+        _y = CameraMotionSafety.NormalizeSignedAngle(_y);
     }
 
     public void Zoom()

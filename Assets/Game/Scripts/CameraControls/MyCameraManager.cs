@@ -431,7 +431,7 @@ public class MyCameraManager : MonoBehaviour
 
         Vector3 angles = ControlledCamera.transform.eulerAngles;
         _freeLookX = angles.y;
-        _freeLookY = angles.x;
+        _freeLookY = CameraMotionSafety.NormalizeSignedAngle(angles.x);
     }
 
     private Vector3 ClampMouseDelta(Vector3 delta)

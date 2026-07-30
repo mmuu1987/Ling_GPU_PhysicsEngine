@@ -223,6 +223,16 @@ namespace MassEngine.Game.Tests
             Assert.That(clamped.magnitude, Is.EqualTo(200f).Within(0.001f));
         }
 
+        [TestCase(330f, -30f)]
+        [TestCase(270f, -90f)]
+        [TestCase(30f, 30f)]
+        public void CameraPitchSynchronizesEulerAnglesToSignedRange(float unityEulerAngle, float expectedPitch)
+        {
+            Assert.That(
+                CameraMotionSafety.NormalizeSignedAngle(unityEulerAngle),
+                Is.EqualTo(expectedPitch).Within(0.001f));
+        }
+
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
             MethodInfo method = typeof(MassEngineManager).GetMethod(

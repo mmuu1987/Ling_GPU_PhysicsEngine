@@ -33,7 +33,7 @@ public class CameraMouseOrbit : MonoBehaviour
     {
         Vector3 angles = transform.eulerAngles;
         _x = angles.y;
-        _y = NormalizeSignedAngle(angles.x);
+        _y = CameraMotionSafety.NormalizeSignedAngle(angles.x);
     }
 
     private void OnEnable()
@@ -61,7 +61,7 @@ public class CameraMouseOrbit : MonoBehaviour
     {
         Transform cameraTransform = _camera != null ? _camera.transform : transform;
         _x = cameraTransform.localEulerAngles.y;
-        _y = NormalizeSignedAngle(cameraTransform.localEulerAngles.x);
+        _y = CameraMotionSafety.NormalizeSignedAngle(cameraTransform.localEulerAngles.x);
     }
 
     public void Zoom()
@@ -84,14 +84,4 @@ public class CameraMouseOrbit : MonoBehaviour
         return Mathf.Clamp(angle, min, max);
     }
 
-    private static float NormalizeSignedAngle(float angle)
-    {
-        angle %= 360f;
-        if (angle > 180f)
-            angle -= 360f;
-        else if (angle < -180f)
-            angle += 360f;
-
-        return angle;
-    }
 }

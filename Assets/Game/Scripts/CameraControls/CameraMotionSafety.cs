@@ -57,6 +57,14 @@ public static class CameraMotionSafety
         return IsFinite(value.x) && IsFinite(value.y) && IsFinite(value.z);
     }
 
+    public static float NormalizeSignedAngle(float angle)
+    {
+        if (!IsFinite(angle))
+            return 0f;
+
+        return Mathf.DeltaAngle(0f, angle);
+    }
+
     private static float SanitizePositive(float value, float fallback)
     {
         return IsFinite(value) && value > 0f ? value : fallback;

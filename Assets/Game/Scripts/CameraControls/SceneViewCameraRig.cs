@@ -241,18 +241,7 @@ public sealed class SceneViewCameraRig
 
         Vector3 angles = _camera.transform.eulerAngles;
         _freeLookX = angles.y;
-        _freeLookY = NormalizeSignedAngle(angles.x);
-    }
-
-    private static float NormalizeSignedAngle(float angle)
-    {
-        angle %= 360f;
-        if (angle > 180f)
-            angle -= 360f;
-        else if (angle < -180f)
-            angle += 360f;
-
-        return angle;
+        _freeLookY = CameraMotionSafety.NormalizeSignedAngle(angles.x);
     }
 }
 
