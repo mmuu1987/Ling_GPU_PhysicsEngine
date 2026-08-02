@@ -215,7 +215,7 @@ namespace MassEngine
             bufferManager = new MassGpuBufferManager();
             pipelineOrchestrator = new ComputePipelineOrchestrator(shaders, bufferManager);
             renderDispatcher = new MassGpuRenderDispatcher();
-            telemetry = new BattleTelemetry();
+            telemetry = new BattleTelemetry(shaders.SpatialHashShader);
 
             if (gpuDispatchBlockedByShaders)
             {

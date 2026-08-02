@@ -77,6 +77,9 @@ RWStructuredBuffer<uint> gridAgentIndices;
 // [0] = agents dropped this frame because their cell was full (visibility for the
 // silent failure mode where overflow victims vanish from neighborhood queries).
 RWStructuredBuffer<int> spatialHashStats;
+// Two fixed-size records used by low-frequency telemetry. Per-team layout (8 ints):
+// alive count, sum X, sum Z, min X, min Z, max X, max Z, reserved.
+RWStructuredBuffer<int> teamSpatialStats;
 StructuredBuffer<uint> gridCountsReadBuffer;
 StructuredBuffer<uint> gridAgentIndicesReadBuffer;
 RWStructuredBuffer<float2> flowFieldDirections;

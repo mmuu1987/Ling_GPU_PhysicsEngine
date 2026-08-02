@@ -30,6 +30,7 @@ namespace MassEngine
         public ComputeBuffer unitTypeIndexBuffer;
         public ComputeBuffer unitTypeSettingsBuffer;
         public ComputeBuffer spatialHashStatsBuffer;
+        public ComputeBuffer teamSpatialStatsBuffer;
         public RenderTexture runtimeAttackerFlowPreviewTexture;
         public RenderTexture runtimeDefenderFlowPreviewTexture;
         public RenderTexture densityMapTexture;
@@ -110,10 +111,12 @@ namespace MassEngine
             unitTypeIndexBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             unitTypeSettingsBuffer = new ComputeBuffer(UnitTypeCount, UnitTypeGpuSettings.StrideBytes);
             spatialHashStatsBuffer = new ComputeBuffer(4, sizeof(int));
+            teamSpatialStatsBuffer = new ComputeBuffer(16, sizeof(int));
             // stats[3] carries a sentinel no kernel ever writes: if a telemetry readback
             // sees it gone, GPU memory was wiped (device reset/TDR) and the manager
             // reinitializes. Slots 1-2 stay reserved; slot 0 is the overflow counter.
             spatialHashStatsBuffer.SetData(new[] { 0, 0, 0, DeviceResetSentinel });
+            teamSpatialStatsBuffer.SetData(new int[16]);
             runtimeAttackerFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             runtimeDefenderFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             densityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
@@ -246,6 +249,7 @@ namespace MassEngine
             ReleaseBuffer(ref unitTypeIndexBuffer);
             ReleaseBuffer(ref unitTypeSettingsBuffer);
             ReleaseBuffer(ref spatialHashStatsBuffer);
+            ReleaseBuffer(ref teamSpatialStatsBuffer);
 
             for (int i = 0; i < visibleIndexBuffers.Length; i++)
                 ReleaseBuffer(ref visibleIndexBuffers[i]);

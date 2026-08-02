@@ -364,6 +364,26 @@ public class MyCameraManager : MonoBehaviour
         FocusBounds(bounds);
     }
 
+    /// <summary>
+    /// Smoothly translates the current tactical framing with a moving GPU population.
+    /// Distance and viewing angle stay unchanged, avoiding zoom pumping as formations
+    /// briefly stretch or lose outlying units.
+    /// </summary>
+    public void FollowTacticalBounds(Bounds bounds, float sharpness)
+    {
+        if (ControlledCamera == null || _point == null || !CameraMotionSafety.IsFinite(bounds.center))
+            return;
+
+        Vector3 target = CameraMotionSafety.ClampWorldPosition(bounds.center, MaxWorldCoordinate);
+        Vector3 step = CameraMotionSafety.ResolveFollowStep(
+            _point.position,
+            target,
+            sharpness,
+            Time.unscaledDeltaTime,
+            MaxTranslationPerFrame);
+        ApplyTranslation(step, true);
+    }
+
     private bool IsMouseInsideInputArea()
     {
         if (!RequireMouseInsideScreen)

@@ -35,6 +35,27 @@ namespace MassEngine.Tests
             Assert.AreEqual(0, UnitTypeGpuSettings.StrideBytes % 16, "StructuredBuffer element size should stay 16-byte aligned for cross-platform safety.");
         }
 
+        [Test]
+        public void TeamSpatialTelemetryDecodesCentroidAndBounds()
+        {
+            int[] values = new int[16];
+            values[0] = 4;
+            values[1] = 40;
+            values[2] = 20;
+            values[3] = 2;
+            values[4] = -3;
+            values[5] = 18;
+            values[6] = 11;
+
+            Assert.That(BattleTelemetry.TryDecodeTeamSpatialStats(values, 0, out TeamSpatialTelemetry team), Is.True);
+            Assert.That(team.aliveCount, Is.EqualTo(4));
+            Assert.That(team.centroid, Is.EqualTo(new Vector3(10f, 0f, 5f)));
+            Assert.That(team.bounds.center, Is.EqualTo(team.centroid));
+            Assert.That(team.bounds.min.x, Is.LessThanOrEqualTo(2f));
+            Assert.That(team.bounds.max.x, Is.GreaterThanOrEqualTo(18f));
+            Assert.That(BattleTelemetry.TryDecodeTeamSpatialStats(values, 1, out _), Is.False);
+        }
+
         // ------------------------------------------------------------------
         // Property 2: public field budget — every type in the namespace, no
         // suffix filtering, so new god-objects cannot hide from this test.

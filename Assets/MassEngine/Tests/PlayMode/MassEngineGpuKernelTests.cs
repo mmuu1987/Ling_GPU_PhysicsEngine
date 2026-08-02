@@ -774,6 +774,31 @@ namespace MassEngine.Tests
 
         private int dispatchedFrames;
 
+        [UnityTest]
+        public IEnumerator TeamSpatialTelemetryReducesLiveGpuPopulation()
+        {
+            AgentData[] agents = (AgentData[])initialAgents.Clone();
+            for (int i = 0; i < agents.Length; i++)
+            {
+                bool attacker = initialTeamIds[i] == 0;
+                int lane = attacker ? i : i - AttackerCount;
+                agents[i].position = new Vector3(attacker ? -10f : 20f, 0f, lane * 2f);
+            }
+            buffers.UploadInitialData(agents, initialTeamIds, initialHp, initialUnitTypeIndices);
+
+            BattleTelemetry telemetry = new BattleTelemetry(shaderSet.SpatialHashShader, 0.1f);
+            telemetry.Tick(buffers, 1f);
+            for (int frame = 0; frame < 120 && !telemetry.Snapshot.valid; frame++)
+                yield return null;
+
+            BattleTelemetrySnapshot snapshot = telemetry.Snapshot;
+            Assert.That(snapshot.valid, Is.True, "team spatial telemetry readback timed out");
+            Assert.That(snapshot.aliveAttackers, Is.EqualTo(AttackerCount));
+            Assert.That(snapshot.aliveDefenders, Is.EqualTo(DefenderCount));
+            Assert.That(snapshot.attackers.centroid, Is.EqualTo(new Vector3(-10f, 0f, 3f)));
+            Assert.That(snapshot.defenders.centroid, Is.EqualTo(new Vector3(20f, 0f, 3f)));
+        }
+
         private void DispatchOneFrame(bool battleStarted)
         {
             registry.FillGpuSettings(settingsCache);
