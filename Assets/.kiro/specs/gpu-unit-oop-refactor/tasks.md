@@ -1,273 +1,181 @@
-﻿# Implementation Plan: GPU Unit OOP Refactor (Stage7)
+# Implementation Plan: GPU Unit OOP Refactor (Stage7)
 
-## Overview
+> 2026-07 重构版。历史版本的勾选与事实不符（多项 [x] 验证的是永不执行的 CPU 影子层，
+> "shader 从 Stage6 逐字复制"的说明也与实际分叉 ~1000 行的现状矛盾），已按当前实现全部
+> 重新核对。架构决策与机制说明见 design.md。
 
-将 Stage6 的 GPUInstancingManager 上帝类拆分为以兵种（UnitType）为核心的模块化 OOP 架构。实现路径：先搭建目录结构和核心接口/数据模型，再逐模块实现 SpawnModule → MovementModule → FlockingModule → AnimationModule → CombatModule → FlowFieldVisualizer，最后通过 ComputePipelineOrchestrator 和 MassGpuSystemManager 将所有模块串联起来。
+## 已完成（2026-07 重构核对）
 
-## Tasks
+- [x] 1. 核心数据模型
+  - AgentData 56 字节（Sequential），属性测试锁定 stride
+  - UnitTypeGpuSettings 112 字节 GPU 参数记录，与 HLSL UnitTypeSettings 逐字段一致
+  - AgentState 枚举 + AgentStateMachine（GPU 状态语义的 C# 镜像规格）
+  - _Requirements: 9.2, 10.1, 10.2_
 
-- [x] 1. 搭建 Stage7 目录结构与核心数据模型
-  - [x] 1.1 创建 MassGPUPhysics_Stage7 目录结构和核心类型定义
-    - 创建 `MassGPUPhysics_Stage7/Scripts/` 目录
-    - 创建 `AgentData` 结构体（56 字节，LayoutKind.Sequential），字段与 Stage6 完全一致
-    - 创建 `AgentState` 枚举（Idle=0, Move=1, Engage=2, Attack=3, Dead=4）
-    - 创建 `VATClipParams` 结构体
-    - _Requirements: 9.2, 10.1_
+- [x] 2. ScriptableObject 配置体系（只读输入）
+  - UnitTypeConfig / SpawnConfig / MovementConfig / FlockingConfig / AnimationConfig /
+    CombatConfig / RenderConfig / ScenarioConfig_Stage7 / Stage7SystemConfig 等
+  - ConfigValidator 纯校验：Error（Spawn 缺失 / unitCount≤0 / teamId∉{0,1} / 类名非法）
+    跳过注册；Warning 用内建默认值；不写回资产
+  - _Requirements: 1.4, 2.1, 4.4, 5.4, 7.6_
 
-  - [x]* 1.2 编写 AgentData 步幅属性测试
-    - **Property 1: AgentData 步幅不变量**
-    - 验证 `Marshal.SizeOf<AgentData>()` 始终返回 56
-    - **Validates: Requirements 9.2**
+- [x] 3. 模块层（架构决策 A：参数贡献者）
+  - IUnitParameterContributor + ISpawn/IMovement/IFlocking/IAnimation/ICombatModule
+  - Default 模块实现 Contribute(ref UnitTypeGpuSettings)；DefaultSpawnModule 为唯一
+    CPU 行为模块
+  - UnitTypeBase（模块组装 + BuildGpuSettings + VAT 时长合并）、DefaultSwordUnit、
+    UnitTypeRegistry（注册/offset/unitTypeIndex/settings 聚合/队伍目标解析）
+  - _Requirements: 1.1, 1.2, 1.5_
 
-  - [x] 1.3 创建 ScriptableObject 配置资产类
-    - 创建 `UnitTypeConfig` ScriptableObject（顶层兵种配置）
-    - 创建 `SpawnConfig` ScriptableObject（生成区域配置）
-    - 创建 `MovementConfig` ScriptableObject（移动配置）
-    - 创建 `FlockingConfig` ScriptableObject（聚散配置）
-    - 创建 `AnimationConfig` ScriptableObject（动画配置）
-    - 创建 `CombatConfig` ScriptableObject（战斗配置）
-    - 创建 `RenderConfig` ScriptableObject（渲染配置）
-    - 创建 `ScenarioConfig_Stage7` ScriptableObject（场景配置，持有多个 UnitTypeConfig 引用）
-    - _Requirements: 1.4, 2.1, 4.1, 5.4, 6.3, 7.6_
+- [x] 4. VAT 与渲染运行时
+  - VatProfileReader（初始化时一次性反射解析）
+  - ResolvedUnitTypeRuntime（mesh-纹理强制配对 + 预填 MaterialPropertyBlock + 各 clip 时长）
+  - MassGpuRenderDispatcher：按兵种 × LOD 间接绘制，渲染路径零反射
+  - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-  - [x]* 1.4 编写公共配置字段上限属性测试
-    - **Property 2: 公共配置字段上限**
-    - 通过反射验证所有模块类的公共字段数量 ≤ 30
-    - **Validates: Requirements 1.3**
+- [x] 5. GPU 管线
+  - MassGpuBufferManager：按兵种 × LOD 分桶的可见索引/args；unitTypeIndex/unitTypeSettings
+    旁路缓冲；hp/pendingDamage/position 双缓冲；分配后清零流场缓冲；释放顺序与
+    Editor/Play 释放语义修正
+  - ComputePipelineOrchestrator：SpatialHash → RuntimeFlow(条件) → DensityMap →
+    Combat → 每兵种 LOD 分类；IDispatchListener 测试钩子；缺失 kernel 一次性日志
+  - HLSL：队伍真理统一为 teamIdReadBuffer（删除 attackerCount 区间推断）；
+    GetUnitSettings(index) 取代全部 attacker*/defender* 参数 uniform；
+    ResolveAliveState 状态推导；hold-position 防守方保留 separation 并钳制于 guardRadius；
+    寻敌格半径改为 C# 下发（超限警告）；按 clip 时长回绕动画；预览写入按开关门控
+  - _Requirements: 5.2, 8.2, 9.1, 9.2, 9.3, 10.2, 10.3_
 
-- [x] 2. 实现核心接口与基类
-  - [x] 2.1 创建模块接口定义
-    - 创建 `IUnitType` 接口（定义兵种完整行为契约）
-    - 创建 `ISpawnModule` 接口
-    - 创建 `IMovementModule` 接口
-    - 创建 `IFlockingModule` 接口
-    - 创建 `IAnimationModule` 接口
-    - 创建 `ICombatModule` 接口
-    - 创建 `IFlowFieldVisualizer` 接口
-    - _Requirements: 1.1, 1.2_
+- [x] 6. 场景入口与运行时状态
+  - MassEngineManager：流场门控三要素分解（enabled/reason/cadence）+
+    dynamicFlowUpdateInterval 节流 + dirty 立即重建；点击目标为运行时覆盖
+    （SetFlowTargetOverride，不触碰配置资产）；OnEnable/OnDisable 配对；
+    分配签名重建守卫；ShaderSet fail-fast；frustum 无分配缓存
+  - ClickFlowTargetSetter 改为写运行时覆盖
+  - _Requirements: 1.3, 4.1, 4.2, 4.3_
 
-  - [x] 2.2 实现 UnitTypeBase 抽象基类
-    - 实现 `UnitTypeBase` 抽象类，提供默认模块组装逻辑
-    - 实现 `Initialize`、`OnBuffersBound`、`Release` 生命周期方法
-    - 实现 `CreateModules` 虚方法，默认创建各 Default 模块实例
-    - _Requirements: 1.2, 1.5_
+- [x] 7. 可观测性
+  - BattleTelemetry（AsyncGPUReadback 存活数/战斗时长/流场重建计数）+
+    BattleTelemetryHUD
+  - FlowFieldPreviewHUD（预览纹理展示；kernel 写入由
+    runtimeFlowPreviewEnabled 门控）
+  - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-  - [x] 2.3 实现 UnitTypeRegistry
-    - 实现兵种注册、buffer offset 分配、批量初始化和释放
-    - 确保 TotalAgentCount 正确累加
-    - _Requirements: 1.1, 1.5_
+- [x] 8. 测试重写
+  - EditMode：数据布局/字段预算（无后缀过滤）/生成包含性/三兵种参数通道/运行时改参生效/
+    钳制与默认值/registry 守卫/状态模型镜像/派发顺序（dispatch 钩子）/双缓冲交换
+  - PlayMode：真实 GPU 派发 + 回读的黄金值测试（伤害量化累积、死亡、状态迁移合法性、
+    未开战冻结）；无 compute 能力环境自动跳过
+  - _Requirements: 7.2, 7.3, 7.4, 7.5, 9.1, 9.3, 10.2, 10.4_
 
-  - [x] 2.4 创建 PipelineFrameContext 和 UnitTypeInitContext 结构体
-    - 定义管线帧上下文数据结构
-    - 定义 UnitType 初始化上下文数据结构
-    - _Requirements: 9.1_
+- [x] 9. 卫生
+  - 删除零引用死文件：AgentComputeShader_Stage6.compute（1230 行）、4 个未引用 shader
+    副本、14 个 "New * Config" 孤儿资产、空 Stage7Configs.cs、过期 TestResults xml
+  - Stage7SampleAssetCreator 改为非破坏式（仅填充新建资产、场景另存、含地面/点击/遥测）
 
-- [ ] 3. Checkpoint - 确保核心接口和数据模型编译通过
-  - Ensure all tests pass, ask the user if questions arise.
+- [x] 14. LOD 降频模拟（2026-07-26，用户指定优先；billboard 方案按用户决定放弃）
+  - 近/中/远决策频率 1/2/4（LodConfig 可调），轻路径每帧保伤害结算/位置积分/写回
+  - dt 补偿 + 累积制冷却保证 DPS/速度不变；64 线程组对齐错峰
+  - 新增 PlayMode 黄金测试：全帧率 vs 1/4 帧率击杀时刻一致（±20 帧）
 
-- [x] 4. 实现 SpawnModule
-  - [x] 4.1 实现 DefaultSpawnModule
-    - 实现 `ISpawnModule` 接口
-    - 根据 SpawnConfig 的 center 和 size 在指定区域内随机生成 Agent
-    - 支持攻击方和防守方独立生成区域
-    - 生成的 Agent 初始状态为 Idle，速度为零
-    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+- [x] 15. 场景意图化与物理自洽（2026-07-27，源于 200k v 200k 卡死事故）
+  - SpawnConfig 意图化：只摆 center+人数+密度/宽深比，脚印自动推导；spawnSize 变手动覆盖
+  - ScenarioPhysics 物理账本：密度/越界/格子溢出/流场覆盖，警告带具体建议数值
+  - 编辑器 MassEngine/Auto-Fit Scenario 一键配平 world/grid/flow（Undo + SetDirty）
+  - LodConfig.maxRenderDistance 渲染能见度上限（0=不限），封顶最坏可见实例数
+  - 现有 200k 场景已切换到自动脚印（spawnSize 清零）
 
-  - [x]* 4.2 编写生成区域包含性属性测试
-    - **Property 3: 生成区域包含性**
-    - 验证所有生成的 Agent 位置在 [center - size/2, center + size/2] 范围内
-    - 验证生成数量恰好等于 count
-    - **Validates: Requirements 2.2**
+- [x] 16. 寻敌迂回修复 + 观测补盲（2026-07-27 夜间）
+  - 根因：流场格 2m→5m 后密度阈值（按"每格人数"标定）失配，压力常年饱和，
+    避让力把冲锋单位从敌人面前推开（"走到跟前又迂回"）
+  - 修复：密度阈值语义改为每平方米（densityComfortPerSqm 0.6 / densityPressureRangePerSqm 1.2，
+    采样值÷格面积），与格子尺寸永久解耦；接战状态避让衰减 ×0.35（冲锋意志压过怕挤）
+  - SampleAheadDensity 重构消除 d3d11 编译警告；LOD 半径重标 near30/mid120（中层人口随
+    半径平方增长，300m 圈住 14 万中模单位是渲染炸弹）、maxRenderDistance 500
+  - 空间哈希格满溢出遥测：spatialHashStats 缓冲 + 异步回读 + HUD 红字告警
+    （溢出者静默掉出邻域查询，40 万规模的必备仪表）
 
-- [x] 5. 实现 MovementModule（流场推进）
-  - [x] 5.1 实现 DefaultMovementModule
-    - 实现 `IMovementModule` 接口
-    - 实现流场推进模式：根据流场方向和权重计算期望速度
-    - 移动中寻敌由 CombatModule 负责，MovementModule 只负责流场驱动
-    - _Requirements: 4.1, 4.2, 4.3, 4.4_
+- [x] 17. 夜间自主缺陷挖掘与修复（2026-07-27，用户授权的自主任务）
+  - 5 维度挖掘 43 条 → 证伪存活 39 条 → 全部 critical/major + 大部分 minor 已修复
+  - 战斗行为：动态流场 Z 收敛（消灭"质心线罚站"）、残局全局质心兜底（仗一定能打完）、
+    停止半径下限 0.75×流场格（消灭目标线抖动带）、避让只偏转不反向（援军不再临阵脱逃）、
+    HOLD 守方接战迟滞（消灭系统性单边换血）
+  - GPU 契约：冷却每通道多次结算（DPS 不随镜头变化）、寻敌节奏改决策计数（任意降频
+    区间对齐）、分离节流门删除（纯陷阱零收益）、FLOW_FIELD 守方追击链删除（曾致永久
+    无法索敌）、flowFieldWeight 0.2 暗底删除
+  - 健壮性：重建签名改从 scenarioConfig 派生（空场景可恢复）、shader 缺失不再改写
+    序列化开关、battleStarted Inspector 翻转接入记账、非法 teamId 有声拒绝
+  - 账本扩展：流场覆盖 Z 轴、导航源短路、按兵种半径的堆积极限、LOD 交叉校验
+  - 新增测试：EditMode +5（账本各项+集成脚印+出货场景锁定+门控断言）、
+    PlayMode +4（渲染桶计数/幽灵清场/行军速度一致性/暂停冻结）
+  - 遗留未做（登记）：SelectFlowTargets 并行化（用户已降优先级）、PlayMode 队伍交错
+    fixture（TG-05）、密度每平米 GPU 金值测试（TG-01）、≥128 人跨组测试（TG-06）
+    ——以上四项已于 2026-07-27 白天批（item 18）全部完成
 
-  - [x]* 5.2 编写流场导航速度方向一致性属性测试
-    - **Property 4: 流场导航速度方向一致性**
-    - 验证期望速度在 XZ 平面与 flowDir 方向一致
-    - **Validates: Requirements 4.2, 4.3**
+- [x] 18. 白天查漏补缺批（2026-07-27，用户授权自主任务；前四笔提交后进行）
+  - SelectRuntime*FlowTargets 并行化：每扇区 64 线程组 groupshared 归约，
+    残局兜底移入 Generate（需跨扇区视野）；派发组数 = clamp(sectorCount,1,8)
+  - 新 PlayMode 金值测试 ×3：DynamicSectorSelectionSteersFlowAtEnemyCluster
+    （扇区路径+兜底路径+stats 契约）、DensityMapCountsAliveAgentsPerCell（TG-01，
+    含死亡剔除）、InterleavedTeamsAcrossThreadGroupsFightAndClassifyCorrectly
+    （TG-05+TG-06：256 人交错队伍跨 4 线程组，战损双向+分类计数）
+  - fixture 参数化：BuildScenario(attackers, defenders) + 动态流场/密度阈值旋钮
+  - CameraControls 清理（原 item 13 待办）：SceneViewCamera 四件套去 _Stage7 后缀、
+    MyCameraManager_Stage7→RigCameraManager、LocalRotationAndScale_Stage7→
+    CameraMouseOrbit（guid 全保持；场景在用的 MyCameraManager/LocalRotationAndScale
+    不动）
 
-  - [x]* 5.3 编写流场权重比例正确性属性测试
-    - **Property 5: 流场权重比例正确性**
-    - 验证权重越大期望速度越大
-    - **Validates: Requirements 4.3, 4.4**
+- [x] 19. 第二轮缺陷挖掘消化（2026-07-27 白天，5 个夜间未覆盖维度：生命周期/渲染/
+  API/编辑器/文档漂移；20 条发现证伪 1 条，存活 19 条全部处置）
+  - 生命周期：shader 缺失阻断改为可自恢复（Update 每秒廉价重探测 + 阻断期跳过全量
+    缓冲分配）；GPU device reset 看门狗（spatialHashStats[3] 哨兵 + 遥测回读校验 +
+    自动重建）；Initialize 签名提前落盘（异常不再逐帧重试风暴）+ 网格索引容量 long
+    守卫；AllocationSignature 增加 scenarioConfigId + teamLayoutHash（资产替换/
+    teamId 热改经签名路径触发完整重建）
+  - 渲染：近景层豁免视锥/距离剔除（唯一投影层，屏幕边缘阴影不再消失）；两个 agent
+    shader 补 DepthOnly + DepthNormals pass（SSAO/DoF/深度效果不再穿透单位）；
+    LodConfig.farIncludeDead=true（120m 尸体消失线可关）；DrawLod 缺槽位一次性告警
+  - API：UnitTypeRegistry.Register 改 internal（游戏层误用即静默停摆的陷阱面）+
+    FillGpuSettings 失配一次性 LogError；IMovementModule 补 ClearTarget + 语义
+    XML 文档 + 同队被遮蔽目标一次性告警
+  - 编辑器：示例创建器出生点按脚印推导 + 新建资产走账本配平 + 场景覆盖确认对话框；
+    BattleTelemetryHUD 改 Repaint-only + 4Hz 缓存重建（消除稳态每帧 GC 分配）；
+    ScenarioGizmos 目标球按运行时规则渲染（主开关关/被遮蔽 → 灰色 + ignored 标注）
+  - 文档：Simulation/README 决策流去 chase 残留 + 寻敌决策计数 + 巡航闭式解；
+    design.md Select 并行化与巡航复合修正；tasks.md 场景/类名标识符更新
 
-- [x] 6. 实现 FlockingModule（聚散行为）
-  - [x] 6.1 实现 DefaultFlockingModule
-    - 实现 `IFlockingModule` 接口
-    - 实现 ComputeSeparationForce：基于重叠距离和 separationStrength 计算排斥力
-    - 实现 ComputeAttractionForce：计算指向目标的吸引力
-    - 参数通过 FlockingConfig ScriptableObject 配置
-    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
+## 编辑器验收与游戏层续建
 
-  - [x]* 6.2 编写分离力单调性属性测试
-    - **Property 6: 分离力单调性**
-    - 验证 separationStrength 增大时分离力大小单调不减
-    - **Validates: Requirements 5.2**
+- [x] 10. 性能基线（Requirement 9.4；2026-07-27 用户实测验收并决定性能封版）
+  - 用户目标：200000v200000（40 万）为基础规模；阶梯 25k→50k→100k→200k/边
+  - 实测：10k/边 8.8ms 113FPS；50k/边 32.8ms 30FPS；100k/边 57.1ms 18FPS；
+    200k/边 85.4ms 12FPS。Stage6 数字对比由用户决定不再阻塞封版
+  - 50k/边起出现 GRID OVERFLOW，作为压力档已知正确性边界保留红色遥测
+  - 详细账目：Assets/Game/PerformanceBaseline.md
 
-  - [x]* 6.3 编写吸引力方向正确性属性测试
-    - **Property 7: 吸引力方向正确性**
-    - 验证吸引力方向指向目标（与 T-A 的点积 > 0）
-    - **Validates: Requirements 5.3**
+- [x] 11. 场景核对（2026-07-27 用户目检确认“感觉还行”）
+  - Game/Scenes/WarSandbox.unity 在编辑器中 Play 验证：攻方沿流场推进、接战、遥测 HUD 数据合理
+  - BattleTelemetryHUD 已挂到 manager；FlowFieldPreviewHUD 仍按需启用
 
-- [x] 7. 实现 AnimationModule（VAT 动画切换）
-  - [x] 7.1 实现 DefaultAnimationModule
-    - 实现 `IAnimationModule` 接口
-    - 实现 GetClipForState：根据 AgentState 映射到对应 VAT 片段参数
-    - 实现 AdvanceAnimationTime：推进动画时间，Dead 状态到末帧后停止，其余循环
-    - 支持按 LOD 距离降低动画更新频率
-    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5_
+- [x] 20. 战争沙盒垂直切片 v0.1（2026-07-27）
+  - 游戏层 ArmyOrder + WarSandboxBattleController：两军选择、进攻、点击移动、原地防守、撤退
+  - MassEngineManager 新增只改运行时状态的队伍导航条令与“保留命令暂停”API
+  - WarSandboxCommandHUD：部署/交战/胜负、0.5×～4×、暂停、重开、快捷键
+  - MassEngine/War Sandbox Editor：兵力、阵营、出生中心、密度、宽深比与 Auto-Fit 入口
+  - 当前军团=阵营；多军团独立导航留待 groupId/多流场设计，不伪装为已支持
 
-  - [x]* 7.2 编写状态-动画映射正确性属性测试
-    - **Property 8: 状态-动画映射正确性**
-    - 验证所有有效 AgentState 返回正确的 VATClipParams，Dead 的 loop=false
-    - **Validates: Requirements 6.1, 6.2**
+- [x] 12. 目录全量搬迁（2026-07-26 完成）
+  - 引擎 → Assets/MassEngine（8 模块 + Tests，每模块 README）；游戏层 → Assets/Game
+  - Stage1-7 历史目录归档至仓库根 ArchivedStages/（归档区零反向引用，已审计）
+  - 近景 shader 迁入 VatRender（GUID 保持，材质引用未断）；命名空间 → MassEngine
 
-  - [x]* 7.3 编写 Dead 动画时间上界属性测试
-    - **Property 9: Dead 动画时间上界**
-    - 验证 Dead 状态动画时间不超过死亡片段总时长
-    - **Validates: Requirements 6.4**
-
-- [ ] 8. Checkpoint - 确保所有独立模块编译通过并通过属性测试
-  - Ensure all tests pass, ask the user if questions arise.
-
-- [x] 9. 实现 CombatModule（战斗逻辑）
-  - [x] 9.1 实现 DefaultCombatModule
-    - 实现 `ICombatModule` 接口
-    - 实现 FindNearestEnemy：基于空间哈希邻域查询，忽略同阵营和 Dead
-    - 实现 IsInAttackRange：判断目标是否在攻击范围内
-    - 实现 ComputeDamage：根据冷却时间计算本帧伤害
-    - _Requirements: 7.1, 7.2, 7.3, 7.6_
-
-  - [x]* 9.2 编写寻敌排除不变量属性测试
-    - **Property 10: 寻敌排除不变量（Dead 与同阵营）**
-    - 验证寻敌结果排除同阵营和 Dead 状态的 Agent
-    - **Validates: Requirements 7.2, 10.4**
-
-  - [x]* 9.3 编写伤害累积线性正确性属性测试
-    - **Property 11: 伤害累积线性正确性**
-    - 验证 N 次完整攻击冷却后累积伤害 = N × attackDamage
-    - **Validates: Requirements 7.3**
-
-  - [x]* 9.4 编写 HP 归零触发死亡属性测试
-    - **Property 12: HP 归零触发死亡**
-    - 验证 HP ≤ 0 时 currentState 被设为 Dead(4)
-    - **Validates: Requirements 7.5**
-
-- [x] 10. 实现 StateMachine（状态机与优先级）
-  - [x] 10.1 实现 AgentStateMachine 静态类
-    - 实现 ValidTransitions 合法转换表
-    - 实现 TryTransition：只允许合法转换
-    - 实现 ResolveConflict：从多个并发请求中选择优先级最高的合法转换
-    - Dead 为终态，不允许任何转出
-    - _Requirements: 10.1, 10.2, 10.3, 10.4_
-
-  - [x]* 10.2 编写状态转换合法性属性测试
-    - **Property 13: 状态转换合法性**
-    - 验证 TryTransition 成功当且仅当 R 在 S 的合法转换集合中
-    - **Validates: Requirements 10.2**
-
-  - [x]* 10.3 编写并发状态请求优先级决定属性测试
-    - **Property 14: 并发状态请求优先级决定**
-    - 验证 ResolveConflict 返回所有合法转换中优先级最高的状态
-    - **Validates: Requirements 10.3**
-
-- [x] 11. 实现 FlowFieldVisualizer（流场可视化）
-  - [x] 11.1 实现 DefaultFlowFieldVisualizer
-    - 实现 `IFlowFieldVisualizer` 接口
-    - 实现 Render 方法：将流场数据渲染到 RenderTexture
-    - 支持 FlowDirection 和 DensityTarget 两种预览模式
-    - 开关关闭时不执行任何 GPU 操作
-    - _Requirements: 3.1, 3.2, 3.3, 3.4_
-
-- [x] 12. 实现 GPU 管线调度与缓冲区管理
-  - [x] 12.1 实现 MassGpuBufferManager_Stage7
-    - 管理所有 ComputeBuffer 的创建和释放
-    - 包含 AgentData 主缓冲区和 CombatBufferSet 战斗缓冲区
-    - 实现双缓冲 pendingDamage 的 swap 逻辑
-    - 实现 ReleaseAll 统一释放
-    - _Requirements: 9.2, 9.3_
-
-  - [x] 12.2 实现 ComputePipelineOrchestrator
-    - 实现 DispatchFrame 方法，严格保持 SpatialHash → RuntimeFlow → CombatSimulation → LodClassification 调度顺序
-    - 实现各阶段的 Dispatch 方法
-    - 实现 Compute Shader 引用为 null 时的跳过和错误日志
-    - _Requirements: 9.1, 9.3_
-
-  - [x] 12.3 实现 MassGpuShaderSet_Stage7（Shader 引用集合）
-    - 集中管理所有 Compute Shader 引用和 kernel index
-    - 从 Stage6 复制 shader 文件到 Stage7 目录（保持不变）
-    - _Requirements: 9.1_
-
-- [x] 13. 实现 MassGpuSystemManager_Stage7（场景入口）
-  - [x] 13.1 实现 MassGpuSystemManager_Stage7 MonoBehaviour
-    - 替代 GPUInstancingManager_Stage6 作为场景入口
-    - 持有 UnitTypeRegistry 和 ComputePipelineOrchestrator
-    - 实现 Start/Update/OnDisable 生命周期
-    - 暴露 StartBattle/StopBattle/ResetScenario API
-    - Inspector 仅保留全局配置（世界大小、LOD 距离、视锥剔除等）
-    - _Requirements: 1.1, 1.3, 9.4_
-
-  - [x] 13.2 实现 ConfigValidator 配置验证
-    - 验证 UnitTypeConfig 完整性
-    - 缺失子配置时记录警告并使用默认值
-    - unitCount ≤ 0 时报错
-    - _Requirements: 1.4_
-
-- [x] 14. 集成串联与首版单兵种骨架
-  - [x] 14.1 创建首版单兵种 UnitType 实现类
-    - 创建 `DefaultSwordUnit : UnitTypeBase`（首版单兵种实现）
-    - 在 CreateModules 中组装所有默认模块
-    - 验证单兵种从生成到战斗的完整流程可运行
-    - _Requirements: 1.2, 1.5_
-
-  - [x] 14.2 创建 Stage7 示例 ScriptableObject 配置资产
-    - 创建攻击方 UnitTypeConfig 资产（含 SpawnConfig、MovementConfig 等子配置）
-    - 创建防守方 UnitTypeConfig 资产
-    - 创建 ScenarioConfig_Stage7 资产引用两个兵种配置
-    - _Requirements: 1.4, 2.4_
-
-  - [x] 14.3 创建 Stage7 测试场景
-    - 创建 `MassGPUPhysics_Stage7/Scene/Stage7_Test.unity` 场景
-    - 配置 MassGpuSystemManager_Stage7 组件
-    - 挂载 ScenarioConfig 和全局参数
-    - 复制 Stage6 的 Shader 和 VAT 资产引用
-    - _Requirements: 9.1, 9.4_
-
-- [ ] 15. Final Checkpoint - 确保所有模块集成正确，编译通过
-  - Ensure all tests pass, ask the user if questions arise.
+- [ ] 13. 未来扩展（不阻塞当前版本）
+  - N 队 N 流场（数组化 flowFieldDirections 并按队伍派发）
+  - ~~SelectRuntimeFlowTargets 并行化~~（2026-07-27 完成，见 item 18）
+  - ~~CameraControls 改名清理~~（2026-07-27 完成，见 item 18）
 
 ## Notes
 
-- Tasks marked with `*` are optional and can be skipped for faster MVP
-- 所有代码使用 C#（Unity 2021+ 兼容语法）
-- GPU Compute Shader 文件从 Stage6 直接复制，不做修改，保持管线性能零退化
-- 首版实现单兵种骨架（DefaultSwordUnit），架构预留多兵种扩展（只需新增 UnitTypeBase 子类 + ScriptableObject 配置）
-- Property-based tests 使用 NUnit + 自定义随机输入生成（Unity Test Framework）
-- 每个 Checkpoint 确保增量验证，避免后期集成问题
-
-## Task Dependency Graph
-
-```json
-{
-  "waves": [
-    { "id": 0, "tasks": ["1.1", "1.3"] },
-    { "id": 1, "tasks": ["1.2", "1.4", "2.1"] },
-    { "id": 2, "tasks": ["2.2", "2.3", "2.4"] },
-    { "id": 3, "tasks": ["4.1", "5.1", "6.1", "7.1", "10.1", "11.1"] },
-    { "id": 4, "tasks": ["4.2", "5.2", "5.3", "6.2", "6.3", "7.2", "7.3", "10.2", "10.3"] },
-    { "id": 5, "tasks": ["9.1"] },
-    { "id": 6, "tasks": ["9.2", "9.3", "9.4"] },
-    { "id": 7, "tasks": ["12.1", "12.2", "12.3"] },
-    { "id": 8, "tasks": ["13.1", "13.2"] },
-    { "id": 9, "tasks": ["14.1", "14.2"] },
-    { "id": 10, "tasks": ["14.3"] }
-  ]
-}
-```
-
-
+- GPU shader 与 Stage6 已实质分叉（新增 DensityMap 阶段、per-unit-type settings、
+  hp 双缓冲、状态推导函数等），"与 Stage6 逐字一致"不再是本阶段的约束；9.4 的对比需
+  在文档标注偏差项。
+- 所有配置资产为只读输入；发现运行时写回配置资产的代码一律视为缺陷。

@@ -1,0 +1,23 @@
+{
+    "name": "Game.Tests",
+    "rootNamespace": "MassEngine.Game.Tests",
+    "references": [
+        "MassEngine",
+        "Game",
+        "Game.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "noEngineReferences": false
+}
