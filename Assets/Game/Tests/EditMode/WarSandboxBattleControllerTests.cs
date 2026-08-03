@@ -272,6 +272,20 @@ namespace MassEngine.Game.Tests
             Assert.That(WarSandboxMinimapProjection.ResolveContentRect(outer).height, Is.GreaterThan(0f));
         }
 
+        [TestCase(0, false, WarSandboxMinimapAction.FocusCamera)]
+        [TestCase(0, true, WarSandboxMinimapAction.MoveSelectedArmy)]
+        [TestCase(1, false, WarSandboxMinimapAction.MoveSelectedArmy)]
+        [TestCase(2, false, WarSandboxMinimapAction.None)]
+        public void MinimapPointerIntentSeparatesCameraAndOrders(
+            int mouseButton,
+            bool awaitingMoveTarget,
+            WarSandboxMinimapAction expected)
+        {
+            Assert.That(
+                WarSandboxMinimapProjection.ResolvePointerAction(mouseButton, awaitingMoveTarget),
+                Is.EqualTo(expected));
+        }
+
         [Test]
         public void BattleResultCapturesAFrozenTerminalSummary()
         {
