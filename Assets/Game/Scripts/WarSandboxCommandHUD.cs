@@ -119,11 +119,7 @@ namespace MassEngine.Game
             if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Max(1f, maxRayDistance), groundMask, QueryTriggerInteraction.Ignore))
                 return;
 
-            if (controller.IssueOrder(ArmyOrder.Move(controller.selectedTeam, hit.point)))
-            {
-                awaitingMoveTarget = false;
-                SetFeedback(FormatTeamName(controller.selectedTeam) + "：移动目标已更新");
-            }
+            IssueMoveTo(hit.point);
         }
 
         private void OnGUI()
@@ -245,6 +241,16 @@ namespace MassEngine.Game
         {
             awaitingMoveTarget = true;
             SetFeedback(FormatTeamName(controller.selectedTeam) + "：请选择移动目标");
+        }
+
+        private bool IssueMoveTo(Vector3 target)
+        {
+            if (!controller.IssueOrder(ArmyOrder.Move(controller.selectedTeam, target)))
+                return false;
+
+            awaitingMoveTarget = false;
+            SetFeedback(FormatTeamName(controller.selectedTeam) + "：移动目标已更新");
+            return true;
         }
 
         private void IssueHold()
@@ -472,7 +478,7 @@ namespace MassEngine.Game
                 Screen.width, Screen.height, minimapSize, 8f);
             Rect map = WarSandboxMinimapProjection.ResolveContentRect(outer);
             GUI.Box(outer, GUIContent.none);
-            GUI.Label(new Rect(outer.x + 8f, outer.y + 3f, outer.width - 16f, 20f), "战术地图 · 点击定位");
+            GUI.Label(new Rect(outer.x + 8f, outer.y + 3f, outer.width - 16f, 20f), "左键定位 · 右键移动");
 
             Color previous = GUI.color;
             GUI.color = new Color(0.08f, 0.1f, 0.12f, 0.92f);
@@ -491,13 +497,23 @@ namespace MassEngine.Game
             }
 
             Event current = Event.current;
-            if (current.type == EventType.MouseDown && current.button == 0 && map.Contains(current.mousePosition))
+            if (current.type == EventType.MouseDown && map.Contains(current.mousePosition))
             {
                 Vector3 point = WarSandboxMinimapProjection.MapToWorld(current.mousePosition, worldSize, map);
-                cameraFocusMode = CameraFocusMode.None;
-                cameraManager.CenterTacticalPoint(point);
-                SetFeedback("镜头定位：" + point.x.ToString("F0") + ", " + point.z.ToString("F0"));
-                current.Use();
+                WarSandboxMinimapAction action = WarSandboxMinimapProjection.ResolvePointerAction(
+                    current.button, awaitingMoveTarget);
+                if (action == WarSandboxMinimapAction.MoveSelectedArmy)
+                {
+                    if (IssueMoveTo(point))
+                        current.Use();
+                }
+                else if (action == WarSandboxMinimapAction.FocusCamera)
+                {
+                    cameraFocusMode = CameraFocusMode.None;
+                    cameraManager.CenterTacticalPoint(point);
+                    SetFeedback("镜头定位：" + point.x.ToString("F0") + ", " + point.z.ToString("F0"));
+                    current.Use();
+                }
             }
         }
 
@@ -697,8 +713,22 @@ namespace MassEngine.Game
         }
     }
 
+    public enum WarSandboxMinimapAction
+    {
+        None,
+        FocusCamera,
+        MoveSelectedArmy
+    }
+
     public static class WarSandboxMinimapProjection
     {
+        public static WarSandboxMinimapAction ResolvePointerAction(int mouseButton, bool awaitingMoveTarget)
+        {
+            if (mouseButton == 1 || (mouseButton == 0 && awaitingMoveTarget))
+                return WarSandboxMinimapAction.MoveSelectedArmy;
+            return mouseButton == 0 ? WarSandboxMinimapAction.FocusCamera : WarSandboxMinimapAction.None;
+        }
+
         public static Rect ResolveOuterRect(float screenWidth, float screenHeight, float requestedSize, float margin)
         {
             screenWidth = Mathf.Max(1f, screenWidth);
