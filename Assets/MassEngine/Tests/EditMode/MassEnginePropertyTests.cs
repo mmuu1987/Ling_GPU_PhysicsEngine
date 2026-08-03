@@ -436,6 +436,8 @@ namespace MassEngine.Tests
             Assert.NotNull(buffers.combatBuffers.hpWriteBuffer);
             Assert.AreNotSame(buffers.combatBuffers.hpReadBuffer, buffers.combatBuffers.hpWriteBuffer);
             Assert.AreNotSame(buffers.combatBuffers.pendingDamageReadBuffer, buffers.combatBuffers.pendingDamageWriteBuffer);
+            Assert.That(buffers.teamGridCountsBuffer.count, Is.EqualTo(8));
+            Assert.That(buffers.teamGridAgentIndicesBuffer.count, Is.EqualTo(32));
 
             ComputeBuffer hpReadBefore = buffers.combatBuffers.hpReadBuffer;
             ComputeBuffer damageReadBefore = buffers.combatBuffers.pendingDamageReadBuffer;

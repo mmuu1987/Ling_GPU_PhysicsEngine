@@ -13,6 +13,8 @@ void ClearGrid(uint3 id : SV_DispatchThreadID)
         return;
 
     gridCounts[id.x] = 0;
+    teamGridCounts[id.x] = 0;
+    teamGridCounts[gridCellCount + id.x] = 0;
     if (id.x == 0)
         spatialHashStats[0] = 0;
 }
@@ -38,6 +40,13 @@ void BuildSpatialHash(uint3 id : SV_DispatchThreadID)
         int ignored;
         InterlockedAdd(spatialHashStats[0], 1, ignored);
     }
+
+    uint teamSlot = teamIdReadBuffer[id.x] == defenderTeamId ? 1u : 0u;
+    uint teamCellIndex = teamSlot * gridCellCount + cellIndex;
+    uint teamCellSlot;
+    InterlockedAdd(teamGridCounts[teamCellIndex], 1, teamCellSlot);
+    if (teamCellSlot < maxAgentsPerCell)
+        teamGridAgentIndices[teamCellIndex * maxAgentsPerCell + teamCellSlot] = id.x;
 }
 
 [numthreads(64, 1, 1)]

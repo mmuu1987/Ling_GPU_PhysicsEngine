@@ -74,6 +74,8 @@ StructuredBuffer<float2> agentPositionReadBuffer;
 RWStructuredBuffer<float2> agentPositionBuffer;
 RWStructuredBuffer<uint> gridCounts;
 RWStructuredBuffer<uint> gridAgentIndices;
+RWStructuredBuffer<uint> teamGridCounts;
+RWStructuredBuffer<uint> teamGridAgentIndices;
 // [0] = agents dropped this frame because their cell was full (visibility for the
 // silent failure mode where overflow victims vanish from neighborhood queries).
 RWStructuredBuffer<int> spatialHashStats;
@@ -82,6 +84,8 @@ RWStructuredBuffer<int> spatialHashStats;
 RWStructuredBuffer<int> teamSpatialStats;
 StructuredBuffer<uint> gridCountsReadBuffer;
 StructuredBuffer<uint> gridAgentIndicesReadBuffer;
+StructuredBuffer<uint> teamGridCountsReadBuffer;
+StructuredBuffer<uint> teamGridAgentIndicesReadBuffer;
 RWStructuredBuffer<float2> flowFieldDirections;
 RWStructuredBuffer<float2> defenderFlowFieldDirections;
 Texture2D<uint> densityMap;
@@ -824,6 +828,7 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     result.nearestEnemyIndex = -1;
     result.nearestEnemyDistSqr = maxTargetRadius * maxTargetRadius;
     result.separation = 0.0;
+    uint enemyTeamSlot = IsDefenderTeam(selfIndex) ? 0u : 1u;
 
     [loop]
     for (int dz = -queryCellRadius; dz <= queryCellRadius; dz++)
@@ -836,8 +841,31 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                 continue;
 
             uint cellIndex = CellToIndex(cell);
-            uint occupantCount = min(gridCountsReadBuffer[cellIndex], maxAgentsPerCell);
+            if (searchForEnemy)
+            {
+                uint enemyCellIndex = enemyTeamSlot * gridCellCount + cellIndex;
+                uint enemyCount = min(teamGridCountsReadBuffer[enemyCellIndex], maxAgentsPerCell);
+                for (uint i = 0; i < enemyCount; i++)
+                {
+                    uint otherIndex = teamGridAgentIndicesReadBuffer[enemyCellIndex * maxAgentsPerCell + i];
+                    if (!IsAliveIndex(otherIndex))
+                        continue;
 
+                    float2 toOther = agentPositionReadBuffer[otherIndex] - selfPosition;
+                    float distSqr = dot(toOther, toOther);
+                    if (distSqr < result.nearestEnemyDistSqr &&
+                        TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
+                    {
+                        result.nearestEnemyDistSqr = distSqr;
+                        result.nearestEnemyIndex = (int)otherIndex;
+                    }
+                }
+            }
+
+            if (abs(dx) > 1 || abs(dz) > 1)
+                continue;
+
+            uint occupantCount = min(gridCountsReadBuffer[cellIndex], maxAgentsPerCell);
             for (uint i = 0; i < occupantCount; i++)
             {
                 uint otherIndex = gridAgentIndicesReadBuffer[cellIndex * maxAgentsPerCell + i];
@@ -847,18 +875,6 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                 float2 otherPosition = agentPositionReadBuffer[otherIndex];
                 float2 toOther = otherPosition - selfPosition;
                 float distSqr = dot(toOther, toOther);
-
-                if (searchForEnemy &&
-                    distSqr < result.nearestEnemyDistSqr &&
-                    TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
-                {
-                    result.nearestEnemyDistSqr = distSqr;
-                    result.nearestEnemyIndex = (int)otherIndex;
-                }
-
-                if (abs(dx) > 1 || abs(dz) > 1)
-                    continue;
-
                 float minDistance = selfRadius + GetAgentRadius(otherIndex);
                 float minDistanceSqr = minDistance * minDistance;
                 if (distSqr >= minDistanceSqr)

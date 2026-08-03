@@ -9,7 +9,8 @@
 | `FlowFieldPreviewHUD.cs` | 屏幕角落展示攻/防流场预览纹理（预览写入由 RuntimeFlowConfig.runtimeFlowPreviewEnabled 门控，关闭时 GPU 零开销） |
 
 HUD 还会在空间哈希格满溢出时显示红色告警（GRID OVERFLOW: N/frame）——溢出的单位
-会静默掉出邻域查询（分离失效、穿插成团），看到该行就调大 maxAgentsPerCell 或 cellSize。
+会掉出混合分离查询（可能穿插成团）；战斗寻敌使用分阵营格，不会因友军拥挤丢失少数敌军。
+看到该行仍应按性能/队形需要调大 maxAgentsPerCell 或调整 cellSize。
 
 注意：存活数来自异步回读，比仿真滞后几帧；这是特性不是缺陷。
 

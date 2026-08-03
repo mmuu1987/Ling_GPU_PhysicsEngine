@@ -8,11 +8,15 @@
 |---|---|---|---|
 | `gridCounts` | `uint[cellCount]`，每格占用数 | `BuildSpatialHash`（原子加） | Simulation 主 kernel |
 | `gridAgentIndices` | `uint[cellCount × maxAgentsPerCell]` | `BuildSpatialHash` | Simulation 主 kernel |
+| `teamGridCounts` | `uint[2 × cellCount]`，每阵营每格占用数 | `BuildSpatialHash`（原子加） | 战斗寻敌 |
+| `teamGridAgentIndices` | `uint[2 × cellCount × maxAgentsPerCell]` | `BuildSpatialHash` | 战斗寻敌 |
 
 - 格子坐标：`cell = floor((posXZ - gridOrigin) / cellSize)`，越界钳制到边缘格。
 - 只有**存活**（上帧 hp 快照 > 0）的 Agent 入格——死者自动从所有邻域查询消失（1 帧延迟）。
-- 格满（超过 `maxAgentsPerCell`）时溢出的 Agent 静默丢弃本帧登记：
-  拥挤战场请调大 `SimulationConfig.maxAgentsPerCell`（默认 64）。
+- 混合格满（超过 `maxAgentsPerCell`）时，溢出的 Agent 不参与本帧分离查询；HUD 会报告
+  `GRID OVERFLOW`。战斗寻敌使用独立的分阵营格，少数敌军不会再被大量友军挤出目标索引。
+- 单阵营在同一格超过容量时仍只保留该阵营的前 `maxAgentsPerCell` 个候选；候选死亡后每帧
+  重建会继续补入其余存活单位，因此不会形成永久不可攻击的残局单位。
 
 ## Kernel
 

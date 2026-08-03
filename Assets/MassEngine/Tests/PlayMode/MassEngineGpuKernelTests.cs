@@ -62,6 +62,8 @@ namespace MassEngine.Tests
             if (!SystemInfo.supportsComputeShaders)
                 Assert.Ignore("Compute shaders unavailable on this device; GPU kernel tests skipped.");
 
+            gridMaxAgentsPerCell = 16;
+
             ComputeShader spatialHash = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "Spatial/Shaders/AgentSpatialHash.compute");
             ComputeShader runtimeFlow = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "FlowField/Shaders/AgentRuntimeFlow.compute");
             ComputeShader combat = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "Simulation/Shaders/AgentCombatSimulation.compute");
@@ -719,6 +721,67 @@ namespace MassEngine.Tests
             Assert.AreEqual(128, type1Instances, "unit type 1 classify count (interleaved unitTypeIndexBuffer)");
 
             gridMaxAgentsPerCell = 16;
+        }
+
+        [UnityTest]
+        public IEnumerator TeamCombatGridKeepsOutnumberedEnemyTargetableDuringMixedGridOverflow()
+        {
+            buffers.ReleaseAll();
+            registry.ReleaseAll();
+            foreach (ScriptableObject asset in createdConfigs)
+            {
+                if (asset != null)
+                    Object.DestroyImmediate(asset);
+            }
+            Object.DestroyImmediate(scenario);
+
+            const int denseAttackerCount = 64;
+            BuildScenario(denseAttackerCount, 1);
+            buffers = new MassGpuBufferManager();
+            orchestrator = new ComputePipelineOrchestrator(shaderSet, buffers);
+            gridMaxAgentsPerCell = 1;
+            buffers.Allocate(fixtureTotalAgents, 64, gridMaxAgentsPerCell, 16, 16, registry.UnitTypeCount);
+            registry.InitializeAll(buffers, orchestrator);
+
+            AgentData[] agents = new AgentData[fixtureTotalAgents];
+            int[] teamIds = new int[fixtureTotalAgents];
+            int[] hp = new int[fixtureTotalAgents];
+            int[] unitTypeIndices = new int[fixtureTotalAgents];
+            registry.GenerateAgents(agents);
+            registry.FillCombatArrays(teamIds, hp, unitTypeIndices);
+            for (int i = 0; i < fixtureTotalAgents; i++)
+            {
+                agents[i].position = Vector3.zero;
+                agents[i].velocity = Vector3.zero;
+            }
+
+            buffers.UploadInitialData(agents, teamIds, hp, unitTypeIndices);
+            settingsCache = new UnitTypeGpuSettings[registry.UnitTypeCount];
+            registry.FillGpuSettings(settingsCache);
+            buffers.UploadUnitTypeSettings(settingsCache);
+            dispatchedFrames = 0;
+
+            // Build the hashes without combat first. The mixed grid can hold only one
+            // of 65 occupants, while the defender-specific cell must still retain the
+            // lone defender for attacker target queries.
+            DispatchOneFrame(battleStarted: false);
+            int[] teamCounts = new int[buffers.teamGridCountsBuffer.count];
+            int[] teamIndices = new int[buffers.teamGridAgentIndicesBuffer.count];
+            buffers.teamGridCountsBuffer.GetData(teamCounts);
+            buffers.teamGridAgentIndicesBuffer.GetData(teamIndices);
+            const int occupiedCell = 4 + 4 * 8;
+            int defenderCell = 64 + occupiedCell;
+            Assert.That(teamCounts[defenderCell], Is.EqualTo(1));
+            Assert.That(teamIds[teamIndices[defenderCell]], Is.EqualTo(1));
+
+            for (int frame = 0; frame < 24; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            int[] resultHp = new int[fixtureTotalAgents];
+            buffers.combatBuffers.hpReadBuffer.GetData(resultHp);
+            Assert.That(resultHp[denseAttackerCount], Is.LessThanOrEqualTo(0),
+                "the lone defender became untargetable when attackers overflowed the mixed spatial cell");
         }
 
         // ------------------------------------------------------------------

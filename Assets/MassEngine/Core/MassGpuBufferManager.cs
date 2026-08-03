@@ -19,6 +19,8 @@ namespace MassEngine
         public ComputeBuffer agentPositionWriteBuffer;
         public ComputeBuffer gridCountsBuffer;
         public ComputeBuffer gridAgentIndicesBuffer;
+        public ComputeBuffer teamGridCountsBuffer;
+        public ComputeBuffer teamGridAgentIndicesBuffer;
         public ComputeBuffer flowFieldDirectionsBuffer;
         public ComputeBuffer defenderFlowFieldDirectionsBuffer;
         public ComputeBuffer runtimeAttackerTargetDensityBuffer;
@@ -100,6 +102,16 @@ namespace MassEngine
             }
 
             gridAgentIndicesBuffer = new ComputeBuffer(GridCellCount * MaxAgentsPerCell, sizeof(int));
+            long teamGridIndexCapacity = gridIndexCapacity * 2L;
+            if (teamGridIndexCapacity > int.MaxValue / sizeof(int))
+            {
+                Debug.LogError("MassEngine: team combat grid would need " + teamGridIndexCapacity + " entries; refusing to allocate. Shrink simulationWorldSize, raise cellSize, or lower maxAgentsPerCell.");
+                ReleaseAll();
+                return;
+            }
+
+            teamGridCountsBuffer = new ComputeBuffer(GridCellCount * 2, sizeof(int));
+            teamGridAgentIndicesBuffer = new ComputeBuffer((int)teamGridIndexCapacity, sizeof(int));
             flowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
             defenderFlowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
             runtimeAttackerTargetDensityBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(uint));
@@ -126,6 +138,7 @@ namespace MassEngine
             flowFieldDirectionsBuffer.SetData(new Vector2[safeFlowCellCount]);
             defenderFlowFieldDirectionsBuffer.SetData(new Vector2[safeFlowCellCount]);
             gridCountsBuffer.SetData(new int[GridCellCount]);
+            teamGridCountsBuffer.SetData(new int[GridCellCount * 2]);
 
             combatBuffers.teamIdBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.hpReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
@@ -238,6 +251,8 @@ namespace MassEngine
             ReleaseBuffer(ref agentPositionWriteBuffer);
             ReleaseBuffer(ref gridCountsBuffer);
             ReleaseBuffer(ref gridAgentIndicesBuffer);
+            ReleaseBuffer(ref teamGridCountsBuffer);
+            ReleaseBuffer(ref teamGridAgentIndicesBuffer);
             ReleaseBuffer(ref flowFieldDirectionsBuffer);
             ReleaseBuffer(ref defenderFlowFieldDirectionsBuffer);
             ReleaseBuffer(ref runtimeAttackerTargetDensityBuffer);
