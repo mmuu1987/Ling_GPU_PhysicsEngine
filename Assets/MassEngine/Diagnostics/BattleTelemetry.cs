@@ -22,6 +22,7 @@ namespace MassEngine
         public int aliveDefenders;
         public int totalAgents;
         public int gridOverflowPerFrame;
+        public int peakGridOverflowPerFrame;
         public float battleSeconds;
         public int attackerFlowRebuilds;
         public int defenderFlowRebuilds;
@@ -246,7 +247,10 @@ namespace MassEngine
 
             NativeArray<int> stats = request.GetData<int>();
             if (stats.Length > 0)
+            {
                 snapshot.gridOverflowPerFrame = stats[0];
+                snapshot.peakGridOverflowPerFrame = Mathf.Max(snapshot.peakGridOverflowPerFrame, stats[0]);
+            }
             if (stats.Length > 3 && stats[3] != MassGpuBufferManager.DeviceResetSentinel)
                 DeviceResetSuspected = true;
         }

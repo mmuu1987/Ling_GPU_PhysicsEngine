@@ -23,6 +23,52 @@ namespace MassEngine.Game
     }
 
     [Serializable]
+    public struct WarSandboxBattleResult
+    {
+        public WarSandboxBattlePhase phase;
+        public int attackerInitial;
+        public int defenderInitial;
+        public int attackerSurvivors;
+        public int defenderSurvivors;
+        public float battleSeconds;
+        public int attackerFlowRebuilds;
+        public int defenderFlowRebuilds;
+        public int peakGridOverflowPerFrame;
+        public bool valid;
+
+        public int AttackerCasualties
+        {
+            get { return Mathf.Max(0, attackerInitial - attackerSurvivors); }
+        }
+
+        public int DefenderCasualties
+        {
+            get { return Mathf.Max(0, defenderInitial - defenderSurvivors); }
+        }
+
+        public static WarSandboxBattleResult Capture(
+            WarSandboxBattlePhase phase,
+            int attackerInitial,
+            int defenderInitial,
+            BattleTelemetrySnapshot telemetry)
+        {
+            return new WarSandboxBattleResult
+            {
+                phase = phase,
+                attackerInitial = Mathf.Max(0, attackerInitial),
+                defenderInitial = Mathf.Max(0, defenderInitial),
+                attackerSurvivors = Mathf.Clamp(telemetry.aliveAttackers, 0, Mathf.Max(0, attackerInitial)),
+                defenderSurvivors = Mathf.Clamp(telemetry.aliveDefenders, 0, Mathf.Max(0, defenderInitial)),
+                battleSeconds = Mathf.Max(0f, telemetry.battleSeconds),
+                attackerFlowRebuilds = Mathf.Max(0, telemetry.attackerFlowRebuilds),
+                defenderFlowRebuilds = Mathf.Max(0, telemetry.defenderFlowRebuilds),
+                peakGridOverflowPerFrame = Mathf.Max(0, telemetry.peakGridOverflowPerFrame),
+                valid = true
+            };
+        }
+    }
+
+    [Serializable]
     public struct ArmyOrder
     {
         public int teamId;

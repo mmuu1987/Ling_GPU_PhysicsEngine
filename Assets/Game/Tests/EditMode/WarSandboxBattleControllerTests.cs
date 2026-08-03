@@ -272,6 +272,44 @@ namespace MassEngine.Game.Tests
             Assert.That(WarSandboxMinimapProjection.ResolveContentRect(outer).height, Is.GreaterThan(0f));
         }
 
+        [Test]
+        public void BattleResultCapturesAFrozenTerminalSummary()
+        {
+            BattleTelemetrySnapshot telemetry = new BattleTelemetrySnapshot
+            {
+                aliveAttackers = 73,
+                aliveDefenders = 0,
+                battleSeconds = 125.8f,
+                attackerFlowRebuilds = 4,
+                defenderFlowRebuilds = 7,
+                peakGridOverflowPerFrame = 12,
+                valid = true
+            };
+
+            WarSandboxBattleResult result = WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.AttackerVictory, 120, 80, telemetry);
+            telemetry.aliveAttackers = 1;
+
+            Assert.That(result.valid, Is.True);
+            Assert.That(result.phase, Is.EqualTo(WarSandboxBattlePhase.AttackerVictory));
+            Assert.That(result.attackerSurvivors, Is.EqualTo(73));
+            Assert.That(result.AttackerCasualties, Is.EqualTo(47));
+            Assert.That(result.DefenderCasualties, Is.EqualTo(80));
+            Assert.That(result.battleSeconds, Is.EqualTo(125.8f));
+            Assert.That(result.peakGridOverflowPerFrame, Is.EqualTo(12));
+        }
+
+        [TestCase(320f, 240f, 72f)]
+        [TestCase(997f, 635f, 689f)]
+        public void BattleReportLayoutStaysOnScreen(float screenWidth, float screenHeight, float commandPanelX)
+        {
+            Rect report = WarSandboxBattleReportLayout.ResolveRect(screenWidth, screenHeight, commandPanelX, 8f);
+            Assert.That(report.xMin, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(report.yMin, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(report.xMax, Is.LessThanOrEqualTo(screenWidth));
+            Assert.That(report.yMax, Is.LessThanOrEqualTo(screenHeight));
+        }
+
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
             MethodInfo method = typeof(MassEngineManager).GetMethod(
