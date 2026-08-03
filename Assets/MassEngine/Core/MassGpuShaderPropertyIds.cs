@@ -29,6 +29,7 @@ namespace MassEngine
         public static readonly int GridCountsId = Shader.PropertyToID("gridCounts");
         public static readonly int GridAgentIndicesId = Shader.PropertyToID("gridAgentIndices");
         public static readonly int SpatialHashStatsId = Shader.PropertyToID("spatialHashStats");
+        public static readonly int TeamSpatialStatsId = Shader.PropertyToID("teamSpatialStats");
         public static readonly int GridCountsReadBufferId = Shader.PropertyToID("gridCountsReadBuffer");
         public static readonly int GridAgentIndicesReadBufferId = Shader.PropertyToID("gridAgentIndicesReadBuffer");
         public static readonly int GridCellCountId = Shader.PropertyToID("gridCellCount");

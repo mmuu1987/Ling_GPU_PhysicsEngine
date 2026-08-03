@@ -233,6 +233,20 @@ namespace MassEngine.Game.Tests
                 Is.EqualTo(expectedPitch).Within(0.001f));
         }
 
+        [Test]
+        public void CameraFollowIsFrameRateIndependentAndStepBounded()
+        {
+            Vector3 current = Vector3.zero;
+            Vector3 target = new Vector3(1000f, 0f, 0f);
+            Vector3 step = CameraMotionSafety.ResolveFollowStep(current, target, 5f, 0.016f, 20f);
+            Assert.That(step.x, Is.GreaterThan(0f));
+            Assert.That(step.magnitude, Is.LessThanOrEqualTo(20f));
+
+            Vector3 stalledFrame = CameraMotionSafety.ResolveFollowStep(current, target, 5f, 10f, 20f);
+            Assert.That(stalledFrame.magnitude, Is.EqualTo(20f).Within(0.001f));
+            Assert.That(CameraMotionSafety.ResolveFollowStep(current, new Vector3(float.NaN, 0f, 0f), 5f, 0.016f, 20f), Is.EqualTo(Vector3.zero));
+        }
+
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
             MethodInfo method = typeof(MassEngineManager).GetMethod(

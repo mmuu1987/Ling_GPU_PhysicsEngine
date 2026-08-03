@@ -47,6 +47,22 @@ public static class CameraMotionSafety
         return position;
     }
 
+    public static Vector3 ResolveFollowStep(
+        Vector3 current,
+        Vector3 target,
+        float sharpness,
+        float deltaTime,
+        float maxStep)
+    {
+        if (!IsFinite(current) || !IsFinite(target))
+            return Vector3.zero;
+
+        sharpness = Mathf.Clamp(IsFinite(sharpness) ? sharpness : 0f, 0f, 30f);
+        deltaTime = Mathf.Clamp(IsFinite(deltaTime) ? deltaTime : 0f, 0f, 0.1f);
+        float blend = 1f - Mathf.Exp(-sharpness * deltaTime);
+        return ClampStep((target - current) * blend, maxStep);
+    }
+
     public static bool IsFinite(float value)
     {
         return !float.IsNaN(value) && !float.IsInfinity(value);

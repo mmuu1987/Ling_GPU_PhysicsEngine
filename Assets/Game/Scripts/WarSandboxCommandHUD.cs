@@ -16,6 +16,16 @@ namespace MassEngine.Game
         [Min(1f)] public float maxRayDistance = 2000f;
         [Min(240f)] public float panelWidth = 300f;
         public bool showHotkeys = true;
+        [Min(0.1f)] public float cameraFollowSharpness = 5f;
+        [Min(0f)] public float liveBoundsPadding = 12f;
+
+        private enum CameraFocusMode
+        {
+            None,
+            Attackers,
+            Defenders,
+            Both
+        }
 
         private bool awaitingMoveTarget;
         private ClickFlowTargetSetter legacyClickSetter;
@@ -23,6 +33,7 @@ namespace MassEngine.Game
         private MyCameraManager cameraManager;
         private string commandFeedback;
         private float feedbackUntil;
+        private CameraFocusMode cameraFocusMode;
 
         private void Reset()
         {
@@ -57,7 +68,11 @@ namespace MassEngine.Game
                 Input.GetMouseButton(1) ||
                 Input.GetMouseButton(2) ||
                 Input.GetKey(KeyCode.LeftAlt) ||
-                Input.GetKey(KeyCode.RightAlt);
+                Input.GetKey(KeyCode.RightAlt) ||
+                !Mathf.Approximately(Input.GetAxis("Mouse ScrollWheel"), 0f);
+
+            if (cameraNavigation)
+                cameraFocusMode = CameraFocusMode.None;
 
             if (Input.GetKeyDown(KeyCode.Alpha1))
                 controller.SelectArmy(0);
@@ -88,6 +103,8 @@ namespace MassEngine.Game
                 FocusBattlefield();
             if (Input.GetKeyDown(KeyCode.F))
                 FocusArmy(controller.selectedTeam);
+
+            UpdateCameraFollow();
 
             if (!awaitingMoveTarget || !Input.GetMouseButtonDown(0) || IsMouseOverPanel())
                 return;
@@ -208,7 +225,7 @@ namespace MassEngine.Game
             else if (Time.unscaledTime < feedbackUntil)
                 GUILayout.Label(commandFeedback, GUILayout.Height(compactLayout ? 17f : 20f));
             else if (showHotkeys && !compactLayout)
-                GUILayout.Label("F当前/F1攻/F2守/F3全景 · Enter开战 · A/M/H/R下令");
+                GUILayout.Label("F当前/F1攻/F2守/F3双方跟随 · Enter开战 · A/M/H/R下令");
 
             GUILayout.EndArea();
         }
@@ -286,12 +303,14 @@ namespace MassEngine.Game
         private void FocusArmy(int teamId)
         {
             ResolveReferences();
-            if (cameraManager == null || !TryResolveArmyBounds(teamId, out Bounds bounds))
+            if (cameraManager == null ||
+                (!TryResolveLiveArmyBounds(teamId, out Bounds bounds) && !TryResolveArmyBounds(teamId, out bounds)))
                 return;
 
             controller.SelectArmy(teamId);
-            cameraManager.FocusTacticalBounds(bounds);
-            SetFeedback("镜头聚焦：" + FormatTeamName(teamId));
+            cameraFocusMode = teamId == 0 ? CameraFocusMode.Attackers : CameraFocusMode.Defenders;
+            cameraManager.FocusTacticalBounds(ExpandLiveBounds(bounds));
+            SetFeedback("镜头跟随：" + FormatTeamName(teamId));
         }
 
         private void FocusBattlefield()
@@ -300,22 +319,69 @@ namespace MassEngine.Game
             if (cameraManager == null || controller.manager == null)
                 return;
 
-            SimulationConfig simulation = controller.manager.systemConfig != null
-                ? controller.manager.systemConfig.simulationConfig
-                : null;
             Bounds bounds;
-            if (simulation != null)
+            if (!TryResolveLiveCombinedArmyBounds(out bounds) && !TryResolveCombinedArmyBounds(out bounds))
             {
+                SimulationConfig simulation = controller.manager.systemConfig != null
+                    ? controller.manager.systemConfig.simulationConfig
+                    : null;
+                if (simulation == null)
+                    return;
                 Vector2 size = simulation.simulationWorldSize;
                 bounds = new Bounds(Vector3.zero, new Vector3(size.x, 40f, size.y));
             }
-            else if (!TryResolveCombinedArmyBounds(out bounds))
-            {
-                return;
-            }
 
-            cameraManager.FocusTacticalBounds(bounds);
-            SetFeedback("镜头：全战场");
+            cameraFocusMode = CameraFocusMode.Both;
+            cameraManager.FocusTacticalBounds(ExpandLiveBounds(bounds));
+            SetFeedback("镜头跟随：双方战场");
+        }
+
+        private void UpdateCameraFollow()
+        {
+            if (cameraFocusMode == CameraFocusMode.None || cameraManager == null)
+                return;
+
+            bool resolved;
+            Bounds bounds;
+            if (cameraFocusMode == CameraFocusMode.Both)
+                resolved = TryResolveLiveCombinedArmyBounds(out bounds);
+            else
+                resolved = TryResolveLiveArmyBounds(cameraFocusMode == CameraFocusMode.Attackers ? 0 : 1, out bounds);
+
+            if (resolved)
+                cameraManager.FollowTacticalBounds(ExpandLiveBounds(bounds), cameraFollowSharpness);
+        }
+
+        private bool TryResolveLiveArmyBounds(int teamId, out Bounds bounds)
+        {
+            bounds = default;
+            if (controller == null)
+                return false;
+
+            BattleTelemetrySnapshot snapshot = controller.TelemetrySnapshot;
+            TeamSpatialTelemetry team = teamId == 0 ? snapshot.attackers : snapshot.defenders;
+            if (!snapshot.valid || !team.valid)
+                return false;
+
+            bounds = team.bounds;
+            return true;
+        }
+
+        private bool TryResolveLiveCombinedArmyBounds(out Bounds bounds)
+        {
+            bool hasAttackers = TryResolveLiveArmyBounds(0, out Bounds attackers);
+            bool hasDefenders = TryResolveLiveArmyBounds(1, out Bounds defenders);
+            bounds = hasAttackers ? attackers : defenders;
+            if (hasAttackers && hasDefenders)
+                bounds.Encapsulate(defenders);
+            return hasAttackers || hasDefenders;
+        }
+
+        private Bounds ExpandLiveBounds(Bounds bounds)
+        {
+            float padding = Mathf.Max(0f, liveBoundsPadding);
+            bounds.Expand(new Vector3(padding * 2f, 0f, padding * 2f));
+            return bounds;
         }
 
         private bool TryResolveArmyBounds(int teamId, out Bounds bounds)
