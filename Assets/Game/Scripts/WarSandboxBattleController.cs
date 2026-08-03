@@ -26,10 +26,12 @@ namespace MassEngine.Game
         };
 
         private WarSandboxBattlePhase phase = WarSandboxBattlePhase.Setup;
+        private WarSandboxBattleResult battleResult;
         private float simulationSpeed = 1f;
         private bool initialized;
 
         public WarSandboxBattlePhase Phase { get { return phase; } }
+        public WarSandboxBattleResult BattleResult { get { return battleResult; } }
         public float SimulationSpeed { get { return simulationSpeed; } }
         public ArmyRuntimeState SelectedArmy { get { return GetArmy(selectedTeam); } }
         public BattleTelemetrySnapshot TelemetrySnapshot
@@ -218,6 +220,7 @@ namespace MassEngine.Game
             simulationSpeed = 1f;
             Time.timeScale = 1f;
             phase = WarSandboxBattlePhase.Setup;
+            battleResult = default;
             initialized = false;
             RebuildArmyStates();
         }
@@ -281,6 +284,11 @@ namespace MassEngine.Game
                     ? WarSandboxBattlePhase.DefenderVictory
                     : WarSandboxBattlePhase.AttackerVictory;
 
+            battleResult = WarSandboxBattleResult.Capture(
+                phase,
+                armies[0].initialUnitCount,
+                armies[1].initialUnitCount,
+                snapshot);
             manager.PauseBattle();
         }
 

@@ -204,6 +204,7 @@ namespace MassEngine
         {
             SetBuffer(shaders.SpatialHashShader, shaders.ClearGrid, AgentBufferId, buffers.agentBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.ClearGrid, GridCountsId, buffers.gridCountsBuffer);
+            SetBuffer(shaders.SpatialHashShader, shaders.ClearGrid, TeamGridCountsId, buffers.teamGridCountsBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.ClearGrid, SpatialHashStatsId, buffers.spatialHashStatsBuffer);
 
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, AgentBufferId, buffers.agentBuffer);
@@ -211,6 +212,9 @@ namespace MassEngine
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, GridCountsId, buffers.gridCountsBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, GridAgentIndicesId, buffers.gridAgentIndicesBuffer);
+            SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, TeamGridCountsId, buffers.teamGridCountsBuffer);
+            SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, TeamGridAgentIndicesId, buffers.teamGridAgentIndicesBuffer);
+            SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, SpatialHashStatsId, buffers.spatialHashStatsBuffer);
         }
 
@@ -286,6 +290,8 @@ namespace MassEngine
             SetBuffer(combat, simulate, AgentPositionBufferId, buffers.agentPositionWriteBuffer);
             SetBuffer(combat, simulate, GridCountsReadBufferId, buffers.gridCountsBuffer);
             SetBuffer(combat, simulate, GridAgentIndicesReadBufferId, buffers.gridAgentIndicesBuffer);
+            SetBuffer(combat, simulate, TeamGridCountsReadBufferId, buffers.teamGridCountsBuffer);
+            SetBuffer(combat, simulate, TeamGridAgentIndicesReadBufferId, buffers.teamGridAgentIndicesBuffer);
             SetBuffer(combat, simulate, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
             SetBuffer(combat, simulate, HpBufferId, buffers.combatBuffers.hpWriteBuffer);
             SetBuffer(combat, simulate, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);

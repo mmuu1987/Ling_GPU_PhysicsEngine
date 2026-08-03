@@ -231,6 +231,7 @@ namespace MassEngine.Game
                 GUILayout.Label("F当前/F1攻/F2守/F3双方跟随 · Enter开战 · A/M/H/R下令");
 
             GUILayout.EndArea();
+            DrawBattleResultReport();
         }
 
         private void IssueAttack()
@@ -283,6 +284,7 @@ namespace MassEngine.Game
         {
             Vector2 guiMouse = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
             return ResolvePanelRect().Contains(guiMouse) ||
+                   (controller.BattleResult.valid && ResolveBattleResultRect().Contains(guiMouse)) ||
                    (showMinimap && WarSandboxMinimapProjection.ResolveOuterRect(
                        Screen.width, Screen.height, minimapSize, 8f).Contains(guiMouse));
         }
@@ -293,6 +295,78 @@ namespace MassEngine.Game
             float preferredHeight = Screen.height < 340f ? 276f : 324f;
             float height = Mathf.Min(preferredHeight, Mathf.Max(200f, Screen.height - 16f));
             return new Rect(Mathf.Max(8f, Screen.width - width - 8f), 8f, width, height);
+        }
+
+        private Rect ResolveBattleResultRect()
+        {
+            return WarSandboxBattleReportLayout.ResolveRect(
+                Screen.width, Screen.height, ResolvePanelRect().x, 8f);
+        }
+
+        private void DrawBattleResultReport()
+        {
+            WarSandboxBattleResult result = controller.BattleResult;
+            if (!result.valid)
+                return;
+
+            Rect panel = ResolveBattleResultRect();
+            GUI.Box(panel, GUIContent.none);
+            GUILayout.BeginArea(new Rect(panel.x + 12f, panel.y + 8f, panel.width - 24f, panel.height - 16f));
+
+            GUIStyle titleStyle = new GUIStyle(GUI.skin.label)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold,
+                fontSize = 18
+            };
+            GUILayout.Label(FormatResultTitle(result.phase), titleStyle, GUILayout.Height(26f));
+            GUILayout.Label("\u6218\u6597\u65f6\u957f  " + FormatBattleTime(result.battleSeconds));
+            GUILayout.Label(
+                "\u653b\u65b9  \u5e78\u5b58 " + result.attackerSurvivors + "/" + result.attackerInitial +
+                "    \u4f24\u4ea1 " + result.AttackerCasualties);
+            GUILayout.Label(
+                "\u5b88\u65b9  \u5e78\u5b58 " + result.defenderSurvivors + "/" + result.defenderInitial +
+                "    \u4f24\u4ea1 " + result.DefenderCasualties);
+            GUILayout.Label(
+                "\u6d41\u573a\u91cd\u5efa  \u653b " + result.attackerFlowRebuilds +
+                "  |  \u5b88 " + result.defenderFlowRebuilds);
+
+            Color previous = GUI.contentColor;
+            GUI.contentColor = result.peakGridOverflowPerFrame > 0
+                ? new Color(1f, 0.45f, 0.3f)
+                : new Color(0.55f, 1f, 0.6f);
+            GUILayout.Label("\u7f51\u683c\u6ea2\u51fa\u5cf0\u503c  " + result.peakGridOverflowPerFrame + "/\u5e27");
+            GUI.contentColor = previous;
+
+            GUILayout.FlexibleSpace();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("\u518d\u6765\u4e00\u5c40", GUILayout.Height(28f)))
+                StartOrRestartDefaultBattle();
+            if (GUILayout.Button("\u8fd4\u56de\u90e8\u7f72", GUILayout.Height(28f)))
+            {
+                awaitingMoveTarget = false;
+                controller.ResetBattle();
+                FocusBattlefield();
+                SetFeedback("\u5df2\u8fd4\u56de\u90e8\u7f72\u9636\u6bb5");
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.EndArea();
+        }
+
+        private static string FormatResultTitle(WarSandboxBattlePhase value)
+        {
+            switch (value)
+            {
+                case WarSandboxBattlePhase.AttackerVictory: return "\u653b\u65b9\u80dc\u5229";
+                case WarSandboxBattlePhase.DefenderVictory: return "\u5b88\u65b9\u80dc\u5229";
+                default: return "\u540c\u5f52\u4e8e\u5c3d";
+            }
+        }
+
+        private static string FormatBattleTime(float seconds)
+        {
+            int totalSeconds = Mathf.Max(0, Mathf.FloorToInt(seconds));
+            return (totalSeconds / 60).ToString("00") + ":" + (totalSeconds % 60).ToString("00");
         }
 
         private void ResolveReferences()
@@ -659,6 +733,24 @@ namespace MassEngine.Game
                 Mathf.Lerp(-worldSize.x * 0.5f, worldSize.x * 0.5f, normalizedX),
                 0f,
                 Mathf.Lerp(-worldSize.y * 0.5f, worldSize.y * 0.5f, normalizedZ));
+        }
+    }
+
+    public static class WarSandboxBattleReportLayout
+    {
+        public static Rect ResolveRect(float screenWidth, float screenHeight, float commandPanelX, float margin)
+        {
+            screenWidth = Mathf.Max(1f, screenWidth);
+            screenHeight = Mathf.Max(1f, screenHeight);
+            margin = Mathf.Clamp(margin, 0f, Mathf.Min(screenWidth, screenHeight) * 0.1f);
+
+            float availableLeftWidth = Mathf.Max(1f, commandPanelX - margin * 2f);
+            float width = Mathf.Min(420f, Mathf.Max(240f, availableLeftWidth));
+            width = Mathf.Min(width, Mathf.Max(1f, screenWidth - margin * 2f));
+            float height = Mathf.Min(224f, Mathf.Max(1f, screenHeight - margin * 2f));
+            float leftRegionCenter = margin + availableLeftWidth * 0.5f;
+            float x = Mathf.Clamp(leftRegionCenter - width * 0.5f, margin, Mathf.Max(margin, screenWidth - width - margin));
+            return new Rect(x, margin, width, height);
         }
     }
 }
