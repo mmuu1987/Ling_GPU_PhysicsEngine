@@ -384,6 +384,20 @@ public class MyCameraManager : MonoBehaviour
         ApplyTranslation(step, true);
     }
 
+    public void CenterTacticalPoint(Vector3 point)
+    {
+        if (ControlledCamera == null || _point == null || !CameraMotionSafety.IsFinite(point))
+            return;
+
+        Vector3 target = CameraMotionSafety.ClampWorldPosition(point, MaxWorldCoordinate);
+        Vector3 offset = target - _point.position;
+        ControlledCamera.transform.position = CameraMotionSafety.ClampWorldPosition(
+            ControlledCamera.transform.position + offset,
+            MaxWorldCoordinate);
+        _point.position = target;
+        CaptureSafeTransform();
+    }
+
     private bool IsMouseInsideInputArea()
     {
         if (!RequireMouseInsideScreen)

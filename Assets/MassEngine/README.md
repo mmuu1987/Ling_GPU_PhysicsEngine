@@ -96,7 +96,8 @@ C# 侧 `AgentStateMachine` 是该 GPU 语义的镜像规格（供测试与工具
   `Core/Shaders/AgentDataCommon.hlsl`（拆成多 pass 会引入额外带宽开销，当前不拆）。
 - hp/pendingDamage/position 三组双缓冲：邻居对"本帧死亡"的感知有确定性的
   1 帧延迟，换取 dispatch 内零竞态。
-- 性能基线（对比 Stage6 的 90% 承诺）尚待在编辑器中用 10000v10000 实测。
+- 性能基线已完成并封版：默认 10000v10000 为 113 FPS，50k/边约 30 FPS；
+  更大规模作为压力/容量档，详见 `../Game/PerformanceBaseline.md`。
 
 ## 文档索引
 
