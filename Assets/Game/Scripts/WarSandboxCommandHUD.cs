@@ -18,6 +18,8 @@ namespace MassEngine.Game
         public bool showHotkeys = true;
         [Min(0.1f)] public float cameraFollowSharpness = 5f;
         [Min(0f)] public float liveBoundsPadding = 12f;
+        public bool showMinimap = true;
+        [Min(96f)] public float minimapSize = 180f;
 
         private enum CameraFocusMode
         {
@@ -106,7 +108,7 @@ namespace MassEngine.Game
 
             UpdateCameraFollow();
 
-            if (!awaitingMoveTarget || !Input.GetMouseButtonDown(0) || IsMouseOverPanel())
+            if (!awaitingMoveTarget || !Input.GetMouseButtonDown(0) || IsMouseOverInterface())
                 return;
 
             Camera targetCamera = commandCamera != null ? commandCamera : Camera.main;
@@ -131,6 +133,7 @@ namespace MassEngine.Game
                 return;
 
             DrawWorldOrderMarkers();
+            DrawTacticalMinimap();
 
             bool compactLayout = Screen.height < 340f;
             float controlHeight = compactLayout ? 20f : 24f;
@@ -276,10 +279,12 @@ namespace MassEngine.Game
                 controller.SetSimulationSpeed(speed);
         }
 
-        private bool IsMouseOverPanel()
+        private bool IsMouseOverInterface()
         {
             Vector2 guiMouse = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-            return ResolvePanelRect().Contains(guiMouse);
+            return ResolvePanelRect().Contains(guiMouse) ||
+                   (showMinimap && WarSandboxMinimapProjection.ResolveOuterRect(
+                       Screen.width, Screen.height, minimapSize, 8f).Contains(guiMouse));
         }
 
         private Rect ResolvePanelRect()
@@ -382,6 +387,105 @@ namespace MassEngine.Game
             float padding = Mathf.Max(0f, liveBoundsPadding);
             bounds.Expand(new Vector3(padding * 2f, 0f, padding * 2f));
             return bounds;
+        }
+
+        private void DrawTacticalMinimap()
+        {
+            if (!showMinimap || cameraManager == null || !TryResolveSimulationWorldSize(out Vector2 worldSize))
+                return;
+
+            Rect outer = WarSandboxMinimapProjection.ResolveOuterRect(
+                Screen.width, Screen.height, minimapSize, 8f);
+            Rect map = WarSandboxMinimapProjection.ResolveContentRect(outer);
+            GUI.Box(outer, GUIContent.none);
+            GUI.Label(new Rect(outer.x + 8f, outer.y + 3f, outer.width - 16f, 20f), "战术地图 · 点击定位");
+
+            Color previous = GUI.color;
+            GUI.color = new Color(0.08f, 0.1f, 0.12f, 0.92f);
+            GUI.DrawTexture(map, Texture2D.whiteTexture);
+            GUI.color = previous;
+
+            DrawMinimapTeam(map, worldSize, 0, new Color(1f, 0.3f, 0.2f));
+            DrawMinimapTeam(map, worldSize, 1, new Color(0.25f, 0.55f, 1f));
+
+            Camera targetCamera = commandCamera != null ? commandCamera : Camera.main;
+            if (targetCamera != null)
+            {
+                Vector2 cameraPoint = WarSandboxMinimapProjection.WorldToMap(
+                    targetCamera.transform.position, worldSize, map);
+                DrawSolidRect(new Rect(cameraPoint.x - 2f, cameraPoint.y - 2f, 4f, 4f), Color.white);
+            }
+
+            Event current = Event.current;
+            if (current.type == EventType.MouseDown && current.button == 0 && map.Contains(current.mousePosition))
+            {
+                Vector3 point = WarSandboxMinimapProjection.MapToWorld(current.mousePosition, worldSize, map);
+                cameraFocusMode = CameraFocusMode.None;
+                cameraManager.CenterTacticalPoint(point);
+                SetFeedback("镜头定位：" + point.x.ToString("F0") + ", " + point.z.ToString("F0"));
+                current.Use();
+            }
+        }
+
+        private void DrawMinimapTeam(Rect map, Vector2 worldSize, int teamId, Color color)
+        {
+            bool hasBounds = TryResolveLiveArmyBounds(teamId, out Bounds bounds) ||
+                             TryResolveArmyBounds(teamId, out bounds);
+            if (!hasBounds)
+                return;
+
+            Vector2 min = WarSandboxMinimapProjection.WorldToMap(bounds.min, worldSize, map);
+            Vector2 max = WarSandboxMinimapProjection.WorldToMap(bounds.max, worldSize, map);
+            Rect teamRect = Rect.MinMaxRect(
+                Mathf.Min(min.x, max.x),
+                Mathf.Min(min.y, max.y),
+                Mathf.Max(min.x, max.x),
+                Mathf.Max(min.y, max.y));
+            DrawRectOutline(teamRect, color, 1f);
+
+            Vector2 center = WarSandboxMinimapProjection.WorldToMap(bounds.center, worldSize, map);
+            float markerSize = controller.selectedTeam == teamId ? 10f : 7f;
+            DrawSolidRect(
+                new Rect(center.x - markerSize * 0.5f, center.y - markerSize * 0.5f, markerSize, markerSize),
+                color);
+
+            ArmyRuntimeState army = controller.GetArmy(teamId);
+            if (army != null && army.hasOrder && army.currentOrder.hasTarget)
+            {
+                Vector2 target = WarSandboxMinimapProjection.WorldToMap(army.currentOrder.target, worldSize, map);
+                DrawSolidRect(new Rect(target.x - 5f, target.y - 1f, 10f, 2f), color);
+                DrawSolidRect(new Rect(target.x - 1f, target.y - 5f, 2f, 10f), color);
+            }
+        }
+
+        private bool TryResolveSimulationWorldSize(out Vector2 worldSize)
+        {
+            worldSize = default;
+            if (controller == null || controller.manager == null || controller.manager.systemConfig == null ||
+                controller.manager.systemConfig.simulationConfig == null)
+                return false;
+
+            worldSize = controller.manager.systemConfig.simulationConfig.simulationWorldSize;
+            return worldSize.x > 0f && worldSize.y > 0f;
+        }
+
+        private static void DrawRectOutline(Rect rect, Color color, float thickness)
+        {
+            if (rect.width <= 0f || rect.height <= 0f)
+                return;
+
+            DrawSolidRect(new Rect(rect.xMin, rect.yMin, rect.width, thickness), color);
+            DrawSolidRect(new Rect(rect.xMin, rect.yMax - thickness, rect.width, thickness), color);
+            DrawSolidRect(new Rect(rect.xMin, rect.yMin, thickness, rect.height), color);
+            DrawSolidRect(new Rect(rect.xMax - thickness, rect.yMin, thickness, rect.height), color);
+        }
+
+        private static void DrawSolidRect(Rect rect, Color color)
+        {
+            Color previous = GUI.color;
+            GUI.color = color;
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = previous;
         }
 
         private bool TryResolveArmyBounds(int teamId, out Bounds bounds)
@@ -516,6 +620,45 @@ namespace MassEngine.Game
                 case WarSandboxBattlePhase.Draw: return "同归于尽";
                 default: return "部署";
             }
+        }
+    }
+
+    public static class WarSandboxMinimapProjection
+    {
+        public static Rect ResolveOuterRect(float screenWidth, float screenHeight, float requestedSize, float margin)
+        {
+            screenWidth = Mathf.Max(1f, screenWidth);
+            screenHeight = Mathf.Max(1f, screenHeight);
+            margin = Mathf.Clamp(margin, 0f, Mathf.Min(screenWidth, screenHeight) * 0.1f);
+            float available = Mathf.Max(1f, Mathf.Min(screenWidth - margin * 2f, screenHeight - margin * 2f));
+            float minimum = Mathf.Min(96f, available);
+            float maximum = Mathf.Clamp(Mathf.Min(screenWidth * 0.38f, screenHeight * 0.38f), minimum, available);
+            float size = Mathf.Clamp(requestedSize, minimum, maximum);
+            return new Rect(margin, Mathf.Max(margin, screenHeight - size - margin), size, size);
+        }
+
+        public static Rect ResolveContentRect(Rect outer)
+        {
+            return new Rect(outer.x + 7f, outer.y + 24f, Mathf.Max(1f, outer.width - 14f), Mathf.Max(1f, outer.height - 31f));
+        }
+
+        public static Vector2 WorldToMap(Vector3 world, Vector2 worldSize, Rect map)
+        {
+            float normalizedX = Mathf.InverseLerp(-worldSize.x * 0.5f, worldSize.x * 0.5f, world.x);
+            float normalizedZ = Mathf.InverseLerp(-worldSize.y * 0.5f, worldSize.y * 0.5f, world.z);
+            return new Vector2(
+                Mathf.Lerp(map.xMin, map.xMax, normalizedX),
+                Mathf.Lerp(map.yMax, map.yMin, normalizedZ));
+        }
+
+        public static Vector3 MapToWorld(Vector2 mapPoint, Vector2 worldSize, Rect map)
+        {
+            float normalizedX = Mathf.InverseLerp(map.xMin, map.xMax, mapPoint.x);
+            float normalizedZ = Mathf.InverseLerp(map.yMax, map.yMin, mapPoint.y);
+            return new Vector3(
+                Mathf.Lerp(-worldSize.x * 0.5f, worldSize.x * 0.5f, normalizedX),
+                0f,
+                Mathf.Lerp(-worldSize.y * 0.5f, worldSize.y * 0.5f, normalizedZ));
         }
     }
 }

@@ -247,6 +247,31 @@ namespace MassEngine.Game.Tests
             Assert.That(CameraMotionSafety.ResolveFollowStep(current, new Vector3(float.NaN, 0f, 0f), 5f, 0.016f, 20f), Is.EqualTo(Vector3.zero));
         }
 
+        [Test]
+        public void MinimapProjectionRoundTripsWorldCoordinates()
+        {
+            Rect map = new Rect(12f, 40f, 180f, 140f);
+            Vector2 worldSize = new Vector2(840f, 620f);
+            Vector3 world = new Vector3(123f, 0f, -77f);
+
+            Vector2 projected = WarSandboxMinimapProjection.WorldToMap(world, worldSize, map);
+            Vector3 restored = WarSandboxMinimapProjection.MapToWorld(projected, worldSize, map);
+
+            Assert.That(restored.x, Is.EqualTo(world.x).Within(0.001f));
+            Assert.That(restored.z, Is.EqualTo(world.z).Within(0.001f));
+        }
+
+        [Test]
+        public void MinimapLayoutStaysOnScreenAtSmallResolutions()
+        {
+            Rect outer = WarSandboxMinimapProjection.ResolveOuterRect(320f, 240f, 180f, 8f);
+            Assert.That(outer.xMin, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(outer.yMin, Is.GreaterThanOrEqualTo(0f));
+            Assert.That(outer.xMax, Is.LessThanOrEqualTo(320f));
+            Assert.That(outer.yMax, Is.LessThanOrEqualTo(240f));
+            Assert.That(WarSandboxMinimapProjection.ResolveContentRect(outer).height, Is.GreaterThan(0f));
+        }
+
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
             MethodInfo method = typeof(MassEngineManager).GetMethod(
