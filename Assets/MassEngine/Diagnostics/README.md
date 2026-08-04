@@ -4,7 +4,7 @@
 
 | 文件 | 职责 |
 |---|---|
-| `BattleTelemetry.cs` | GPU 归约 + 小型 AsyncGPUReadback 采样（默认 0.5s）：双方存活数、实时质心/范围、战斗时长（暂停不计时）、流场重建计数。Manager 自动持有 |
+| `BattleTelemetry.cs` | GPU 归约 + 小型 AsyncGPUReadback 采样（默认 0.5s）：双方存活数、实时质心/范围、可选观察区域人数、战斗时长（暂停不计时）、流场重建计数。Manager 自动持有 |
 | `BattleTelemetryHUD.cs` | OnGUI 面板：帧时间/FPS、存活数、战斗时长、重建计数。挂在 manager 旁即可 |
 | `FlowFieldPreviewHUD.cs` | 屏幕角落展示攻/防流场预览纹理（预览写入由 RuntimeFlowConfig.runtimeFlowPreviewEnabled 门控，关闭时 GPU 零开销） |
 

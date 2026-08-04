@@ -22,6 +22,12 @@ namespace MassEngine.Game
         [Min(1f)] public float moveWaypointArrivalRadius = 8f;
         [Range(2, 16)] public int maxMoveRoutePoints = 8;
 
+        [Header("Battle Rules")]
+        public WarSandboxGameMode gameMode = WarSandboxGameMode.Annihilation;
+        public Vector3 controlPointCenter = Vector3.zero;
+        [Min(2f)] public float controlPointRadius = 30f;
+        [Min(5f)] public float controlPointCaptureSeconds = 20f;
+
         private readonly ArmyRuntimeState[] armies =
         {
             new ArmyRuntimeState { teamId = 0, displayName = "攻方" },
@@ -36,11 +42,15 @@ namespace MassEngine.Game
         private WarSandboxBattlePhase phase = WarSandboxBattlePhase.Setup;
         private WarSandboxBattleResult battleResult;
         private float simulationSpeed = 1f;
+        private float controlPointProgress;
         private bool initialized;
 
         public WarSandboxBattlePhase Phase { get { return phase; } }
         public WarSandboxBattleResult BattleResult { get { return battleResult; } }
         public float SimulationSpeed { get { return simulationSpeed; } }
+        public float ControlPointProgress { get { return controlPointProgress; } }
+        public int AttackersInControlPoint { get { return TelemetrySnapshot.attackers.observationZoneCount; } }
+        public int DefendersInControlPoint { get { return TelemetrySnapshot.defenders.observationZoneCount; } }
         public ArmyRuntimeState SelectedArmy { get { return GetArmy(selectedTeam); } }
         public BattleTelemetrySnapshot TelemetrySnapshot
         {
@@ -79,8 +89,10 @@ namespace MassEngine.Game
             if (!initialized)
                 RebuildArmyStates();
 
+            ConfigureControlPointTelemetry();
             AdvanceMoveRoutes();
             EvaluateVictory();
+            EvaluateControlPoint();
         }
 
         private void OnDestroy()
@@ -123,6 +135,17 @@ namespace MassEngine.Game
                 return false;
 
             route.Add(target);
+            return true;
+        }
+
+        public bool SetGameMode(WarSandboxGameMode value)
+        {
+            if (phase != WarSandboxBattlePhase.Setup)
+                return false;
+
+            gameMode = value;
+            controlPointProgress = 0f;
+            ConfigureControlPointTelemetry();
             return true;
         }
 
@@ -201,7 +224,11 @@ namespace MassEngine.Game
             for (int teamId = 0; teamId < armies.Length; teamId++)
             {
                 if (armies[teamId].initialUnitCount > 0)
-                    issuedAnyOrder |= IssueOrder(ArmyOrder.Attack(teamId));
+                {
+                    issuedAnyOrder |= gameMode == WarSandboxGameMode.ControlPoint
+                        ? IssueMoveOrder(teamId, controlPointCenter, false)
+                        : IssueOrder(ArmyOrder.Attack(teamId));
+                }
             }
 
             return issuedAnyOrder;
@@ -276,8 +303,10 @@ namespace MassEngine.Game
             Time.timeScale = 1f;
             phase = WarSandboxBattlePhase.Setup;
             battleResult = default;
+            controlPointProgress = 0f;
             initialized = false;
             RebuildArmyStates();
+            ConfigureControlPointTelemetry();
         }
 
         public void SetSimulationSpeed(float speed)
@@ -332,19 +361,64 @@ namespace MassEngine.Game
             if (!attackersDefeated && !defendersDefeated)
                 return;
 
+            WarSandboxBattlePhase resultPhase;
             if (attackersDefeated && defendersDefeated)
-                phase = WarSandboxBattlePhase.Draw;
+                resultPhase = WarSandboxBattlePhase.Draw;
             else
-                phase = attackersDefeated
+                resultPhase = attackersDefeated
                     ? WarSandboxBattlePhase.DefenderVictory
                     : WarSandboxBattlePhase.AttackerVictory;
 
+            CompleteBattle(resultPhase, snapshot, WarSandboxVictoryReason.Annihilation);
+        }
+
+        private void EvaluateControlPoint()
+        {
+            if (phase != WarSandboxBattlePhase.Running || gameMode != WarSandboxGameMode.ControlPoint)
+                return;
+
+            BattleTelemetrySnapshot snapshot = TelemetrySnapshot;
+            if (!snapshot.valid)
+                return;
+
+            controlPointProgress = WarSandboxControlPoint.ResolveProgress(
+                controlPointProgress,
+                snapshot.attackers.observationZoneCount,
+                snapshot.defenders.observationZoneCount,
+                Time.deltaTime,
+                controlPointCaptureSeconds);
+
+            if (controlPointProgress >= 1f)
+                CompleteBattle(WarSandboxBattlePhase.AttackerVictory, snapshot, WarSandboxVictoryReason.ControlPoint);
+            else if (controlPointProgress <= -1f)
+                CompleteBattle(WarSandboxBattlePhase.DefenderVictory, snapshot, WarSandboxVictoryReason.ControlPoint);
+        }
+
+        private void CompleteBattle(
+            WarSandboxBattlePhase resultPhase,
+            BattleTelemetrySnapshot snapshot,
+            WarSandboxVictoryReason victoryReason)
+        {
+            phase = resultPhase;
             battleResult = WarSandboxBattleResult.Capture(
                 phase,
                 armies[0].initialUnitCount,
                 armies[1].initialUnitCount,
-                snapshot);
+                snapshot,
+                victoryReason);
             manager.PauseBattle();
+        }
+
+        private void ConfigureControlPointTelemetry()
+        {
+            ResolveManager();
+            if (manager == null || manager.Telemetry == null)
+                return;
+
+            manager.Telemetry.ConfigureObservationZone(
+                controlPointCenter,
+                controlPointRadius,
+                gameMode == WarSandboxGameMode.ControlPoint);
         }
 
         private void AdvanceMoveRoutes()

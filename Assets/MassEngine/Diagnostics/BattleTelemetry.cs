@@ -9,6 +9,7 @@ namespace MassEngine
         public int aliveCount;
         public Vector3 centroid;
         public Bounds bounds;
+        public int observationZoneCount;
         public bool valid;
     }
 
@@ -45,6 +46,8 @@ namespace MassEngine
         private static readonly int AgentPositionReadBufferId = Shader.PropertyToID("agentPositionReadBuffer");
         private static readonly int HpReadBufferId = Shader.PropertyToID("hpReadBuffer");
         private static readonly int TeamIdReadBufferId = Shader.PropertyToID("teamIdReadBuffer");
+        private static readonly int ObservationZoneEnabledId = Shader.PropertyToID("telemetryObservationZoneEnabled");
+        private static readonly int ObservationZoneId = Shader.PropertyToID("telemetryObservationZone");
 
         private readonly float sampleInterval;
         private readonly ComputeShader spatialHashShader;
@@ -58,6 +61,9 @@ namespace MassEngine
         private float accumulatedBattleSeconds;
         private float runStartTime = -1f;
         private bool battleRunning;
+        private bool observationZoneEnabled;
+        private Vector3 observationZoneCenter;
+        private float observationZoneRadius = 1f;
 
         private BattleTelemetrySnapshot snapshot;
 
@@ -123,6 +129,13 @@ namespace MassEngine
                 snapshot.defenderFlowRebuilds++;
         }
 
+        public void ConfigureObservationZone(Vector3 center, float radius, bool enabled)
+        {
+            observationZoneCenter = center;
+            observationZoneRadius = Mathf.Max(0.1f, radius);
+            observationZoneEnabled = enabled;
+        }
+
         /// <summary>Kicks a readback when the sample interval elapsed. Never blocks.</summary>
         public void Tick(MassGpuBufferManager buffers, float time)
         {
@@ -179,6 +192,10 @@ namespace MassEngine
             spatialHashShader.SetBuffer(buildTeamSpatialStatsKernel, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             spatialHashShader.SetBuffer(buildTeamSpatialStatsKernel, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
             spatialHashShader.SetBuffer(buildTeamSpatialStatsKernel, TeamSpatialStatsId, buffers.teamSpatialStatsBuffer);
+            spatialHashShader.SetInt(ObservationZoneEnabledId, observationZoneEnabled ? 1 : 0);
+            spatialHashShader.SetVector(
+                ObservationZoneId,
+                new Vector4(observationZoneCenter.x, observationZoneCenter.z, observationZoneRadius, 0f));
 
             spatialHashShader.Dispatch(clearTeamSpatialStatsKernel, 1, 1, 1);
             spatialHashShader.Dispatch(buildTeamSpatialStatsKernel, Mathf.Max(1, (buffers.AgentCount + 63) / 64), 1, 1);
@@ -210,7 +227,7 @@ namespace MassEngine
                 return false;
 
             int offset = teamId * 8;
-            if (values.Length < offset + 7 || values[offset] <= 0)
+            if (values.Length < offset + 8 || values[offset] <= 0)
                 return false;
 
             int count = values[offset];
@@ -230,6 +247,7 @@ namespace MassEngine
             team.bounds = new Bounds(
                 team.centroid,
                 new Vector3(Mathf.Max(1f, extentX * 2f), 30f, Mathf.Max(1f, extentZ * 2f)));
+            team.observationZoneCount = values[offset + 7];
             team.valid = true;
             return true;
         }

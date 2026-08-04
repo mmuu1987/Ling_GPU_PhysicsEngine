@@ -89,5 +89,11 @@ void BuildTeamSpatialStats(uint3 id : SV_DispatchThreadID)
     InterlockedMin(teamSpatialStats[baseIndex + 4], position.y, ignored);
     InterlockedMax(teamSpatialStats[baseIndex + 5], position.x, ignored);
     InterlockedMax(teamSpatialStats[baseIndex + 6], position.y, ignored);
+    float2 toObservationZone = agentPositionReadBuffer[id.x] - telemetryObservationZone.xy;
+    if (telemetryObservationZoneEnabled != 0 &&
+        dot(toObservationZone, toObservationZone) <= telemetryObservationZone.z * telemetryObservationZone.z)
+    {
+        InterlockedAdd(teamSpatialStats[baseIndex + 7], 1, ignored);
+    }
 }
 

@@ -120,6 +120,25 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void ControlPointProgressCapturesOnlyWhenZoneIsUncontested()
+        {
+            Assert.That(WarSandboxControlPoint.ResolveProgress(0f, 10, 0, 2f, 20f), Is.EqualTo(0.1f));
+            Assert.That(WarSandboxControlPoint.ResolveProgress(0.25f, 10, 3, 2f, 20f), Is.EqualTo(0.25f));
+            Assert.That(WarSandboxControlPoint.ResolveProgress(-0.25f, 0, 0, 2f, 20f), Is.EqualTo(-0.2f));
+            Assert.That(WarSandboxControlPoint.ResolveProgress(0f, 0, 4, 40f, 20f), Is.EqualTo(-1f));
+        }
+
+        [Test]
+        public void GameModeCanOnlyChangeDuringDeployment()
+        {
+            Assert.That(controller.SetGameMode(WarSandboxGameMode.ControlPoint), Is.True);
+            Assert.That(controller.gameMode, Is.EqualTo(WarSandboxGameMode.ControlPoint));
+            controller.StartDefaultBattle();
+            Assert.That(controller.SetGameMode(WarSandboxGameMode.Annihilation), Is.False);
+            Assert.That(controller.gameMode, Is.EqualTo(WarSandboxGameMode.ControlPoint));
+        }
+
+        [Test]
         public void RuntimeNavigationDoctrineOverridesReadOnlyFlowConfig()
         {
             RuntimeFlowConfig flow = system.runtimeFlowConfig;
@@ -161,6 +180,19 @@ namespace MassEngine.Game.Tests
             Assert.That(controller.GetArmy(0).currentOrder.type, Is.EqualTo(ArmyOrderType.Attack));
             Assert.That(controller.GetArmy(1).currentOrder.type, Is.EqualTo(ArmyOrderType.Attack));
             Assert.That(manager.IsBattleRunning, Is.True);
+        }
+
+        [Test]
+        public void ControlPointBattleOrdersBothArmiesToTheObjective()
+        {
+            controller.controlPointCenter = new Vector3(15f, 0f, -12f);
+            controller.SetGameMode(WarSandboxGameMode.ControlPoint);
+
+            Assert.That(controller.StartDefaultBattle(), Is.True);
+            Assert.That(controller.GetArmy(0).currentOrder.type, Is.EqualTo(ArmyOrderType.Move));
+            Assert.That(controller.GetArmy(1).currentOrder.type, Is.EqualTo(ArmyOrderType.Move));
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(controller.controlPointCenter));
+            Assert.That(controller.GetArmy(1).currentOrder.target, Is.EqualTo(controller.controlPointCenter));
         }
 
         [TestCase(10000)]

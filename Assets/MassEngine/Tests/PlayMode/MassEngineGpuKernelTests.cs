@@ -850,6 +850,7 @@ namespace MassEngine.Tests
             buffers.UploadInitialData(agents, initialTeamIds, initialHp, initialUnitTypeIndices);
 
             BattleTelemetry telemetry = new BattleTelemetry(shaderSet.SpatialHashShader, 0.1f);
+            telemetry.ConfigureObservationZone(new Vector3(-10f, 0f, 3f), 5f, true);
             telemetry.Tick(buffers, 1f);
             for (int frame = 0; frame < 120 && !telemetry.Snapshot.valid; frame++)
                 yield return null;
@@ -860,6 +861,8 @@ namespace MassEngine.Tests
             Assert.That(snapshot.aliveDefenders, Is.EqualTo(DefenderCount));
             Assert.That(snapshot.attackers.centroid, Is.EqualTo(new Vector3(-10f, 0f, 3f)));
             Assert.That(snapshot.defenders.centroid, Is.EqualTo(new Vector3(20f, 0f, 3f)));
+            Assert.That(snapshot.attackers.observationZoneCount, Is.EqualTo(AttackerCount));
+            Assert.That(snapshot.defenders.observationZoneCount, Is.Zero);
         }
 
         private void DispatchOneFrame(bool battleStarted)
