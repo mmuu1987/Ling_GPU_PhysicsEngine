@@ -710,6 +710,23 @@ namespace MassEngine.Tests
             return fixture;
         }
 
+        [Test]
+        public void StaticObstacleSegmentTestDetectsBlockedAndClearRoutes()
+        {
+            StaticObstacleRect obstacle = new StaticObstacleRect(Vector2.zero, new Vector2(4f, 8f));
+            Assert.IsTrue(StaticObstacleMath.SegmentIntersects(obstacle, new Vector2(-10f, 0f), new Vector2(10f, 0f), 1f));
+            Assert.IsFalse(StaticObstacleMath.SegmentIntersects(obstacle, new Vector2(-10f, 8f), new Vector2(10f, 8f), 1f));
+        }
+
+        [Test]
+        public void StaticObstacleProjectsMoveTargetToNearestSafeEdge()
+        {
+            StaticObstacleRect obstacle = new StaticObstacleRect(Vector2.zero, new Vector2(4f, 8f));
+            Vector3 projected = StaticObstacleMath.ResolvePointOutside(obstacle, new Vector3(1.5f, 0f, 0f), 1f);
+            Assert.That(projected.x, Is.GreaterThan(3f));
+            Assert.That(projected.z, Is.EqualTo(0f).Within(0.001f));
+        }
+
         // ------------------------------------------------------------------
         // Helpers
         // ------------------------------------------------------------------

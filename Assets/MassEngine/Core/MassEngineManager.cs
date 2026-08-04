@@ -78,6 +78,11 @@ namespace MassEngine
         private readonly bool[] flowFieldDirty = { true, true };
         private readonly int[] lastFlowTargetHash = new int[2];
         private readonly float[] nextDynamicFlowRebuildTime = new float[2];
+        private readonly StaticObstacleRect[] activeStaticObstacles = new StaticObstacleRect[StaticObstacleMath.MaxObstacleCount];
+        private readonly Vector4[] staticObstacleShaderRects = new Vector4[StaticObstacleMath.MaxObstacleCount];
+        private int activeStaticObstacleCount;
+        private float activeStaticObstaclePadding;
+        private int lastStaticObstacleHash;
         // Non-serialized: a missing-shader block must never mutate the designer's
         // serialized enableGpuDispatch checkbox (fix-and-Reset could not recover).
         private bool gpuDispatchBlockedByShaders;
@@ -94,6 +99,8 @@ namespace MassEngine
         public MassGpuBufferManager Buffers { get { return bufferManager; } }
         public BattleTelemetry Telemetry { get { return telemetry; } }
         public bool IsBattleRunning { get { return battleStarted; } }
+        public int StaticObstacleCount { get { return activeStaticObstacleCount; } }
+        public float StaticObstaclePadding { get { return activeStaticObstaclePadding; } }
 
         private void OnEnable()
         {
@@ -324,7 +331,7 @@ namespace MassEngine
                 return;
             }
 
-            flowTargetOverrides[teamId] = new FlowTargetOverride { active = true, point = point };
+            flowTargetOverrides[teamId] = new FlowTargetOverride { active = true, point = ResolvePointOutsideStaticObstacles(point) };
             flowFieldDirty[teamId] = true;
         }
 
@@ -367,6 +374,81 @@ namespace MassEngine
 
             teamNavigationOverrides[teamId] = default;
             flowFieldDirty[teamId] = true;
+        }
+
+        /// <summary>
+        /// Replaces the runtime obstacle set without mutating any ScriptableObject.
+        /// Invalid/zero-sized entries are ignored and the GPU contract is capped at 8.
+        /// </summary>
+        public void SetStaticObstacles(StaticObstacleRect[] obstacles, float padding)
+        {
+            float safePadding = Mathf.Max(0f, padding);
+            int hash = safePadding.GetHashCode();
+            int validCount = 0;
+            if (obstacles != null)
+            {
+                for (int i = 0; i < obstacles.Length && validCount < StaticObstacleMath.MaxObstacleCount; i++)
+                {
+                    StaticObstacleRect obstacle = obstacles[i];
+                    if (!obstacle.IsValid)
+                        continue;
+                    unchecked
+                    {
+                        hash = hash * 31 + obstacle.center.GetHashCode();
+                        hash = hash * 31 + obstacle.size.GetHashCode();
+                    }
+                    validCount++;
+                }
+            }
+
+            if (hash == lastStaticObstacleHash && validCount == activeStaticObstacleCount &&
+                Mathf.Approximately(safePadding, activeStaticObstaclePadding))
+                return;
+
+            lastStaticObstacleHash = hash;
+            activeStaticObstaclePadding = safePadding;
+            activeStaticObstacleCount = 0;
+            for (int i = 0; i < activeStaticObstacles.Length; i++)
+            {
+                activeStaticObstacles[i] = default;
+                staticObstacleShaderRects[i] = Vector4.zero;
+            }
+
+            if (obstacles != null)
+            {
+                for (int i = 0; i < obstacles.Length && activeStaticObstacleCount < StaticObstacleMath.MaxObstacleCount; i++)
+                {
+                    StaticObstacleRect obstacle = obstacles[i];
+                    if (!obstacle.IsValid)
+                        continue;
+                    activeStaticObstacles[activeStaticObstacleCount] = obstacle;
+                    staticObstacleShaderRects[activeStaticObstacleCount] = obstacle.ToShaderRect();
+                    activeStaticObstacleCount++;
+                }
+            }
+
+            flowFieldDirty[AttackerTeamId] = true;
+            flowFieldDirty[DefenderTeamId] = true;
+        }
+
+        public bool TryGetStaticObstacle(int obstacleIndex, out StaticObstacleRect obstacle)
+        {
+            obstacle = default;
+            if (obstacleIndex < 0 || obstacleIndex >= activeStaticObstacleCount)
+                return false;
+            obstacle = activeStaticObstacles[obstacleIndex];
+            return true;
+        }
+
+        public Vector3 ResolvePointOutsideStaticObstacles(Vector3 point)
+        {
+            // Two passes handle touching/overlapping rectangles without an unbounded loop.
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (int i = 0; i < activeStaticObstacleCount; i++)
+                    point = StaticObstacleMath.ResolvePointOutside(activeStaticObstacles[i], point, activeStaticObstaclePadding);
+            }
+            return point;
         }
 
         public void Release()
@@ -457,6 +539,9 @@ namespace MassEngine
                 localTargetSearchCellRadius = ComputeLocalTargetSearchCellRadius(),
                 flowPreviewEnabled = Flow.runtimeFlowPreviewEnabled,
                 runtimeFlowPreviewMode = (int)Flow.runtimeFlowPreviewMode,
+                staticObstacleCount = activeStaticObstacleCount,
+                staticObstaclePadding = activeStaticObstaclePadding,
+                staticObstacleRects = staticObstacleShaderRects,
                 grid = new GridFrameSettings
                 {
                     resolutionX = ComputeGridResolutionX(),

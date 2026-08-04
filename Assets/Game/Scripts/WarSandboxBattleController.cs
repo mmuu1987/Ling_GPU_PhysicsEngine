@@ -28,6 +28,17 @@ namespace MassEngine.Game
         [Min(2f)] public float controlPointRadius = 30f;
         [Min(5f)] public float controlPointCaptureSeconds = 20f;
 
+        [Header("Static Obstacles")]
+        public bool staticObstaclesEnabled;
+        [Tooltip("Use the custom obstacle array below instead of the built-in two-wall layout.")]
+        public bool useCustomStaticObstacleLayout;
+        [Min(0f)] public float staticObstacleClearance = 2f;
+        public StaticObstacleRect[] staticObstacles =
+        {
+            new StaticObstacleRect(new Vector2(0f, -90f), new Vector2(14f, 110f)),
+            new StaticObstacleRect(new Vector2(0f, 90f), new Vector2(14f, 110f))
+        };
+
         private readonly ArmyRuntimeState[] armies =
         {
             new ArmyRuntimeState { teamId = 0, displayName = "攻方" },
@@ -38,12 +49,18 @@ namespace MassEngine.Game
             new List<Vector3>(),
             new List<Vector3>()
         };
+        private static readonly StaticObstacleRect[] DefaultStaticObstacles =
+        {
+            new StaticObstacleRect(new Vector2(0f, -90f), new Vector2(14f, 110f)),
+            new StaticObstacleRect(new Vector2(0f, 90f), new Vector2(14f, 110f))
+        };
 
         private WarSandboxBattlePhase phase = WarSandboxBattlePhase.Setup;
         private WarSandboxBattleResult battleResult;
         private float simulationSpeed = 1f;
         private float controlPointProgress;
         private bool initialized;
+        private WarSandboxStaticObstaclePresenter obstaclePresenter;
 
         public WarSandboxBattlePhase Phase { get { return phase; } }
         public WarSandboxBattleResult BattleResult { get { return battleResult; } }
@@ -66,6 +83,7 @@ namespace MassEngine.Game
         {
             ResolveManager();
             RebuildArmyStates();
+            ApplyStaticObstacleSettings();
         }
 
         private void Start()
@@ -90,6 +108,7 @@ namespace MassEngine.Game
                 RebuildArmyStates();
 
             ConfigureControlPointTelemetry();
+            ApplyStaticObstacleSettings();
             AdvanceMoveRoutes();
             EvaluateVictory();
             EvaluateControlPoint();
@@ -99,6 +118,8 @@ namespace MassEngine.Game
         {
             if (Application.isPlaying)
                 Time.timeScale = 1f;
+            if (manager != null)
+                manager.SetStaticObstacles(null, 0f);
         }
 
         public ArmyRuntimeState GetArmy(int teamId)
@@ -126,6 +147,10 @@ namespace MassEngine.Game
             if (army == null)
                 return false;
 
+            ResolveManager();
+            if (manager != null)
+                target = manager.ResolvePointOutsideStaticObstacles(target);
+
             List<Vector3> route = moveRoutes[teamId];
             bool hasActiveMoveRoute = army.hasOrder && army.currentOrder.type == ArmyOrderType.Move && route.Count > 0;
             if (!append || !hasActiveMoveRoute)
@@ -149,6 +174,34 @@ namespace MassEngine.Game
             return true;
         }
 
+        public bool SetStaticObstaclesEnabled(bool value)
+        {
+            if (phase != WarSandboxBattlePhase.Setup)
+                return false;
+
+            staticObstaclesEnabled = value;
+            ApplyStaticObstacleSettings();
+            return true;
+        }
+
+        public int GetStaticObstacleCount()
+        {
+            StaticObstacleRect[] resolved = ResolveStaticObstacles();
+            return staticObstaclesEnabled && resolved != null
+                ? Mathf.Min(resolved.Length, StaticObstacleMath.MaxObstacleCount)
+                : 0;
+        }
+
+        public bool TryGetStaticObstacle(int obstacleIndex, out StaticObstacleRect obstacle)
+        {
+            obstacle = default;
+            StaticObstacleRect[] resolved = ResolveStaticObstacles();
+            if (!staticObstaclesEnabled || resolved == null || obstacleIndex < 0 || obstacleIndex >= resolved.Length)
+                return false;
+            obstacle = resolved[obstacleIndex];
+            return obstacle.IsValid;
+        }
+
         public int GetMoveRoutePointCount(int teamId)
         {
             return teamId >= 0 && teamId < moveRoutes.Length ? moveRoutes[teamId].Count : 0;
@@ -170,6 +223,9 @@ namespace MassEngine.Game
             ArmyRuntimeState army = GetArmy(order.teamId);
             if (manager == null || army == null)
                 return false;
+
+            if (order.type == ArmyOrderType.Move && order.hasTarget)
+                order.target = manager.ResolvePointOutsideStaticObstacles(order.target);
 
             if (replaceRoute)
             {
@@ -307,6 +363,7 @@ namespace MassEngine.Game
             initialized = false;
             RebuildArmyStates();
             ConfigureControlPointTelemetry();
+            ApplyStaticObstacleSettings();
         }
 
         public void SetSimulationSpeed(float speed)
@@ -449,6 +506,27 @@ namespace MassEngine.Game
         {
             if (manager == null)
                 manager = GetComponent<MassEngineManager>();
+        }
+
+        private void ApplyStaticObstacleSettings()
+        {
+            ResolveManager();
+            StaticObstacleRect[] active = staticObstaclesEnabled ? ResolveStaticObstacles() : null;
+            if (manager != null)
+                manager.SetStaticObstacles(active, staticObstacleClearance);
+
+            if (!Application.isPlaying)
+                return;
+            if (obstaclePresenter == null)
+                obstaclePresenter = GetComponent<WarSandboxStaticObstaclePresenter>();
+            if (obstaclePresenter == null)
+                obstaclePresenter = gameObject.AddComponent<WarSandboxStaticObstaclePresenter>();
+            obstaclePresenter.Sync(active);
+        }
+
+        private StaticObstacleRect[] ResolveStaticObstacles()
+        {
+            return useCustomStaticObstacleLayout ? staticObstacles : DefaultStaticObstacles;
         }
 
         private static bool IsTerminalPhase(WarSandboxBattlePhase value)

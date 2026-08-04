@@ -84,6 +84,9 @@ namespace MassEngine
         public static readonly int DefenderFlowFieldResolutionId = Shader.PropertyToID("defenderFlowFieldResolution");
         public static readonly int DefenderFlowFieldOriginId = Shader.PropertyToID("defenderFlowFieldOrigin");
         public static readonly int DefenderFlowFieldCellSizeId = Shader.PropertyToID("defenderFlowFieldCellSize");
+        public static readonly int StaticObstacleCountId = Shader.PropertyToID("staticObstacleCount");
+        public static readonly int StaticObstaclePaddingId = Shader.PropertyToID("staticObstaclePadding");
+        public static readonly int StaticObstacleRectsId = Shader.PropertyToID("staticObstacleRects");
 
         // Runtime dynamic flow
         public static readonly int RuntimeAttackerTargetDensityId = Shader.PropertyToID("runtimeAttackerTargetDensity");

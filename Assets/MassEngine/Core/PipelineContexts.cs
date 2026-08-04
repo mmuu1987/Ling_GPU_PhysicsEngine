@@ -81,6 +81,9 @@ namespace MassEngine
         public int localTargetSearchCellRadius;
         public bool flowPreviewEnabled;
         public int runtimeFlowPreviewMode;
+        public int staticObstacleCount;
+        public float staticObstaclePadding;
+        public Vector4[] staticObstacleRects;
         public GridFrameSettings grid;
         public TeamFlowFrameSettings attackerFlow;
         public TeamFlowFrameSettings defenderFlow;

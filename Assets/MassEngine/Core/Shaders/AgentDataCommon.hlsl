@@ -178,6 +178,11 @@ int2 defenderFlowFieldResolution;
 float2 defenderFlowFieldOrigin;
 float defenderFlowFieldCellSize;
 
+#define MAX_STATIC_OBSTACLES 8
+int staticObstacleCount;
+float staticObstaclePadding;
+float4 staticObstacleRects[MAX_STATIC_OBSTACLES];
+
 int enableTwoTeamCombat;
 int battleStarted;
 int attackerTeamId;
@@ -208,6 +213,167 @@ bool IsInsideFrustum(float3 position)
 float SafeDt()
 {
     return min(deltaTime, 0.05);
+}
+
+float4 ExpandedStaticObstacleRect(int obstacleIndex, float extraPadding)
+{
+    float padding = max(0.0, staticObstaclePadding + extraPadding);
+    float4 rect = staticObstacleRects[obstacleIndex];
+    return rect + float4(-padding, -padding, padding, padding);
+}
+
+bool PointInsideStaticObstacleRect(float2 positionXZ, float4 rect)
+{
+    return positionXZ.x >= rect.x && positionXZ.x <= rect.z && positionXZ.y >= rect.y && positionXZ.y <= rect.w;
+}
+
+bool SegmentIntersectsStaticObstacleRect(float2 start, float2 end, float4 rect, out float enterDistance01)
+{
+    float2 delta = end - start;
+    float enter = 0.0;
+    float exit = 1.0;
+
+    if (abs(delta.x) <= 0.000001)
+    {
+        if (start.x < rect.x || start.x > rect.z)
+        {
+            enterDistance01 = 1.0;
+            return false;
+        }
+    }
+    else
+    {
+        float2 tx = (float2(rect.x, rect.z) - start.x) / delta.x;
+        enter = max(enter, min(tx.x, tx.y));
+        exit = min(exit, max(tx.x, tx.y));
+    }
+
+    if (abs(delta.y) <= 0.000001)
+    {
+        if (start.y < rect.y || start.y > rect.w)
+        {
+            enterDistance01 = 1.0;
+            return false;
+        }
+    }
+    else
+    {
+        float2 ty = (float2(rect.y, rect.w) - start.y) / delta.y;
+        enter = max(enter, min(ty.x, ty.y));
+        exit = min(exit, max(ty.x, ty.y));
+    }
+
+    enterDistance01 = enter;
+    return exit >= enter && exit >= 0.0 && enter <= 1.0;
+}
+
+float2 DirectionOutOfStaticObstacle(float2 positionXZ, float4 rect)
+{
+    float4 distances = float4(
+        positionXZ.x - rect.x,
+        rect.z - positionXZ.x,
+        positionXZ.y - rect.y,
+        rect.w - positionXZ.y);
+    float nearest = min(min(distances.x, distances.y), min(distances.z, distances.w));
+    if (nearest == distances.x)
+        return float2(-1.0, 0.0);
+    if (nearest == distances.y)
+        return float2(1.0, 0.0);
+    if (nearest == distances.z)
+        return float2(0.0, -1.0);
+    return float2(0.0, 1.0);
+}
+
+// The existing runtime flow is a direct per-cell steering field, not an integration
+// cost field. Preserve that architecture and detour only when the cell-to-target ray
+// crosses an obstacle. The cheapest visible expanded corner becomes the local waypoint.
+float2 StaticObstacleAwareDirection(float2 start, float2 target, float extraPadding)
+{
+    float2 direct = target - start;
+    if (dot(direct, direct) <= 0.0001)
+        return 0.0;
+
+    int count = clamp(staticObstacleCount, 0, MAX_STATIC_OBSTACLES);
+    int blockingObstacle = -1;
+    float nearestEnter = 2.0;
+    for (int obstacleIndex = 0; obstacleIndex < count; obstacleIndex++)
+    {
+        float4 rect = ExpandedStaticObstacleRect(obstacleIndex, extraPadding);
+        if (PointInsideStaticObstacleRect(start, rect))
+            return DirectionOutOfStaticObstacle(start, rect);
+
+        float enter;
+        if (SegmentIntersectsStaticObstacleRect(start, target, rect, enter) && enter < nearestEnter)
+        {
+            blockingObstacle = obstacleIndex;
+            nearestEnter = enter;
+        }
+    }
+
+    if (blockingObstacle < 0)
+        return normalize(direct);
+
+    float4 blockingRect = ExpandedStaticObstacleRect(blockingObstacle, extraPadding);
+    float cornerMargin = max(0.2, extraPadding * 0.5 + 0.1);
+    float bestScore = 1e20;
+    float2 bestCorner = float2(blockingRect.x - cornerMargin, blockingRect.y - cornerMargin);
+    [unroll]
+    for (int cornerIndex = 0; cornerIndex < 4; cornerIndex++)
+    {
+        float2 corner = float2(
+            cornerIndex < 2 ? blockingRect.x - cornerMargin : blockingRect.z + cornerMargin,
+            (cornerIndex & 1) == 0 ? blockingRect.y - cornerMargin : blockingRect.w + cornerMargin);
+        float ignoredEnter;
+        bool crossesBlockingRect = SegmentIntersectsStaticObstacleRect(start, corner, blockingRect, ignoredEnter);
+        float score = length(corner - start) + length(target - corner);
+        if (crossesBlockingRect)
+            score += 100000.0;
+
+        // Reject a corner whose first leg immediately cuts through another obstacle.
+        for (int otherIndex = 0; otherIndex < count; otherIndex++)
+        {
+            if (otherIndex == blockingObstacle)
+                continue;
+            float4 otherRect = ExpandedStaticObstacleRect(otherIndex, extraPadding);
+            if (SegmentIntersectsStaticObstacleRect(start, corner, otherRect, ignoredEnter))
+                score += 100000.0;
+        }
+
+        if (score < bestScore)
+        {
+            bestScore = score;
+            bestCorner = corner;
+        }
+    }
+
+    float2 detour = bestCorner - start;
+    return dot(detour, detour) > 0.0001 ? normalize(detour) : normalize(direct);
+}
+
+void ApplyStaticObstacleBounds(uint agentIndex, inout AgentData agent)
+{
+    int count = clamp(staticObstacleCount, 0, MAX_STATIC_OBSTACLES);
+    float radius = max(0.05, GetUnitSettings(agentIndex).agentRadius);
+    for (int obstacleIndex = 0; obstacleIndex < count; obstacleIndex++)
+    {
+        float4 rect = ExpandedStaticObstacleRect(obstacleIndex, radius);
+        if (!PointInsideStaticObstacleRect(agent.position.xz, rect))
+            continue;
+
+        float2 normal = DirectionOutOfStaticObstacle(agent.position.xz, rect);
+        if (normal.x < 0.0)
+            agent.position.x = rect.x - 0.001;
+        else if (normal.x > 0.0)
+            agent.position.x = rect.z + 0.001;
+        else if (normal.y < 0.0)
+            agent.position.z = rect.y - 0.001;
+        else
+            agent.position.z = rect.w + 0.001;
+
+        float inwardSpeed = dot(agent.velocity.xz, -normal);
+        if (inwardSpeed > 0.0)
+            agent.velocity.xz += normal * inwardSpeed;
+    }
 }
 
 // -----------------------------------------------------------------------------

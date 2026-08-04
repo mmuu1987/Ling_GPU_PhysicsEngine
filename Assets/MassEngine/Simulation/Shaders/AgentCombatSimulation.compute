@@ -107,6 +107,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     if (!IsSimulationActiveFrame(id.x, simInterval))
     {
         agent.position += agent.velocity * dt;
+        ApplyStaticObstacleBounds(id.x, agent);
         ApplyBounds(agent);
         StoreAgent(id.x, agent);
         return;
@@ -218,6 +219,19 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         }
     }
 
+    // Ordinary marching already samples the obstacle-aware flow field. Only direct
+    // enemy pursuit bypasses that field and needs a per-agent look-ahead detour; doing
+    // this for every marcher would multiply the obstacle scan by the full army size.
+    if (hasEngageTarget && dot(desiredDirection, desiredDirection) > 0.0001 && staticObstacleCount > 0)
+    {
+        float obstacleLookAhead = max(4.0, settings.agentRadius * 6.0);
+        float2 normalizedDesired = normalize(desiredDirection);
+        desiredDirection = StaticObstacleAwareDirection(
+            agent.position.xz,
+            agent.position.xz + normalizedDesired * obstacleLookAhead,
+            settings.agentRadius);
+    }
+
     bool hasMoveDirection = dot(desiredDirection, desiredDirection) > 0.0001;
     int nextState = ResolveAliveState(inAttackHold, hasEngageTarget, hasMoveDirection);
     SetCrowdState(agent, nextState);
@@ -287,6 +301,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
             agent.position.z = homePositionReadBuffer[id.x].z + clamped.y;
         }
 
+        ApplyStaticObstacleBounds(id.x, agent);
         ApplyBounds(agent);
         StoreAgent(id.x, agent);
         return;
@@ -335,6 +350,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
             agent.velocity.xz *= maxLocomotionSpeed * rsqrt(locomotionSpeedSqr);
     }
     agent.position += agent.velocity * dt;
+    ApplyStaticObstacleBounds(id.x, agent);
     ApplyBounds(agent);
 
     if (!hasTacticalDirection && dot(agent.velocity.xz, agent.velocity.xz) > 0.25 && agent.currentState != STATE_ATTACK)

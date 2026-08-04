@@ -38,6 +38,9 @@ namespace MassEngine.Tests
         private Vector3 attackerFlowTargetPoint;
         private int attackerFlowMinPerTarget = 8;
         private int gridMaxAgentsPerCell = 16;
+        private int staticObstacleCount;
+        private float staticObstaclePadding;
+        private readonly Vector4[] staticObstacleRects = new Vector4[StaticObstacleMath.MaxObstacleCount];
 
         // Fixture population; BuildScenario overwrites these so a test can rebuild
         // the whole rig at a larger scale (cross-thread-group coverage).
@@ -63,6 +66,10 @@ namespace MassEngine.Tests
                 Assert.Ignore("Compute shaders unavailable on this device; GPU kernel tests skipped.");
 
             gridMaxAgentsPerCell = 16;
+            staticObstacleCount = 0;
+            staticObstaclePadding = 0f;
+            for (int i = 0; i < staticObstacleRects.Length; i++)
+                staticObstacleRects[i] = Vector4.zero;
 
             ComputeShader spatialHash = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "Spatial/Shaders/AgentSpatialHash.compute");
             ComputeShader runtimeFlow = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "FlowField/Shaders/AgentRuntimeFlow.compute");
@@ -430,6 +437,54 @@ namespace MassEngine.Tests
             buffers.flowFieldDirectionsBuffer.GetData(directions);
             for (int i = 0; i < directions.Length; i++)
                 Assert.AreEqual(0f, directions[i].sqrMagnitude, 0.000001f, "cell " + i + " kept a ghost direction after target removal");
+        }
+
+        [UnityTest]
+        public IEnumerator ConfiguredFlowDetoursAroundStaticObstacle()
+        {
+            attackerFlowEnabled = true;
+            attackerFlowRebuild = true;
+            attackerFlowTargetMode = 1;
+            attackerFlowTargetPoint = new Vector3(7f, 0f, 0.5f);
+            staticObstacleCount = 1;
+            staticObstaclePadding = 0.25f;
+            staticObstacleRects[0] = new Vector4(-1f, -3f, 1f, 3f);
+
+            DispatchOneFrame(battleStarted: false);
+            yield return null;
+
+            Vector2[] directions = new Vector2[16 * 16];
+            buffers.flowFieldDirectionsBuffer.GetData(directions);
+            Vector2 westCell = directions[8 * 16 + 2]; // world (-5.5, 0.5)
+            Assert.Greater(westCell.x, 0.2f, "detour must still make eastward progress: " + westCell);
+            Assert.Greater(Mathf.Abs(westCell.y), 0.2f, "blocked direct ray must bend around a wall corner: " + westCell);
+
+            attackerFlowEnabled = false;
+            attackerFlowRebuild = false;
+            attackerFlowTargetMode = 0;
+            staticObstacleCount = 0;
+        }
+
+        [UnityTest]
+        public IEnumerator SimulationPushesAgentsOutOfStaticObstacles()
+        {
+            staticObstacleCount = 1;
+            staticObstacleRects[0] = new Vector4(-2f, -2f, 2f, 5f);
+
+            DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            AgentData[] result = new AgentData[TotalAgents];
+            buffers.agentBuffer.GetData(result);
+            for (int i = 0; i < result.Length; i++)
+            {
+                Vector3 position = result[i].position;
+                bool insideRawObstacle = position.x >= -2f && position.x <= 2f &&
+                                         position.z >= -2f && position.z <= 5f;
+                Assert.IsFalse(insideRawObstacle, "agent " + i + " remained inside the obstacle at " + position);
+            }
+
+            staticObstacleCount = 0;
         }
 
         [UnityTest]
@@ -891,6 +946,9 @@ namespace MassEngine.Tests
                 defenderMovementMode = 0,
                 defenderGuardRadius = 50f,
                 localTargetSearchCellRadius = 4,
+                staticObstacleCount = staticObstacleCount,
+                staticObstaclePadding = staticObstaclePadding,
+                staticObstacleRects = staticObstacleRects,
                 grid = new GridFrameSettings
                 {
                     resolutionX = 8,

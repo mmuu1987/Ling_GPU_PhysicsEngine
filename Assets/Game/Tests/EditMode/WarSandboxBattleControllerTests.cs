@@ -111,6 +111,27 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void StaticObstacleToggleUploadsRuntimeWallsAndProjectsMoveTargets()
+        {
+            controller.useCustomStaticObstacleLayout = true;
+            controller.staticObstacles = new[]
+            {
+                new StaticObstacleRect(Vector2.zero, new Vector2(10f, 20f))
+            };
+            controller.staticObstacleClearance = 2f;
+
+            Assert.That(controller.SetStaticObstaclesEnabled(true), Is.True);
+            Assert.That(manager.StaticObstacleCount, Is.EqualTo(1));
+            Assert.That(manager.ResolvePointOutsideStaticObstacles(Vector3.zero), Is.Not.EqualTo(Vector3.zero));
+            Assert.That(controller.SetStaticObstaclesEnabled(false), Is.True);
+            Assert.That(manager.StaticObstacleCount, Is.Zero);
+
+            Assert.That(controller.SetStaticObstaclesEnabled(true), Is.True);
+            Assert.That(controller.IssueMoveOrder(0, Vector3.zero, false), Is.True);
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.Not.EqualTo(Vector3.zero));
+        }
+
+        [Test]
         public void WaypointArrivalUsesGroundPlaneDistanceAndConfiguredRadius()
         {
             Assert.That(WarSandboxMoveRoute.HasReached(
