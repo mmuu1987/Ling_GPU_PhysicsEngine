@@ -164,6 +164,10 @@ namespace MassEngine
 
             shaders.SetInt(RuntimeFlowPreviewModeId, context.runtimeFlowPreviewMode);
             shaders.SetInt(FlowPreviewEnabledId, context.flowPreviewEnabled ? 1 : 0);
+            shaders.SetInt(StaticObstacleCountId, Mathf.Clamp(context.staticObstacleCount, 0, StaticObstacleMath.MaxObstacleCount));
+            shaders.SetFloat(StaticObstaclePaddingId, Mathf.Max(0f, context.staticObstaclePadding));
+            if (context.staticObstacleRects != null && context.staticObstacleRects.Length > 0)
+                shaders.SetVectorArray(StaticObstacleRectsId, context.staticObstacleRects);
 
             if (context.lod.frustumPlanes != null && context.lod.frustumPlanes.Length > 0)
                 shaders.SetVectorArray(FrustumPlanesId, context.lod.frustumPlanes);

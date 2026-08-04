@@ -160,7 +160,7 @@ void GenerateRuntimeAttackerFlowField(uint3 id : SV_DispatchThreadID)
         float stopRadius = max(max(0.0, dynamicFlowTargetStopRadius), flowFieldCellSize * 0.75);
         float2 configuredDirection = (distSqrToConfiguredTarget <= stopRadius * stopRadius || distSqrToConfiguredTarget <= 0.0001)
             ? 0.0
-            : normalize(offsetToConfiguredTarget);
+            : StaticObstacleAwareDirection(cellCenter, cellCenter + offsetToConfiguredTarget, flowFieldCellSize * 0.5);
 
         flowFieldDirections[id.x] = configuredDirection;
         if (flowPreviewEnabled != 0)
@@ -244,7 +244,7 @@ void GenerateRuntimeAttackerFlowField(uint3 id : SV_DispatchThreadID)
     float stopRadius = max(max(0.0, dynamicFlowTargetStopRadius), flowFieldCellSize * 0.75);
     float2 direction = (distSqr <= stopRadius * stopRadius || distSqr <= 0.0001)
         ? 0.0
-        : normalize(offset);
+        : StaticObstacleAwareDirection(cellCenter, target, flowFieldCellSize * 0.5);
 
     flowFieldDirections[id.x] = direction;
 
@@ -404,7 +404,7 @@ void GenerateRuntimeDefenderFlowField(uint3 id : SV_DispatchThreadID)
         float stopRadius = max(max(0.0, dynamicDefenderFlowTargetStopRadius), defenderFlowFieldCellSize * 0.75);
         float2 configuredDirection = (distSqrToConfiguredTarget <= stopRadius * stopRadius || distSqrToConfiguredTarget <= 0.0001)
             ? 0.0
-            : normalize(offsetToConfiguredTarget);
+            : StaticObstacleAwareDirection(cellCenter, cellCenter + offsetToConfiguredTarget, defenderFlowFieldCellSize * 0.5);
 
         defenderFlowFieldDirections[id.x] = configuredDirection;
         if (flowPreviewEnabled != 0)
@@ -482,7 +482,7 @@ void GenerateRuntimeDefenderFlowField(uint3 id : SV_DispatchThreadID)
     float stopRadius = max(max(0.0, dynamicDefenderFlowTargetStopRadius), defenderFlowFieldCellSize * 0.75);
     float2 direction = (distSqr <= stopRadius * stopRadius || distSqr <= 0.0001)
         ? 0.0
-        : normalize(offset);
+        : StaticObstacleAwareDirection(cellCenter, target, defenderFlowFieldCellSize * 0.5);
 
     defenderFlowFieldDirections[id.x] = direction;
 

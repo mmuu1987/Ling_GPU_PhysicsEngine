@@ -105,6 +105,8 @@ namespace MassEngine.Game
                 FocusBattlefield();
             if (Input.GetKeyDown(KeyCode.F))
                 FocusArmy(controller.selectedTeam);
+            if (Input.GetKeyDown(KeyCode.O) && controller.Phase == WarSandboxBattlePhase.Setup)
+                ToggleStaticObstacles();
 
             UpdateCameraFollow();
 
@@ -151,6 +153,15 @@ namespace MassEngine.Game
                 if (GUILayout.Toggle(controlPoint, "据点战", GUI.skin.button, GUILayout.Height(controlHeight)) && !controlPoint)
                     controller.SetGameMode(WarSandboxGameMode.ControlPoint);
                 GUILayout.EndHorizontal();
+
+                bool obstacleEnabled = controller.staticObstaclesEnabled;
+                string obstacleLabel = obstacleEnabled
+                    ? "\u9759\u6001\u969c\u788d [O]  \u5df2\u5f00\u542f"
+                    : "\u9759\u6001\u969c\u788d [O]  \u5df2\u5173\u95ed";
+                bool requestedObstacleState = GUILayout.Toggle(
+                    obstacleEnabled, obstacleLabel, GUI.skin.button, GUILayout.Height(controlHeight));
+                if (requestedObstacleState != obstacleEnabled)
+                    controller.SetStaticObstaclesEnabled(requestedObstacleState);
             }
 
             GUILayout.BeginHorizontal();
@@ -289,6 +300,13 @@ namespace MassEngine.Game
                 SetFeedback(FormatTeamName(controller.selectedTeam) + "：撤回出生地");
         }
 
+        private void ToggleStaticObstacles()
+        {
+            bool enabled = !controller.staticObstaclesEnabled;
+            if (controller.SetStaticObstaclesEnabled(enabled))
+                SetFeedback(enabled ? "\u9759\u6001\u969c\u788d\u5df2\u5f00\u542f" : "\u9759\u6001\u969c\u788d\u5df2\u5173\u95ed");
+        }
+
         private void StartOrRestartDefaultBattle()
         {
             awaitingMoveTarget = false;
@@ -320,7 +338,7 @@ namespace MassEngine.Game
         private Rect ResolvePanelRect()
         {
             float width = Mathf.Min(Mathf.Max(240f, panelWidth), Mathf.Max(240f, Screen.width - 16f));
-            float preferredHeight = Screen.height < 340f ? 276f : 352f;
+            float preferredHeight = Screen.height < 380f ? 296f : 380f;
             float height = Mathf.Min(preferredHeight, Mathf.Max(200f, Screen.height - 16f));
             return new Rect(Mathf.Max(8f, Screen.width - width - 8f), 8f, width, height);
         }
@@ -538,6 +556,7 @@ namespace MassEngine.Game
             GUI.DrawTexture(map, Texture2D.whiteTexture);
             GUI.color = previous;
 
+            DrawStaticObstaclesMinimap(map, worldSize);
             DrawControlPointMinimap(map, worldSize);
             DrawMinimapTeam(map, worldSize, 0, new Color(1f, 0.3f, 0.2f));
             DrawMinimapTeam(map, worldSize, 1, new Color(0.25f, 0.55f, 1f));
@@ -604,6 +623,29 @@ namespace MassEngine.Game
                 Vector2 target = WarSandboxMinimapProjection.WorldToMap(army.currentOrder.target, worldSize, map);
                 DrawSolidRect(new Rect(target.x - 5f, target.y - 1f, 10f, 2f), color);
                 DrawSolidRect(new Rect(target.x - 1f, target.y - 5f, 2f, 10f), color);
+            }
+        }
+
+        private void DrawStaticObstaclesMinimap(Rect map, Vector2 worldSize)
+        {
+            int count = controller.GetStaticObstacleCount();
+            for (int obstacleIndex = 0; obstacleIndex < count; obstacleIndex++)
+            {
+                if (!controller.TryGetStaticObstacle(obstacleIndex, out StaticObstacleRect obstacle))
+                    continue;
+
+                Rect bounds = obstacle.Bounds;
+                Vector2 minimum = WarSandboxMinimapProjection.WorldToMap(
+                    new Vector3(bounds.xMin, 0f, bounds.yMin), worldSize, map);
+                Vector2 maximum = WarSandboxMinimapProjection.WorldToMap(
+                    new Vector3(bounds.xMax, 0f, bounds.yMax), worldSize, map);
+                Rect obstacleRect = Rect.MinMaxRect(
+                    Mathf.Min(minimum.x, maximum.x),
+                    Mathf.Min(minimum.y, maximum.y),
+                    Mathf.Max(minimum.x, maximum.x),
+                    Mathf.Max(minimum.y, maximum.y));
+                DrawSolidRect(obstacleRect, new Color(0.48f, 0.52f, 0.55f, 0.9f));
+                DrawRectOutline(obstacleRect, new Color(0.85f, 0.9f, 0.95f), 1f);
             }
         }
 
