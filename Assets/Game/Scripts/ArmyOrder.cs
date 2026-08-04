@@ -22,6 +22,18 @@ namespace MassEngine.Game
         Draw = 5
     }
 
+    public enum WarSandboxGameMode
+    {
+        Annihilation = 0,
+        ControlPoint = 1
+    }
+
+    public enum WarSandboxVictoryReason
+    {
+        Annihilation = 0,
+        ControlPoint = 1
+    }
+
     [Serializable]
     public struct WarSandboxBattleResult
     {
@@ -34,6 +46,7 @@ namespace MassEngine.Game
         public int attackerFlowRebuilds;
         public int defenderFlowRebuilds;
         public int peakGridOverflowPerFrame;
+        public WarSandboxVictoryReason victoryReason;
         public bool valid;
 
         public int AttackerCasualties
@@ -50,7 +63,8 @@ namespace MassEngine.Game
             WarSandboxBattlePhase phase,
             int attackerInitial,
             int defenderInitial,
-            BattleTelemetrySnapshot telemetry)
+            BattleTelemetrySnapshot telemetry,
+            WarSandboxVictoryReason victoryReason = WarSandboxVictoryReason.Annihilation)
         {
             return new WarSandboxBattleResult
             {
@@ -63,6 +77,7 @@ namespace MassEngine.Game
                 attackerFlowRebuilds = Mathf.Max(0, telemetry.attackerFlowRebuilds),
                 defenderFlowRebuilds = Mathf.Max(0, telemetry.defenderFlowRebuilds),
                 peakGridOverflowPerFrame = Mathf.Max(0, telemetry.peakGridOverflowPerFrame),
+                victoryReason = victoryReason,
                 valid = true
             };
         }
@@ -115,6 +130,26 @@ namespace MassEngine.Game
             Vector2 delta = new Vector2(armyCenter.x - waypoint.x, armyCenter.z - waypoint.z);
             float radius = Mathf.Max(0.1f, arrivalRadius);
             return delta.sqrMagnitude <= radius * radius;
+        }
+    }
+
+    public static class WarSandboxControlPoint
+    {
+        public static float ResolveProgress(
+            float current,
+            int attackersInZone,
+            int defendersInZone,
+            float deltaTime,
+            float captureSeconds)
+        {
+            float step = Mathf.Max(0f, deltaTime) / Mathf.Max(1f, captureSeconds);
+            if (attackersInZone > 0 && defendersInZone <= 0)
+                return Mathf.Clamp(current + step, -1f, 1f);
+            if (defendersInZone > 0 && attackersInZone <= 0)
+                return Mathf.Clamp(current - step, -1f, 1f);
+            if (attackersInZone <= 0 && defendersInZone <= 0)
+                return Mathf.MoveTowards(current, 0f, step * 0.5f);
+            return Mathf.Clamp(current, -1f, 1f);
         }
     }
 }

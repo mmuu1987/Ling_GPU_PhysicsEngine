@@ -82,6 +82,8 @@ RWStructuredBuffer<int> spatialHashStats;
 // Two fixed-size records used by low-frequency telemetry. Per-team layout (8 ints):
 // alive count, sum X, sum Z, min X, min Z, max X, max Z, reserved.
 RWStructuredBuffer<int> teamSpatialStats;
+int telemetryObservationZoneEnabled;
+float4 telemetryObservationZone;
 StructuredBuffer<uint> gridCountsReadBuffer;
 StructuredBuffer<uint> gridAgentIndicesReadBuffer;
 StructuredBuffer<uint> teamGridCountsReadBuffer;

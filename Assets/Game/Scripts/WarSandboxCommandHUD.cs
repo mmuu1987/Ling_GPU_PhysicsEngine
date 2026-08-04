@@ -141,6 +141,18 @@ namespace MassEngine.Game
             GUILayout.Label("阶段：" + FormatPhase(controller.Phase), GUILayout.Height(compactLayout ? 17f : 20f));
             GUILayout.Label(FormatForceSummary(), GUILayout.Height(compactLayout ? 17f : 20f));
 
+            if (controller.Phase == WarSandboxBattlePhase.Setup && !compactLayout)
+            {
+                GUILayout.BeginHorizontal();
+                bool annihilation = controller.gameMode == WarSandboxGameMode.Annihilation;
+                bool controlPoint = controller.gameMode == WarSandboxGameMode.ControlPoint;
+                if (GUILayout.Toggle(annihilation, "歼灭战", GUI.skin.button, GUILayout.Height(controlHeight)) && !annihilation)
+                    controller.SetGameMode(WarSandboxGameMode.Annihilation);
+                if (GUILayout.Toggle(controlPoint, "据点战", GUI.skin.button, GUILayout.Height(controlHeight)) && !controlPoint)
+                    controller.SetGameMode(WarSandboxGameMode.ControlPoint);
+                GUILayout.EndHorizontal();
+            }
+
             GUILayout.BeginHorizontal();
             if (GUILayout.Toggle(controller.selectedTeam == 0, "攻方 [1]", GUI.skin.button, GUILayout.Height(controlHeight)))
                 controller.SelectArmy(0);
@@ -227,6 +239,7 @@ namespace MassEngine.Game
                 GUILayout.Label("F当前/F1攻/F2守/F3双方跟随 · Enter开战 · A/M/H/R下令");
 
             GUILayout.EndArea();
+            DrawControlPointStatus();
             DrawBattleResultReport();
         }
 
@@ -307,7 +320,7 @@ namespace MassEngine.Game
         private Rect ResolvePanelRect()
         {
             float width = Mathf.Min(Mathf.Max(240f, panelWidth), Mathf.Max(240f, Screen.width - 16f));
-            float preferredHeight = Screen.height < 340f ? 276f : 324f;
+            float preferredHeight = Screen.height < 340f ? 276f : 352f;
             float height = Mathf.Min(preferredHeight, Mathf.Max(200f, Screen.height - 16f));
             return new Rect(Mathf.Max(8f, Screen.width - width - 8f), 8f, width, height);
         }
@@ -335,7 +348,9 @@ namespace MassEngine.Game
                 fontSize = 18
             };
             GUILayout.Label(FormatResultTitle(result.phase), titleStyle, GUILayout.Height(26f));
-            GUILayout.Label("\u6218\u6597\u65f6\u957f  " + FormatBattleTime(result.battleSeconds));
+            GUILayout.Label(
+                "胜因  " + FormatVictoryReason(result.victoryReason) +
+                "    战斗时长  " + FormatBattleTime(result.battleSeconds));
             GUILayout.Label(
                 "\u653b\u65b9  \u5e78\u5b58 " + result.attackerSurvivors + "/" + result.attackerInitial +
                 "    \u4f24\u4ea1 " + result.AttackerCasualties);
@@ -382,6 +397,35 @@ namespace MassEngine.Game
         {
             int totalSeconds = Mathf.Max(0, Mathf.FloorToInt(seconds));
             return (totalSeconds / 60).ToString("00") + ":" + (totalSeconds % 60).ToString("00");
+        }
+
+        private static string FormatVictoryReason(WarSandboxVictoryReason reason)
+        {
+            return reason == WarSandboxVictoryReason.ControlPoint ? "占领据点" : "歼灭敌军";
+        }
+
+        private void DrawControlPointStatus()
+        {
+            if (controller.gameMode != WarSandboxGameMode.ControlPoint || IsTerminalPhase(controller.Phase))
+                return;
+
+            Rect commandPanel = ResolvePanelRect();
+            float width = Mathf.Min(360f, Mathf.Max(180f, commandPanel.x - 16f));
+            Rect panel = new Rect(8f, 92f, width, 58f);
+            GUI.Box(panel, GUIContent.none);
+            GUI.Label(
+                new Rect(panel.x + 8f, panel.y + 4f, panel.width - 16f, 20f),
+                "中央据点  攻 " + controller.AttackersInControlPoint + "  |  守 " + controller.DefendersInControlPoint);
+
+            Rect bar = new Rect(panel.x + 8f, panel.y + 30f, panel.width - 16f, 16f);
+            DrawSolidRect(bar, new Color(0.1f, 0.12f, 0.14f, 0.9f));
+            float half = bar.width * 0.5f;
+            float progress = Mathf.Clamp(controller.ControlPointProgress, -1f, 1f);
+            if (progress > 0f)
+                DrawSolidRect(new Rect(bar.center.x, bar.y, half * progress, bar.height), new Color(1f, 0.32f, 0.2f));
+            else if (progress < 0f)
+                DrawSolidRect(new Rect(bar.center.x + half * progress, bar.y, -half * progress, bar.height), new Color(0.25f, 0.55f, 1f));
+            DrawSolidRect(new Rect(bar.center.x - 1f, bar.y, 2f, bar.height), Color.white);
         }
 
         private void ResolveReferences()
@@ -494,6 +538,7 @@ namespace MassEngine.Game
             GUI.DrawTexture(map, Texture2D.whiteTexture);
             GUI.color = previous;
 
+            DrawControlPointMinimap(map, worldSize);
             DrawMinimapTeam(map, worldSize, 0, new Color(1f, 0.3f, 0.2f));
             DrawMinimapTeam(map, worldSize, 1, new Color(0.25f, 0.55f, 1f));
 
@@ -560,6 +605,25 @@ namespace MassEngine.Game
                 DrawSolidRect(new Rect(target.x - 5f, target.y - 1f, 10f, 2f), color);
                 DrawSolidRect(new Rect(target.x - 1f, target.y - 5f, 2f, 10f), color);
             }
+        }
+
+        private void DrawControlPointMinimap(Rect map, Vector2 worldSize)
+        {
+            if (controller.gameMode != WarSandboxGameMode.ControlPoint)
+                return;
+
+            Vector3 centerWorld = controller.controlPointCenter;
+            float radius = Mathf.Max(2f, controller.controlPointRadius);
+            Vector2 center = WarSandboxMinimapProjection.WorldToMap(centerWorld, worldSize, map);
+            Vector2 edgeX = WarSandboxMinimapProjection.WorldToMap(centerWorld + Vector3.right * radius, worldSize, map);
+            Vector2 edgeZ = WarSandboxMinimapProjection.WorldToMap(centerWorld + Vector3.forward * radius, worldSize, map);
+            float radiusX = Mathf.Abs(edgeX.x - center.x);
+            float radiusY = Mathf.Abs(edgeZ.y - center.y);
+            DrawRectOutline(
+                new Rect(center.x - radiusX, center.y - radiusY, radiusX * 2f, radiusY * 2f),
+                new Color(1f, 0.85f, 0.2f),
+                1f);
+            DrawSolidRect(new Rect(center.x - 2f, center.y - 2f, 4f, 4f), new Color(1f, 0.85f, 0.2f));
         }
 
         private void DrawMinimapRoute(
@@ -689,6 +753,34 @@ namespace MassEngine.Game
 
             DrawArmyMarker(targetCamera, controller.GetArmy(0), new Color(1f, 0.35f, 0.25f));
             DrawArmyMarker(targetCamera, controller.GetArmy(1), new Color(0.3f, 0.6f, 1f));
+            DrawControlPointWorldMarker(targetCamera);
+        }
+
+        private void DrawControlPointWorldMarker(Camera targetCamera)
+        {
+            if (controller.gameMode != WarSandboxGameMode.ControlPoint)
+                return;
+
+            Vector3 centerScreen = targetCamera.WorldToScreenPoint(controller.controlPointCenter);
+            Vector3 edgeScreen = targetCamera.WorldToScreenPoint(
+                controller.controlPointCenter + Vector3.right * Mathf.Max(2f, controller.controlPointRadius));
+            if (centerScreen.z <= 0f || edgeScreen.z <= 0f)
+                return;
+
+            Vector2 center = new Vector2(centerScreen.x, Screen.height - centerScreen.y);
+            float radius = Mathf.Clamp(Mathf.Abs(edgeScreen.x - centerScreen.x), 8f, 240f);
+            Color color = new Color(1f, 0.85f, 0.2f, 0.8f);
+            const int segments = 24;
+            Vector2 previous = center + Vector2.right * radius;
+            for (int i = 1; i <= segments; i++)
+            {
+                float angle = i * Mathf.PI * 2f / segments;
+                Vector2 next = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+                DrawLine(previous, next, color, 1f);
+                previous = next;
+            }
+
+            GUI.Label(new Rect(center.x + 8f, center.y - 12f, 100f, 22f), "中央据点");
         }
 
         private static void DrawArmyMarker(Camera targetCamera, ArmyRuntimeState army, Color color)

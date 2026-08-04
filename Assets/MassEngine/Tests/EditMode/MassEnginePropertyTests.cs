@@ -46,6 +46,7 @@ namespace MassEngine.Tests
             values[4] = -3;
             values[5] = 18;
             values[6] = 11;
+            values[7] = 3;
 
             Assert.That(BattleTelemetry.TryDecodeTeamSpatialStats(values, 0, out TeamSpatialTelemetry team), Is.True);
             Assert.That(team.aliveCount, Is.EqualTo(4));
@@ -53,6 +54,7 @@ namespace MassEngine.Tests
             Assert.That(team.bounds.center, Is.EqualTo(team.centroid));
             Assert.That(team.bounds.min.x, Is.LessThanOrEqualTo(2f));
             Assert.That(team.bounds.max.x, Is.GreaterThanOrEqualTo(18f));
+            Assert.That(team.observationZoneCount, Is.EqualTo(3));
             Assert.That(BattleTelemetry.TryDecodeTeamSpatialStats(values, 1, out _), Is.False);
         }
 
