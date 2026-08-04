@@ -119,7 +119,7 @@ namespace MassEngine.Game
             if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Max(1f, maxRayDistance), groundMask, QueryTriggerInteraction.Ignore))
                 return;
 
-            IssueMoveTo(hit.point);
+            IssueMoveTo(hit.point, Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
         }
 
         private void OnGUI()
@@ -243,13 +243,22 @@ namespace MassEngine.Game
             SetFeedback(FormatTeamName(controller.selectedTeam) + "：请选择移动目标");
         }
 
-        private bool IssueMoveTo(Vector3 target)
+        private bool IssueMoveTo(Vector3 target, bool append = false)
         {
-            if (!controller.IssueOrder(ArmyOrder.Move(controller.selectedTeam, target)))
+            ArmyRuntimeState selectedArmy = controller.SelectedArmy;
+            bool actuallyAppending = append &&
+                                     controller.GetMoveRoutePointCount(controller.selectedTeam) > 0 &&
+                                     selectedArmy != null && selectedArmy.hasOrder &&
+                                     selectedArmy.currentOrder.type == ArmyOrderType.Move;
+            if (!controller.IssueMoveOrder(controller.selectedTeam, target, append))
+            {
+                if (actuallyAppending)
+                    SetFeedback("路线已达到航点上限");
                 return false;
+            }
 
             awaitingMoveTarget = false;
-            SetFeedback(FormatTeamName(controller.selectedTeam) + "：移动目标已更新");
+            SetFeedback(FormatTeamName(controller.selectedTeam) + (actuallyAppending ? "：已追加路线航点" : "：移动目标已更新"));
             return true;
         }
 
@@ -478,7 +487,7 @@ namespace MassEngine.Game
                 Screen.width, Screen.height, minimapSize, 8f);
             Rect map = WarSandboxMinimapProjection.ResolveContentRect(outer);
             GUI.Box(outer, GUIContent.none);
-            GUI.Label(new Rect(outer.x + 8f, outer.y + 3f, outer.width - 16f, 20f), "左键定位 · 右键移动");
+            GUI.Label(new Rect(outer.x + 8f, outer.y + 3f, outer.width - 16f, 20f), "左定位 右移动 Shift追加");
 
             Color previous = GUI.color;
             GUI.color = new Color(0.08f, 0.1f, 0.12f, 0.92f);
@@ -501,10 +510,11 @@ namespace MassEngine.Game
             {
                 Vector3 point = WarSandboxMinimapProjection.MapToWorld(current.mousePosition, worldSize, map);
                 WarSandboxMinimapAction action = WarSandboxMinimapProjection.ResolvePointerAction(
-                    current.button, awaitingMoveTarget);
-                if (action == WarSandboxMinimapAction.MoveSelectedArmy)
+                    current.button, awaitingMoveTarget, current.shift);
+                if (action == WarSandboxMinimapAction.MoveSelectedArmy ||
+                    action == WarSandboxMinimapAction.QueueMoveSelectedArmy)
                 {
-                    if (IssueMoveTo(point))
+                    if (IssueMoveTo(point, action == WarSandboxMinimapAction.QueueMoveSelectedArmy))
                         current.Use();
                 }
                 else if (action == WarSandboxMinimapAction.FocusCamera)
@@ -534,17 +544,52 @@ namespace MassEngine.Game
             DrawRectOutline(teamRect, color, 1f);
 
             Vector2 center = WarSandboxMinimapProjection.WorldToMap(bounds.center, worldSize, map);
+            int routePointCount = controller.GetMoveRoutePointCount(teamId);
+            if (routePointCount > 0)
+                DrawMinimapRoute(map, worldSize, teamId, center, color, routePointCount);
+
             float markerSize = controller.selectedTeam == teamId ? 10f : 7f;
             DrawSolidRect(
                 new Rect(center.x - markerSize * 0.5f, center.y - markerSize * 0.5f, markerSize, markerSize),
                 color);
 
             ArmyRuntimeState army = controller.GetArmy(teamId);
-            if (army != null && army.hasOrder && army.currentOrder.hasTarget)
+            if (routePointCount == 0 && army != null && army.hasOrder && army.currentOrder.hasTarget)
             {
                 Vector2 target = WarSandboxMinimapProjection.WorldToMap(army.currentOrder.target, worldSize, map);
                 DrawSolidRect(new Rect(target.x - 5f, target.y - 1f, 10f, 2f), color);
                 DrawSolidRect(new Rect(target.x - 1f, target.y - 5f, 2f, 10f), color);
+            }
+        }
+
+        private void DrawMinimapRoute(
+            Rect map,
+            Vector2 worldSize,
+            int teamId,
+            Vector2 armyCenter,
+            Color color,
+            int routePointCount)
+        {
+            Vector2 previous = armyCenter;
+            Color lineColor = new Color(color.r, color.g, color.b, 0.65f);
+            for (int routeIndex = 0; routeIndex < routePointCount; routeIndex++)
+            {
+                if (!controller.TryGetMoveRoutePoint(teamId, routeIndex, out Vector3 worldPoint))
+                    continue;
+
+                Vector2 point = WarSandboxMinimapProjection.WorldToMap(worldPoint, worldSize, map);
+                DrawLine(previous, point, lineColor, 1f);
+                if (routeIndex == 0)
+                {
+                    DrawSolidRect(new Rect(point.x - 5f, point.y - 1f, 10f, 2f), color);
+                    DrawSolidRect(new Rect(point.x - 1f, point.y - 5f, 2f, 10f), color);
+                }
+                else
+                {
+                    DrawRectOutline(new Rect(point.x - 3f, point.y - 3f, 6f, 6f), color, 1f);
+                }
+
+                previous = point;
             }
         }
 
@@ -576,6 +621,19 @@ namespace MassEngine.Game
             GUI.color = color;
             GUI.DrawTexture(rect, Texture2D.whiteTexture);
             GUI.color = previous;
+        }
+
+        private static void DrawLine(Vector2 start, Vector2 end, Color color, float thickness)
+        {
+            Vector2 delta = end - start;
+            float length = delta.magnitude;
+            if (length <= 0.01f)
+                return;
+
+            Matrix4x4 previous = GUI.matrix;
+            GUIUtility.RotateAroundPivot(Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg, start);
+            DrawSolidRect(new Rect(start.x, start.y - thickness * 0.5f, length, thickness), color);
+            GUI.matrix = previous;
         }
 
         private bool TryResolveArmyBounds(int teamId, out Bounds bounds)
@@ -717,15 +775,18 @@ namespace MassEngine.Game
     {
         None,
         FocusCamera,
-        MoveSelectedArmy
+        MoveSelectedArmy,
+        QueueMoveSelectedArmy
     }
 
     public static class WarSandboxMinimapProjection
     {
-        public static WarSandboxMinimapAction ResolvePointerAction(int mouseButton, bool awaitingMoveTarget)
+        public static WarSandboxMinimapAction ResolvePointerAction(int mouseButton, bool awaitingMoveTarget, bool appendModifier)
         {
             if (mouseButton == 1 || (mouseButton == 0 && awaitingMoveTarget))
-                return WarSandboxMinimapAction.MoveSelectedArmy;
+                return appendModifier
+                    ? WarSandboxMinimapAction.QueueMoveSelectedArmy
+                    : WarSandboxMinimapAction.MoveSelectedArmy;
             return mouseButton == 0 ? WarSandboxMinimapAction.FocusCamera : WarSandboxMinimapAction.None;
         }
 
