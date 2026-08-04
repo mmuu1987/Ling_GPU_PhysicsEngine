@@ -94,6 +94,32 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void MoveRoutesReplaceAppendAndClearWithDoctrineChanges()
+        {
+            Vector3 first = new Vector3(-5f, 0f, 10f);
+            Vector3 second = new Vector3(20f, 0f, 30f);
+            Assert.That(controller.IssueMoveOrder(0, first, false), Is.True);
+            Assert.That(controller.IssueMoveOrder(0, second, true), Is.True);
+
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.EqualTo(2));
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(first));
+            Assert.That(controller.TryGetMoveRoutePoint(0, 1, out Vector3 queued), Is.True);
+            Assert.That(queued, Is.EqualTo(second));
+
+            controller.IssueOrder(ArmyOrder.Attack(0));
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.Zero);
+        }
+
+        [Test]
+        public void WaypointArrivalUsesGroundPlaneDistanceAndConfiguredRadius()
+        {
+            Assert.That(WarSandboxMoveRoute.HasReached(
+                new Vector3(4f, 100f, 3f), Vector3.zero, 5f), Is.True);
+            Assert.That(WarSandboxMoveRoute.HasReached(
+                new Vector3(4.1f, 0f, 3f), Vector3.zero, 5f), Is.False);
+        }
+
+        [Test]
         public void RuntimeNavigationDoctrineOverridesReadOnlyFlowConfig()
         {
             RuntimeFlowConfig flow = system.runtimeFlowConfig;
@@ -272,17 +298,20 @@ namespace MassEngine.Game.Tests
             Assert.That(WarSandboxMinimapProjection.ResolveContentRect(outer).height, Is.GreaterThan(0f));
         }
 
-        [TestCase(0, false, WarSandboxMinimapAction.FocusCamera)]
-        [TestCase(0, true, WarSandboxMinimapAction.MoveSelectedArmy)]
-        [TestCase(1, false, WarSandboxMinimapAction.MoveSelectedArmy)]
-        [TestCase(2, false, WarSandboxMinimapAction.None)]
+        [TestCase(0, false, false, WarSandboxMinimapAction.FocusCamera)]
+        [TestCase(0, true, false, WarSandboxMinimapAction.MoveSelectedArmy)]
+        [TestCase(1, false, false, WarSandboxMinimapAction.MoveSelectedArmy)]
+        [TestCase(1, false, true, WarSandboxMinimapAction.QueueMoveSelectedArmy)]
+        [TestCase(0, true, true, WarSandboxMinimapAction.QueueMoveSelectedArmy)]
+        [TestCase(2, false, false, WarSandboxMinimapAction.None)]
         public void MinimapPointerIntentSeparatesCameraAndOrders(
             int mouseButton,
             bool awaitingMoveTarget,
+            bool appendModifier,
             WarSandboxMinimapAction expected)
         {
             Assert.That(
-                WarSandboxMinimapProjection.ResolvePointerAction(mouseButton, awaitingMoveTarget),
+                WarSandboxMinimapProjection.ResolvePointerAction(mouseButton, awaitingMoveTarget, appendModifier),
                 Is.EqualTo(expected));
         }
 

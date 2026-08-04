@@ -107,4 +107,14 @@ namespace MassEngine.Game
         public ArmyOrder currentOrder;
         public bool hasOrder;
     }
+
+    public static class WarSandboxMoveRoute
+    {
+        public static bool HasReached(Vector3 armyCenter, Vector3 waypoint, float arrivalRadius)
+        {
+            Vector2 delta = new Vector2(armyCenter.x - waypoint.x, armyCenter.z - waypoint.z);
+            float radius = Mathf.Max(0.1f, arrivalRadius);
+            return delta.sqrMagnitude <= radius * radius;
+        }
+    }
 }
