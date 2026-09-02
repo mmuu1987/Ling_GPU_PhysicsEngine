@@ -662,10 +662,20 @@ namespace MassEngine.Tests
             yield return null;
 
             int[] map = ReadDensityMap();
+            int[] attackerMap = ReadDensityMap(buffers.attackerDensityMapTexture);
+            int[] defenderMap = ReadDensityMap(buffers.defenderDensityMapTexture);
             int total = 0;
+            int attackerTotal = 0;
+            int defenderTotal = 0;
             for (int i = 0; i < map.Length; i++)
+            {
                 total += map[i];
+                attackerTotal += attackerMap[i];
+                defenderTotal += defenderMap[i];
+            }
             Assert.AreEqual(TotalAgents, total, "density map must count every living agent exactly once");
+            Assert.AreEqual(AttackerCount, attackerTotal, "attacker density must contain only team 0");
+            Assert.AreEqual(DefenderCount, defenderTotal, "defender density must contain only team 1");
             // Default layout: attackers at x=-0.5 (cell 7), defenders at x=0.5 (cell 8),
             // z lanes 0/1.5/3/4.5 -> cells 8, 9, 11, 12.
             int[] laneCells = { 8, 9, 11, 12 };
@@ -673,6 +683,10 @@ namespace MassEngine.Tests
             {
                 Assert.AreEqual(1, map[zCell * 16 + 7], "attacker cell z=" + zCell);
                 Assert.AreEqual(1, map[zCell * 16 + 8], "defender cell z=" + zCell);
+                Assert.AreEqual(1, attackerMap[zCell * 16 + 7], "attacker team cell z=" + zCell);
+                Assert.AreEqual(0, attackerMap[zCell * 16 + 8], "attacker map leaked defender z=" + zCell);
+                Assert.AreEqual(0, defenderMap[zCell * 16 + 7], "defender map leaked attacker z=" + zCell);
+                Assert.AreEqual(1, defenderMap[zCell * 16 + 8], "defender team cell z=" + zCell);
             }
 
             // Dead agents must vanish from the map.
@@ -687,17 +701,164 @@ namespace MassEngine.Tests
             yield return null;
 
             map = ReadDensityMap();
+            attackerMap = ReadDensityMap(buffers.attackerDensityMapTexture);
+            defenderMap = ReadDensityMap(buffers.defenderDensityMapTexture);
             total = 0;
+            attackerTotal = 0;
+            defenderTotal = 0;
             for (int i = 0; i < map.Length; i++)
+            {
                 total += map[i];
+                attackerTotal += attackerMap[i];
+                defenderTotal += defenderMap[i];
+            }
             Assert.AreEqual(AttackerCount, total, "dead defenders must not appear in the density map");
+            Assert.AreEqual(AttackerCount, attackerTotal);
+            Assert.AreEqual(0, defenderTotal, "dead defenders must vanish from their team density map");
             foreach (int zCell in laneCells)
                 Assert.AreEqual(0, map[zCell * 16 + 8], "dead defender cell z=" + zCell);
         }
 
+        [UnityTest]
+        public IEnumerator EngagementSlotOccupancyRedirectsAnOverloadedApproach()
+        {
+            // Four attackers claim the same slot around defender 4. The occupancy pass
+            // must record all four claims before combat chooses lower-load sectors.
+            int[] targets = new int[TotalAgents];
+            int[] assignments = new int[TotalAgents];
+            for (int i = 0; i < TotalAgents; i++)
+            {
+                targets[i] = -1;
+                assignments[i] = -1;
+            }
+
+            int targetIndex = AttackerCount;
+            for (int i = 0; i < AttackerCount; i++)
+            {
+                targets[i] = targetIndex;
+                assignments[i] = targetIndex * MassGpuBufferManager.EngagementSlotsPerTarget;
+            }
+            buffers.combatBuffers.targetAgentIndexBuffer.SetData(targets);
+            buffers.combatBuffers.engagementSlotAssignmentBuffer.SetData(assignments);
+
+            DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            uint[] occupancy = new uint[fixtureTotalAgents * MassGpuBufferManager.EngagementSlotsPerTarget];
+            buffers.combatBuffers.engagementSlotOccupancyBuffer.GetData(occupancy);
+            uint packed = occupancy[targetIndex * MassGpuBufferManager.EngagementSlotsPerTarget];
+            Assert.AreEqual((uint)dispatchedFrames & 0x00FFFFFFu, packed >> 8, "slot counter must carry the current frame stamp");
+            Assert.AreEqual(AttackerCount, (int)(packed & 0xFFu), "all prior assignments must be counted");
+
+            buffers.combatBuffers.engagementSlotAssignmentBuffer.GetData(assignments);
+            bool redirected = false;
+            for (int i = 0; i < AttackerCount; i++)
+            {
+                Assert.AreEqual(targetIndex, assignments[i] / MassGpuBufferManager.EngagementSlotsPerTarget);
+                redirected |= assignments[i] % MassGpuBufferManager.EngagementSlotsPerTarget != 0;
+            }
+            Assert.IsTrue(redirected, "an overloaded slot must redirect at least one attacker");
+        }
+
+        [UnityTest]
+        public IEnumerator TargetLoadBalancingDistributesAttackersWithoutDroppingTheLastEnemy()
+        {
+            buffers.ReleaseAll();
+            registry.ReleaseAll();
+            foreach (ScriptableObject asset in createdConfigs)
+            {
+                if (asset != null)
+                    Object.DestroyImmediate(asset);
+            }
+            Object.DestroyImmediate(scenario);
+
+            const int attackerCount = 16;
+            const int defenderCount = 2;
+            BuildScenario(attackerCount, defenderCount);
+            buffers = new MassGpuBufferManager();
+            orchestrator = new ComputePipelineOrchestrator(shaderSet, buffers);
+            gridMaxAgentsPerCell = 32;
+            buffers.Allocate(fixtureTotalAgents, 64, gridMaxAgentsPerCell, 16, 16, registry.UnitTypeCount);
+            registry.InitializeAll(buffers, orchestrator);
+
+            AgentData[] agents = new AgentData[fixtureTotalAgents];
+            int[] teamIds = new int[fixtureTotalAgents];
+            int[] hp = new int[fixtureTotalAgents];
+            int[] unitTypeIndices = new int[fixtureTotalAgents];
+            registry.GenerateAgents(agents);
+            registry.FillCombatArrays(teamIds, hp, unitTypeIndices);
+            for (int i = 0; i < attackerCount; i++)
+            {
+                agents[i].position = new Vector3(-4f, 0f, -1.5f + i * 0.2f);
+                agents[i].velocity = Vector3.zero;
+            }
+            agents[attackerCount].position = new Vector3(0f, 0f, -1f);
+            agents[attackerCount + 1].position = new Vector3(0f, 0f, 1f);
+            hp[attackerCount] = 10000;
+            hp[attackerCount + 1] = 10000;
+            buffers.UploadInitialData(agents, teamIds, hp, unitTypeIndices);
+
+            settingsCache = new UnitTypeGpuSettings[registry.UnitTypeCount];
+            registry.FillGpuSettings(settingsCache);
+            buffers.UploadUnitTypeSettings(settingsCache);
+            dispatchedFrames = 0;
+
+            int[] targets = new int[fixtureTotalAgents];
+            int[] assignments = new int[fixtureTotalAgents];
+            for (int i = 0; i < fixtureTotalAgents; i++)
+            {
+                targets[i] = -1;
+                assignments[i] = -1;
+            }
+            for (int i = 0; i < attackerCount; i++)
+            {
+                targets[i] = attackerCount;
+                assignments[i] = attackerCount * MassGpuBufferManager.EngagementSlotsPerTarget +
+                    i % MassGpuBufferManager.EngagementSlotsPerTarget;
+            }
+            buffers.combatBuffers.targetAgentIndexBuffer.SetData(targets);
+            buffers.combatBuffers.engagementSlotAssignmentBuffer.SetData(assignments);
+
+            for (int frame = 0; frame < 8; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            buffers.combatBuffers.targetAgentIndexBuffer.GetData(targets);
+            int firstTargetCount = 0;
+            int secondTargetCount = 0;
+            for (int i = 0; i < attackerCount; i++)
+            {
+                if (targets[i] == attackerCount)
+                    firstTargetCount++;
+                else if (targets[i] == attackerCount + 1)
+                    secondTargetCount++;
+            }
+            Assert.Greater(firstTargetCount, 0, "hysteresis must keep part of the force on the original target");
+            Assert.Greater(secondTargetCount, 0, "overloaded targeting must redirect part of the force to the second defender");
+
+            hp[attackerCount] = 0;
+            hp[attackerCount + 1] = 10000;
+            buffers.combatBuffers.hpReadBuffer.SetData(hp);
+            buffers.combatBuffers.hpWriteBuffer.SetData(hp);
+            for (int frame = 0; frame < 12; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            buffers.combatBuffers.targetAgentIndexBuffer.GetData(targets);
+            for (int i = 0; i < attackerCount; i++)
+                Assert.AreEqual(attackerCount + 1, targets[i], "the sole surviving defender must remain targetable regardless of load");
+
+            gridMaxAgentsPerCell = 16;
+        }
+
         private int[] ReadDensityMap()
         {
-            AsyncGPUReadbackRequest request = AsyncGPUReadback.Request(buffers.densityMapTexture);
+            return ReadDensityMap(buffers.densityMapTexture);
+        }
+
+        private int[] ReadDensityMap(RenderTexture texture)
+        {
+            AsyncGPUReadbackRequest request = AsyncGPUReadback.Request(texture);
             request.WaitForCompletion();
             Assert.IsFalse(request.hasError, "density map readback failed");
             var data = request.GetData<int>();

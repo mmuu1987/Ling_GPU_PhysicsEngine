@@ -25,6 +25,9 @@
 #define LOCAL_TARGET_SEARCH_MAX_CELL_RADIUS 4
 #define LOCAL_TARGET_SEARCH_INTERVAL 4u
 #define LOCAL_TARGET_SEARCH_GROUP_SIZE 64u
+#define ENGAGEMENT_SLOT_COUNT 8u
+#define ENGAGEMENT_SLOT_SHIFT 3u
+#define ENGAGEMENT_SLOT_MASK 7u
 
 struct AgentData
 {
@@ -90,8 +93,14 @@ StructuredBuffer<uint> teamGridCountsReadBuffer;
 StructuredBuffer<uint> teamGridAgentIndicesReadBuffer;
 RWStructuredBuffer<float2> flowFieldDirections;
 RWStructuredBuffer<float2> defenderFlowFieldDirections;
+StructuredBuffer<float2> flowFieldDirectionsReadBuffer;
+StructuredBuffer<float2> defenderFlowFieldDirectionsReadBuffer;
 Texture2D<uint> densityMap;
 RWTexture2D<uint> densityMapWrite;
+Texture2D<uint> attackerDensityMap;
+Texture2D<uint> defenderDensityMap;
+RWTexture2D<uint> attackerDensityMapWrite;
+RWTexture2D<uint> defenderDensityMapWrite;
 RWStructuredBuffer<uint> runtimeAttackerTargetDensity;
 RWStructuredBuffer<int> runtimeAttackerFlowStats;
 RWStructuredBuffer<float4> runtimeAttackerFlowTargets;
@@ -110,6 +119,9 @@ RWStructuredBuffer<int> hpBuffer;            // this frame's write target (comba
 StructuredBuffer<int> hpReadBuffer;          // last frame's snapshot (read everywhere)
 StructuredBuffer<int> teamIdReadBuffer;
 RWStructuredBuffer<int> targetAgentIndexBuffer;
+RWStructuredBuffer<int> engagementSlotAssignmentBuffer;
+RWStructuredBuffer<uint> engagementSlotOccupancyBuffer;
+StructuredBuffer<uint> engagementSlotOccupancyReadBuffer;
 RWStructuredBuffer<float> attackCooldownBuffer;
 StructuredBuffer<float3> homePositionReadBuffer;
 RWStructuredBuffer<int> pendingDamageBuffer;
@@ -563,7 +575,7 @@ float2 SampleFlowDirection(uint index, float3 position)
     if (flowFieldEnabled == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
         return 0.0;
 
-    float2 direction = flowFieldDirections[FlowFieldCellToIndex(PositionToFlowFieldCell(position))];
+    float2 direction = flowFieldDirectionsReadBuffer[FlowFieldCellToIndex(PositionToFlowFieldCell(position))];
     float lengthSqr = dot(direction, direction);
     if (lengthSqr <= 0.0001)
         return 0.0;
@@ -579,7 +591,7 @@ float2 SampleDefenderFlowDirection(uint index, float3 position)
     if (defenderFlowFieldEnabled == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
         return 0.0;
 
-    float2 direction = defenderFlowFieldDirections[DefenderFlowFieldCellToIndex(PositionToDefenderFlowFieldCell(position))];
+    float2 direction = defenderFlowFieldDirectionsReadBuffer[DefenderFlowFieldCellToIndex(PositionToDefenderFlowFieldCell(position))];
     float lengthSqr = dot(direction, direction);
     if (lengthSqr <= 0.0001)
         return 0.0;
@@ -619,12 +631,28 @@ uint SampleDensityCell(int2 cell)
     return densityMap[cell];
 }
 
-float2 SampleDensityGradientCell(int2 cell)
+uint SampleFriendlyDensityCell(uint selfIndex, int2 cell)
 {
-    float densityL = (float)SampleDensityCell(cell + int2(-1, 0));
-    float densityR = (float)SampleDensityCell(cell + int2(1, 0));
-    float densityD = (float)SampleDensityCell(cell + int2(0, -1));
-    float densityU = (float)SampleDensityCell(cell + int2(0, 1));
+    cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
+    cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
+
+    int team = teamIdReadBuffer[selfIndex];
+    uint result = densityMap[cell];
+    if (team == attackerTeamId)
+        result = attackerDensityMap[cell];
+    else if (team == defenderTeamId)
+        result = defenderDensityMap[cell];
+
+    // The current battle path is two-team, but keep non-standard/editor teams safe.
+    return result;
+}
+
+float2 SampleFriendlyDensityGradientCell(uint selfIndex, int2 cell)
+{
+    float densityL = (float)SampleFriendlyDensityCell(selfIndex, cell + int2(-1, 0));
+    float densityR = (float)SampleFriendlyDensityCell(selfIndex, cell + int2(1, 0));
+    float densityD = (float)SampleFriendlyDensityCell(selfIndex, cell + int2(0, -1));
+    float densityU = (float)SampleFriendlyDensityCell(selfIndex, cell + int2(0, 1));
     return float2(densityR - densityL, densityU - densityD) * 0.5;
 }
 
@@ -647,22 +675,76 @@ int2 DirectionToCellStep(float2 direction)
     return step;
 }
 
-float SampleAheadDensity(int2 cell, float2 desiredDirection)
+float SampleAheadFriendlyDensity(uint selfIndex, int2 cell, float2 desiredDirection)
 {
     // Single result variable: keeps fxc's flow analysis happy after inlining
     // (the early-return form triggered a spurious uninitialized-variable warning).
-    float result = (float)SampleDensityCell(cell);
+    float result = (float)SampleFriendlyDensityCell(selfIndex, cell);
     int2 ahead = DirectionToCellStep(desiredDirection);
     if (ahead.x != 0 || ahead.y != 0)
     {
         int2 side = DirectionToCellStep(float2(-desiredDirection.y, desiredDirection.x));
-        float aheadCenter = (float)SampleDensityCell(cell + ahead);
-        float aheadLeft = (float)SampleDensityCell(cell + ahead + side);
-        float aheadRight = (float)SampleDensityCell(cell + ahead - side);
+        float aheadCenter = (float)SampleFriendlyDensityCell(selfIndex, cell + ahead);
+        float aheadLeft = (float)SampleFriendlyDensityCell(selfIndex, cell + ahead + side);
+        float aheadRight = (float)SampleFriendlyDensityCell(selfIndex, cell + ahead - side);
         result = (aheadCenter * 2.0 + aheadLeft + aheadRight) * 0.25;
     }
 
     return result;
+}
+
+float FriendlyNavigationCost(uint selfIndex, float3 position, float2 direction)
+{
+    float lenSqr = dot(direction, direction);
+    if (lenSqr <= 0.0001)
+        return 1e20;
+
+    float2 unitDirection = direction * rsqrt(lenSqr);
+    float lookAhead = max(0.5, flowFieldCellSize);
+    int2 nearCell = PositionToFlowFieldCell(position + float3(unitDirection.x * lookAhead, 0.0, unitDirection.y * lookAhead));
+    int2 farCell = PositionToFlowFieldCell(position + float3(unitDirection.x * lookAhead * 2.0, 0.0, unitDirection.y * lookAhead * 2.0));
+    return (float)SampleFriendlyDensityCell(selfIndex, nearCell) +
+           (float)SampleFriendlyDensityCell(selfIndex, farCell) * 0.45;
+}
+
+float2 ApplyFriendlyDensityNavigation(uint selfIndex, float3 position, float2 navigationDirection)
+{
+    float lenSqr = dot(navigationDirection, navigationDirection);
+    if (lenSqr <= 0.0001)
+        return navigationDirection;
+
+    float2 forward = navigationDirection * rsqrt(lenSqr);
+    float2 side = float2(-forward.y, forward.x);
+    // Roughly +/- 38 degrees: enough to move into a neighboring lane without
+    // overriding the global flow field or turning a marching column backwards.
+    float2 left = normalize(forward * 0.79 + side * 0.61);
+    float2 right = normalize(forward * 0.79 - side * 0.61);
+    float forwardCost = FriendlyNavigationCost(selfIndex, position, forward);
+    float leftCost = FriendlyNavigationCost(selfIndex, position, left) + 0.65;
+    float rightCost = FriendlyNavigationCost(selfIndex, position, right) + 0.65;
+
+    // A stable per-agent epsilon breaks perfectly symmetric queues without flicker.
+    float lanePreference = SignedHash01(selfIndex ^ 0xA24BAED5u) * 0.04;
+    leftCost += lanePreference;
+    rightCost -= lanePreference;
+
+    float2 bestDirection = forward;
+    float bestCost = forwardCost;
+    if (leftCost < bestCost)
+    {
+        bestCost = leftCost;
+        bestDirection = left;
+    }
+    if (rightCost < bestCost)
+    {
+        bestCost = rightCost;
+        bestDirection = right;
+    }
+
+    float congestionGain = saturate((forwardCost - bestCost) / max(1.0, forwardCost));
+    float2 blended = lerp(forward, bestDirection, congestionGain * 0.78);
+    float blendedLenSqr = dot(blended, blended);
+    return blendedLenSqr > 0.0001 ? blended * rsqrt(blendedLenSqr) : forward;
 }
 
 struct DensityPressureSample
@@ -691,9 +773,12 @@ DensityPressureSample ComputeDensityPressure(uint selfIndex, float3 position, fl
     float cellArea = max(0.25, flowFieldCellSize * flowFieldCellSize);
     float comfort = max(0.0, settings.densityComfortPerSqm);
     float range = max(0.01, settings.densityPressureRangePerSqm);
-    float centerDensity = (float)SampleDensityCell(cell) / cellArea;
+    // Friendly pressure must remain strong while approaching an enemy formation. The
+    // previous all-agent map treated the enemy front as a wall, forcing the combat path
+    // to globally weaken avoidance and consequently allowing friendly ranks to overlap.
+    float centerDensity = (float)SampleFriendlyDensityCell(selfIndex, cell) / cellArea;
     float centerPressure = saturate((centerDensity - comfort) / range);
-    float aheadPressure = saturate((SampleAheadDensity(cell, desiredDirection) / cellArea - comfort) / range);
+    float aheadPressure = saturate((SampleAheadFriendlyDensity(selfIndex, cell, desiredDirection) / cellArea - comfort) / range);
     float pressure = max(centerPressure, aheadPressure);
     result.pressure = pressure;
     result.centerPressure = centerPressure;
@@ -703,7 +788,7 @@ DensityPressureSample ComputeDensityPressure(uint selfIndex, float3 position, fl
     result.speedScale = saturate(1.0 - pressure * penalty);
 
     float strength = max(0.0, settings.densityAvoidanceStrength);
-    float2 gradient = SampleDensityGradientCell(cell);
+    float2 gradient = SampleFriendlyDensityGradientCell(selfIndex, cell);
     float gradLenSqr = dot(gradient, gradient);
     if (pressure > 0.0 && strength > 0.0 && gradLenSqr > 0.0001)
         result.avoidance = -normalize(gradient) * strength * pressure;
@@ -980,10 +1065,55 @@ float2 ConfiguredFlowTargetOffset(float2 position, int targetMode, float4 target
 
 struct NeighborhoodQueryResult
 {
-    int nearestEnemyIndex;
-    float nearestEnemyDistSqr;
+    int bestEnemyIndex;
+    float bestEnemyScore;
     float2 separation;
 };
+
+uint CurrentEngagementOccupancy(uint targetIndex, uint slot)
+{
+    uint packed = engagementSlotOccupancyReadBuffer[targetIndex * ENGAGEMENT_SLOT_COUNT + slot];
+    uint stamp = frameIndex & 0x00FFFFFFu;
+    return (packed >> 8) == stamp ? packed & 0xFFu : 0u;
+}
+
+uint CurrentTargetLoad(uint targetIndex)
+{
+    uint load = 0u;
+    [unroll]
+    for (uint slot = 0u; slot < ENGAGEMENT_SLOT_COUNT; slot++)
+        load += CurrentEngagementOccupancy(targetIndex, slot);
+    return load;
+}
+
+float TargetLoadCapacity(uint selfIndex, uint targetIndex)
+{
+    float selfRadius = max(0.05, GetAgentRadius(selfIndex));
+    float targetRadius = max(0.05, GetAgentRadius(targetIndex));
+    float attackRange = max(0.1, GetAttackRange(selfIndex));
+    float engagementRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
+    float circumference = 6.2831853 * max(engagementRadius, selfRadius + targetRadius);
+    float geometricCapacity = floor(circumference / max(0.1, selfRadius * 2.0));
+    return clamp(geometricCapacity, 1.0, (float)ENGAGEMENT_SLOT_COUNT);
+}
+
+float TargetLoadRatio(uint selfIndex, uint targetIndex)
+{
+    return (float)CurrentTargetLoad(targetIndex) / TargetLoadCapacity(selfIndex, targetIndex);
+}
+
+float TargetSelectionScore(uint selfIndex, uint targetIndex, float distSqr)
+{
+    float distanceScore = sqrt(max(0.0, distSqr)) / max(0.1, GetTargetAcquireRadius(selfIndex));
+    float loadRatio = TargetLoadRatio(selfIndex, targetIndex);
+    float loadPenalty = saturate(loadRatio) * 0.30 + max(0.0, loadRatio - 1.0) * 0.15;
+
+    // A stable per-agent affinity breaks up synchronized switching when many agents
+    // observe the same one-frame-old load snapshot. Distance still dominates when
+    // candidates are meaningfully separated.
+    float affinity = Hash01(selfIndex ^ (targetIndex * 0x9E3779B9u)) * 0.45;
+    return distanceScore + loadPenalty + affinity;
+}
 
 NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent, float maxTargetRadius, bool searchForEnemy)
 {
@@ -993,8 +1123,8 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     int queryCellRadius = searchForEnemy ? GetLocalTargetSearchCellRadius(maxTargetRadius) : 1;
 
     NeighborhoodQueryResult result;
-    result.nearestEnemyIndex = -1;
-    result.nearestEnemyDistSqr = maxTargetRadius * maxTargetRadius;
+    result.bestEnemyIndex = -1;
+    result.bestEnemyScore = 1e20;
     result.separation = 0.0;
     uint enemyTeamSlot = IsDefenderTeam(selfIndex) ? 0u : 1u;
 
@@ -1021,11 +1151,14 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
 
                     float2 toOther = agentPositionReadBuffer[otherIndex] - selfPosition;
                     float distSqr = dot(toOther, toOther);
-                    if (distSqr < result.nearestEnemyDistSqr &&
-                        TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
+                    if (TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
                     {
-                        result.nearestEnemyDistSqr = distSqr;
-                        result.nearestEnemyIndex = (int)otherIndex;
+                        float score = TargetSelectionScore(selfIndex, otherIndex, distSqr);
+                        if (score < result.bestEnemyScore)
+                        {
+                            result.bestEnemyScore = score;
+                            result.bestEnemyIndex = (int)otherIndex;
+                        }
                     }
                 }
             }

@@ -1,6 +1,7 @@
 #pragma kernel ClearPendingDamage
 #pragma kernel ClearDensityMap
 #pragma kernel BuildDensityMap
+#pragma kernel BuildEngagementSlotOccupancy
 #pragma kernel SimulateCombatAndAccumulateDamage
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
@@ -11,13 +12,99 @@ void StoreAgent(uint index, AgentData agent)
     agentPositionBuffer[index] = agent.position.xz;
 }
 
+void IncrementEngagementOccupancy(uint targetIndex, uint slot)
+{
+    uint key = targetIndex * ENGAGEMENT_SLOT_COUNT + slot;
+    uint stamp = frameIndex & 0x00FFFFFFu;
+
+    // Frame stamp + saturating 8-bit counter removes a multi-million-entry clear
+    // dispatch. CAS also makes first-touch initialization safe under contention.
+    [loop]
+    for (int attempt = 0; attempt < 16; attempt++)
+    {
+        uint observed = engagementSlotOccupancyBuffer[key];
+        uint count = (observed >> 8) == stamp ? observed & 0xFFu : 0u;
+        uint desired = (stamp << 8) | min(255u, count + 1u);
+        uint original;
+        InterlockedCompareExchange(engagementSlotOccupancyBuffer[key], observed, desired, original);
+        if (original == observed)
+            return;
+    }
+}
+
+float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPosition, float2 targetPosition, UnitTypeSettings settings)
+{
+    float selfRadius = max(0.05, settings.agentRadius);
+    float targetRadius = max(0.05, GetAgentRadius(targetIndex));
+    float attackRange = max(0.1, settings.attackRange);
+
+    // Prefer a deterministic sector, but select against the previous frame's actual
+    // assignments. Retaining the current slot receives hysteresis so rings do not
+    // oscillate merely because two neighboring counters differ by one.
+    float phase = Hash01(targetIndex ^ 0xB5297A4Du) * 6.2831853;
+    float2 radial = selfPosition - targetPosition;
+    float physicalAngle = atan2(radial.y, radial.x);
+    float normalizedSector = frac((physicalAngle - phase) / 6.2831853 + 1.0);
+    uint preferredSlot = (uint)floor(normalizedSector * (float)ENGAGEMENT_SLOT_COUNT + 0.5) % ENGAGEMENT_SLOT_COUNT;
+    int assignment = engagementSlotAssignmentBuffer[selfIndex];
+    bool assignmentMatchesTarget = assignment >= 0 && ((uint)assignment >> ENGAGEMENT_SLOT_SHIFT) == targetIndex;
+    uint currentSlot = assignmentMatchesTarget ? (uint)assignment & ENGAGEMENT_SLOT_MASK : preferredSlot;
+    uint bestSlot = preferredSlot;
+    float bestScore = 1e20;
+
+    [unroll]
+    for (uint slot = 0u; slot < ENGAGEMENT_SLOT_COUNT; slot++)
+    {
+        uint directDistance = slot > preferredSlot ? slot - preferredSlot : preferredSlot - slot;
+        uint circularDistance = min(directDistance, ENGAGEMENT_SLOT_COUNT - directDistance);
+        float score = (float)CurrentEngagementOccupancy(targetIndex, slot) + (float)circularDistance * 0.22;
+        score += Hash01(selfIndex ^ (targetIndex * 0x9E3779B9u) ^ (slot * 0x85EBCA6Bu)) * 0.03;
+        if (assignmentMatchesTarget && slot == currentSlot)
+            score -= 1.25;
+
+        if (score < bestScore)
+        {
+            bestScore = score;
+            bestSlot = slot;
+        }
+    }
+
+    engagementSlotAssignmentBuffer[selfIndex] = (int)((targetIndex << ENGAGEMENT_SLOT_SHIFT) | bestSlot);
+
+    // Slots sit safely inside attack range but outside the target's visual center.
+    float slotRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
+    float angle = phase + (float)bestSlot * (6.2831853 / (float)ENGAGEMENT_SLOT_COUNT);
+    return targetPosition + float2(cos(angle), sin(angle)) * slotRadius;
+}
+
+float2 BlendPursuitWithNavigation(uint selfIndex, float3 position, float2 pursuitDirection, float targetDistance, UnitTypeSettings settings)
+{
+    float2 navigationDirection = IsDefenderTeam(selfIndex)
+        ? SampleDefenderFlowDirection(selfIndex, position)
+        : SampleFlowDirection(selfIndex, position);
+    if (dot(navigationDirection, navigationDirection) <= 0.0001)
+        return pursuitDirection;
+
+    // Far inside the acquire radius, keep most of the congestion/obstacle-aware
+    // navigation intent. Only hand over strongly to the engagement slot near contact.
+    float approachRange = max(0.1, settings.targetAcquireRadius - settings.attackRange);
+    float nearContact = 1.0 - saturate((targetDistance - settings.attackRange) / approachRange);
+    float pursuitWeight = lerp(0.35, 0.88, nearContact);
+    float2 blended = navigationDirection * (1.0 - pursuitWeight) + pursuitDirection * pursuitWeight;
+    float lenSqr = dot(blended, blended);
+    return lenSqr > 0.0001 ? blended * rsqrt(lenSqr) : pursuitDirection;
+}
+
 [numthreads(8, 8, 1)]
 void ClearDensityMap(uint3 id : SV_DispatchThreadID)
 {
     if (id.x >= (uint)flowFieldResolution.x || id.y >= (uint)flowFieldResolution.y)
         return;
 
-    densityMapWrite[int2(id.x, id.y)] = 0u;
+    int2 cell = int2(id.x, id.y);
+    densityMapWrite[cell] = 0u;
+    attackerDensityMapWrite[cell] = 0u;
+    defenderDensityMapWrite[cell] = 0u;
 }
 
 [numthreads(64, 1, 1)]
@@ -32,6 +119,33 @@ void BuildDensityMap(uint3 id : SV_DispatchThreadID)
     int2 cell = PositionToFlowFieldCell(agentBuffer[id.x].position);
     uint original;
     InterlockedAdd(densityMapWrite[cell], 1u, original);
+
+    int team = teamIdReadBuffer[id.x];
+    if (team == attackerTeamId)
+        InterlockedAdd(attackerDensityMapWrite[cell], 1u, original);
+    else if (team == defenderTeamId)
+        InterlockedAdd(defenderDensityMapWrite[cell], 1u, original);
+}
+
+[numthreads(64, 1, 1)]
+void BuildEngagementSlotOccupancy(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count || battleStarted == 0 || !IsAliveIndex(id.x))
+        return;
+
+    int targetIndex = targetAgentIndexBuffer[id.x];
+    int assignment = engagementSlotAssignmentBuffer[id.x];
+    if (targetIndex < 0 || assignment < 0 || !IsAliveIndex((uint)targetIndex) ||
+        teamIdReadBuffer[id.x] == teamIdReadBuffer[(uint)targetIndex])
+        return;
+
+    uint assignedTarget = (uint)assignment >> ENGAGEMENT_SLOT_SHIFT;
+    uint assignedSlot = (uint)assignment & ENGAGEMENT_SLOT_MASK;
+    if (assignedTarget == (uint)targetIndex)
+        IncrementEngagementOccupancy((uint)targetIndex, assignedSlot);
 }
 
 [numthreads(64, 1, 1)]
@@ -66,6 +180,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     if (battleStarted == 0)
     {
         targetAgentIndexBuffer[id.x] = -1;
+        engagementSlotAssignmentBuffer[id.x] = -1;
         attackCooldownBuffer[id.x] = 0.0;
         agent.velocity = 0.0;
         hpBuffer[id.x] = hpSelf;
@@ -90,6 +205,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         SetAgentState(agent, STATE_DEAD);
         agent.velocity = 0.0;
         targetAgentIndexBuffer[id.x] = -1;
+        engagementSlotAssignmentBuffer[id.x] = -1;
         attackCooldownBuffer[id.x] = 0.0;
         StoreAgent(id.x, agent);
         return;
@@ -121,14 +237,26 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     int targetIndex = targetAgentIndexBuffer[id.x];
     float searchRadius = settings.targetAcquireRadius;
     bool targetIsValid = CurrentTargetIsValid(id.x, agent, targetIndex);
-    bool searchForEnemy = !targetIsValid && ShouldSearchForLocalTarget(id.x, simInterval);
+    bool searchCadence = ShouldSearchForLocalTarget(id.x, simInterval);
+    bool targetIsOverloaded = targetIsValid && searchCadence && TargetLoadRatio(id.x, (uint)targetIndex) > 1.0;
+    bool searchForEnemy = searchCadence && (!targetIsValid || targetIsOverloaded);
     NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy);
 
     if (!targetIsValid)
     {
         targetIndex = -1;
         if (searchForEnemy)
-            targetIndex = neighborhood.nearestEnemyIndex;
+            targetIndex = neighborhood.bestEnemyIndex;
+    }
+    else if (searchForEnemy && neighborhood.bestEnemyIndex >= 0 && neighborhood.bestEnemyIndex != targetIndex)
+    {
+        float2 currentDelta = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
+        float currentScore = TargetSelectionScore(id.x, (uint)targetIndex, dot(currentDelta, currentDelta));
+        // Require a material improvement before abandoning a live target. This keeps
+        // load balancing responsive without making one-frame occupancy lag visible as
+        // target ping-pong.
+        if (neighborhood.bestEnemyScore + 0.18 < currentScore)
+            targetIndex = neighborhood.bestEnemyIndex;
     }
 
     float2 desiredDirection = 0.0;
@@ -140,12 +268,15 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 
     if (targetIndex >= 0 && IsAliveIndex((uint)targetIndex))
     {
-        float2 toTarget = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
+        float2 targetPosition = agentPositionReadBuffer[(uint)targetIndex];
+        float2 toTarget = targetPosition - agent.position.xz;
         float distSqr = dot(toTarget, toTarget);
+        float targetDistance = sqrt(max(distSqr, 0.0001));
         float activeAttackRange = settings.attackRange;
         float attackRangeSqr = activeAttackRange * activeAttackRange;
         float attackExitRange = AttackExitRange(id.x);
         float attackExitRangeSqr = attackExitRange * attackExitRange;
+        float2 engagementPoint = ResolveEngagementSlot(id.x, (uint)targetIndex, agent.position.xz, targetPosition, settings);
 
         // (chase-leash enforcement lives in TargetIsUsable / CurrentTargetIsValid)
         {
@@ -169,13 +300,18 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
             {
                 hasEngageTarget = true;
                 if (!defenderHoldingPosition)
-                    desiredDirection = normalize(toTarget);
+                {
+                    float2 toSlot = engagementPoint - agent.position.xz;
+                    float2 pursuitDirection = dot(toSlot, toSlot) > 0.0001 ? normalize(toSlot) : normalize(toTarget);
+                    desiredDirection = BlendPursuitWithNavigation(id.x, agent.position, pursuitDirection, targetDistance, settings);
+                }
             }
         }
     }
 
     if (targetIndex < 0)
     {
+        engagementSlotAssignmentBuffer[id.x] = -1;
         if (isDefender)
         {
             if (defenderHoldingPosition)
@@ -219,6 +355,12 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         }
     }
 
+    // Treat the current friendly-density map as a local dynamic navigation cost.
+    // This overlays the slowly rebuilt global flow field and lets columns select a
+    // neighboring low-load lane without paying for a full integration rebuild.
+    if (!inAttackHold && dot(desiredDirection, desiredDirection) > 0.0001)
+        desiredDirection = ApplyFriendlyDensityNavigation(id.x, agent.position, desiredDirection);
+
     // Ordinary marching already samples the obstacle-aware flow field. Only direct
     // enemy pursuit bypasses that field and needs a per-agent look-ahead detour; doing
     // this for every marcher would multiply the obstacle scan by the full army size.
@@ -243,11 +385,8 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     float2 tacticalDirection = desiredDirection;
     bool hasTacticalDirection = dot(tacticalDirection, tacticalDirection) > 0.0001;
     DensityPressureSample densityPressure = ComputeDensityPressure(id.x, agent.position, desiredDirection);
-    // A charger committed to a target must not be shoved off it by crowd avoidance:
-    // the enemy formation IS a density wall, and full-strength avoidance made agents
-    // veer away right in front of their victim.
-    if (hasEngageTarget)
-        densityPressure.avoidance *= 0.35;
+    // Density pressure is now FRIENDLY-only, so it remains fully active during pursuit:
+    // enemies no longer look like an avoidance wall, while rear ranks still spread.
 
     // Deflect, never reverse: unbounded avoidance flipped rear ranks into full-speed
     // retreat from the melee. Idle agents (no desired direction) keep full diffusion.
@@ -265,8 +404,8 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         desiredDirection = ApplyStableLaneBias(id.x, id.x, desiredDirection, densityPressure.pressure);
 
     float2 separationForce = neighborhood.separation;
-    float contactSeparationScale = agent.currentState == STATE_ATTACK ? 0.18 : lerp(1.0, 1.7, saturate(densityPressure.centerPressure));
-    agent.velocity.xz += separationForce * settings.separationStrength * contactSeparationScale * dtSim;
+    float contactSeparationScale = agent.currentState == STATE_ATTACK ? 0.62 : lerp(1.0, 1.7, saturate(densityPressure.centerPressure));
+    float2 separationVelocityDelta = separationForce * settings.separationStrength * contactSeparationScale * dtSim;
 
     // Damping compounds EXACTLY like N per-frame applications; a linearized
     // (1 - d*dtSim) drifted the damp/steer equilibrium ~20% between LOD cadences.
@@ -284,7 +423,9 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         if (inAttackHold)
             agent.velocity.xz *= saturate(1.0 - 28.0 * dtSim);
 
-        float maxHoldSpeed = inAttackHold ? max(0.05, settings.maxSpeed * 0.08) : max(0.05, settings.maxSpeed * 0.25);
+        agent.velocity.xz += separationVelocityDelta;
+
+        float maxHoldSpeed = inAttackHold ? max(0.05, settings.maxSpeed * 0.18) : max(0.05, settings.maxSpeed * 0.25);
         float holdSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
         if (holdSpeedSqr > maxHoldSpeed * maxHoldSpeed)
             agent.velocity.xz *= maxHoldSpeed * rsqrt(holdSpeedSqr);
@@ -310,7 +451,10 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     if (agent.currentState == STATE_ATTACK)
     {
         agent.velocity.xz *= saturate(1.0 - 28.0 * dtSim);
-        float maxContactSpeed = max(0.05, settings.maxSpeed * 0.08);
+        // Apply contact separation AFTER attack damping. At reduced simulation cadence
+        // the old ordering could damp the entire correction to zero every decision.
+        agent.velocity.xz += separationVelocityDelta;
+        float maxContactSpeed = max(0.05, settings.maxSpeed * 0.18);
         float contactSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
         if (contactSpeedSqr > maxContactSpeed * maxContactSpeed)
             agent.velocity.xz *= maxContactSpeed * rsqrt(contactSpeedSqr);
@@ -336,6 +480,12 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         agent.velocity.xz = agent.velocity.xz * alphaN + desiredDirection * (targetSpeed * gain);
         agent.velocity.y = 0.0;
         SmoothFaceDirectionDt(agent, hasTacticalDirection ? tacticalDirection : desiredDirection, 0.05, 360.0, dtSim);
+        agent.velocity.xz += separationVelocityDelta;
+    }
+    else
+    {
+        // Idle agents still need to resolve spawn/contact overlap.
+        agent.velocity.xz += separationVelocityDelta;
     }
 
     agent.velocity = ClampVelocity(id.x, agent.velocity);

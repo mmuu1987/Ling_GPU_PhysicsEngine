@@ -69,6 +69,7 @@ namespace MassEngine
 
         // Flow fields
         public static readonly int FlowFieldDirectionsId = Shader.PropertyToID("flowFieldDirections");
+        public static readonly int FlowFieldDirectionsReadBufferId = Shader.PropertyToID("flowFieldDirectionsReadBuffer");
         public static readonly int FlowFieldEnabledId = Shader.PropertyToID("flowFieldEnabled");
         public static readonly int FlowFieldResolutionId = Shader.PropertyToID("flowFieldResolution");
         public static readonly int FlowFieldOriginId = Shader.PropertyToID("flowFieldOrigin");
@@ -80,6 +81,7 @@ namespace MassEngine
         public static readonly int DefenderFlowTargetPointId = Shader.PropertyToID("defenderFlowTargetPoint");
         public static readonly int DefenderFlowTargetAreaId = Shader.PropertyToID("defenderFlowTargetArea");
         public static readonly int DefenderFlowFieldDirectionsId = Shader.PropertyToID("defenderFlowFieldDirections");
+        public static readonly int DefenderFlowFieldDirectionsReadBufferId = Shader.PropertyToID("defenderFlowFieldDirectionsReadBuffer");
         public static readonly int DefenderFlowFieldEnabledId = Shader.PropertyToID("defenderFlowFieldEnabled");
         public static readonly int DefenderFlowFieldResolutionId = Shader.PropertyToID("defenderFlowFieldResolution");
         public static readonly int DefenderFlowFieldOriginId = Shader.PropertyToID("defenderFlowFieldOrigin");
@@ -111,6 +113,13 @@ namespace MassEngine
         // Density map
         public static readonly int DensityMapId = Shader.PropertyToID("densityMap");
         public static readonly int DensityMapWriteId = Shader.PropertyToID("densityMapWrite");
+        public static readonly int AttackerDensityMapId = Shader.PropertyToID("attackerDensityMap");
+        public static readonly int DefenderDensityMapId = Shader.PropertyToID("defenderDensityMap");
+        public static readonly int AttackerDensityMapWriteId = Shader.PropertyToID("attackerDensityMapWrite");
+        public static readonly int DefenderDensityMapWriteId = Shader.PropertyToID("defenderDensityMapWrite");
+        public static readonly int EngagementSlotAssignmentBufferId = Shader.PropertyToID("engagementSlotAssignmentBuffer");
+        public static readonly int EngagementSlotOccupancyBufferId = Shader.PropertyToID("engagementSlotOccupancyBuffer");
+        public static readonly int EngagementSlotOccupancyReadBufferId = Shader.PropertyToID("engagementSlotOccupancyReadBuffer");
 
         // LOD classification (per unit type)
         public static readonly int ClassifyUnitTypeIndexId = Shader.PropertyToID("classifyUnitTypeIndex");

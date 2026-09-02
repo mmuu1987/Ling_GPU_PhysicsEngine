@@ -21,6 +21,7 @@ namespace MassEngine
         public readonly int GenerateRuntimeDefenderFlowField;
         public readonly int ClearDensityMap;
         public readonly int BuildDensityMap;
+        public readonly int BuildEngagementSlotOccupancy;
         public readonly int ClearPendingDamage;
         public readonly int SimulateCombatAndAccumulateDamage;
         public readonly int ClassifyVisibleAgentsForUnitType;
@@ -73,6 +74,7 @@ namespace MassEngine
             GenerateRuntimeDefenderFlowField = FindKernelOrInvalid(runtimeFlowShader, "GenerateRuntimeDefenderFlowField");
             ClearDensityMap = FindKernelOrInvalid(combatSimulationShader, "ClearDensityMap");
             BuildDensityMap = FindKernelOrInvalid(combatSimulationShader, "BuildDensityMap");
+            BuildEngagementSlotOccupancy = FindKernelOrInvalid(combatSimulationShader, "BuildEngagementSlotOccupancy");
             ClearPendingDamage = FindKernelOrInvalid(combatSimulationShader, "ClearPendingDamage");
             SimulateCombatAndAccumulateDamage = FindKernelOrInvalid(combatSimulationShader, "SimulateCombatAndAccumulateDamage");
             ClassifyVisibleAgentsForUnitType = FindKernelOrInvalid(lodClassificationShader, "ClassifyVisibleAgentsForUnitType");

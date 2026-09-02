@@ -32,9 +32,10 @@
 ## 关键契约
 
 - **调度顺序**（`DispatchFrame`）：SpatialHash → RuntimeFlow(条件) → DensityMap →
-  CombatSimulation → LodClassification(每兵种一次) → SwapSimulationBuffers。
+  EngagementSlotOccupancy → CombatSimulation → LodClassification(每兵种一次) → SwapSimulationBuffers。
 - **双缓冲纪律**：hp / pendingDamage / agentPosition 均为"读上帧快照、写本帧目标、
   帧末交换"。绑定发生在每帧派发前，永远指向交换后的正确侧。
+- **目标负载反馈**：战斗阶段复用 8 槽位占用的本帧汇总作为上一轮锁定负载，在既有空间哈希候选内做常数成本评分；不增加逐单位 CPU 工作或全局敌人扫描。
 - **零初始化**：Allocate 后立即清零流场方向缓冲与网格计数；预览 RT 清为透明黑。
   任何 kernel 不得读到未定义显存。
 - **重建守卫**：Manager 按分配签名（agentCount+gridCellCount+maxAgentsPerCell+

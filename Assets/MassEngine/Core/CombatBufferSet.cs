@@ -13,6 +13,8 @@ namespace MassEngine
         public ComputeBuffer hpReadBuffer;
         public ComputeBuffer hpWriteBuffer;
         public ComputeBuffer targetAgentIndexBuffer;
+        public ComputeBuffer engagementSlotAssignmentBuffer;
+        public ComputeBuffer engagementSlotOccupancyBuffer;
         public ComputeBuffer attackCooldownBuffer;
         public ComputeBuffer homePositionBuffer;
         public ComputeBuffer pendingDamageReadBuffer;
@@ -38,6 +40,8 @@ namespace MassEngine
             MassGpuBufferManager.ReleaseBuffer(ref hpReadBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref hpWriteBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref targetAgentIndexBuffer);
+            MassGpuBufferManager.ReleaseBuffer(ref engagementSlotAssignmentBuffer);
+            MassGpuBufferManager.ReleaseBuffer(ref engagementSlotOccupancyBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref attackCooldownBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref homePositionBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref pendingDamageReadBuffer);

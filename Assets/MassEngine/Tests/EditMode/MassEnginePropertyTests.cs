@@ -104,6 +104,36 @@ namespace MassEngine.Tests
             UnityEngine.Object.DestroyImmediate(config);
         }
 
+        [Test]
+        public void SpawnFormationIsDeterministicAndAvoidsDefaultDensityOverlap()
+        {
+            SpawnConfig config = ScriptableObject.CreateInstance<SpawnConfig>();
+            config.unitCount = 400;
+            config.formationDensity = 0.5f;
+            config.formationAspect = 2f;
+            config.spawnSize = Vector3.zero;
+            DefaultSpawnModule module = new DefaultSpawnModule(config);
+            AgentData[] first = new AgentData[config.unitCount];
+            AgentData[] second = new AgentData[config.unitCount];
+
+            module.GenerateAgents(first, 0, first.Length, 0);
+            module.GenerateAgents(second, 0, second.Length, 0);
+
+            float minimumDistanceSqr = float.MaxValue;
+            for (int i = 0; i < first.Length; i++)
+            {
+                Assert.AreEqual(first[i].position, second[i].position, "formation must be reproducible at index " + i);
+                Assert.AreEqual(first[i].currentAnimationTime, second[i].currentAnimationTime, 0.000001f);
+                for (int j = i + 1; j < first.Length; j++)
+                    minimumDistanceSqr = Mathf.Min(minimumDistanceSqr, (first[i].position - first[j].position).sqrMagnitude);
+            }
+
+            // Shipped sword units use radius 0.55m (1.10m contact diameter). The
+            // default 0.5 agents/m2 formation must begin outside that contact range.
+            Assert.Greater(Mathf.Sqrt(minimumDistanceSqr), 1.1f);
+            UnityEngine.Object.DestroyImmediate(config);
+        }
+
         // ------------------------------------------------------------------
         // Per-unit-type GPU parameter channel (Requirement 1.5 / 4.4 / 5.4)
         // ------------------------------------------------------------------
@@ -361,8 +391,8 @@ namespace MassEngine.Tests
             ComputePipelineOrchestrator orchestrator = new ComputePipelineOrchestrator(
                 MassGpuShaderSet.Find(null, null, null, null), buffers, recorder);
 
-            // 16 distinct kernel labels, each reported exactly once across both frames.
-            for (int i = 0; i < 16; i++)
+            // 17 distinct kernel labels, each reported exactly once across both frames.
+            for (int i = 0; i < 17; i++)
                 LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("MassEngine skipped GPU dispatch"));
 
             PipelineFrameContext context = new PipelineFrameContext
@@ -396,6 +426,7 @@ namespace MassEngine.Tests
                 "GenerateRuntimeDefenderFlowField",
                 "ClearDensityMap",
                 "BuildDensityMap",
+                "BuildEngagementSlotOccupancy",
                 "ClearPendingDamage",
                 "SimulateCombatAndAccumulateDamage",
                 "ClassifyVisibleAgentsForUnitType[0]",
@@ -416,6 +447,7 @@ namespace MassEngine.Tests
             {
                 "ClearGrid",
                 "BuildSpatialHash",
+                "BuildEngagementSlotOccupancy",
                 "ClearPendingDamage",
                 "SimulateCombatAndAccumulateDamage",
                 "ClassifyVisibleAgentsForUnitType[0]",
@@ -438,6 +470,9 @@ namespace MassEngine.Tests
             Assert.NotNull(buffers.combatBuffers.hpWriteBuffer);
             Assert.AreNotSame(buffers.combatBuffers.hpReadBuffer, buffers.combatBuffers.hpWriteBuffer);
             Assert.AreNotSame(buffers.combatBuffers.pendingDamageReadBuffer, buffers.combatBuffers.pendingDamageWriteBuffer);
+            Assert.AreEqual(8, MassGpuBufferManager.EngagementSlotsPerTarget);
+            Assert.AreEqual(4 * 8, buffers.combatBuffers.engagementSlotOccupancyBuffer.count);
+            Assert.AreEqual(4, buffers.combatBuffers.engagementSlotAssignmentBuffer.count);
             Assert.That(buffers.teamGridCountsBuffer.count, Is.EqualTo(8));
             Assert.That(buffers.teamGridAgentIndicesBuffer.count, Is.EqualTo(32));
 

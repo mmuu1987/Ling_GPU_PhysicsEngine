@@ -17,7 +17,8 @@ namespace MassEngine
     /// <summary>
     /// GPU compute pipeline scheduler. Dispatch order (Requirement 9.1, density stage
     /// added in this engine): SpatialHash -> RuntimeFlow (conditional) -> DensityMap ->
-    /// CombatSimulation -> LodClassification (once per unit type) -> buffer swap.
+    /// EngagementSlotOccupancy -> CombatSimulation -> LodClassification (once per unit
+    /// type) -> buffer swap.
     /// </summary>
     public sealed class ComputePipelineOrchestrator
     {
@@ -83,7 +84,9 @@ namespace MassEngine
 
         private void DispatchDensityMap(PipelineFrameContext context)
         {
-            if (buffers.densityMapTexture == null)
+            if (buffers.densityMapTexture == null ||
+                buffers.attackerDensityMapTexture == null ||
+                buffers.defenderDensityMapTexture == null)
                 return;
 
             Dispatch(shaders.CombatSimulationShader, shaders.ClearDensityMap, Mathf.Max(1, context.densityMapThreadGroupsX), Mathf.Max(1, context.densityMapThreadGroupsY), "ClearDensityMap");
@@ -92,6 +95,7 @@ namespace MassEngine
 
         private void DispatchCombatSimulation(PipelineFrameContext context)
         {
+            Dispatch(shaders.CombatSimulationShader, shaders.BuildEngagementSlotOccupancy, Mathf.Max(1, context.agentThreadGroupsX), "BuildEngagementSlotOccupancy");
             Dispatch(shaders.CombatSimulationShader, shaders.ClearPendingDamage, Mathf.Max(1, context.agentThreadGroupsX), "ClearPendingDamage");
             Dispatch(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage, Mathf.Max(1, context.agentThreadGroupsX), "SimulateCombatAndAccumulateDamage");
         }
@@ -283,10 +287,22 @@ namespace MassEngine
             SetBuffer(combat, shaders.ClearPendingDamage, PendingDamageBufferId, buffers.combatBuffers.pendingDamageWriteBuffer);
 
             SetTexture(combat, shaders.ClearDensityMap, DensityMapWriteId, buffers.densityMapTexture);
+            SetTexture(combat, shaders.ClearDensityMap, AttackerDensityMapWriteId, buffers.attackerDensityMapTexture);
+            SetTexture(combat, shaders.ClearDensityMap, DefenderDensityMapWriteId, buffers.defenderDensityMapTexture);
 
             SetBuffer(combat, shaders.BuildDensityMap, AgentBufferId, buffers.agentBuffer);
             SetBuffer(combat, shaders.BuildDensityMap, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
+            SetBuffer(combat, shaders.BuildDensityMap, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
             SetTexture(combat, shaders.BuildDensityMap, DensityMapWriteId, buffers.densityMapTexture);
+            SetTexture(combat, shaders.BuildDensityMap, AttackerDensityMapWriteId, buffers.attackerDensityMapTexture);
+            SetTexture(combat, shaders.BuildDensityMap, DefenderDensityMapWriteId, buffers.defenderDensityMapTexture);
+
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, AgentBufferId, buffers.agentBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, TargetAgentIndexBufferId, buffers.combatBuffers.targetAgentIndexBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, EngagementSlotAssignmentBufferId, buffers.combatBuffers.engagementSlotAssignmentBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, EngagementSlotOccupancyBufferId, buffers.combatBuffers.engagementSlotOccupancyBuffer);
 
             int simulate = shaders.SimulateCombatAndAccumulateDamage;
             SetBuffer(combat, simulate, AgentBufferId, buffers.agentBuffer);
@@ -300,15 +316,19 @@ namespace MassEngine
             SetBuffer(combat, simulate, HpBufferId, buffers.combatBuffers.hpWriteBuffer);
             SetBuffer(combat, simulate, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             SetBuffer(combat, simulate, TargetAgentIndexBufferId, buffers.combatBuffers.targetAgentIndexBuffer);
+            SetBuffer(combat, simulate, EngagementSlotAssignmentBufferId, buffers.combatBuffers.engagementSlotAssignmentBuffer);
+            SetBuffer(combat, simulate, EngagementSlotOccupancyReadBufferId, buffers.combatBuffers.engagementSlotOccupancyBuffer);
             SetBuffer(combat, simulate, AttackCooldownBufferId, buffers.combatBuffers.attackCooldownBuffer);
             SetBuffer(combat, simulate, HomePositionReadBufferId, buffers.combatBuffers.homePositionBuffer);
             SetBuffer(combat, simulate, PendingDamageBufferId, buffers.combatBuffers.pendingDamageWriteBuffer);
             SetBuffer(combat, simulate, PendingDamageReadBufferId, buffers.combatBuffers.pendingDamageReadBuffer);
-            SetBuffer(combat, simulate, FlowFieldDirectionsId, buffers.flowFieldDirectionsBuffer);
-            SetBuffer(combat, simulate, DefenderFlowFieldDirectionsId, buffers.defenderFlowFieldDirectionsBuffer);
+            SetBuffer(combat, simulate, FlowFieldDirectionsReadBufferId, buffers.flowFieldDirectionsBuffer);
+            SetBuffer(combat, simulate, DefenderFlowFieldDirectionsReadBufferId, buffers.defenderFlowFieldDirectionsBuffer);
             SetBuffer(combat, simulate, UnitTypeSettingsId, buffers.unitTypeSettingsBuffer);
             SetBuffer(combat, simulate, UnitTypeIndexReadBufferId, buffers.unitTypeIndexBuffer);
             SetTexture(combat, simulate, DensityMapId, buffers.densityMapTexture);
+            SetTexture(combat, simulate, AttackerDensityMapId, buffers.attackerDensityMapTexture);
+            SetTexture(combat, simulate, DefenderDensityMapId, buffers.defenderDensityMapTexture);
         }
 
         private void BindLodBuffers()
