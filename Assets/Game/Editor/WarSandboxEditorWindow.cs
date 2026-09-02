@@ -15,6 +15,7 @@ namespace MassEngine.Game.Editor
         [SerializeField, Min(0f)] private float engagementGap = WarSandboxFormationLayout.DefaultEngagementGap;
         [SerializeField] private WarSandboxScalePreset scalePreset = WarSandboxScalePreset.Standard10K;
         [SerializeField, Min(1)] private int customUnitsPerTeam = 10000;
+        [SerializeField] private WarSandboxScenarioPreset battlefieldPreset;
 
         [MenuItem("MassEngine/War Sandbox Editor")]
         public static void Open()
@@ -59,6 +60,7 @@ namespace MassEngine.Game.Editor
             }
 
             DrawToolbar();
+            DrawBattlefieldPresetToolbar();
 
             ScenarioConfig scenario = manager.scenarioConfig;
             if (scenario == null || scenario.unitTypes == null)
@@ -134,6 +136,120 @@ namespace MassEngine.Game.Editor
             WarSandboxScenarioPresets.ApplyPerTeamUnitCount(scenario, definition.unitsPerTeam);
             ScenarioAutoFit.AutoFit(engagementGap);
             Undo.CollapseUndoOperations(undoGroup);
+        }
+
+        private void DrawBattlefieldPresetToolbar()
+        {
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+            EditorGUILayout.LabelField("可复用战场方案", EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(
+                "保存/载入双方部署、世界网格、流场、战斗模式、据点与静态障碍。载入会修改当前配置资产，但支持 Undo。",
+                MessageType.Info);
+            battlefieldPreset = (WarSandboxScenarioPreset)EditorGUILayout.ObjectField(
+                "战场方案资产", battlefieldPreset, typeof(WarSandboxScenarioPreset), false);
+
+            using (new EditorGUI.DisabledScope(EditorApplication.isPlaying))
+            {
+                if (GUILayout.Button("新建并捕获当前战场", GUILayout.Height(26f)))
+                    CreateAndCaptureBattlefieldPreset();
+
+                EditorGUILayout.BeginHorizontal();
+                using (new EditorGUI.DisabledScope(battlefieldPreset == null))
+                {
+                    if (GUILayout.Button("覆盖保存当前战场"))
+                        CaptureCurrentBattlefield();
+                    if (GUILayout.Button("载入到当前场景"))
+                        ApplySelectedBattlefield();
+                    if (GUILayout.Button("定位资产"))
+                        Selection.activeObject = battlefieldPreset;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+
+            if (EditorApplication.isPlaying)
+                EditorGUILayout.HelpBox("请退出 Play Mode 后再保存或载入战场方案。", MessageType.Warning);
+            EditorGUILayout.EndVertical();
+            EditorGUILayout.Space();
+        }
+
+        private void CreateAndCaptureBattlefieldPreset()
+        {
+            string sceneName = manager != null && manager.gameObject.scene.IsValid()
+                ? manager.gameObject.scene.name
+                : "WarSandbox";
+            string path = EditorUtility.SaveFilePanelInProject(
+                "新建战场方案",
+                sceneName + "_ScenarioPreset",
+                "asset",
+                "请选择战场方案资产的保存位置。",
+                "Assets/Game/Settings");
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            var preset = CreateInstance<WarSandboxScenarioPreset>();
+            AssetDatabase.CreateAsset(preset, path);
+            battlefieldPreset = preset;
+            if (!CaptureCurrentBattlefield())
+            {
+                Debug.LogError("战场方案资产已创建，但捕获失败；请检查场景 Manager 的 ScenarioConfig。", preset);
+                return;
+            }
+
+            Selection.activeObject = preset;
+            EditorGUIUtility.PingObject(preset);
+        }
+
+        private bool CaptureCurrentBattlefield()
+        {
+            WarSandboxBattleController controller = ResolveBattleController(true);
+            if (!WarSandboxScenarioPresetAuthoring.Capture(battlefieldPreset, manager, controller))
+            {
+                Debug.LogError("捕获战场方案失败：需要有效的 Manager、BattleController 和 ScenarioConfig。", manager);
+                return false;
+            }
+
+            Debug.Log("已保存战场方案：" + battlefieldPreset.name, battlefieldPreset);
+            Repaint();
+            return true;
+        }
+
+        private void ApplySelectedBattlefield()
+        {
+            if (!EditorUtility.DisplayDialog(
+                    "载入战场方案",
+                    "这会用方案快照覆盖当前双方部署及相关系统配置。该操作支持 Undo。",
+                    "载入",
+                    "取消"))
+                return;
+
+            WarSandboxBattleController controller = ResolveBattleController(true);
+            if (!WarSandboxScenarioPresetAuthoring.Apply(battlefieldPreset, manager, controller))
+            {
+                Debug.LogError("载入战场方案失败：方案缺少 ScenarioConfig 或当前场景对象无效。", battlefieldPreset);
+                return;
+            }
+
+            Debug.Log("已载入战场方案：" + battlefieldPreset.name, battlefieldPreset);
+            SceneView.RepaintAll();
+            Repaint();
+        }
+
+        private WarSandboxBattleController ResolveBattleController(bool createIfMissing)
+        {
+            if (manager == null)
+                return null;
+
+            WarSandboxBattleController controller = manager.GetComponent<WarSandboxBattleController>();
+            if (controller == null && createIfMissing)
+                controller = Undo.AddComponent<WarSandboxBattleController>(manager.gameObject);
+            if (controller != null && controller.manager != manager)
+            {
+                Undo.RecordObject(controller, "Assign War Sandbox Manager");
+                controller.manager = manager;
+                EditorUtility.SetDirty(controller);
+                EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);
+            }
+            return controller;
         }
 
         private static void DrawArmy(int index, UnitTypeConfig unitType)
