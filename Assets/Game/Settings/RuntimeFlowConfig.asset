@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: RuntimeFlowConfig
   m_EditorClassIdentifier: 
   flowFieldResolution: 256
-  flowFieldCellSize: 4
-  flowFieldOrigin: {x: -420, y: -420}
+  flowFieldCellSize: 3
+  flowFieldOrigin: {x: -360, y: -360}
   flowFieldEnabled: 1
   defenderFlowFieldEnabled: 0
   dynamicFlowUpdateInterval: 0.35
