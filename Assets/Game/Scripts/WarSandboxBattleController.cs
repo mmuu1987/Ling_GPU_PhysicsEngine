@@ -20,6 +20,9 @@ namespace MassEngine.Game
         [Header("Runtime")]
         [Range(0, 1)] public int selectedTeam;
         [Min(1f)] public float moveWaypointArrivalRadius = 8f;
+        [Range(0.1f, 1f)]
+        [Tooltip("路径点切换条件：前 X% 单位到达即切换下一点，而非等待质心到达。值越小响应越快。")]
+        public float moveWaypointVanguardRatio = 0.35f;
         [Range(2, 16)] public int maxMoveRoutePoints = 8;
 
         [Header("Battle Rules")]
@@ -494,7 +497,16 @@ namespace MassEngine.Game
                     continue;
 
                 TeamSpatialTelemetry team = teamId == 0 ? snapshot.attackers : snapshot.defenders;
-                if (!team.valid || !WarSandboxMoveRoute.HasReached(team.centroid, route[0], moveWaypointArrivalRadius))
+                if (!team.valid)
+                    continue;
+
+                bool reached = WarSandboxMoveRoute.HasVanguardReached(
+                    route[0],
+                    moveWaypointArrivalRadius,
+                    team,
+                    moveWaypointVanguardRatio);
+
+                if (!reached)
                     continue;
 
                 route.RemoveAt(0);

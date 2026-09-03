@@ -131,6 +131,37 @@ namespace MassEngine.Game
             float radius = Mathf.Max(0.1f, arrivalRadius);
             return delta.sqrMagnitude <= radius * radius;
         }
+
+        public static bool HasVanguardReached(
+            Vector3 waypoint,
+            float arrivalRadius,
+            TeamSpatialTelemetry team,
+            float vanguardRatio)
+        {
+            if (!team.valid || team.alive <= 0)
+                return false;
+
+            float radius = Mathf.Max(0.1f, arrivalRadius);
+            float radiusSqr = radius * radius;
+            Vector2 waypointXZ = new Vector2(waypoint.x, waypoint.z);
+
+            // 自适应半径：对于分散军队，扩大判定半径避免等后排
+            float spreadRadius = Mathf.Max(team.spreadRadius, 1f);
+            float adaptiveRadius = radius + spreadRadius * 0.5f;
+            float adaptiveRadiusSqr = adaptiveRadius * adaptiveRadius;
+
+            // 质心到达检查（兜底条件）
+            Vector2 centroidXZ = new Vector2(team.centroid.x, team.centroid.z);
+            Vector2 deltaCentroid = centroidXZ - waypointXZ;
+            if (deltaCentroid.sqrMagnitude <= radiusSqr)
+                return true;
+
+            // 前锋比例检查：当至少 vanguardRatio 比例的单位接近目标时切换
+            // 用质心距离和分布半径估算：如果质心在 (自适应半径 * (1 + vanguardRatio)) 内，
+            // 则认为前锋已到达
+            float vanguardThresholdSqr = adaptiveRadiusSqr * (1f + Mathf.Clamp01(vanguardRatio)) * (1f + Mathf.Clamp01(vanguardRatio));
+            return deltaCentroid.sqrMagnitude <= vanguardThresholdSqr;
+        }
     }
 
     public static class WarSandboxControlPoint
