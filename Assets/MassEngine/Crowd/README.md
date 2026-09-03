@@ -16,7 +16,7 @@
 |---|---|
 | `agentRadius` | 碰撞半径；分离在两半径之和内线性增强 |
 | `separationStrength` | 分离力强度（攻击接触中自动降为 0.18 倍防止推散战线） |
-| `densityComfortPerSqm` / `densityPressureRangePerSqm` | 密度压力起算密度与归一化范围（**每平方米**，与流场格尺寸解耦；0.6/1.2 默认 ≈ 行军密度以上开始避让、堆积极限时打满）。接战状态避让自动衰减 ×0.35 |
+| `densityComfortPerSqm` / `densityPressureRangePerSqm` | 密度压力起算密度与归一化范围（**每平方米**，与流场格尺寸解耦；0.6/1.2 默认 ≈ 行军密度以上开始避让、堆积极限时打满）。引擎使用友军独立密度图，敌我不再互为密度约束 |
 | `densityAvoidanceStrength` | 沿密度梯度的避让力 + 前向拥堵侧移（**只偏转不反向**：上限 0.8×期望方向模长，后排援军不会被人堆吓得掉头跑） |
 | `densitySpeedPenalty` | 拥堵减速上限（0~1） |
 | `speedVariation` | 个体速度抖动（打破整齐划一） |

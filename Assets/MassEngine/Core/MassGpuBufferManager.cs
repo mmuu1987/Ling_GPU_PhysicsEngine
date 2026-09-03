@@ -23,19 +23,20 @@ namespace MassEngine
         public ComputeBuffer teamGridAgentIndicesBuffer;
         public ComputeBuffer flowFieldDirectionsBuffer;
         public ComputeBuffer defenderFlowFieldDirectionsBuffer;
-        public ComputeBuffer runtimeAttackerTargetDensityBuffer;
-        public ComputeBuffer runtimeAttackerFlowStatsBuffer;
-        public ComputeBuffer runtimeAttackerFlowTargetsBuffer;
-        public ComputeBuffer runtimeDefenderTargetDensityBuffer;
-        public ComputeBuffer runtimeDefenderFlowStatsBuffer;
-        public ComputeBuffer runtimeDefenderFlowTargetsBuffer;
+        public ComputeBuffer[] flowFieldDirectionsBuffers;
+        public ComputeBuffer runtimeTargetDensityBuffer;
+        public ComputeBuffer runtimeFlowStatsBuffer;
+        public ComputeBuffer runtimeFlowTargetsBuffer;
         public ComputeBuffer unitTypeIndexBuffer;
         public ComputeBuffer unitTypeSettingsBuffer;
         public ComputeBuffer spatialHashStatsBuffer;
         public ComputeBuffer teamSpatialStatsBuffer;
         public RenderTexture runtimeAttackerFlowPreviewTexture;
         public RenderTexture runtimeDefenderFlowPreviewTexture;
+        public RenderTexture[] runtimeFlowPreviewTextures;
         public RenderTexture densityMapTexture;
+
+        public int teamCount = 2;
 
         private ComputeBuffer[] visibleIndexBuffers = System.Array.Empty<ComputeBuffer>();
         private ComputeBuffer[] drawArgsBuffers = System.Array.Empty<ComputeBuffer>();
@@ -114,12 +115,14 @@ namespace MassEngine
             teamGridAgentIndicesBuffer = new ComputeBuffer((int)teamGridIndexCapacity, sizeof(int));
             flowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
             defenderFlowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
-            runtimeAttackerTargetDensityBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(uint));
-            runtimeAttackerFlowStatsBuffer = new ComputeBuffer(4, sizeof(int));
-            runtimeAttackerFlowTargetsBuffer = new ComputeBuffer(8, sizeof(float) * 4);
-            runtimeDefenderTargetDensityBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(uint));
-            runtimeDefenderFlowStatsBuffer = new ComputeBuffer(4, sizeof(int));
-            runtimeDefenderFlowTargetsBuffer = new ComputeBuffer(8, sizeof(float) * 4);
+            flowFieldDirectionsBuffers = new ComputeBuffer[teamCount];
+            for (int i = 0; i < teamCount; i++)
+            {
+                flowFieldDirectionsBuffers[i] = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
+            }
+            runtimeTargetDensityBuffer = new ComputeBuffer(safeFlowCellCount * teamCount, sizeof(uint));
+            runtimeFlowStatsBuffer = new ComputeBuffer(4 * teamCount, sizeof(int));
+            runtimeFlowTargetsBuffer = new ComputeBuffer(8 * teamCount, sizeof(float) * 4);
             unitTypeIndexBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             unitTypeSettingsBuffer = new ComputeBuffer(UnitTypeCount, UnitTypeGpuSettings.StrideBytes);
             spatialHashStatsBuffer = new ComputeBuffer(4, sizeof(int));
@@ -131,12 +134,22 @@ namespace MassEngine
             teamSpatialStatsBuffer.SetData(new int[16]);
             runtimeAttackerFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             runtimeDefenderFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
+            runtimeFlowPreviewTextures = new RenderTexture[teamCount];
+            for (int i = 0; i < teamCount; i++)
+            {
+                runtimeFlowPreviewTextures[i] = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
+            }
             densityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
 
             // GPU buffer contents are undefined after allocation; zero-fill everything a
             // kernel may read before its first producer runs.
             flowFieldDirectionsBuffer.SetData(new Vector2[safeFlowCellCount]);
             defenderFlowFieldDirectionsBuffer.SetData(new Vector2[safeFlowCellCount]);
+            Vector2[] zeroFlow = new Vector2[safeFlowCellCount];
+            for (int i = 0; i < teamCount; i++)
+            {
+                flowFieldDirectionsBuffers[i].SetData(zeroFlow);
+            }
             gridCountsBuffer.SetData(new int[GridCellCount]);
             teamGridCountsBuffer.SetData(new int[GridCellCount * 2]);
 
@@ -255,12 +268,15 @@ namespace MassEngine
             ReleaseBuffer(ref teamGridAgentIndicesBuffer);
             ReleaseBuffer(ref flowFieldDirectionsBuffer);
             ReleaseBuffer(ref defenderFlowFieldDirectionsBuffer);
-            ReleaseBuffer(ref runtimeAttackerTargetDensityBuffer);
-            ReleaseBuffer(ref runtimeAttackerFlowStatsBuffer);
-            ReleaseBuffer(ref runtimeAttackerFlowTargetsBuffer);
-            ReleaseBuffer(ref runtimeDefenderTargetDensityBuffer);
-            ReleaseBuffer(ref runtimeDefenderFlowStatsBuffer);
-            ReleaseBuffer(ref runtimeDefenderFlowTargetsBuffer);
+            if (flowFieldDirectionsBuffers != null)
+            {
+                for (int i = 0; i < flowFieldDirectionsBuffers.Length; i++)
+                    ReleaseBuffer(ref flowFieldDirectionsBuffers[i]);
+                flowFieldDirectionsBuffers = null;
+            }
+            ReleaseBuffer(ref runtimeTargetDensityBuffer);
+            ReleaseBuffer(ref runtimeFlowStatsBuffer);
+            ReleaseBuffer(ref runtimeFlowTargetsBuffer);
             ReleaseBuffer(ref unitTypeIndexBuffer);
             ReleaseBuffer(ref unitTypeSettingsBuffer);
             ReleaseBuffer(ref spatialHashStatsBuffer);
@@ -275,6 +291,12 @@ namespace MassEngine
 
             ReleaseRenderTexture(ref runtimeAttackerFlowPreviewTexture);
             ReleaseRenderTexture(ref runtimeDefenderFlowPreviewTexture);
+            if (runtimeFlowPreviewTextures != null)
+            {
+                for (int i = 0; i < runtimeFlowPreviewTextures.Length; i++)
+                    ReleaseRenderTexture(ref runtimeFlowPreviewTextures[i]);
+                runtimeFlowPreviewTextures = null;
+            }
             ReleaseRenderTexture(ref densityMapTexture);
 
             AgentCount = 0;

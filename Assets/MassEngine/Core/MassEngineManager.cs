@@ -523,6 +523,7 @@ namespace MassEngine
                 frameIndex = Time.frameCount,
                 totalAgentCount = total,
                 unitTypeCount = unitTypeRegistry != null ? unitTypeRegistry.UnitTypeCount : 0,
+                teamCount = bufferManager != null ? bufferManager.teamCount : 2,
                 agentThreadGroupsX = agentThreadGroups,
                 gridThreadGroupsX = gridThreadGroups,
                 battleStarted = battleStarted,
@@ -554,6 +555,7 @@ namespace MassEngine
                 },
                 attackerFlow = BuildTeamFlowSettings(AttackerTeamId, flowThreadGroups, flowResolution),
                 defenderFlow = BuildTeamFlowSettings(DefenderTeamId, flowThreadGroups, flowResolution),
+                teamFlows = BuildAllTeamFlowSettings(flowThreadGroups, flowResolution),
                 lod = new LodFrameSettings
                 {
                     lodCenterPosition = ResolveLodCenter(),
@@ -668,6 +670,17 @@ namespace MassEngine
             }
 
             settings.rebuildThisFrame = rebuild;
+            return settings;
+        }
+
+        private TeamFlowFrameSettings[] BuildAllTeamFlowSettings(int flowThreadGroups, int flowResolution)
+        {
+            int count = bufferManager != null ? bufferManager.teamCount : 2;
+            TeamFlowFrameSettings[] settings = new TeamFlowFrameSettings[count];
+            for (int i = 0; i < count; i++)
+            {
+                settings[i] = BuildTeamFlowSettings(i, flowThreadGroups, flowResolution);
+            }
             return settings;
         }
 

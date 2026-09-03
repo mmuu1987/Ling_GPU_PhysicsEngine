@@ -1,6 +1,7 @@
 #pragma kernel ClearPendingDamage
 #pragma kernel ClearDensityMap
 #pragma kernel BuildDensityMap
+#pragma kernel BuildEngagementSlotOccupancy
 #pragma kernel SimulateCombatAndAccumulateDamage
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
@@ -9,6 +10,90 @@ void StoreAgent(uint index, AgentData agent)
 {
     agentBuffer[index] = agent;
     agentPositionBuffer[index] = agent.position.xz;
+}
+
+void IncrementEngagementOccupancy(uint targetIndex, uint slot)
+{
+    uint key = targetIndex * ENGAGEMENT_SLOT_COUNT + slot;
+    uint stamp = frameIndex & 0x00FFFFFFu;
+
+    [loop]
+    for (int attempt = 0; attempt < 16; attempt++)
+    {
+        uint observed = engagementSlotOccupancyBuffer[key];
+        uint count = (observed >> 8) == stamp ? observed & 0xFFu : 0u;
+        uint desired = (stamp << 8) | min(255u, count + 1u);
+        uint original;
+        InterlockedCompareExchange(engagementSlotOccupancyBuffer[key], observed, desired, original);
+        if (original == observed)
+            return;
+    }
+}
+
+float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPosition, float2 targetPosition, UnitTypeSettings settings)
+{
+    float selfRadius = max(0.05, settings.agentRadius);
+    float targetRadius = max(0.05, GetAgentRadius(targetIndex));
+    float attackRange = max(0.1, settings.attackRange);
+
+    float phase = Hash01(targetIndex ^ 0xB5297A4Du) * 6.2831853;
+    float2 radial = selfPosition - targetPosition;
+    float physicalAngle = atan2(radial.y, radial.x);
+    float normalizedSector = frac((physicalAngle - phase) / 6.2831853 + 1.0);
+    uint preferredSlot = (uint)floor(normalizedSector * (float)ENGAGEMENT_SLOT_COUNT + 0.5) % ENGAGEMENT_SLOT_COUNT;
+    int assignment = engagementSlotAssignmentBuffer[selfIndex];
+    bool assignmentMatchesTarget = assignment >= 0 && ((uint)assignment >> ENGAGEMENT_SLOT_SHIFT) == targetIndex;
+    uint currentSlot = assignmentMatchesTarget ? (uint)assignment & ENGAGEMENT_SLOT_MASK : preferredSlot;
+    uint bestSlot = preferredSlot;
+    float bestScore = 1e20;
+
+    [unroll]
+    for (uint slot = 0u; slot < ENGAGEMENT_SLOT_COUNT; slot++)
+    {
+        uint directDistance = slot > preferredSlot ? slot - preferredSlot : preferredSlot - slot;
+        uint circularDistance = min(directDistance, ENGAGEMENT_SLOT_COUNT - directDistance);
+        float score = (float)CurrentEngagementOccupancy(targetIndex, slot) + (float)circularDistance * 0.22;
+        score += Hash01(selfIndex ^ (targetIndex * 0x9E3779B9u) ^ (slot * 0x85EBCA6Bu)) * 0.03;
+        if (assignmentMatchesTarget && slot == currentSlot)
+            score -= 1.25;
+
+        if (score < bestScore)
+        {
+            bestScore = score;
+            bestSlot = slot;
+        }
+    }
+
+    engagementSlotAssignmentBuffer[selfIndex] = (int)((targetIndex << ENGAGEMENT_SLOT_SHIFT) | bestSlot);
+
+    float slotRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
+    float angle = phase + (float)bestSlot * (6.2831853 / (float)ENGAGEMENT_SLOT_COUNT);
+    return targetPosition + float2(cos(angle), sin(angle)) * slotRadius;
+}
+
+[numthreads(64, 1, 1)]
+void BuildEngagementSlotOccupancy(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    int targetIndex = targetAgentIndexBuffer[id.x];
+    if (targetIndex < 0 || !IsAliveIndex(id.x) || !IsAliveIndex((uint)targetIndex))
+        return;
+
+    int assignment = engagementSlotAssignmentBuffer[id.x];
+    if (assignment < 0)
+        return;
+
+    uint assignedTarget = (uint)assignment >> ENGAGEMENT_SLOT_SHIFT;
+    if (assignedTarget != (uint)targetIndex)
+        return;
+
+    uint slot = (uint)assignment & ENGAGEMENT_SLOT_MASK;
+    IncrementEngagementOccupancy((uint)targetIndex, slot);
 }
 
 [numthreads(8, 8, 1)]
@@ -185,17 +270,6 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
             else if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
             {
                 desiredDirection = SampleDefenderFlowDirection(id.x, agent.position);
-                if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
-                    defenderFlowTargetMode != FLOW_TARGET_NONE &&
-                    settings.attractionStrength > 0.0)
-                {
-                    // Attraction fallback: when the flow field yields no direction (not yet
-                    // generated, or outside coverage) steer straight at the configured target.
-                    float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, defenderFlowTargetMode, defenderFlowTargetPoint, defenderFlowTargetArea);
-                    float stopRadius = max(0.0, dynamicDefenderFlowTargetStopRadius);
-                    if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
-                        desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
-                }
             }
             else
             {
@@ -207,15 +281,6 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         else
         {
             desiredDirection = SampleFlowDirection(id.x, agent.position);
-            if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
-                attackerFlowTargetMode != FLOW_TARGET_NONE &&
-                settings.attractionStrength > 0.0)
-            {
-                float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, attackerFlowTargetMode, attackerFlowTargetPoint, attackerFlowTargetArea);
-                float stopRadius = max(0.0, dynamicFlowTargetStopRadius);
-                if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
-                    desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
-            }
         }
     }
 

@@ -44,8 +44,9 @@ namespace MassEngine
             else if (config.spawnConfig.unitCount <= 0)
                 result.AddError("SpawnConfig.unitCount must be greater than 0.");
 
-            if (config.teamId != 0 && config.teamId != 1)
-                result.AddError("teamId must be 0 (attacker) or 1 (defender); the pipeline currently maintains exactly two team flow fields. Unit type will be skipped.");
+            const int MaxTeamCount = 8;
+            if (config.teamId < 0 || config.teamId >= MaxTeamCount)
+                result.AddError($"teamId must be in range [0, {MaxTeamCount}); current value {config.teamId} is out of bounds. Unit type will be skipped.");
 
             if (config.movementConfig == null)
                 result.AddWarning("MovementConfig is null; built-in defaults will be used (asset is not modified).");

@@ -625,7 +625,8 @@ namespace MassEngine.Tests
             yield return null;
 
             int[] stats = new int[4];
-            buffers.runtimeAttackerFlowStatsBuffer.GetData(stats);
+            int attackerTeamStatsOffset = 0; // team 0 is attacker
+            buffers.runtimeFlowStatsBuffer.GetData(stats, 0, attackerTeamStatsOffset, 4);
             Assert.AreEqual(4, stats[0], "density build must count the 4 living defenders");
             Assert.AreEqual(1, stats[3], "exactly one sector meets the min-agents bar");
 
@@ -641,7 +642,7 @@ namespace MassEngine.Tests
             DispatchOneFrame(battleStarted: true);
             yield return null;
 
-            buffers.runtimeAttackerFlowStatsBuffer.GetData(stats);
+            buffers.runtimeFlowStatsBuffer.GetData(stats, 0, attackerTeamStatsOffset, 4);
             Assert.AreEqual(0, stats[3], "no sector may meet a bar of 50");
             buffers.flowFieldDirectionsBuffer.GetData(directions);
             westCell = directions[14 * 16 + 2];
@@ -934,6 +935,7 @@ namespace MassEngine.Tests
                 frameIndex = ++dispatchedFrames,
                 totalAgentCount = fixtureTotalAgents,
                 unitTypeCount = registry.UnitTypeCount,
+                teamCount = 2,
                 agentThreadGroupsX = Mathf.Max(1, (fixtureTotalAgents + 63) / 64),
                 gridThreadGroupsX = 1,
                 battleStarted = battleStarted,

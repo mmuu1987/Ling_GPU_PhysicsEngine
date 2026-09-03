@@ -25,6 +25,9 @@
 #define LOCAL_TARGET_SEARCH_MAX_CELL_RADIUS 4
 #define LOCAL_TARGET_SEARCH_INTERVAL 4u
 #define LOCAL_TARGET_SEARCH_GROUP_SIZE 64u
+#define ENGAGEMENT_SLOT_COUNT 8u
+#define ENGAGEMENT_SLOT_SHIFT 3u
+#define ENGAGEMENT_SLOT_MASK 7u
 
 struct AgentData
 {
@@ -92,16 +95,14 @@ RWStructuredBuffer<float2> flowFieldDirections;
 RWStructuredBuffer<float2> defenderFlowFieldDirections;
 Texture2D<uint> densityMap;
 RWTexture2D<uint> densityMapWrite;
-RWStructuredBuffer<uint> runtimeAttackerTargetDensity;
-RWStructuredBuffer<int> runtimeAttackerFlowStats;
-RWStructuredBuffer<float4> runtimeAttackerFlowTargets;
+RWStructuredBuffer<uint> runtimeTargetDensity;
+RWStructuredBuffer<int> runtimeFlowStats;
+RWStructuredBuffer<float4> runtimeFlowTargets;
 RWTexture2D<float4> runtimeAttackerFlowPreviewTexture;
-RWStructuredBuffer<uint> runtimeDefenderTargetDensity;
-RWStructuredBuffer<int> runtimeDefenderFlowStats;
-RWStructuredBuffer<float4> runtimeDefenderFlowTargets;
 RWTexture2D<float4> runtimeDefenderFlowPreviewTexture;
 int runtimeFlowPreviewMode;
 int flowPreviewEnabled;
+int runtimeDynamicFlowEnabled;
 
 StructuredBuffer<UnitTypeSettings> unitTypeSettings;
 StructuredBuffer<int> unitTypeIndexReadBuffer;
@@ -158,18 +159,9 @@ int flowFieldEnabled;
 int2 flowFieldResolution;
 float2 flowFieldOrigin;
 float flowFieldCellSize;
-int attackerFlowTargetMode;
-float4 attackerFlowTargetPoint;
-float4 attackerFlowTargetArea;
-int defenderFlowTargetMode;
-float4 defenderFlowTargetPoint;
-float4 defenderFlowTargetArea;
-int runtimeDynamicAttackerFlowEnabled;
-int runtimeDynamicDefenderFlowEnabled;
 int dynamicFlowSectorCount;
 float dynamicFlowTargetStopRadius;
 int dynamicFlowMinDefendersPerTarget;
-int dynamicDefenderFlowSectorCount;
 float dynamicDefenderFlowTargetStopRadius;
 int dynamicDefenderFlowMinAttackersPerTarget;
 int defenderMovementMode;
@@ -187,6 +179,8 @@ int enableTwoTeamCombat;
 int battleStarted;
 int attackerTeamId;
 int defenderTeamId;
+int activeTeamIndex;
+int teamCount;
 int localTargetSearchCellRadius;
 float defenderGuardRadius;
 
@@ -556,6 +550,29 @@ uint DefenderFlowFieldCellCount()
 float2 DefenderFlowFieldCellCenter(int2 cell)
 {
     return defenderFlowFieldOrigin + ((float2)cell + 0.5) * defenderFlowFieldCellSize;
+}
+
+uint GetTeamFlowFieldOffset(int teamIndex)
+{
+    return (uint)teamIndex * FlowFieldCellCount();
+}
+
+uint GetTeamFlowStatsOffset(int teamIndex)
+{
+    return (uint)teamIndex * 4u;
+}
+
+uint GetTeamFlowTargetsOffset(int teamIndex)
+{
+    return (uint)teamIndex * 8u;
+}
+
+float2 SampleFlowFieldForTeam(float2 position, int teamIndex)
+{
+    uint baseOffset = GetTeamFlowFieldOffset(teamIndex);
+    int2 cell = PositionToFlowFieldCell(float3(position.x, 0.0, position.y));
+    uint cellIndex = FlowFieldCellToIndex(cell);
+    return flowFieldDirections[baseOffset + cellIndex];
 }
 
 float2 SampleFlowDirection(uint index, float3 position)
@@ -1062,6 +1079,47 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     }
 
     return result;
+}
+
+uint CurrentEngagementOccupancy(uint targetIndex, uint slot)
+{
+    uint packed = engagementSlotOccupancyReadBuffer[targetIndex * ENGAGEMENT_SLOT_COUNT + slot];
+    uint stamp = frameIndex & 0x00FFFFFFu;
+    return (packed >> 8) == stamp ? packed & 0xFFu : 0u;
+}
+
+uint CurrentTargetLoad(uint targetIndex)
+{
+    uint load = 0u;
+    [unroll]
+    for (uint slot = 0u; slot < ENGAGEMENT_SLOT_COUNT; slot++)
+        load += CurrentEngagementOccupancy(targetIndex, slot);
+    return load;
+}
+
+float TargetLoadCapacity(uint selfIndex, uint targetIndex)
+{
+    float selfRadius = max(0.05, GetAgentRadius(selfIndex));
+    float targetRadius = max(0.05, GetAgentRadius(targetIndex));
+    float attackRange = max(0.1, GetAttackRange(selfIndex));
+    float engagementRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
+    float circumference = 6.2831853 * max(engagementRadius, selfRadius + targetRadius);
+    float geometricCapacity = floor(circumference / max(0.1, selfRadius * 2.0));
+    return clamp(geometricCapacity, 1.0, (float)ENGAGEMENT_SLOT_COUNT);
+}
+
+float TargetLoadRatio(uint selfIndex, uint targetIndex)
+{
+    return (float)CurrentTargetLoad(targetIndex) / TargetLoadCapacity(selfIndex, targetIndex);
+}
+
+float TargetSelectionScore(uint selfIndex, uint targetIndex, float distSqr)
+{
+    float distanceScore = sqrt(max(0.0, distSqr)) / max(0.1, GetTargetAcquireRadius(selfIndex));
+    float loadRatio = TargetLoadRatio(selfIndex, targetIndex);
+    float loadPenalty = saturate(loadRatio) * 0.30 + max(0.0, loadRatio - 1.0) * 0.15;
+    float affinity = Hash01(selfIndex ^ (targetIndex * 0x9E3779B9u)) * 0.45;
+    return distanceScore + loadPenalty + affinity;
 }
 
 // Classifies ONE unit type per dispatch (classifyUnitTypeIndex). Animation time is

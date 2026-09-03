@@ -1,508 +1,178 @@
-﻿#pragma kernel ClearRuntimeAttackerFlowResources
-#pragma kernel BuildRuntimeAttackerTargetDensity
-#pragma kernel SelectRuntimeAttackerFlowTargets
-#pragma kernel GenerateRuntimeAttackerFlowField
-#pragma kernel ClearRuntimeDefenderFlowResources
-#pragma kernel BuildRuntimeDefenderTargetDensity
-#pragma kernel SelectRuntimeDefenderFlowTargets
-#pragma kernel GenerateRuntimeDefenderFlowField
+﻿#pragma kernel ClearRuntimeFlowResources
+#pragma kernel BuildRuntimeTargetDensity
+#pragma kernel SelectRuntimeFlowTargets
+#pragma kernel GenerateRuntimeFlowField
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
 
 [numthreads(64, 1, 1)]
-void ClearRuntimeAttackerFlowResources(uint3 id : SV_DispatchThreadID)
+void ClearRuntimeFlowResources(uint3 id : SV_DispatchThreadID)
 {
     uint cellCount = FlowFieldCellCount();
+    uint baseOffset = GetTeamFlowFieldOffset(activeTeamIndex);
+
     if (id.x < cellCount)
-        runtimeAttackerTargetDensity[id.x] = 0;
+        runtimeTargetDensity[baseOffset + id.x] = 0;
 
     if (id.x == 0)
     {
-        runtimeAttackerFlowStats[0] = 0;
-        runtimeAttackerFlowStats[1] = 0;
-        runtimeAttackerFlowStats[2] = 0;
-        runtimeAttackerFlowStats[3] = 0;
+        uint statsOffset = GetTeamFlowStatsOffset(activeTeamIndex);
+        runtimeFlowStats[statsOffset + 0] = 0;
+        runtimeFlowStats[statsOffset + 1] = 0;
+        runtimeFlowStats[statsOffset + 2] = 0;
+        runtimeFlowStats[statsOffset + 3] = 0;
     }
 
     if (id.x < 8)
     {
-        runtimeAttackerFlowTargets[id.x] = 0.0;
+        uint targetsOffset = GetTeamFlowTargetsOffset(activeTeamIndex);
+        runtimeFlowTargets[targetsOffset + id.x] = 0.0;
     }
 }
 
 [numthreads(64, 1, 1)]
-void BuildRuntimeAttackerTargetDensity(uint3 id : SV_DispatchThreadID)
+void BuildRuntimeTargetDensity(uint3 id : SV_DispatchThreadID)
 {
-    if (runtimeDynamicAttackerFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
+    if (runtimeDynamicFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
         return;
 
     uint count;
     uint stride;
     agentBuffer.GetDimensions(count, stride);
-    // Team identity comes from teamIdReadBuffer only: the attacker flow field steers the
-    // attacker team toward every agent that is NOT on the attacker team.
-    if (id.x >= count || teamIdReadBuffer[id.x] == attackerTeamId || !IsAliveIndex(id.x))
+    if (id.x >= count || teamIdReadBuffer[id.x] == activeTeamIndex || !IsAliveIndex(id.x))
         return;
 
     float2 position = agentPositionReadBuffer[id.x];
     int2 cell = PositionXzToFlowFieldCell(position);
     uint cellIndex = FlowFieldCellToIndex(cell);
+    uint baseOffset = GetTeamFlowFieldOffset(activeTeamIndex);
+
     uint ignoredDensity;
-    InterlockedAdd(runtimeAttackerTargetDensity[cellIndex], 1u, ignoredDensity);
+    InterlockedAdd(runtimeTargetDensity[baseOffset + cellIndex], 1u, ignoredDensity);
 
-    // [1]/[2] accumulate positions at 1m precision (int32-safe up to ~3M agents at
-    // +-640m) for the endgame global-centroid fallback in SelectRuntime*FlowTargets.
+    uint statsOffset = GetTeamFlowStatsOffset(activeTeamIndex);
     int ignoredStats;
-    InterlockedAdd(runtimeAttackerFlowStats[0], 1, ignoredStats);
-    InterlockedAdd(runtimeAttackerFlowStats[1], (int)round(position.x), ignoredStats);
-    InterlockedAdd(runtimeAttackerFlowStats[2], (int)round(position.y), ignoredStats);
+    InterlockedAdd(runtimeFlowStats[statsOffset + 0], 1, ignoredStats);
+    InterlockedAdd(runtimeFlowStats[statsOffset + 1], (int)round(position.x), ignoredStats);
+    InterlockedAdd(runtimeFlowStats[statsOffset + 2], (int)round(position.y), ignoredStats);
 }
 
-// Parallel per-sector target selection: one 64-thread group per sector strides the
-// sector's cells, then a groupshared tree reduction. Replaces a single-thread scan
-// of the whole grid (up to 8 x 256 x 256 serial iterations = a visible frame spike
-// on every dynamic rebuild). The endgame fallback needs a view across ALL sectors,
-// which no longer exists inside this per-sector kernel; it moved into
-// GenerateRuntime*FlowField (stats[3] == 0 there means "no sector met the bar").
-groupshared uint gsSectorDensitySum[64];
-groupshared float2 gsSectorPositionSum[64];
-
-[numthreads(64, 1, 1)]
-void SelectRuntimeAttackerFlowTargets(uint3 groupId : SV_GroupID, uint groupThreadIndex : SV_GroupIndex)
+[numthreads(8, 1, 1)]
+void SelectRuntimeFlowTargets(uint3 id : SV_DispatchThreadID)
 {
-    bool active = runtimeDynamicAttackerFlowEnabled != 0 && enableTwoTeamCombat != 0 && battleStarted != 0
-        && runtimeAttackerFlowStats[0] > 0;
+    if (runtimeDynamicFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
+        return;
 
-    uint sectorCount = (uint)clamp(dynamicFlowSectorCount, 1, 8);
-    uint sectorIndex = groupId.x;
-    active = active && sectorIndex < sectorCount;
+    uint sectorIndex = id.x;
+    if (sectorIndex >= (uint)dynamicFlowSectorCount)
+        return;
 
-    uint localDensity = 0u;
-    float2 localPositionSum = 0.0;
-    if (active)
+    uint statsOffset = GetTeamFlowStatsOffset(activeTeamIndex);
+    int totalTargets = runtimeFlowStats[statsOffset + 0];
+    if (totalTargets < dynamicFlowMinDefendersPerTarget)
     {
-        int minZ = (int)((sectorIndex * (uint)flowFieldResolution.y) / sectorCount);
-        int maxZ = (int)(((sectorIndex + 1u) * (uint)flowFieldResolution.y) / sectorCount);
-        uint rowWidth = (uint)flowFieldResolution.x;
-        uint cellsInSector = (uint)max(0, maxZ - minZ) * rowWidth;
-        for (uint i = groupThreadIndex; i < cellsInSector; i += 64u)
+        uint targetsOffset = GetTeamFlowTargetsOffset(activeTeamIndex);
+        runtimeFlowTargets[targetsOffset + sectorIndex] = float4(0, 0, 0, 0);
+        return;
+    }
+
+    float angleStep = 6.283185307 / (float)dynamicFlowSectorCount;
+    float sectorAngle = angleStep * (float)sectorIndex;
+    float2 sectorDir = float2(cos(sectorAngle), sin(sectorAngle));
+
+    float2 centroid = float2(
+        (float)runtimeFlowStats[statsOffset + 1] / max(1.0, (float)totalTargets),
+        (float)runtimeFlowStats[statsOffset + 2] / max(1.0, (float)totalTargets)
+    );
+
+    uint baseOffset = GetTeamFlowFieldOffset(activeTeamIndex);
+    int maxDensity = 0;
+    float2 maxDensityPos = centroid;
+
+    for (int cy = 0; cy < flowFieldResolution.y; cy++)
+    {
+        for (int cx = 0; cx < flowFieldResolution.x; cx++)
         {
-            int2 cell = int2((int)(i % rowWidth), minZ + (int)(i / rowWidth));
-            uint density = runtimeAttackerTargetDensity[FlowFieldCellToIndex(cell)];
-            if (density > 0u)
+            uint cellIndex = (uint)cy * (uint)flowFieldResolution.x + (uint)cx;
+            int density = (int)runtimeTargetDensity[baseOffset + cellIndex];
+            if (density <= 0)
+                continue;
+
+            float2 cellWorldPos = FlowFieldCellToWorldCenter(int2(cx, cy));
+            float2 fromCentroid = cellWorldPos - centroid;
+            float projection = dot(normalize(fromCentroid + float2(0.001, 0.001)), sectorDir);
+
+            if (projection > 0.5 && density > maxDensity)
             {
-                localDensity += density;
-                localPositionSum += FlowFieldCellCenter(cell) * (float)density;
+                maxDensity = density;
+                maxDensityPos = cellWorldPos;
             }
         }
     }
 
-    gsSectorDensitySum[groupThreadIndex] = localDensity;
-    gsSectorPositionSum[groupThreadIndex] = localPositionSum;
-    GroupMemoryBarrierWithGroupSync();
-
-    [unroll]
-    for (uint stride = 32u; stride > 0u; stride >>= 1u)
-    {
-        if (groupThreadIndex < stride)
-        {
-            gsSectorDensitySum[groupThreadIndex] += gsSectorDensitySum[groupThreadIndex + stride];
-            gsSectorPositionSum[groupThreadIndex] += gsSectorPositionSum[groupThreadIndex + stride];
-        }
-        GroupMemoryBarrierWithGroupSync();
-    }
-
-    if (groupThreadIndex == 0u && active)
-    {
-        uint sectorDefenderCount = gsSectorDensitySum[0];
-        if (sectorDefenderCount >= (uint)max(1, dynamicFlowMinDefendersPerTarget))
-        {
-            float2 target = gsSectorPositionSum[0] / max(1.0, (float)sectorDefenderCount);
-            runtimeAttackerFlowTargets[sectorIndex] = float4(target.x, target.y, (float)sectorDefenderCount, 1.0);
-            int ignoredTargetCount;
-            InterlockedAdd(runtimeAttackerFlowStats[3], 1, ignoredTargetCount);
-        }
-    }
+    uint targetsOffset = GetTeamFlowTargetsOffset(activeTeamIndex);
+    runtimeFlowTargets[targetsOffset + sectorIndex] = float4(maxDensityPos.x, maxDensityPos.y, (float)maxDensity, 0.0);
 }
 
-[numthreads(64, 1, 1)]
-void GenerateRuntimeAttackerFlowField(uint3 id : SV_DispatchThreadID)
+[numthreads(8, 8, 1)]
+void GenerateRuntimeFlowField(uint3 id : SV_DispatchThreadID)
 {
-    uint cellCount = FlowFieldCellCount();
-    if (id.x >= cellCount)
+    if (id.x >= (uint)flowFieldResolution.x || id.y >= (uint)flowFieldResolution.y)
         return;
 
-    bool useConfiguredTarget = attackerFlowTargetMode != FLOW_TARGET_NONE;
-    if (!useConfiguredTarget && (runtimeDynamicAttackerFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0))
+    if (runtimeDynamicFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
+        return;
+
+    uint statsOffset = GetTeamFlowStatsOffset(activeTeamIndex);
+    int totalTargets = runtimeFlowStats[statsOffset + 0];
+    if (totalTargets < dynamicFlowMinDefendersPerTarget)
+        return;
+
+    float2 cellWorldPos = FlowFieldCellToWorldCenter(int2(id.x, id.y));
+    uint targetsOffset = GetTeamFlowTargetsOffset(activeTeamIndex);
+    int bestSector = -1;
+    float bestScore = -1e9;
+
+    for (int s = 0; s < dynamicFlowSectorCount && s < 8; s++)
     {
-        // No target and no active dynamic targeting: clear the field explicitly so a
-        // removed target cannot leave stale directions behind (agents would otherwise
-        // keep marching toward a ghost target forever).
-        flowFieldDirections[id.x] = 0.0;
-        if (flowPreviewEnabled != 0)
+        float4 target = runtimeFlowTargets[targetsOffset + s];
+        float2 targetPos = target.xy;
+        float density = target.z;
+
+        if (density <= 0.0)
+            continue;
+
+        float2 toTarget = targetPos - cellWorldPos;
+        float dist = length(toTarget);
+        if (dist < 0.01)
+            continue;
+
+        float score = density / max(1.0, dist * 0.05);
+        if (score > bestScore)
         {
-            int px = (int)(id.x % (uint)flowFieldResolution.x);
-            int pz = (int)(id.x / (uint)flowFieldResolution.x);
-            runtimeAttackerFlowPreviewTexture[int2(px, pz)] = float4(0.03, 0.03, 0.03, 1.0);
+            bestScore = score;
+            bestSector = s;
         }
-        return;
     }
 
-    int x = (int)(id.x % (uint)flowFieldResolution.x);
-    int z = (int)(id.x / (uint)flowFieldResolution.x);
-    int2 cell = int2(x, z);
-    float2 cellCenter = FlowFieldCellCenter(cell);
+    uint cellIndex = id.y * (uint)flowFieldResolution.x + id.x;
+    uint baseOffset = GetTeamFlowFieldOffset(activeTeamIndex);
 
-    if (useConfiguredTarget)
+    if (bestSector >= 0)
     {
-        float2 offsetToConfiguredTarget = ConfiguredFlowTargetOffset(cellCenter, attackerFlowTargetMode, attackerFlowTargetPoint, attackerFlowTargetArea);
-        float distSqrToConfiguredTarget = dot(offsetToConfiguredTarget, offsetToConfiguredTarget);
-        float stopRadius = max(max(0.0, dynamicFlowTargetStopRadius), flowFieldCellSize * 0.75);
-        float2 configuredDirection = (distSqrToConfiguredTarget <= stopRadius * stopRadius || distSqrToConfiguredTarget <= 0.0001)
-            ? 0.0
-            : StaticObstacleAwareDirection(cellCenter, cellCenter + offsetToConfiguredTarget, flowFieldCellSize * 0.5);
+        float4 target = runtimeFlowTargets[targetsOffset + bestSector];
+        float2 targetPos = target.xy;
+        float2 toTarget = targetPos - cellWorldPos;
+        float dist = length(toTarget);
 
-        flowFieldDirections[id.x] = configuredDirection;
-        if (flowPreviewEnabled != 0)
-            runtimeAttackerFlowPreviewTexture[int2(x, z)] = float4(FlowDirectionToPreviewColor(configuredDirection), 1.0);
-        return;
-    }
-
-    int aliveDefenderCount = runtimeAttackerFlowStats[0];
-    if (aliveDefenderCount <= 0)
-    {
-        flowFieldDirections[id.x] = 0.0;
-        if (flowPreviewEnabled != 0)
-            runtimeAttackerFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
-        return;
-    }
-
-    int targetCount = clamp(runtimeAttackerFlowStats[3], 0, 8);
-    uint sectorCount = (uint)clamp(dynamicFlowSectorCount, 1, 8);
-    uint currentSectorU = min(((uint)z * sectorCount) / max(1u, (uint)flowFieldResolution.y), sectorCount - 1u);
-    int currentSector = (int)currentSectorU;
-    int sectorCountInt = (int)sectorCount;
-    int selectedSector = currentSector;
-    float4 selectedTarget;
-
-    if (targetCount <= 0)
-    {
-        // Endgame fallback (moved from the Select kernel when it went parallel):
-        // survivors below every sector threshold must still be hunted down or a
-        // 200k-vs-35 battle never concludes. Steer every cell at the global centroid
-        // accumulated in stats[1]/[2] (1m precision position sums).
-        float aliveCount = max(1.0, (float)aliveDefenderCount);
-        selectedTarget = float4(
-            (float)runtimeAttackerFlowStats[1] / aliveCount,
-            (float)runtimeAttackerFlowStats[2] / aliveCount,
-            aliveCount,
-            1.0);
-    }
-    else
-    {
-        selectedSector = -1;
-        if (runtimeAttackerFlowTargets[currentSector].w > 0.0)
-        {
-            selectedSector = currentSector;
-        }
+        if (dist > 0.01)
+            flowFieldDirections[baseOffset + cellIndex] = toTarget / dist;
         else
-        {
-            for (int radius = 1; radius < 8 && selectedSector < 0; radius++)
-            {
-                int lower = currentSector - radius;
-                int upper = currentSector + radius;
-                if (lower >= 0 && runtimeAttackerFlowTargets[lower].w > 0.0)
-                    selectedSector = lower;
-                if (selectedSector < 0 && upper < sectorCountInt && runtimeAttackerFlowTargets[upper].w > 0.0)
-                    selectedSector = upper;
-            }
-        }
-
-        if (selectedSector < 0)
-        {
-            flowFieldDirections[id.x] = 0.0;
-            if (flowPreviewEnabled != 0)
-                runtimeAttackerFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
-            return;
-        }
-
-        selectedTarget = runtimeAttackerFlowTargets[selectedSector];
-    }
-    int sectorMinZ = (int)(((uint)selectedSector * (uint)flowFieldResolution.y) / sectorCount);
-    int sectorMaxZ = (int)((((uint)selectedSector + 1u) * (uint)flowFieldResolution.y) / sectorCount);
-    float targetX = selectedTarget.x;
-    // Pure-X steering strands attackers whose Z lane is enemy-free at the centroid X
-    // line forever; pull each lane 35% toward the sector's density centroid Z so lanes
-    // converge onto the live cluster while the front still stays spread.
-    float clampedOwnZ = clamp(cellCenter.y, FlowFieldCellCenter(int2(x, sectorMinZ)).y, FlowFieldCellCenter(int2(x, max(sectorMinZ, sectorMaxZ - 1))).y);
-    float targetZ = lerp(clampedOwnZ, selectedTarget.y, 0.35);
-    float2 target = float2(targetX, targetZ);
-    float targetWeight = selectedTarget.z;
-
-    float2 offset = target - cellCenter;
-    float distSqr = dot(offset, offset);
-    float stopRadius = max(max(0.0, dynamicFlowTargetStopRadius), flowFieldCellSize * 0.75);
-    float2 direction = (distSqr <= stopRadius * stopRadius || distSqr <= 0.0001)
-        ? 0.0
-        : StaticObstacleAwareDirection(cellCenter, target, flowFieldCellSize * 0.5);
-
-    flowFieldDirections[id.x] = direction;
-
-    float lengthSqr = dot(direction, direction);
-    float density01 = saturate(targetWeight / max(1.0, (float)dynamicFlowMinDefendersPerTarget * 4.0));
-    float3 color = 0.03;
-
-    if (runtimeFlowPreviewMode == 0)
-    {
-        color = FlowDirectionToPreviewColor(direction);
+            flowFieldDirections[baseOffset + cellIndex] = float2(0, 0);
     }
     else
     {
-        color = lerp(float3(0.08, 0.08, 0.08), float3(0.85, 0.18, 0.08), density01);
-        if (lengthSqr > 0.0001)
-            color = lerp(color, float3(1.0, 0.86, 0.12), saturate(density01 * 0.75));
+        flowFieldDirections[baseOffset + cellIndex] = float2(0, 0);
     }
-
-    if (flowPreviewEnabled != 0)
-
-        runtimeAttackerFlowPreviewTexture[int2(x, z)] = float4(color, 1.0);
-}
-
-[numthreads(64, 1, 1)]
-void ClearRuntimeDefenderFlowResources(uint3 id : SV_DispatchThreadID)
-{
-    uint cellCount = DefenderFlowFieldCellCount();
-    if (id.x < cellCount)
-        runtimeDefenderTargetDensity[id.x] = 0;
-
-    if (id.x == 0)
-    {
-        runtimeDefenderFlowStats[0] = 0;
-        runtimeDefenderFlowStats[1] = 0;
-        runtimeDefenderFlowStats[2] = 0;
-        runtimeDefenderFlowStats[3] = 0;
-    }
-
-    if (id.x < 8)
-    {
-        runtimeDefenderFlowTargets[id.x] = 0.0;
-    }
-}
-
-[numthreads(64, 1, 1)]
-void BuildRuntimeDefenderTargetDensity(uint3 id : SV_DispatchThreadID)
-{
-    if (runtimeDynamicDefenderFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
-        return;
-
-    uint count;
-    uint stride;
-    agentBuffer.GetDimensions(count, stride);
-    // Defender flow field steers the defender team toward every agent NOT on the defender team.
-    if (id.x >= count || teamIdReadBuffer[id.x] == defenderTeamId || !IsAliveIndex(id.x))
-        return;
-
-    float2 position = agentPositionReadBuffer[id.x];
-    int2 cell = PositionXzToDefenderFlowFieldCell(position);
-    uint cellIndex = DefenderFlowFieldCellToIndex(cell);
-    uint ignoredDensity;
-    InterlockedAdd(runtimeDefenderTargetDensity[cellIndex], 1u, ignoredDensity);
-
-    int ignoredStats;
-    InterlockedAdd(runtimeDefenderFlowStats[0], 1, ignoredStats);
-    InterlockedAdd(runtimeDefenderFlowStats[1], (int)round(position.x), ignoredStats);
-    InterlockedAdd(runtimeDefenderFlowStats[2], (int)round(position.y), ignoredStats);
-}
-
-[numthreads(64, 1, 1)]
-void SelectRuntimeDefenderFlowTargets(uint3 groupId : SV_GroupID, uint groupThreadIndex : SV_GroupIndex)
-{
-    bool active = runtimeDynamicDefenderFlowEnabled != 0 && enableTwoTeamCombat != 0 && battleStarted != 0
-        && runtimeDefenderFlowStats[0] > 0;
-
-    uint sectorCount = (uint)clamp(dynamicDefenderFlowSectorCount, 1, 8);
-    uint sectorIndex = groupId.x;
-    active = active && sectorIndex < sectorCount;
-
-    uint localDensity = 0u;
-    float2 localPositionSum = 0.0;
-    if (active)
-    {
-        int minZ = (int)((sectorIndex * (uint)defenderFlowFieldResolution.y) / sectorCount);
-        int maxZ = (int)(((sectorIndex + 1u) * (uint)defenderFlowFieldResolution.y) / sectorCount);
-        uint rowWidth = (uint)defenderFlowFieldResolution.x;
-        uint cellsInSector = (uint)max(0, maxZ - minZ) * rowWidth;
-        for (uint i = groupThreadIndex; i < cellsInSector; i += 64u)
-        {
-            int2 cell = int2((int)(i % rowWidth), minZ + (int)(i / rowWidth));
-            uint density = runtimeDefenderTargetDensity[DefenderFlowFieldCellToIndex(cell)];
-            if (density > 0u)
-            {
-                localDensity += density;
-                localPositionSum += DefenderFlowFieldCellCenter(cell) * (float)density;
-            }
-        }
-    }
-
-    gsSectorDensitySum[groupThreadIndex] = localDensity;
-    gsSectorPositionSum[groupThreadIndex] = localPositionSum;
-    GroupMemoryBarrierWithGroupSync();
-
-    [unroll]
-    for (uint stride = 32u; stride > 0u; stride >>= 1u)
-    {
-        if (groupThreadIndex < stride)
-        {
-            gsSectorDensitySum[groupThreadIndex] += gsSectorDensitySum[groupThreadIndex + stride];
-            gsSectorPositionSum[groupThreadIndex] += gsSectorPositionSum[groupThreadIndex + stride];
-        }
-        GroupMemoryBarrierWithGroupSync();
-    }
-
-    if (groupThreadIndex == 0u && active)
-    {
-        uint sectorAttackerCount = gsSectorDensitySum[0];
-        if (sectorAttackerCount >= (uint)max(1, dynamicDefenderFlowMinAttackersPerTarget))
-        {
-            float2 target = gsSectorPositionSum[0] / max(1.0, (float)sectorAttackerCount);
-            runtimeDefenderFlowTargets[sectorIndex] = float4(target.x, target.y, (float)sectorAttackerCount, 1.0);
-            int ignoredTargetCount;
-            InterlockedAdd(runtimeDefenderFlowStats[3], 1, ignoredTargetCount);
-        }
-    }
-}
-
-[numthreads(64, 1, 1)]
-void GenerateRuntimeDefenderFlowField(uint3 id : SV_DispatchThreadID)
-{
-    uint cellCount = DefenderFlowFieldCellCount();
-    if (id.x >= cellCount)
-        return;
-
-    bool useConfiguredTarget = defenderFlowTargetMode != FLOW_TARGET_NONE;
-    if (!useConfiguredTarget && (runtimeDynamicDefenderFlowEnabled == 0 || enableTwoTeamCombat == 0 || battleStarted == 0))
-    {
-        defenderFlowFieldDirections[id.x] = 0.0;
-        if (flowPreviewEnabled != 0)
-        {
-            int px = (int)(id.x % (uint)defenderFlowFieldResolution.x);
-            int pz = (int)(id.x / (uint)defenderFlowFieldResolution.x);
-            runtimeDefenderFlowPreviewTexture[int2(px, pz)] = float4(0.03, 0.03, 0.03, 1.0);
-        }
-        return;
-    }
-
-    int x = (int)(id.x % (uint)defenderFlowFieldResolution.x);
-    int z = (int)(id.x / (uint)defenderFlowFieldResolution.x);
-    int2 cell = int2(x, z);
-    float2 cellCenter = DefenderFlowFieldCellCenter(cell);
-
-    if (useConfiguredTarget)
-    {
-        float2 offsetToConfiguredTarget = ConfiguredFlowTargetOffset(cellCenter, defenderFlowTargetMode, defenderFlowTargetPoint, defenderFlowTargetArea);
-        float distSqrToConfiguredTarget = dot(offsetToConfiguredTarget, offsetToConfiguredTarget);
-        float stopRadius = max(max(0.0, dynamicDefenderFlowTargetStopRadius), defenderFlowFieldCellSize * 0.75);
-        float2 configuredDirection = (distSqrToConfiguredTarget <= stopRadius * stopRadius || distSqrToConfiguredTarget <= 0.0001)
-            ? 0.0
-            : StaticObstacleAwareDirection(cellCenter, cellCenter + offsetToConfiguredTarget, defenderFlowFieldCellSize * 0.5);
-
-        defenderFlowFieldDirections[id.x] = configuredDirection;
-        if (flowPreviewEnabled != 0)
-            runtimeDefenderFlowPreviewTexture[int2(x, z)] = float4(FlowDirectionToPreviewColor(configuredDirection), 1.0);
-        return;
-    }
-
-    int aliveAttackerCount = runtimeDefenderFlowStats[0];
-    if (aliveAttackerCount <= 0)
-    {
-        defenderFlowFieldDirections[id.x] = 0.0;
-        if (flowPreviewEnabled != 0)
-            runtimeDefenderFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
-        return;
-    }
-
-    int targetCount = clamp(runtimeDefenderFlowStats[3], 0, 8);
-    uint sectorCount = (uint)clamp(dynamicDefenderFlowSectorCount, 1, 8);
-    uint currentSectorU = min(((uint)z * sectorCount) / max(1u, (uint)defenderFlowFieldResolution.y), sectorCount - 1u);
-    int currentSector = (int)currentSectorU;
-    int sectorCountInt = (int)sectorCount;
-    int selectedSector = currentSector;
-    float4 selectedTarget;
-
-    if (targetCount <= 0)
-    {
-        // Endgame fallback: same contract as the attacker field (see comment there).
-        float aliveCount = max(1.0, (float)aliveAttackerCount);
-        selectedTarget = float4(
-            (float)runtimeDefenderFlowStats[1] / aliveCount,
-            (float)runtimeDefenderFlowStats[2] / aliveCount,
-            aliveCount,
-            1.0);
-    }
-    else
-    {
-        selectedSector = -1;
-        if (runtimeDefenderFlowTargets[currentSector].w > 0.0)
-        {
-            selectedSector = currentSector;
-        }
-        else
-        {
-            for (int radius = 1; radius < 8 && selectedSector < 0; radius++)
-            {
-                int lower = currentSector - radius;
-                int upper = currentSector + radius;
-                if (lower >= 0 && runtimeDefenderFlowTargets[lower].w > 0.0)
-                    selectedSector = lower;
-                if (selectedSector < 0 && upper < sectorCountInt && runtimeDefenderFlowTargets[upper].w > 0.0)
-                    selectedSector = upper;
-            }
-        }
-
-        if (selectedSector < 0)
-        {
-            defenderFlowFieldDirections[id.x] = 0.0;
-            if (flowPreviewEnabled != 0)
-                runtimeDefenderFlowPreviewTexture[int2(x, z)] = float4(0.03, 0.03, 0.03, 1.0);
-            return;
-        }
-
-        selectedTarget = runtimeDefenderFlowTargets[selectedSector];
-    }
-    int sectorMinZ = (int)(((uint)selectedSector * (uint)defenderFlowFieldResolution.y) / sectorCount);
-    int sectorMaxZ = (int)((((uint)selectedSector + 1u) * (uint)defenderFlowFieldResolution.y) / sectorCount);
-    float targetX = selectedTarget.x;
-    float clampedOwnZ = clamp(cellCenter.y, DefenderFlowFieldCellCenter(int2(x, sectorMinZ)).y, DefenderFlowFieldCellCenter(int2(x, max(sectorMinZ, sectorMaxZ - 1))).y);
-    float targetZ = lerp(clampedOwnZ, selectedTarget.y, 0.35);
-    float2 target = float2(targetX, targetZ);
-    float targetWeight = selectedTarget.z;
-
-    float2 offset = target - cellCenter;
-    float distSqr = dot(offset, offset);
-    float stopRadius = max(max(0.0, dynamicDefenderFlowTargetStopRadius), defenderFlowFieldCellSize * 0.75);
-    float2 direction = (distSqr <= stopRadius * stopRadius || distSqr <= 0.0001)
-        ? 0.0
-        : StaticObstacleAwareDirection(cellCenter, target, defenderFlowFieldCellSize * 0.5);
-
-    defenderFlowFieldDirections[id.x] = direction;
-
-    float lengthSqr = dot(direction, direction);
-    float density01 = saturate(targetWeight / max(1.0, (float)dynamicDefenderFlowMinAttackersPerTarget * 4.0));
-    float3 color = 0.03;
-
-    if (runtimeFlowPreviewMode == 0)
-    {
-        color = FlowDirectionToPreviewColor(direction);
-    }
-    else
-    {
-        color = lerp(float3(0.08, 0.08, 0.08), float3(0.08, 0.42, 0.85), density01);
-        if (lengthSqr > 0.0001)
-            color = lerp(color, float3(1.0, 0.86, 0.12), saturate(density01 * 0.75));
-    }
-
-    if (flowPreviewEnabled != 0)
-
-        runtimeDefenderFlowPreviewTexture[int2(x, z)] = float4(color, 1.0);
 }
 

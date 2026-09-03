@@ -11,14 +11,10 @@ namespace MassEngine
 
         public readonly int ClearGrid;
         public readonly int BuildSpatialHash;
-        public readonly int ClearRuntimeAttackerFlowResources;
-        public readonly int BuildRuntimeAttackerTargetDensity;
-        public readonly int SelectRuntimeAttackerFlowTargets;
-        public readonly int GenerateRuntimeAttackerFlowField;
-        public readonly int ClearRuntimeDefenderFlowResources;
-        public readonly int BuildRuntimeDefenderTargetDensity;
-        public readonly int SelectRuntimeDefenderFlowTargets;
-        public readonly int GenerateRuntimeDefenderFlowField;
+        public readonly int ClearRuntimeFlowResources;
+        public readonly int BuildRuntimeTargetDensity;
+        public readonly int SelectRuntimeFlowTargets;
+        public readonly int GenerateRuntimeFlowField;
         public readonly int ClearDensityMap;
         public readonly int BuildDensityMap;
         public readonly int ClearPendingDamage;
@@ -63,14 +59,10 @@ namespace MassEngine
 
             ClearGrid = FindKernelOrInvalid(spatialHashShader, "ClearGrid");
             BuildSpatialHash = FindKernelOrInvalid(spatialHashShader, "BuildSpatialHash");
-            ClearRuntimeAttackerFlowResources = FindKernelOrInvalid(runtimeFlowShader, "ClearRuntimeAttackerFlowResources");
-            BuildRuntimeAttackerTargetDensity = FindKernelOrInvalid(runtimeFlowShader, "BuildRuntimeAttackerTargetDensity");
-            SelectRuntimeAttackerFlowTargets = FindKernelOrInvalid(runtimeFlowShader, "SelectRuntimeAttackerFlowTargets");
-            GenerateRuntimeAttackerFlowField = FindKernelOrInvalid(runtimeFlowShader, "GenerateRuntimeAttackerFlowField");
-            ClearRuntimeDefenderFlowResources = FindKernelOrInvalid(runtimeFlowShader, "ClearRuntimeDefenderFlowResources");
-            BuildRuntimeDefenderTargetDensity = FindKernelOrInvalid(runtimeFlowShader, "BuildRuntimeDefenderTargetDensity");
-            SelectRuntimeDefenderFlowTargets = FindKernelOrInvalid(runtimeFlowShader, "SelectRuntimeDefenderFlowTargets");
-            GenerateRuntimeDefenderFlowField = FindKernelOrInvalid(runtimeFlowShader, "GenerateRuntimeDefenderFlowField");
+            ClearRuntimeFlowResources = FindKernelOrInvalid(runtimeFlowShader, "ClearRuntimeFlowResources");
+            BuildRuntimeTargetDensity = FindKernelOrInvalid(runtimeFlowShader, "BuildRuntimeTargetDensity");
+            SelectRuntimeFlowTargets = FindKernelOrInvalid(runtimeFlowShader, "SelectRuntimeFlowTargets");
+            GenerateRuntimeFlowField = FindKernelOrInvalid(runtimeFlowShader, "GenerateRuntimeFlowField");
             ClearDensityMap = FindKernelOrInvalid(combatSimulationShader, "ClearDensityMap");
             BuildDensityMap = FindKernelOrInvalid(combatSimulationShader, "BuildDensityMap");
             ClearPendingDamage = FindKernelOrInvalid(combatSimulationShader, "ClearPendingDamage");

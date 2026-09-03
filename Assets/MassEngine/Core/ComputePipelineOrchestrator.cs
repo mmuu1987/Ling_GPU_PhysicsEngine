@@ -43,10 +43,13 @@ namespace MassEngine
 
             DispatchSpatialHash(frameContext);
 
-            if (frameContext.attackerFlow.rebuildThisFrame)
-                DispatchRuntimeAttackerFlow(frameContext);
-            if (frameContext.defenderFlow.rebuildThisFrame)
-                DispatchRuntimeDefenderFlow(frameContext);
+            // N-team runtime flow dispatch
+            shaders.SetInt(TeamCountId, frameContext.teamCount);
+            for (int teamIndex = 0; teamIndex < frameContext.teamCount; teamIndex++)
+            {
+                if (ShouldRebuildTeamFlow(frameContext, teamIndex))
+                    DispatchRuntimeFlowForTeam(teamIndex, frameContext);
+            }
 
             if (frameContext.rebuildDensityMap)
                 DispatchDensityMap(frameContext);
@@ -56,29 +59,63 @@ namespace MassEngine
             buffers.SwapSimulationBuffers();
         }
 
+        private bool ShouldRebuildTeamFlow(PipelineFrameContext context, int teamIndex)
+        {
+            if (context.teamFlows != null && teamIndex < context.teamFlows.Length)
+                return context.teamFlows[teamIndex].rebuildThisFrame;
+
+            if (teamIndex == 0)
+                return context.attackerFlow.rebuildThisFrame;
+            if (teamIndex == 1)
+                return context.defenderFlow.rebuildThisFrame;
+            return false;
+        }
+
+        private void DispatchRuntimeFlowForTeam(int teamIndex, PipelineFrameContext context)
+        {
+            TeamFlowFrameSettings flow;
+            if (context.teamFlows != null && teamIndex < context.teamFlows.Length)
+                flow = context.teamFlows[teamIndex];
+            else
+                flow = teamIndex == 0 ? context.attackerFlow : context.defenderFlow;
+
+            int flowGroups = Mathf.Max(1, flow.threadGroupsX);
+
+            shaders.SetInt(ActiveTeamIndexId, teamIndex);
+
+            // Bind per-team flow field directions buffer
+            ComputeBuffer teamFlowBuffer;
+            if (buffers.flowFieldDirectionsBuffers != null && teamIndex < buffers.flowFieldDirectionsBuffers.Length)
+                teamFlowBuffer = buffers.flowFieldDirectionsBuffers[teamIndex];
+            else
+                teamFlowBuffer = teamIndex == 0 ? buffers.flowFieldDirectionsBuffer : buffers.defenderFlowFieldDirectionsBuffer;
+            SetBuffer(shaders.RuntimeFlowShader, shaders.GenerateRuntimeFlowField, FlowFieldDirectionsId, teamFlowBuffer);
+
+            // Bind per-team preview texture (fallback to legacy buffers for team 0/1)
+            RenderTexture teamPreviewTexture;
+            int previewPropertyId;
+            if (buffers.runtimeFlowPreviewTextures != null && teamIndex < buffers.runtimeFlowPreviewTextures.Length)
+            {
+                teamPreviewTexture = buffers.runtimeFlowPreviewTextures[teamIndex];
+                previewPropertyId = RuntimeFlowPreviewTextureId;
+            }
+            else
+            {
+                teamPreviewTexture = teamIndex == 0 ? buffers.runtimeAttackerFlowPreviewTexture : buffers.runtimeDefenderFlowPreviewTexture;
+                previewPropertyId = teamIndex == 0 ? RuntimeAttackerFlowPreviewTextureId : RuntimeDefenderFlowPreviewTextureId;
+            }
+            SetTexture(shaders.RuntimeFlowShader, shaders.GenerateRuntimeFlowField, previewPropertyId, teamPreviewTexture);
+
+            Dispatch(shaders.RuntimeFlowShader, shaders.ClearRuntimeFlowResources, flowGroups, "ClearRuntimeFlowResources[" + teamIndex + "]");
+            Dispatch(shaders.RuntimeFlowShader, shaders.BuildRuntimeTargetDensity, Mathf.Max(1, context.agentThreadGroupsX), "BuildRuntimeTargetDensity[" + teamIndex + "]");
+            Dispatch(shaders.RuntimeFlowShader, shaders.SelectRuntimeFlowTargets, Mathf.Clamp(flow.sectorCount, 1, 8), "SelectRuntimeFlowTargets[" + teamIndex + "]");
+            Dispatch(shaders.RuntimeFlowShader, shaders.GenerateRuntimeFlowField, flowGroups, "GenerateRuntimeFlowField[" + teamIndex + "]");
+        }
+
         private void DispatchSpatialHash(PipelineFrameContext context)
         {
             Dispatch(shaders.SpatialHashShader, shaders.ClearGrid, Mathf.Max(1, context.gridThreadGroupsX), "ClearGrid");
             Dispatch(shaders.SpatialHashShader, shaders.BuildSpatialHash, Mathf.Max(1, context.agentThreadGroupsX), "BuildSpatialHash");
-        }
-
-        private void DispatchRuntimeAttackerFlow(PipelineFrameContext context)
-        {
-            int flowGroups = Mathf.Max(1, context.attackerFlow.threadGroupsX);
-            Dispatch(shaders.RuntimeFlowShader, shaders.ClearRuntimeAttackerFlowResources, flowGroups, "ClearRuntimeAttackerFlowResources");
-            Dispatch(shaders.RuntimeFlowShader, shaders.BuildRuntimeAttackerTargetDensity, Mathf.Max(1, context.agentThreadGroupsX), "BuildRuntimeAttackerTargetDensity");
-            // One 64-thread group per sector (the kernel reduces its sector in groupshared memory).
-            Dispatch(shaders.RuntimeFlowShader, shaders.SelectRuntimeAttackerFlowTargets, Mathf.Clamp(context.attackerFlow.sectorCount, 1, 8), "SelectRuntimeAttackerFlowTargets");
-            Dispatch(shaders.RuntimeFlowShader, shaders.GenerateRuntimeAttackerFlowField, flowGroups, "GenerateRuntimeAttackerFlowField");
-        }
-
-        private void DispatchRuntimeDefenderFlow(PipelineFrameContext context)
-        {
-            int flowGroups = Mathf.Max(1, context.defenderFlow.threadGroupsX);
-            Dispatch(shaders.RuntimeFlowShader, shaders.ClearRuntimeDefenderFlowResources, flowGroups, "ClearRuntimeDefenderFlowResources");
-            Dispatch(shaders.RuntimeFlowShader, shaders.BuildRuntimeDefenderTargetDensity, Mathf.Max(1, context.agentThreadGroupsX), "BuildRuntimeDefenderTargetDensity");
-            Dispatch(shaders.RuntimeFlowShader, shaders.SelectRuntimeDefenderFlowTargets, Mathf.Clamp(context.defenderFlow.sectorCount, 1, 8), "SelectRuntimeDefenderFlowTargets");
-            Dispatch(shaders.RuntimeFlowShader, shaders.GenerateRuntimeDefenderFlowField, flowGroups, "GenerateRuntimeDefenderFlowField");
         }
 
         private void DispatchDensityMap(PipelineFrameContext context)
@@ -155,13 +192,6 @@ namespace MassEngine
             shaders.SetInt(DefenderMovementModeId, context.defenderMovementMode);
             shaders.SetFloat(DefenderGuardRadiusId, Mathf.Max(0f, context.defenderGuardRadius));
 
-            UploadTeamFlowConstants(context.attackerFlow, FlowFieldEnabledId, FlowFieldResolutionId, FlowFieldOriginId, FlowFieldCellSizeId,
-                AttackerFlowTargetModeId, AttackerFlowTargetPointId, AttackerFlowTargetAreaId,
-                RuntimeDynamicAttackerFlowEnabledId, DynamicFlowSectorCountId, DynamicFlowTargetStopRadiusId, DynamicFlowMinDefendersPerTargetId);
-            UploadTeamFlowConstants(context.defenderFlow, DefenderFlowFieldEnabledId, DefenderFlowFieldResolutionId, DefenderFlowFieldOriginId, DefenderFlowFieldCellSizeId,
-                DefenderFlowTargetModeId, DefenderFlowTargetPointId, DefenderFlowTargetAreaId,
-                RuntimeDynamicDefenderFlowEnabledId, DynamicDefenderFlowSectorCountId, DynamicDefenderFlowTargetStopRadiusId, DynamicDefenderFlowMinAttackersPerTargetId);
-
             shaders.SetInt(RuntimeFlowPreviewModeId, context.runtimeFlowPreviewMode);
             shaders.SetInt(FlowPreviewEnabledId, context.flowPreviewEnabled ? 1 : 0);
             shaders.SetInt(StaticObstacleCountId, Mathf.Clamp(context.staticObstacleCount, 0, StaticObstacleMath.MaxObstacleCount));
@@ -171,29 +201,6 @@ namespace MassEngine
 
             if (context.lod.frustumPlanes != null && context.lod.frustumPlanes.Length > 0)
                 shaders.SetVectorArray(FrustumPlanesId, context.lod.frustumPlanes);
-        }
-
-        private void UploadTeamFlowConstants(
-            TeamFlowFrameSettings flow,
-            int enabledId, int resolutionId, int originId, int cellSizeId,
-            int targetModeId, int targetPointId, int targetAreaId,
-            int dynamicEnabledId, int sectorCountId, int stopRadiusId, int minAgentsId)
-        {
-            shaders.SetInt(enabledId, flow.enabled ? 1 : 0);
-            shaders.SetInts(resolutionId, Mathf.Max(1, flow.resolutionX), Mathf.Max(1, flow.resolutionZ));
-            shaders.SetVector(originId, new Vector4(flow.origin.x, flow.origin.y, 0f, 0f));
-            shaders.SetFloat(cellSizeId, Mathf.Max(0.1f, flow.cellSize));
-            shaders.SetInt(targetModeId, flow.targetMode);
-            shaders.SetVector(targetPointId, new Vector4(flow.targetPoint.x, flow.targetPoint.z, 0f, 0f));
-            shaders.SetVector(targetAreaId, new Vector4(
-                flow.targetAreaCenter.x,
-                flow.targetAreaCenter.z,
-                Mathf.Max(0f, flow.targetAreaSize.x),
-                Mathf.Max(0f, flow.targetAreaSize.z)));
-            shaders.SetInt(dynamicEnabledId, flow.dynamicFlowEnabled ? 1 : 0);
-            shaders.SetInt(sectorCountId, Mathf.Clamp(flow.sectorCount, 1, 8));
-            shaders.SetFloat(stopRadiusId, Mathf.Max(0f, flow.targetStopRadius));
-            shaders.SetInt(minAgentsId, Mathf.Max(1, flow.minAgentsPerTarget));
         }
 
         private void BindComputeBuffers()
@@ -226,53 +233,28 @@ namespace MassEngine
         {
             ComputeShader flow = shaders.RuntimeFlowShader;
 
-            SetBuffer(flow, shaders.ClearRuntimeAttackerFlowResources, AgentBufferId, buffers.agentBuffer);
-            SetBuffer(flow, shaders.ClearRuntimeAttackerFlowResources, RuntimeAttackerTargetDensityId, buffers.runtimeAttackerTargetDensityBuffer);
-            SetBuffer(flow, shaders.ClearRuntimeAttackerFlowResources, RuntimeAttackerFlowStatsId, buffers.runtimeAttackerFlowStatsBuffer);
-            SetBuffer(flow, shaders.ClearRuntimeAttackerFlowResources, RuntimeAttackerFlowTargetsId, buffers.runtimeAttackerFlowTargetsBuffer);
+            SetBuffer(flow, shaders.ClearRuntimeFlowResources, AgentBufferId, buffers.agentBuffer);
+            SetBuffer(flow, shaders.ClearRuntimeFlowResources, RuntimeTargetDensityId, buffers.runtimeTargetDensityBuffer);
+            SetBuffer(flow, shaders.ClearRuntimeFlowResources, RuntimeFlowStatsId, buffers.runtimeFlowStatsBuffer);
+            SetBuffer(flow, shaders.ClearRuntimeFlowResources, RuntimeFlowTargetsId, buffers.runtimeFlowTargetsBuffer);
 
-            SetBuffer(flow, shaders.BuildRuntimeAttackerTargetDensity, AgentBufferId, buffers.agentBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeAttackerTargetDensity, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeAttackerTargetDensity, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeAttackerTargetDensity, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeAttackerTargetDensity, RuntimeAttackerTargetDensityId, buffers.runtimeAttackerTargetDensityBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeAttackerTargetDensity, RuntimeAttackerFlowStatsId, buffers.runtimeAttackerFlowStatsBuffer);
+            SetBuffer(flow, shaders.BuildRuntimeTargetDensity, AgentBufferId, buffers.agentBuffer);
+            SetBuffer(flow, shaders.BuildRuntimeTargetDensity, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
+            SetBuffer(flow, shaders.BuildRuntimeTargetDensity, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
+            SetBuffer(flow, shaders.BuildRuntimeTargetDensity, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
+            SetBuffer(flow, shaders.BuildRuntimeTargetDensity, RuntimeTargetDensityId, buffers.runtimeTargetDensityBuffer);
+            SetBuffer(flow, shaders.BuildRuntimeTargetDensity, RuntimeFlowStatsId, buffers.runtimeFlowStatsBuffer);
 
-            SetBuffer(flow, shaders.SelectRuntimeAttackerFlowTargets, AgentBufferId, buffers.agentBuffer);
-            SetBuffer(flow, shaders.SelectRuntimeAttackerFlowTargets, RuntimeAttackerTargetDensityId, buffers.runtimeAttackerTargetDensityBuffer);
-            SetBuffer(flow, shaders.SelectRuntimeAttackerFlowTargets, RuntimeAttackerFlowStatsId, buffers.runtimeAttackerFlowStatsBuffer);
-            SetBuffer(flow, shaders.SelectRuntimeAttackerFlowTargets, RuntimeAttackerFlowTargetsId, buffers.runtimeAttackerFlowTargetsBuffer);
+            SetBuffer(flow, shaders.SelectRuntimeFlowTargets, AgentBufferId, buffers.agentBuffer);
+            SetBuffer(flow, shaders.SelectRuntimeFlowTargets, RuntimeTargetDensityId, buffers.runtimeTargetDensityBuffer);
+            SetBuffer(flow, shaders.SelectRuntimeFlowTargets, RuntimeFlowStatsId, buffers.runtimeFlowStatsBuffer);
+            SetBuffer(flow, shaders.SelectRuntimeFlowTargets, RuntimeFlowTargetsId, buffers.runtimeFlowTargetsBuffer);
 
-            SetBuffer(flow, shaders.GenerateRuntimeAttackerFlowField, AgentBufferId, buffers.agentBuffer);
-            SetBuffer(flow, shaders.GenerateRuntimeAttackerFlowField, FlowFieldDirectionsId, buffers.flowFieldDirectionsBuffer);
-            SetBuffer(flow, shaders.GenerateRuntimeAttackerFlowField, RuntimeAttackerTargetDensityId, buffers.runtimeAttackerTargetDensityBuffer);
-            SetBuffer(flow, shaders.GenerateRuntimeAttackerFlowField, RuntimeAttackerFlowStatsId, buffers.runtimeAttackerFlowStatsBuffer);
-            SetBuffer(flow, shaders.GenerateRuntimeAttackerFlowField, RuntimeAttackerFlowTargetsId, buffers.runtimeAttackerFlowTargetsBuffer);
-            SetTexture(flow, shaders.GenerateRuntimeAttackerFlowField, RuntimeAttackerFlowPreviewTextureId, buffers.runtimeAttackerFlowPreviewTexture);
-
-            SetBuffer(flow, shaders.ClearRuntimeDefenderFlowResources, AgentBufferId, buffers.agentBuffer);
-            SetBuffer(flow, shaders.ClearRuntimeDefenderFlowResources, RuntimeDefenderTargetDensityId, buffers.runtimeDefenderTargetDensityBuffer);
-            SetBuffer(flow, shaders.ClearRuntimeDefenderFlowResources, RuntimeDefenderFlowStatsId, buffers.runtimeDefenderFlowStatsBuffer);
-            SetBuffer(flow, shaders.ClearRuntimeDefenderFlowResources, RuntimeDefenderFlowTargetsId, buffers.runtimeDefenderFlowTargetsBuffer);
-
-            SetBuffer(flow, shaders.BuildRuntimeDefenderTargetDensity, AgentBufferId, buffers.agentBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeDefenderTargetDensity, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeDefenderTargetDensity, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeDefenderTargetDensity, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeDefenderTargetDensity, RuntimeDefenderTargetDensityId, buffers.runtimeDefenderTargetDensityBuffer);
-            SetBuffer(flow, shaders.BuildRuntimeDefenderTargetDensity, RuntimeDefenderFlowStatsId, buffers.runtimeDefenderFlowStatsBuffer);
-
-            SetBuffer(flow, shaders.SelectRuntimeDefenderFlowTargets, AgentBufferId, buffers.agentBuffer);
-            SetBuffer(flow, shaders.SelectRuntimeDefenderFlowTargets, RuntimeDefenderTargetDensityId, buffers.runtimeDefenderTargetDensityBuffer);
-            SetBuffer(flow, shaders.SelectRuntimeDefenderFlowTargets, RuntimeDefenderFlowStatsId, buffers.runtimeDefenderFlowStatsBuffer);
-            SetBuffer(flow, shaders.SelectRuntimeDefenderFlowTargets, RuntimeDefenderFlowTargetsId, buffers.runtimeDefenderFlowTargetsBuffer);
-
-            SetBuffer(flow, shaders.GenerateRuntimeDefenderFlowField, AgentBufferId, buffers.agentBuffer);
-            SetBuffer(flow, shaders.GenerateRuntimeDefenderFlowField, DefenderFlowFieldDirectionsId, buffers.defenderFlowFieldDirectionsBuffer);
-            SetBuffer(flow, shaders.GenerateRuntimeDefenderFlowField, RuntimeDefenderTargetDensityId, buffers.runtimeDefenderTargetDensityBuffer);
-            SetBuffer(flow, shaders.GenerateRuntimeDefenderFlowField, RuntimeDefenderFlowStatsId, buffers.runtimeDefenderFlowStatsBuffer);
-            SetBuffer(flow, shaders.GenerateRuntimeDefenderFlowField, RuntimeDefenderFlowTargetsId, buffers.runtimeDefenderFlowTargetsBuffer);
-            SetTexture(flow, shaders.GenerateRuntimeDefenderFlowField, RuntimeDefenderFlowPreviewTextureId, buffers.runtimeDefenderFlowPreviewTexture);
+            SetBuffer(flow, shaders.GenerateRuntimeFlowField, AgentBufferId, buffers.agentBuffer);
+            SetBuffer(flow, shaders.GenerateRuntimeFlowField, RuntimeTargetDensityId, buffers.runtimeTargetDensityBuffer);
+            SetBuffer(flow, shaders.GenerateRuntimeFlowField, RuntimeFlowStatsId, buffers.runtimeFlowStatsBuffer);
+            SetBuffer(flow, shaders.GenerateRuntimeFlowField, RuntimeFlowTargetsId, buffers.runtimeFlowTargetsBuffer);
+            // FlowFieldDirections and preview texture are bound per-team inside DispatchRuntimeFlowForTeam.
         }
 
         private void BindCombatBuffers()

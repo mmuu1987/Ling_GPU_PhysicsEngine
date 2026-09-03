@@ -67,6 +67,7 @@ namespace MassEngine
         public int frameIndex;
         public int totalAgentCount;
         public int unitTypeCount;
+        public int teamCount;
         public int agentThreadGroupsX;
         public int gridThreadGroupsX;
         public bool battleStarted;
@@ -87,6 +88,7 @@ namespace MassEngine
         public GridFrameSettings grid;
         public TeamFlowFrameSettings attackerFlow;
         public TeamFlowFrameSettings defenderFlow;
+        public TeamFlowFrameSettings[] teamFlows;
         public LodFrameSettings lod;
     }
 
