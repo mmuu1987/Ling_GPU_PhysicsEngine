@@ -36,6 +36,32 @@ namespace MassEngine.Tests
         }
 
         [Test]
+        public void ProjectileGpuDataStrideIs64Bytes()
+        {
+            Assert.AreEqual(64, Projectiles.ProjectileGpuData.Stride);
+            Assert.AreEqual(64, Marshal.SizeOf<Projectiles.ProjectileGpuData>());
+        }
+
+        [Test]
+        public void ProjectileBufferAllocationTest()
+        {
+            MassGpuBufferManager bufferManager = new MassGpuBufferManager();
+            int agentCount = 1000;
+            int expectedMaxProjectiles = agentCount / 4;
+
+            bufferManager.Allocate(agentCount, 256, 32, 128, 128, 1);
+
+            Assert.IsNotNull(bufferManager.projectileBuffer, "projectileBuffer should be allocated");
+            Assert.AreEqual(expectedMaxProjectiles, bufferManager.MaxProjectiles, "MaxProjectiles should be agentCount / 4");
+            Assert.IsNotNull(bufferManager.combatBuffers.launchRequestBuffer, "launchRequestBuffer should be allocated");
+
+            bufferManager.ReleaseAll();
+
+            Assert.IsNull(bufferManager.projectileBuffer, "projectileBuffer should be released");
+            Assert.AreEqual(0, bufferManager.MaxProjectiles, "MaxProjectiles should be reset to 0");
+        }
+
+        [Test]
         public void TeamSpatialTelemetryDecodesCentroidAndBounds()
         {
             int[] values = new int[16];
@@ -389,7 +415,7 @@ namespace MassEngine.Tests
             // Null shaders: dispatches are skipped but the recorder still sees intent,
             // and each missing kernel is reported exactly once.
             ComputePipelineOrchestrator orchestrator = new ComputePipelineOrchestrator(
-                MassGpuShaderSet.Find(null, null, null, null), buffers, recorder);
+                MassGpuShaderSet.Find(null, null, null, null, null), buffers, recorder);
 
             // 17 distinct kernel labels, each reported exactly once across both frames.
             for (int i = 0; i < 17; i++)

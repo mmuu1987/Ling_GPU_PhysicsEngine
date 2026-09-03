@@ -45,10 +45,13 @@ namespace MassEngine
 
         public readonly CombatBufferSet combatBuffers = new CombatBufferSet();
 
+        public ComputeBuffer projectileBuffer;
+
         public int AgentCount { get; private set; }
         public int GridCellCount { get; private set; }
         public int MaxAgentsPerCell { get; private set; }
         public int UnitTypeCount { get; private set; }
+        public int MaxProjectiles { get; private set; }
 
         public bool IsAllocated { get { return agentBuffer != null && AgentCount > 0; } }
 
@@ -75,6 +78,7 @@ namespace MassEngine
             GridCellCount = Mathf.Max(1, gridCellCount);
             MaxAgentsPerCell = Mathf.Max(1, maxAgentsPerCell);
             UnitTypeCount = Mathf.Max(0, unitTypeCount);
+            MaxProjectiles = agentCount > 0 ? Mathf.Max(1, agentCount / 4) : 0;
             int safeFlowResolutionX = Mathf.Max(1, flowFieldResolutionX);
             int safeFlowResolutionZ = Mathf.Max(1, flowFieldResolutionZ);
             int safeFlowCellCount = safeFlowResolutionX * safeFlowResolutionZ;
@@ -84,11 +88,19 @@ namespace MassEngine
 
             int agentStride = Marshal.SizeOf(typeof(AgentData));
             if (agentStride != AgentStrideBytes)
-                Debug.LogError("MassEngine AgentData stride must remain 56 bytes. Actual: " + agentStride);
+            {
+                Debug.LogError("MassEngine AgentData stride must remain 56 bytes. Actual: " + agentStride + " - refusing to allocate.");
+                ReleaseAll();
+                return;
+            }
 
             int settingsStride = Marshal.SizeOf(typeof(UnitTypeGpuSettings));
             if (settingsStride != UnitTypeGpuSettings.StrideBytes)
-                Debug.LogError("MassEngine UnitTypeGpuSettings stride must remain " + UnitTypeGpuSettings.StrideBytes + " bytes. Actual: " + settingsStride);
+            {
+                Debug.LogError("MassEngine UnitTypeGpuSettings stride must remain " + UnitTypeGpuSettings.StrideBytes + " bytes. Actual: " + settingsStride + " - refusing to allocate.");
+                ReleaseAll();
+                return;
+            }
 
             agentBuffer = new ComputeBuffer(AgentCount, AgentStrideBytes);
             agentPositionReadBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 2);
@@ -155,6 +167,14 @@ namespace MassEngine
             combatBuffers.homePositionBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 3);
             combatBuffers.pendingDamageReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.pendingDamageWriteBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+            combatBuffers.launchRequestBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+
+            // 初始化 launchRequestBuffer 为 0（计数器模式）
+            int[] initialLaunchRequests = new int[AgentCount];
+            combatBuffers.launchRequestBuffer.SetData(initialLaunchRequests);
+
+            if (MaxProjectiles > 0)
+                projectileBuffer = new ComputeBuffer(MaxProjectiles, 64);
 
             int bucketCount = UnitTypeCount * LodLevels;
             visibleIndexBuffers = new ComputeBuffer[bucketCount];
@@ -276,6 +296,7 @@ namespace MassEngine
             ReleaseBuffer(ref unitTypeSettingsBuffer);
             ReleaseBuffer(ref spatialHashStatsBuffer);
             ReleaseBuffer(ref teamSpatialStatsBuffer);
+            ReleaseBuffer(ref projectileBuffer);
 
             for (int i = 0; i < visibleIndexBuffers.Length; i++)
                 ReleaseBuffer(ref visibleIndexBuffers[i]);
@@ -294,6 +315,7 @@ namespace MassEngine
             GridCellCount = 0;
             MaxAgentsPerCell = 0;
             UnitTypeCount = 0;
+            MaxProjectiles = 0;
         }
 
         public static void ReleaseBuffer(ref ComputeBuffer buffer)

@@ -3,6 +3,7 @@
 #pragma kernel BuildDensityMap
 #pragma kernel BuildEngagementSlotOccupancy
 #pragma kernel SimulateCombatAndAccumulateDamage
+#pragma kernel ClearLaunchRequests
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
 
@@ -36,7 +37,9 @@ float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPositi
 {
     float selfRadius = max(0.05, settings.agentRadius);
     float targetRadius = max(0.05, GetAgentRadius(targetIndex));
-    float attackRange = max(0.1, settings.attackRange);
+    // 统一使用有效射程：远程单位用 projectileRange，近战单位用 attackRange
+    float effectiveRange = settings.projectileRange > 0.01 ? settings.projectileRange : settings.attackRange;
+    float attackRange = max(0.1, effectiveRange);
 
     // Prefer a deterministic sector, but select against the previous frame's actual
     // assignments. Retaining the current slot receives hysteresis so rings do not
@@ -173,6 +176,9 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     if (id.x >= count)
         return;
 
+    // 发射请求累积模式：不自动清零，由 CPU 消费后派发清零 kernel
+    // （移除了原来的 launchRequestBuffer[id.x] = 0;）
+
     AgentData agent = agentBuffer[id.x];
     float dt = SafeDt();
     int hpSelf = hpReadBuffer[id.x];
@@ -272,9 +278,14 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         float2 toTarget = targetPosition - agent.position.xz;
         float distSqr = dot(toTarget, toTarget);
         float targetDistance = sqrt(max(distSqr, 0.0001));
-        float activeAttackRange = settings.attackRange;
+
+        // 判定远程模式
+        bool isRanged = settings.projectileRange > 0.01;
+        float effectiveRange = isRanged ? settings.projectileRange : settings.attackRange;
+
+        float activeAttackRange = effectiveRange;
         float attackRangeSqr = activeAttackRange * activeAttackRange;
-        float attackExitRange = AttackExitRange(id.x);
+        float attackExitRange = activeAttackRange + max(0.25, settings.agentRadius * 0.75);
         float attackExitRangeSqr = attackExitRange * attackExitRange;
         float2 engagementPoint = ResolveEngagementSlot(id.x, (uint)targetIndex, agent.position.xz, targetPosition, settings);
 
@@ -286,14 +297,24 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
                 SmoothFaceDirectionDt(agent, toTarget, max(0.2, settings.agentRadius * 0.5), 240.0, dtSim);
                 if (cooldown <= 0.0)
                 {
-                    // Settle EVERY elapsed attack period, not just one: with LOD cadence
-                    // dtSim can exceed attackInterval, and a one-strike cap would make a
-                    // unit's DPS depend on its distance to the camera.
+                    // Settle EVERY elapsed attack period (LOD降频补偿)
                     float interval = max(0.01, settings.attackInterval);
-                    int strikes = min(4, 1 + (int)floor(-cooldown / interval));
-                    int ignored;
-                    InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], max(1, settings.attackDamage) * strikes, ignored);
-                    cooldown += strikes * interval;
+                    int attacks = min(4, 1 + (int)floor(-cooldown / interval));
+
+                    if (isRanged)
+                    {
+                        // 远程模式：累积发射请求计数
+                        int ignored;
+                        InterlockedAdd(launchRequestBuffer[id.x], attacks, ignored);
+                        cooldown += attacks * interval;
+                    }
+                    else
+                    {
+                        // 近战模式：直接累积伤害
+                        int ignored;
+                        InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], max(1, settings.attackDamage) * attacks, ignored);
+                        cooldown += attacks * interval;
+                    }
                 }
             }
             else
@@ -507,4 +528,17 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         SmoothFaceDirectionDt(agent, agent.velocity.xz, 0.05, 180.0, dtSim);
 
     StoreAgent(id.x, agent);
+}
+
+// 清零发射请求计数器（CPU 消费完成后调用，避免采样稀释）
+[numthreads(64, 1, 1)]
+void ClearLaunchRequests(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    launchRequestBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    launchRequestBuffer[id.x] = 0;
 }

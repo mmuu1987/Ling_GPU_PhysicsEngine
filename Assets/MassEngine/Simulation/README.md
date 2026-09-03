@@ -29,8 +29,10 @@
 2. hp≤0 → Dead（终态，清目标/冷却/速度）并返回                      [每帧]
    ── 非激活帧到此走轻路径：位置积分+写回后返回 ──
 3. 目标维护：现有目标失效则按决策通道计数分批（每 4 个决策通道一批）从空间哈希重新寻敌
-4. 攻击判定：距离≤attackRange（或曾攻击且≤退出半径）→ Attack，
-   冷却归零时 InterlockedAdd 伤害进目标的 pendingDamageWrite
+4. 攻击判定：
+   - 近战模式（projectileRange ≤ 0.01）：距离≤attackRange 时 InterlockedAdd 伤害
+   - 远程模式（projectileRange > 0.01）：距离≤projectileRange 时写入 launchRequestBuffer
+   - 冷却归零时触发攻击，冷却累积制保证 DPS 一致
 5. 无目标 → 队伍行为：攻方采流场（零向量时吸引力兜底直奔配置目标）；
    守方按模式：HOLD 原地驻守（接战迟滞见语义要点）/ FLOW_FIELD 采守方流场
    （索敌只受 aggro 半径限制；旧的 chase 追击距离参数已整链删除）
@@ -59,7 +61,8 @@
 ## 参数
 
 - `CombatConfig`（按兵种）：targetAcquireRadius / attackRange / attackDamage /
-  attackInterval / maxHp
+  attackInterval / maxHp / projectileRange / projectileSpeed / projectileGravity /
+  projectileHitRadius / projectileMaxLifetime
 - `MovementConfig`（按兵种）：maxSpeed / velocityDamping / flowFieldWeight /
   flowFieldResponsiveness / 配置流场目标
 - `RuntimeCombatConfig`（全局）：defenderGuardRadius / deathClipDuration（无 VAT profile 时的兜底）

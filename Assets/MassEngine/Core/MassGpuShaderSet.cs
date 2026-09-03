@@ -8,6 +8,7 @@ namespace MassEngine
         public readonly ComputeShader RuntimeFlowShader;
         public readonly ComputeShader CombatSimulationShader;
         public readonly ComputeShader LodClassificationShader;
+        public readonly ComputeShader ProjectileShader;
 
         public readonly int ClearGrid;
         public readonly int BuildSpatialHash;
@@ -24,7 +25,10 @@ namespace MassEngine
         public readonly int BuildEngagementSlotOccupancy;
         public readonly int ClearPendingDamage;
         public readonly int SimulateCombatAndAccumulateDamage;
+        public readonly int ClearLaunchRequests;
         public readonly int ClassifyVisibleAgentsForUnitType;
+        public readonly int SimulateProjectiles;
+        public readonly int ClearProjectiles;
 
         public bool IsValid
         {
@@ -33,7 +37,11 @@ namespace MassEngine
                 return SpatialHashShader != null &&
                        RuntimeFlowShader != null &&
                        CombatSimulationShader != null &&
-                       LodClassificationShader != null;
+                       LodClassificationShader != null &&
+                       ProjectileShader != null &&
+                       ClearLaunchRequests >= 0 &&
+                       SimulateProjectiles >= 0 &&
+                       ClearProjectiles >= 0;
             }
         }
 
@@ -47,7 +55,15 @@ namespace MassEngine
             if (SpatialHashShader == null) missing.Append("SpatialHash ");
             if (RuntimeFlowShader == null) missing.Append("RuntimeFlow ");
             if (CombatSimulationShader == null) missing.Append("CombatSimulation ");
+            else if (ClearLaunchRequests < 0) missing.Append("CombatSimulation/ClearLaunchRequests ");
             if (LodClassificationShader == null) missing.Append("LodClassification ");
+            if (ProjectileShader == null)
+                missing.Append("Projectile ");
+            else
+            {
+                if (SimulateProjectiles < 0) missing.Append("Projectile/SimulateProjectiles ");
+                if (ClearProjectiles < 0) missing.Append("Projectile/ClearProjectiles ");
+            }
             return missing.ToString().TrimEnd();
         }
 
@@ -55,7 +71,8 @@ namespace MassEngine
             ComputeShader spatialHashShader,
             ComputeShader runtimeFlowShader,
             ComputeShader combatSimulationShader,
-            ComputeShader lodClassificationShader)
+            ComputeShader lodClassificationShader,
+            ComputeShader projectileShader)
         {
             SpatialHashShader = spatialHashShader;
             RuntimeFlowShader = runtimeFlowShader;
@@ -77,16 +94,22 @@ namespace MassEngine
             BuildEngagementSlotOccupancy = FindKernelOrInvalid(combatSimulationShader, "BuildEngagementSlotOccupancy");
             ClearPendingDamage = FindKernelOrInvalid(combatSimulationShader, "ClearPendingDamage");
             SimulateCombatAndAccumulateDamage = FindKernelOrInvalid(combatSimulationShader, "SimulateCombatAndAccumulateDamage");
+            ClearLaunchRequests = FindKernelOrInvalid(combatSimulationShader, "ClearLaunchRequests");
             ClassifyVisibleAgentsForUnitType = FindKernelOrInvalid(lodClassificationShader, "ClassifyVisibleAgentsForUnitType");
+
+            ProjectileShader = projectileShader;
+            SimulateProjectiles = FindKernelOrInvalid(projectileShader, "SimulateProjectiles");
+            ClearProjectiles = FindKernelOrInvalid(projectileShader, "ClearProjectiles");
         }
 
         public static MassGpuShaderSet Find(
             ComputeShader spatialHashShader,
             ComputeShader runtimeFlowShader,
             ComputeShader combatSimulationShader,
-            ComputeShader lodClassificationShader)
+            ComputeShader lodClassificationShader,
+            ComputeShader projectileShader)
         {
-            return new MassGpuShaderSet(spatialHashShader, runtimeFlowShader, combatSimulationShader, lodClassificationShader);
+            return new MassGpuShaderSet(spatialHashShader, runtimeFlowShader, combatSimulationShader, lodClassificationShader, projectileShader);
         }
 
         public void SetFloat(int id, float value)
@@ -95,6 +118,7 @@ namespace MassEngine
             SetFloatIfPresent(RuntimeFlowShader, id, value);
             SetFloatIfPresent(CombatSimulationShader, id, value);
             SetFloatIfPresent(LodClassificationShader, id, value);
+            SetFloatIfPresent(ProjectileShader, id, value);
         }
 
         public void SetInt(int id, int value)
@@ -103,6 +127,7 @@ namespace MassEngine
             SetIntIfPresent(RuntimeFlowShader, id, value);
             SetIntIfPresent(CombatSimulationShader, id, value);
             SetIntIfPresent(LodClassificationShader, id, value);
+            SetIntIfPresent(ProjectileShader, id, value);
         }
 
         public void SetInts(int id, int x, int y)
@@ -111,6 +136,7 @@ namespace MassEngine
             SetIntsIfPresent(RuntimeFlowShader, id, x, y);
             SetIntsIfPresent(CombatSimulationShader, id, x, y);
             SetIntsIfPresent(LodClassificationShader, id, x, y);
+            SetIntsIfPresent(ProjectileShader, id, x, y);
         }
 
         public void SetVector(int id, Vector4 value)
@@ -119,6 +145,7 @@ namespace MassEngine
             SetVectorIfPresent(RuntimeFlowShader, id, value);
             SetVectorIfPresent(CombatSimulationShader, id, value);
             SetVectorIfPresent(LodClassificationShader, id, value);
+            SetVectorIfPresent(ProjectileShader, id, value);
         }
 
         public void SetVectorArray(int id, Vector4[] values)
@@ -130,6 +157,7 @@ namespace MassEngine
             SetVectorArrayIfPresent(RuntimeFlowShader, id, values);
             SetVectorArrayIfPresent(CombatSimulationShader, id, values);
             SetVectorArrayIfPresent(LodClassificationShader, id, values);
+            SetVectorArrayIfPresent(ProjectileShader, id, values);
         }
 
         private static int FindKernelOrInvalid(ComputeShader shader, string kernelName)

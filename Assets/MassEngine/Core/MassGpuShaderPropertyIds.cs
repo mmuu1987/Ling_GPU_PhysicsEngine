@@ -67,6 +67,12 @@ namespace MassEngine
         public static readonly int PendingDamageBufferId = Shader.PropertyToID("pendingDamageBuffer");
         public static readonly int PendingDamageReadBufferId = Shader.PropertyToID("pendingDamageReadBuffer");
 
+        // Projectile system
+        public static readonly int ProjectileBufferId = Shader.PropertyToID("projectileBuffer");
+        public static readonly int LaunchRequestBufferId = Shader.PropertyToID("launchRequestBuffer");
+        public static readonly int MaxProjectilesId = Shader.PropertyToID("maxProjectiles");
+        public static readonly int CurrentTimeId = Shader.PropertyToID("currentTime");
+
         // Flow fields
         public static readonly int FlowFieldDirectionsId = Shader.PropertyToID("flowFieldDirections");
         public static readonly int FlowFieldDirectionsReadBufferId = Shader.PropertyToID("flowFieldDirectionsReadBuffer");

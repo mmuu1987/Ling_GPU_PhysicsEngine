@@ -17,8 +17,8 @@ namespace MassEngine
     /// <summary>
     /// GPU compute pipeline scheduler. Dispatch order (Requirement 9.1, density stage
     /// added in this engine): SpatialHash -> RuntimeFlow (conditional) -> DensityMap ->
-    /// EngagementSlotOccupancy -> CombatSimulation -> LodClassification (once per unit
-    /// type) -> buffer swap.
+    /// EngagementSlotOccupancy -> CombatSimulation -> ProjectileSimulation ->
+    /// LodClassification (once per unit type) -> buffer swap.
     /// </summary>
     public sealed class ComputePipelineOrchestrator
     {
@@ -53,6 +53,7 @@ namespace MassEngine
                 DispatchDensityMap(frameContext);
 
             DispatchCombatSimulation(frameContext);
+            DispatchProjectileSimulation(frameContext);
             DispatchLodClassification(frameContext);
             buffers.SwapSimulationBuffers();
         }
@@ -98,6 +99,20 @@ namespace MassEngine
             Dispatch(shaders.CombatSimulationShader, shaders.BuildEngagementSlotOccupancy, Mathf.Max(1, context.agentThreadGroupsX), "BuildEngagementSlotOccupancy");
             Dispatch(shaders.CombatSimulationShader, shaders.ClearPendingDamage, Mathf.Max(1, context.agentThreadGroupsX), "ClearPendingDamage");
             Dispatch(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage, Mathf.Max(1, context.agentThreadGroupsX), "SimulateCombatAndAccumulateDamage");
+        }
+
+        private void DispatchProjectileSimulation(PipelineFrameContext context)
+        {
+            // Projectiles are part of the battle simulation and must freeze with it.
+            // Their buffers are bound once by BindProjectileBuffers above.
+            if (!context.battleStarted || context.projectileThreadGroupsX <= 0)
+                return;
+
+            Dispatch(
+                shaders.ProjectileShader,
+                shaders.SimulateProjectiles,
+                Mathf.Max(1, context.projectileThreadGroupsX),
+                "SimulateProjectiles");
         }
 
         /// <summary>
@@ -175,6 +190,10 @@ namespace MassEngine
 
             if (context.lod.frustumPlanes != null && context.lod.frustumPlanes.Length > 0)
                 shaders.SetVectorArray(FrustumPlanesId, context.lod.frustumPlanes);
+
+            // 弹道系统常量
+            shaders.SetInt(MaxProjectilesId, buffers.MaxProjectiles);
+            shaders.SetFloat(CurrentTimeId, context.simulationTime);
         }
 
         private void UploadTeamFlowConstants(
@@ -205,6 +224,7 @@ namespace MassEngine
             BindSpatialHashBuffers();
             BindRuntimeFlowBuffers();
             BindCombatBuffers();
+            BindProjectileBuffers();
             BindLodBuffers();
         }
 
@@ -326,9 +346,22 @@ namespace MassEngine
             SetBuffer(combat, simulate, DefenderFlowFieldDirectionsReadBufferId, buffers.defenderFlowFieldDirectionsBuffer);
             SetBuffer(combat, simulate, UnitTypeSettingsId, buffers.unitTypeSettingsBuffer);
             SetBuffer(combat, simulate, UnitTypeIndexReadBufferId, buffers.unitTypeIndexBuffer);
+            SetBuffer(combat, simulate, LaunchRequestBufferId, buffers.combatBuffers.launchRequestBuffer);
             SetTexture(combat, simulate, DensityMapId, buffers.densityMapTexture);
             SetTexture(combat, simulate, AttackerDensityMapId, buffers.attackerDensityMapTexture);
             SetTexture(combat, simulate, DefenderDensityMapId, buffers.defenderDensityMapTexture);
+        }
+
+        private void BindProjectileBuffers()
+        {
+            ComputeShader projectile = shaders.ProjectileShader;
+            int simulate = shaders.SimulateProjectiles;
+
+            SetBuffer(projectile, simulate, ProjectileBufferId, buffers.projectileBuffer);
+            SetBuffer(projectile, simulate, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
+            SetBuffer(projectile, simulate, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
+            SetBuffer(projectile, simulate, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
+            SetBuffer(projectile, simulate, PendingDamageBufferId, buffers.combatBuffers.pendingDamageWriteBuffer);
         }
 
         private void BindLodBuffers()

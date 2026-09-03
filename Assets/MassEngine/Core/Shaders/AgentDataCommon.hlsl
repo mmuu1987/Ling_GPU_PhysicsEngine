@@ -39,7 +39,7 @@ struct AgentData
     float currentAnimationTime;
 };
 
-// Mirror of MassEngine.UnitTypeGpuSettings (112 bytes, sequential layout).
+// Mirror of MassEngine.UnitTypeGpuSettings (144 bytes, sequential layout).
 struct UnitTypeSettings
 {
     float agentRadius;
@@ -65,11 +65,20 @@ struct UnitTypeSettings
     float moveAnimationSpeedMin;
     float moveAnimationSpeedMax;
     float densityComfortPerSqm;
+    float projectileRange;
+    float projectileSpeed;
+    float projectileGravity;
+    float projectileHitRadius;
+    float projectileMaxLifetime;
     int padding3;
     int teamId;
     int padding0;
     int padding1;
     int padding2;
+    // 补齐到 36×4 = 144 字节（16字节对齐）
+    int padding4;
+    int padding5;
+    int padding6;
 };
 
 RWStructuredBuffer<AgentData> agentBuffer;
@@ -127,6 +136,9 @@ StructuredBuffer<float3> homePositionReadBuffer;
 RWStructuredBuffer<int> pendingDamageBuffer;
 StructuredBuffer<int> pendingDamageReadBuffer;
 
+// Projectile system
+RWStructuredBuffer<int> launchRequestBuffer;
+
 // LOD classification runs once per unit type; only the buffers of the unit type
 // currently being classified are bound.
 int classifyUnitTypeIndex;
@@ -135,6 +147,7 @@ AppendStructuredBuffer<uint> midVisibleAgentIndices;
 AppendStructuredBuffer<uint> farVisibleAgentIndices;
 
 float deltaTime;
+float currentTime;
 uint frameIndex;
 
 float3 lodCenter;
@@ -896,7 +909,9 @@ bool ShouldSearchForLocalTarget(uint selfIndex, int simInterval)
 
 float GetAttackRange(uint index)
 {
-    return GetUnitSettings(index).attackRange;
+    UnitTypeSettings settings = GetUnitSettings(index);
+    // 统一使用有效射程：远程单位用 projectileRange，近战单位用 attackRange
+    return settings.projectileRange > 0.01 ? settings.projectileRange : settings.attackRange;
 }
 
 int GetAttackDamage(uint index)
@@ -911,8 +926,8 @@ float GetAttackInterval(uint index)
 
 float AttackExitRange(uint selfIndex)
 {
-    float attackRange = GetAttackRange(selfIndex);
-    return attackRange + max(0.25, GetAgentRadius(selfIndex) * 0.75);
+    float effectiveRange = GetAttackRange(selfIndex);
+    return effectiveRange + max(0.25, GetAgentRadius(selfIndex) * 0.75);
 }
 
 float3 ClampVelocity(uint selfIndex, float3 velocity)

@@ -11,9 +11,14 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010006, type: 3}
   m_Name: AttackerUnitConfig_Combat
-  m_EditorClassIdentifier: 
-  targetAcquireRadius: 8
+  m_EditorClassIdentifier:
+  targetAcquireRadius: 25
   attackRange: 1.8
   attackDamage: 10
   attackInterval: 0.8
   maxHp: 100
+  projectileRange: 20
+  projectileSpeed: 20
+  projectileGravity: -9.8
+  projectileHitRadius: 0.8
+  projectileMaxLifetime: 3

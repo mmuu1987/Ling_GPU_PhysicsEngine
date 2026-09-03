@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TestTools;
+using MassEngine.Projectiles;
 
 namespace MassEngine.Tests
 {
@@ -25,6 +26,10 @@ namespace MassEngine.Tests
         private ScenarioConfig scenario;
         private ScriptableObject[] createdConfigs;
         private UnitTypeGpuSettings[] settingsCache;
+        private ProjectileGpuManager projectileManager;
+        private bool projectileSimulationEnabled;
+        private bool projectileProcessingEnabled;
+        private float projectileSimulationTime;
 
         // LOD/sim-cadence/flow overrides used by DispatchOneFrame (defaults = full rate, flow off).
         private float lodNearRadius = 100f;
@@ -75,10 +80,11 @@ namespace MassEngine.Tests
             ComputeShader runtimeFlow = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "FlowField/Shaders/AgentRuntimeFlow.compute");
             ComputeShader combat = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "Simulation/Shaders/AgentCombatSimulation.compute");
             ComputeShader lod = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "VatRender/Shaders/AgentLodClassification.compute");
+            ComputeShader projectile = AssetDatabase.LoadAssetAtPath<ComputeShader>(ShaderRoot + "Projectiles/Shaders/ProjectileSimulation.compute");
             Assert.NotNull(spatialHash, "spatial hash compute shader asset missing");
             Assert.NotNull(combat, "combat compute shader asset missing");
 
-            MassGpuShaderSet shaders = MassGpuShaderSet.Find(spatialHash, runtimeFlow, combat, lod);
+            MassGpuShaderSet shaders = MassGpuShaderSet.Find(spatialHashShader: spatialHash, runtimeFlowShader: runtimeFlow, combatSimulationShader: combat, lodClassificationShader: lod, projectileShader: projectile);
             Assert.IsTrue(shaders.IsValid);
             shaderSet = shaders;
 
@@ -115,11 +121,18 @@ namespace MassEngine.Tests
             registry.FillGpuSettings(settingsCache);
             buffers.UploadUnitTypeSettings(settingsCache);
             dispatchedFrames = 0;
+            projectileSimulationEnabled = false;
+            projectileProcessingEnabled = false;
+            projectileSimulationTime = 0f;
         }
 
         [TearDown]
         public void TearDown()
         {
+            if (projectileManager != null)
+                projectileManager.Dispose();
+            projectileManager = null;
+
             if (buffers != null)
                 buffers.ReleaseAll();
             buffers = null;
@@ -1004,14 +1017,26 @@ namespace MassEngine.Tests
         // Helpers
         // ------------------------------------------------------------------
 
-        private void BuildScenario(int attackerCount, int defenderCount)
+        private void BuildScenario(
+            int attackerCount,
+            int defenderCount,
+            float attackerProjectileRange = 0f,
+            float attackerProjectileSpeed = 0f,
+            float attackerProjectileGravity = 0f,
+            float attackerProjectileHitRadius = 0f,
+            float attackerProjectileMaxLifetime = 0f,
+            float defenderProjectileRange = 0f,
+            float defenderProjectileSpeed = 0f,
+            float defenderProjectileGravity = 0f,
+            float defenderProjectileHitRadius = 0f,
+            float defenderProjectileMaxLifetime = 0f)
         {
             fixtureAttackerCount = attackerCount;
             fixtureTotalAgents = attackerCount + defenderCount;
 
             var created = new System.Collections.Generic.List<ScriptableObject>();
 
-            UnitTypeConfig MakeType(int teamId, int count)
+            UnitTypeConfig MakeType(int teamId, int count, float projectileRange, float projectileSpeed, float projectileGravity, float projectileHitRadius, float projectileMaxLifetime)
             {
                 SpawnConfig spawn = ScriptableObject.CreateInstance<SpawnConfig>();
                 spawn.unitCount = count;
@@ -1023,6 +1048,11 @@ namespace MassEngine.Tests
                 combat.attackRange = 3f;
                 combat.targetAcquireRadius = 8f;
                 combat.maxHp = 100;
+                combat.projectileRange = projectileRange;
+                combat.projectileSpeed = projectileSpeed;
+                combat.projectileGravity = projectileGravity;
+                combat.projectileHitRadius = projectileHitRadius;
+                combat.projectileMaxLifetime = projectileMaxLifetime;
 
                 FlockingConfig flocking = ScriptableObject.CreateInstance<FlockingConfig>();
                 flocking.separationStrength = 0f;
@@ -1043,7 +1073,10 @@ namespace MassEngine.Tests
             }
 
             scenario = ScriptableObject.CreateInstance<ScenarioConfig>();
-            scenario.unitTypes = new[] { MakeType(0, attackerCount), MakeType(1, defenderCount) };
+            scenario.unitTypes = new[] {
+                MakeType(0, attackerCount, attackerProjectileRange, attackerProjectileSpeed, attackerProjectileGravity, attackerProjectileHitRadius, attackerProjectileMaxLifetime),
+                MakeType(1, defenderCount, defenderProjectileRange, defenderProjectileSpeed, defenderProjectileGravity, defenderProjectileHitRadius, defenderProjectileMaxLifetime)
+            };
             createdConfigs = created.ToArray();
 
             registry = new UnitTypeRegistry();
@@ -1086,6 +1119,9 @@ namespace MassEngine.Tests
             registry.FillGpuSettings(settingsCache);
             buffers.UploadUnitTypeSettings(settingsCache);
 
+            if (battleStarted)
+                projectileSimulationTime += FrameDt;
+
             PipelineFrameContext context = new PipelineFrameContext
             {
                 deltaTime = FrameDt,
@@ -1097,6 +1133,10 @@ namespace MassEngine.Tests
                 unitTypeCount = registry.UnitTypeCount,
                 agentThreadGroupsX = Mathf.Max(1, (fixtureTotalAgents + 63) / 64),
                 gridThreadGroupsX = 1,
+                projectileThreadGroupsX = projectileSimulationEnabled && buffers.MaxProjectiles > 0
+                    ? Mathf.Max(1, (buffers.MaxProjectiles + 63) / 64)
+                    : 0,
+                simulationTime = projectileSimulationTime,
                 battleStarted = battleStarted,
                 combatEnabled = true,
                 attackerTeamId = 0,
@@ -1152,6 +1192,37 @@ namespace MassEngine.Tests
             };
 
             orchestrator.DispatchFrame(context);
+
+            if (projectileProcessingEnabled && projectileManager != null)
+            {
+                projectileManager.ProcessLaunchRequests(
+                    buffers.combatBuffers.launchRequestBuffer,
+                    buffers.agentPositionReadBuffer,
+                    buffers.combatBuffers.targetAgentIndexBuffer,
+                    initialUnitTypeIndices,
+                    settingsCache,
+                    fixtureTotalAgents,
+                    projectileSimulationTime);
+            }
+        }
+
+        private void InitializeProjectileManager()
+        {
+            if (projectileManager != null)
+                projectileManager.Dispose();
+
+            projectileManager = new ProjectileGpuManager();
+            projectileManager.Initialize(
+                shaderSet.ProjectileShader,
+                shaderSet.CombatSimulationShader,
+                buffers.projectileBuffer,
+                buffers.MaxProjectiles,
+                buffers.combatBuffers.launchRequestBuffer,
+                fixtureTotalAgents);
+            projectileManager.ClearAllProjectiles();
+            projectileSimulationEnabled = true;
+            projectileProcessingEnabled = true;
+            projectileSimulationTime = 0f;
         }
 
         private int[] ReadStates()
@@ -1162,6 +1233,200 @@ namespace MassEngine.Tests
             for (int i = 0; i < fixtureTotalAgents; i++)
                 states[i] = agents[i].currentState;
             return states;
+        }
+
+        // ------------------------------------------------------------------
+        // Projectile System Tests (Ranged Weapon System - Stage 7)
+        // ------------------------------------------------------------------
+
+        [UnityTest]
+        public IEnumerator RangedUnitLaunchesProjectileOnCooldown()
+        {
+            // Requirement 4.3, 5.1: the complete GPU-request -> async readback -> pool
+            // upload path creates a projectile after the ranged cooldown elapses.
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false);
+
+            for (int frame = 0; frame < 120 && projectileManager.TotalLaunched == 0; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+            }
+
+            Assert.Greater(projectileManager.TotalLaunched, 0,
+                "the manager never consumed a ranged launch request and uploaded a projectile");
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileHitsTargetAndDealsDamage()
+        {
+            // Requirement 3.3, 3.4, 3.5, 10.3: projectile travels, detects collision,
+            // accumulates damage, and is destroyed on hit.
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 10f);
+
+            int[] initialHpSnapshot = (int[])initialHp.Clone();
+            bool anyDamage = false;
+            int[] currentHp = new int[fixtureTotalAgents];
+            for (int frame = 0; frame < 180 && !anyDamage; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+
+                buffers.combatBuffers.hpReadBuffer.GetData(currentHp);
+                for (int i = AttackerCount; i < fixtureTotalAgents; i++)
+                {
+                    if (currentHp[i] < initialHpSnapshot[i])
+                    {
+                        anyDamage = true;
+                        int damageDealt = initialHpSnapshot[i] - currentHp[i];
+                        Assert.GreaterOrEqual(damageDealt, AttackDamage, "damage should be at least AttackDamage");
+                        break;
+                    }
+                }
+            }
+
+            Assert.IsTrue(anyDamage, "projectile should have hit at least one defender and dealt damage");
+        }
+
+        [UnityTest]
+        public IEnumerator ProjectileExpiresByLifetime()
+        {
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 100f);
+            projectileProcessingEnabled = false;
+
+            ProjectileGpuData projectile = ProjectileGpuData.CreateEmpty();
+            projectile.position = new Vector3(-50f, 0f, 0f);
+            projectile.velocity = Vector3.zero;
+            projectile.targetAgentIndex = AttackerCount;
+            projectile.sourceTeamId = 0;
+            projectile.launchTime = projectileSimulationTime;
+            projectile.maxLifetime = FrameDt * 2f;
+            projectile.hitRadius = 0.1f;
+            buffers.projectileBuffer.SetData(new[] { projectile }, 0, 0, 1);
+
+            for (int frame = 0; frame < 4; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+            }
+
+            ProjectileGpuData[] result = new ProjectileGpuData[buffers.MaxProjectiles];
+            buffers.projectileBuffer.GetData(result);
+            Assert.AreEqual(-1, result[0].targetAgentIndex,
+                "expired projectile slot was not released by the GPU kernel");
+        }
+
+        [UnityTest]
+        public IEnumerator PausingBattleFreezesActiveProjectile()
+        {
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 100f);
+            projectileProcessingEnabled = false;
+
+            ProjectileGpuData projectile = ProjectileGpuData.CreateEmpty();
+            projectile.position = new Vector3(-50f, 0f, 0f);
+            projectile.velocity = new Vector3(10f, 0f, 0f);
+            projectile.targetAgentIndex = AttackerCount;
+            projectile.sourceTeamId = 0;
+            projectile.launchTime = projectileSimulationTime;
+            projectile.maxLifetime = 5f;
+            buffers.projectileBuffer.SetData(new[] { projectile }, 0, 0, 1);
+
+            for (int frame = 0; frame < 5; frame++)
+            {
+                DispatchOneFrame(battleStarted: false);
+                yield return null;
+            }
+
+            ProjectileGpuData[] result = new ProjectileGpuData[buffers.MaxProjectiles];
+            buffers.projectileBuffer.GetData(result);
+            Assert.That(result[0].position, Is.EqualTo(projectile.position));
+            Assert.AreEqual(projectile.targetAgentIndex, result[0].targetAgentIndex);
+        }
+
+        [UnityTest]
+        public IEnumerator MeleeUnitsUnaffectedByProjectileSystem()
+        {
+            // Requirement 9.4: units with projectileRange = 0 use melee logic,
+            // and existing melee tests still pass (backward compatibility).
+            BuildRangedScenario(attackerRanged: false, defenderRanged: false);
+
+            // Run the same damage test as the original melee test
+            int framesToFirstStrike = Mathf.CeilToInt(AttackInterval / FrameDt) + 2;
+            for (int frame = 0; frame < framesToFirstStrike; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+            }
+
+            int[] hp = new int[fixtureTotalAgents];
+            buffers.combatBuffers.hpReadBuffer.GetData(hp);
+
+            bool anyMeleeDamage = false;
+            for (int i = 0; i < fixtureTotalAgents; i++)
+            {
+                if (hp[i] < initialHp[i])
+                {
+                    anyMeleeDamage = true;
+                    Assert.GreaterOrEqual(initialHp[i] - hp[i], AttackDamage, "melee damage should be at least AttackDamage");
+                }
+            }
+
+            Assert.IsTrue(anyMeleeDamage, "melee units should deal damage via InterlockedAdd, not projectiles");
+
+            // Verify launchRequestBuffer stays at 0 for melee units (计数器模式)
+            int[] launchRequests = new int[fixtureTotalAgents];
+            buffers.combatBuffers.launchRequestBuffer.GetData(launchRequests);
+            for (int i = 0; i < fixtureTotalAgents; i++)
+                Assert.AreEqual(0, launchRequests[i], "melee unit " + i + " should never write launch request");
+        }
+
+        private void BuildRangedScenario(bool attackerRanged, bool defenderRanged, float distance = 1f)
+        {
+            // Rebuild scenario with ranged weapon config
+            float attackerProjectileRange = attackerRanged ? 50f : 0f;
+            float defenderProjectileRange = defenderRanged ? 50f : 0f;
+
+            BuildScenario(AttackerCount, DefenderCount,
+                attackerProjectileRange: attackerProjectileRange,
+                attackerProjectileSpeed: 20f,
+                attackerProjectileGravity: 0f,
+                attackerProjectileHitRadius: 0.5f,
+                attackerProjectileMaxLifetime: 5f,
+                defenderProjectileRange: defenderProjectileRange,
+                defenderProjectileSpeed: 20f,
+                defenderProjectileGravity: 0f,
+                defenderProjectileHitRadius: 0.5f,
+                defenderProjectileMaxLifetime: 5f);
+
+            buffers.ReleaseAll();
+            buffers.Allocate(fixtureTotalAgents, 64, 16, 16, 16, registry.UnitTypeCount);
+            registry.InitializeAll(buffers, orchestrator);
+
+            AgentData[] agents = new AgentData[fixtureTotalAgents];
+            int[] teamIds = new int[fixtureTotalAgents];
+            int[] hp = new int[fixtureTotalAgents];
+            int[] unitTypeIndices = new int[fixtureTotalAgents];
+            registry.GenerateAgents(agents);
+            registry.FillCombatArrays(teamIds, hp, unitTypeIndices);
+
+            for (int i = 0; i < fixtureTotalAgents; i++)
+            {
+                bool attacker = teamIds[i] == 0;
+                int lane = attacker ? i : i - AttackerCount;
+                agents[i].position = new Vector3(attacker ? -distance * 0.5f : distance * 0.5f, 0f, lane * 1.5f);
+                agents[i].velocity = Vector3.zero;
+            }
+
+            buffers.UploadInitialData(agents, teamIds, hp, unitTypeIndices);
+            initialAgents = agents;
+            initialTeamIds = teamIds;
+            initialHp = hp;
+            initialUnitTypeIndices = unitTypeIndices;
+
+            settingsCache = new UnitTypeGpuSettings[registry.UnitTypeCount];
+            registry.FillGpuSettings(settingsCache);
+            buffers.UploadUnitTypeSettings(settingsCache);
+            dispatchedFrames = 0;
+            InitializeProjectileManager();
         }
     }
 }
