@@ -130,6 +130,7 @@ namespace MassEngine
         private void DispatchCombatSimulation(PipelineFrameContext context)
         {
             Dispatch(shaders.CombatSimulationShader, shaders.ClearPendingDamage, Mathf.Max(1, context.agentThreadGroupsX), "ClearPendingDamage");
+            Dispatch(shaders.CombatSimulationShader, shaders.BuildEngagementSlotOccupancy, Mathf.Max(1, context.agentThreadGroupsX), "BuildEngagementSlotOccupancy");
             Dispatch(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage, Mathf.Max(1, context.agentThreadGroupsX), "SimulateCombatAndAccumulateDamage");
         }
 
@@ -270,6 +271,15 @@ namespace MassEngine
             SetBuffer(combat, shaders.BuildDensityMap, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             SetTexture(combat, shaders.BuildDensityMap, DensityMapWriteId, buffers.densityMapTexture);
 
+            int buildSlots = shaders.BuildEngagementSlotOccupancy;
+            SetBuffer(combat, buildSlots, AgentBufferId, buffers.agentBuffer);
+            SetBuffer(combat, buildSlots, TargetAgentIndexBufferId, buffers.combatBuffers.targetAgentIndexBuffer);
+            SetBuffer(combat, buildSlots, EngagementSlotAssignmentBufferId, buffers.combatBuffers.engagementSlotAssignmentBuffer);
+            SetBuffer(combat, buildSlots, EngagementSlotOccupancyBufferId, buffers.combatBuffers.engagementSlotOccupancyBuffer);
+            SetBuffer(combat, buildSlots, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
+            SetBuffer(combat, buildSlots, UnitTypeSettingsId, buffers.unitTypeSettingsBuffer);
+            SetBuffer(combat, buildSlots, UnitTypeIndexReadBufferId, buffers.unitTypeIndexBuffer);
+
             int simulate = shaders.SimulateCombatAndAccumulateDamage;
             SetBuffer(combat, simulate, AgentBufferId, buffers.agentBuffer);
             SetBuffer(combat, simulate, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
@@ -282,6 +292,8 @@ namespace MassEngine
             SetBuffer(combat, simulate, HpBufferId, buffers.combatBuffers.hpWriteBuffer);
             SetBuffer(combat, simulate, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             SetBuffer(combat, simulate, TargetAgentIndexBufferId, buffers.combatBuffers.targetAgentIndexBuffer);
+            SetBuffer(combat, simulate, EngagementSlotAssignmentBufferId, buffers.combatBuffers.engagementSlotAssignmentBuffer);
+            SetBuffer(combat, simulate, EngagementSlotOccupancyReadBufferId, buffers.combatBuffers.engagementSlotOccupancyBuffer);
             SetBuffer(combat, simulate, AttackCooldownBufferId, buffers.combatBuffers.attackCooldownBuffer);
             SetBuffer(combat, simulate, HomePositionReadBufferId, buffers.combatBuffers.homePositionBuffer);
             SetBuffer(combat, simulate, PendingDamageBufferId, buffers.combatBuffers.pendingDamageWriteBuffer);

@@ -14,7 +14,7 @@ void StoreAgent(uint index, AgentData agent)
 
 void IncrementEngagementOccupancy(uint targetIndex, uint slot)
 {
-    uint key = targetIndex * ENGAGEMENT_SLOT_COUNT + slot;
+    uint key = targetIndex * MAX_ENGAGEMENT_SLOTS + slot;
     uint stamp = frameIndex & 0x00FFFFFFu;
 
     [loop]
@@ -36,22 +36,23 @@ float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPositi
     float targetRadius = max(0.05, GetAgentRadius(targetIndex));
     float attackRange = max(0.1, settings.attackRange);
 
+    uint slotCount = (uint)TargetLoadCapacity(selfIndex, targetIndex);
     float phase = Hash01(targetIndex ^ 0xB5297A4Du) * 6.2831853;
     float2 radial = selfPosition - targetPosition;
     float physicalAngle = atan2(radial.y, radial.x);
     float normalizedSector = frac((physicalAngle - phase) / 6.2831853 + 1.0);
-    uint preferredSlot = (uint)floor(normalizedSector * (float)ENGAGEMENT_SLOT_COUNT + 0.5) % ENGAGEMENT_SLOT_COUNT;
+    uint preferredSlot = (uint)floor(normalizedSector * (float)slotCount + 0.5) % slotCount;
     int assignment = engagementSlotAssignmentBuffer[selfIndex];
     bool assignmentMatchesTarget = assignment >= 0 && ((uint)assignment >> ENGAGEMENT_SLOT_SHIFT) == targetIndex;
     uint currentSlot = assignmentMatchesTarget ? (uint)assignment & ENGAGEMENT_SLOT_MASK : preferredSlot;
     uint bestSlot = preferredSlot;
     float bestScore = 1e20;
 
-    [unroll]
-    for (uint slot = 0u; slot < ENGAGEMENT_SLOT_COUNT; slot++)
+    [loop]
+    for (uint slot = 0u; slot < slotCount; slot++)
     {
         uint directDistance = slot > preferredSlot ? slot - preferredSlot : preferredSlot - slot;
-        uint circularDistance = min(directDistance, ENGAGEMENT_SLOT_COUNT - directDistance);
+        uint circularDistance = min(directDistance, slotCount - directDistance);
         float score = (float)CurrentEngagementOccupancy(targetIndex, slot) + (float)circularDistance * 0.22;
         score += Hash01(selfIndex ^ (targetIndex * 0x9E3779B9u) ^ (slot * 0x85EBCA6Bu)) * 0.03;
         if (assignmentMatchesTarget && slot == currentSlot)
@@ -67,7 +68,7 @@ float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPositi
     engagementSlotAssignmentBuffer[selfIndex] = (int)((targetIndex << ENGAGEMENT_SLOT_SHIFT) | bestSlot);
 
     float slotRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
-    float angle = phase + (float)bestSlot * (6.2831853 / (float)ENGAGEMENT_SLOT_COUNT);
+    float angle = phase + (float)bestSlot * (6.2831853 / (float)slotCount);
     return targetPosition + float2(cos(angle), sin(angle)) * slotRadius;
 }
 

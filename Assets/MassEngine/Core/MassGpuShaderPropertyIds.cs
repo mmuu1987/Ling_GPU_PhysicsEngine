@@ -64,6 +64,9 @@ namespace MassEngine
         public static readonly int HpBufferId = Shader.PropertyToID("hpBuffer");
         public static readonly int HpReadBufferId = Shader.PropertyToID("hpReadBuffer");
         public static readonly int TargetAgentIndexBufferId = Shader.PropertyToID("targetAgentIndexBuffer");
+        public static readonly int EngagementSlotAssignmentBufferId = Shader.PropertyToID("engagementSlotAssignmentBuffer");
+        public static readonly int EngagementSlotOccupancyBufferId = Shader.PropertyToID("engagementSlotOccupancyBuffer");
+        public static readonly int EngagementSlotOccupancyReadBufferId = Shader.PropertyToID("engagementSlotOccupancyReadBuffer");
         public static readonly int AttackCooldownBufferId = Shader.PropertyToID("attackCooldownBuffer");
         public static readonly int HomePositionReadBufferId = Shader.PropertyToID("homePositionReadBuffer");
         public static readonly int PendingDamageBufferId = Shader.PropertyToID("pendingDamageBuffer");

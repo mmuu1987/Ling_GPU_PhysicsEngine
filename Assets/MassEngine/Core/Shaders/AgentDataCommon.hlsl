@@ -25,9 +25,10 @@
 #define LOCAL_TARGET_SEARCH_MAX_CELL_RADIUS 4
 #define LOCAL_TARGET_SEARCH_INTERVAL 4u
 #define LOCAL_TARGET_SEARCH_GROUP_SIZE 64u
+#define MAX_ENGAGEMENT_SLOTS 16u
 #define ENGAGEMENT_SLOT_COUNT 8u
-#define ENGAGEMENT_SLOT_SHIFT 3u
-#define ENGAGEMENT_SLOT_MASK 7u
+#define ENGAGEMENT_SLOT_SHIFT 4u
+#define ENGAGEMENT_SLOT_MASK 15u
 
 struct AgentData
 {
@@ -1083,16 +1084,17 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
 
 uint CurrentEngagementOccupancy(uint targetIndex, uint slot)
 {
-    uint packed = engagementSlotOccupancyReadBuffer[targetIndex * ENGAGEMENT_SLOT_COUNT + slot];
+    uint packed = engagementSlotOccupancyReadBuffer[targetIndex * MAX_ENGAGEMENT_SLOTS + slot];
     uint stamp = frameIndex & 0x00FFFFFFu;
     return (packed >> 8) == stamp ? packed & 0xFFu : 0u;
 }
 
 uint CurrentTargetLoad(uint targetIndex)
 {
+    uint slotCount = (uint)TargetLoadCapacity(targetIndex, targetIndex);
     uint load = 0u;
-    [unroll]
-    for (uint slot = 0u; slot < ENGAGEMENT_SLOT_COUNT; slot++)
+    [loop]
+    for (uint slot = 0u; slot < slotCount; slot++)
         load += CurrentEngagementOccupancy(targetIndex, slot);
     return load;
 }
@@ -1105,7 +1107,7 @@ float TargetLoadCapacity(uint selfIndex, uint targetIndex)
     float engagementRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
     float circumference = 6.2831853 * max(engagementRadius, selfRadius + targetRadius);
     float geometricCapacity = floor(circumference / max(0.1, selfRadius * 2.0));
-    return clamp(geometricCapacity, 1.0, (float)ENGAGEMENT_SLOT_COUNT);
+    return clamp(geometricCapacity, 1.0, (float)MAX_ENGAGEMENT_SLOTS);
 }
 
 float TargetLoadRatio(uint selfIndex, uint targetIndex)

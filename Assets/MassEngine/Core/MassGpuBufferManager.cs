@@ -13,6 +13,7 @@ namespace MassEngine
     {
         public const int AgentStrideBytes = 56;
         public const int LodLevels = 3;
+        public const int MaxEngagementSlotsPerTarget = 16;
 
         public ComputeBuffer agentBuffer;
         public ComputeBuffer agentPositionReadBuffer;
@@ -157,6 +158,8 @@ namespace MassEngine
             combatBuffers.hpReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.hpWriteBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.targetAgentIndexBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+            combatBuffers.engagementSlotAssignmentBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+            combatBuffers.engagementSlotOccupancyBuffer = new ComputeBuffer(AgentCount * MaxEngagementSlotsPerTarget, sizeof(uint));
             combatBuffers.attackCooldownBuffer = new ComputeBuffer(AgentCount, sizeof(float));
             combatBuffers.homePositionBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 3);
             combatBuffers.pendingDamageReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
@@ -182,6 +185,7 @@ namespace MassEngine
             Vector2[] positions = new Vector2[agents.Length];
             Vector3[] homePositions = new Vector3[agents.Length];
             int[] targetIndices = new int[agents.Length];
+            int[] slotAssignments = new int[agents.Length];
             float[] cooldowns = new float[agents.Length];
             int[] pendingDamage = new int[agents.Length];
 
@@ -190,12 +194,14 @@ namespace MassEngine
                 positions[i] = new Vector2(agents[i].position.x, agents[i].position.z);
                 homePositions[i] = agents[i].position;
                 targetIndices[i] = -1;
+                slotAssignments[i] = -1;
             }
 
             agentPositionReadBuffer.SetData(positions);
             agentPositionWriteBuffer.SetData(positions);
             combatBuffers.homePositionBuffer.SetData(homePositions);
             combatBuffers.targetAgentIndexBuffer.SetData(targetIndices);
+            combatBuffers.engagementSlotAssignmentBuffer.SetData(slotAssignments);
             combatBuffers.attackCooldownBuffer.SetData(cooldowns);
             combatBuffers.pendingDamageReadBuffer.SetData(pendingDamage);
             combatBuffers.pendingDamageWriteBuffer.SetData(pendingDamage);
