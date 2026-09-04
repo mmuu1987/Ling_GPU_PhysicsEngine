@@ -17,7 +17,8 @@ namespace MassEngine
     /// <summary>
     /// GPU compute pipeline scheduler. Dispatch order (Requirement 9.1, density stage
     /// added in this engine): SpatialHash -> RuntimeFlow (conditional) -> DensityMap ->
-    /// CombatSimulation -> LodClassification (once per unit type) -> buffer swap.
+    /// EngagementSlotOccupancy -> CombatSimulation -> ProjectileSimulation ->
+    /// CollectActiveProjectiles -> LodClassification (once per unit type) -> buffer swap.
     /// </summary>
     public sealed class ComputePipelineOrchestrator
     {
@@ -52,6 +53,8 @@ namespace MassEngine
                 DispatchDensityMap(frameContext);
 
             DispatchCombatSimulation(frameContext);
+            DispatchProjectileSimulation(frameContext);
+            DispatchProjectileActiveList(frameContext);
             DispatchLodClassification(frameContext);
             buffers.SwapSimulationBuffers();
         }
@@ -83,7 +86,9 @@ namespace MassEngine
 
         private void DispatchDensityMap(PipelineFrameContext context)
         {
-            if (buffers.densityMapTexture == null)
+            if (buffers.densityMapTexture == null ||
+                buffers.attackerDensityMapTexture == null ||
+                buffers.defenderDensityMapTexture == null)
                 return;
 
             Dispatch(shaders.CombatSimulationShader, shaders.ClearDensityMap, Mathf.Max(1, context.densityMapThreadGroupsX), Mathf.Max(1, context.densityMapThreadGroupsY), "ClearDensityMap");
@@ -92,8 +97,51 @@ namespace MassEngine
 
         private void DispatchCombatSimulation(PipelineFrameContext context)
         {
+            Dispatch(shaders.CombatSimulationShader, shaders.BuildEngagementSlotOccupancy, Mathf.Max(1, context.agentThreadGroupsX), "BuildEngagementSlotOccupancy");
             Dispatch(shaders.CombatSimulationShader, shaders.ClearPendingDamage, Mathf.Max(1, context.agentThreadGroupsX), "ClearPendingDamage");
             Dispatch(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage, Mathf.Max(1, context.agentThreadGroupsX), "SimulateCombatAndAccumulateDamage");
+        }
+
+        private void DispatchProjectileSimulation(PipelineFrameContext context)
+        {
+            // Projectiles are part of the battle simulation and must freeze with it.
+            // Their buffers are bound once by BindProjectileBuffers above.
+            if (!context.battleStarted || context.projectileThreadGroupsX <= 0)
+                return;
+
+            Dispatch(
+                shaders.ProjectileShader,
+                shaders.SimulateProjectiles,
+                Mathf.Max(1, context.projectileThreadGroupsX),
+                "SimulateProjectiles");
+        }
+
+        /// <summary>
+        /// Compresses the projectile pool into the append list the indirect draw reads,
+        /// then publishes its count into the draw args. Runs AFTER SimulateProjectiles so
+        /// slots released by this frame's hits and expiries are already excluded.
+        /// </summary>
+        private void DispatchProjectileActiveList(PipelineFrameContext context)
+        {
+            if (buffers.activeProjectileIndexBuffer == null || buffers.projectileDrawArgsBuffer == null)
+                return;
+
+            // Rebuilt every frame whether the battle runs or is paused: while paused the
+            // pool contents are unchanged, so the list comes out identical and existing
+            // trails stay on screen frozen instead of blinking out.
+            buffers.ResetProjectileAppendCounter();
+
+            if (context.projectileThreadGroupsX > 0)
+            {
+                SetBuffer(shaders.ProjectileShader, shaders.CollectActiveProjectiles, ProjectileBufferId, buffers.projectileBuffer);
+                SetBuffer(shaders.ProjectileShader, shaders.CollectActiveProjectiles, ActiveProjectileIndicesId, buffers.activeProjectileIndexBuffer);
+                DispatchOptional(shaders.ProjectileShader, shaders.CollectActiveProjectiles, context.projectileThreadGroupsX, "CollectActiveProjectiles");
+            }
+
+            // Always published, including on the skipped paths above: the args then carry
+            // instance count 0 and the renderer draws nothing, rather than replaying a
+            // stale count over a pool that has since been cleared.
+            buffers.CopyProjectileCountToArgs();
         }
 
         /// <summary>
@@ -171,6 +219,10 @@ namespace MassEngine
 
             if (context.lod.frustumPlanes != null && context.lod.frustumPlanes.Length > 0)
                 shaders.SetVectorArray(FrustumPlanesId, context.lod.frustumPlanes);
+
+            // 弹道系统常量
+            shaders.SetInt(MaxProjectilesId, buffers.MaxProjectiles);
+            shaders.SetFloat(CurrentTimeId, context.simulationTime);
         }
 
         private void UploadTeamFlowConstants(
@@ -201,6 +253,7 @@ namespace MassEngine
             BindSpatialHashBuffers();
             BindRuntimeFlowBuffers();
             BindCombatBuffers();
+            BindProjectileBuffers();
             BindLodBuffers();
         }
 
@@ -283,10 +336,22 @@ namespace MassEngine
             SetBuffer(combat, shaders.ClearPendingDamage, PendingDamageBufferId, buffers.combatBuffers.pendingDamageWriteBuffer);
 
             SetTexture(combat, shaders.ClearDensityMap, DensityMapWriteId, buffers.densityMapTexture);
+            SetTexture(combat, shaders.ClearDensityMap, AttackerDensityMapWriteId, buffers.attackerDensityMapTexture);
+            SetTexture(combat, shaders.ClearDensityMap, DefenderDensityMapWriteId, buffers.defenderDensityMapTexture);
 
             SetBuffer(combat, shaders.BuildDensityMap, AgentBufferId, buffers.agentBuffer);
             SetBuffer(combat, shaders.BuildDensityMap, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
+            SetBuffer(combat, shaders.BuildDensityMap, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
             SetTexture(combat, shaders.BuildDensityMap, DensityMapWriteId, buffers.densityMapTexture);
+            SetTexture(combat, shaders.BuildDensityMap, AttackerDensityMapWriteId, buffers.attackerDensityMapTexture);
+            SetTexture(combat, shaders.BuildDensityMap, DefenderDensityMapWriteId, buffers.defenderDensityMapTexture);
+
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, AgentBufferId, buffers.agentBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, TargetAgentIndexBufferId, buffers.combatBuffers.targetAgentIndexBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, EngagementSlotAssignmentBufferId, buffers.combatBuffers.engagementSlotAssignmentBuffer);
+            SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, EngagementSlotOccupancyBufferId, buffers.combatBuffers.engagementSlotOccupancyBuffer);
 
             int simulate = shaders.SimulateCombatAndAccumulateDamage;
             SetBuffer(combat, simulate, AgentBufferId, buffers.agentBuffer);
@@ -300,15 +365,32 @@ namespace MassEngine
             SetBuffer(combat, simulate, HpBufferId, buffers.combatBuffers.hpWriteBuffer);
             SetBuffer(combat, simulate, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             SetBuffer(combat, simulate, TargetAgentIndexBufferId, buffers.combatBuffers.targetAgentIndexBuffer);
+            SetBuffer(combat, simulate, EngagementSlotAssignmentBufferId, buffers.combatBuffers.engagementSlotAssignmentBuffer);
+            SetBuffer(combat, simulate, EngagementSlotOccupancyReadBufferId, buffers.combatBuffers.engagementSlotOccupancyBuffer);
             SetBuffer(combat, simulate, AttackCooldownBufferId, buffers.combatBuffers.attackCooldownBuffer);
             SetBuffer(combat, simulate, HomePositionReadBufferId, buffers.combatBuffers.homePositionBuffer);
             SetBuffer(combat, simulate, PendingDamageBufferId, buffers.combatBuffers.pendingDamageWriteBuffer);
             SetBuffer(combat, simulate, PendingDamageReadBufferId, buffers.combatBuffers.pendingDamageReadBuffer);
-            SetBuffer(combat, simulate, FlowFieldDirectionsId, buffers.flowFieldDirectionsBuffer);
-            SetBuffer(combat, simulate, DefenderFlowFieldDirectionsId, buffers.defenderFlowFieldDirectionsBuffer);
+            SetBuffer(combat, simulate, FlowFieldDirectionsReadBufferId, buffers.flowFieldDirectionsBuffer);
+            SetBuffer(combat, simulate, DefenderFlowFieldDirectionsReadBufferId, buffers.defenderFlowFieldDirectionsBuffer);
             SetBuffer(combat, simulate, UnitTypeSettingsId, buffers.unitTypeSettingsBuffer);
             SetBuffer(combat, simulate, UnitTypeIndexReadBufferId, buffers.unitTypeIndexBuffer);
+            SetBuffer(combat, simulate, LaunchRequestBufferId, buffers.combatBuffers.launchRequestBuffer);
             SetTexture(combat, simulate, DensityMapId, buffers.densityMapTexture);
+            SetTexture(combat, simulate, AttackerDensityMapId, buffers.attackerDensityMapTexture);
+            SetTexture(combat, simulate, DefenderDensityMapId, buffers.defenderDensityMapTexture);
+        }
+
+        private void BindProjectileBuffers()
+        {
+            ComputeShader projectile = shaders.ProjectileShader;
+            int simulate = shaders.SimulateProjectiles;
+
+            SetBuffer(projectile, simulate, ProjectileBufferId, buffers.projectileBuffer);
+            SetBuffer(projectile, simulate, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
+            SetBuffer(projectile, simulate, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
+            SetBuffer(projectile, simulate, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
+            SetBuffer(projectile, simulate, PendingDamageBufferId, buffers.combatBuffers.pendingDamageWriteBuffer);
         }
 
         private void BindLodBuffers()
@@ -338,6 +420,26 @@ namespace MassEngine
         private void Dispatch(ComputeShader shader, int kernel, int groupsX, string label)
         {
             Dispatch(shader, kernel, groupsX, 1, label);
+        }
+
+        /// <summary>
+        /// Dispatch for kernels that only drive optional visuals: a missing one degrades to
+        /// a single warning instead of the hard error the simulation kernels report, because
+        /// losing it must not read as a broken pipeline.
+        /// </summary>
+        private void DispatchOptional(ComputeShader shader, int kernel, int groupsX, string label)
+        {
+            if (dispatchListener != null)
+                dispatchListener.OnDispatch(label);
+
+            if (shader == null || kernel < 0)
+            {
+                if (reportedMissingKernels.Add(label))
+                    Debug.LogWarning("MassEngine skipped optional GPU dispatch: " + label + " shader or kernel is missing (reported once) - the visuals it feeds stay off, simulation is unaffected.");
+                return;
+            }
+
+            shader.Dispatch(kernel, Mathf.Max(1, groupsX), 1, 1);
         }
 
         private void Dispatch(ComputeShader shader, int kernel, int groupsX, int groupsY, string label)

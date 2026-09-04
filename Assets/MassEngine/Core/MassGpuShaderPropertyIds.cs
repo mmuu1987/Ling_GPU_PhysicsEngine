@@ -67,8 +67,22 @@ namespace MassEngine
         public static readonly int PendingDamageBufferId = Shader.PropertyToID("pendingDamageBuffer");
         public static readonly int PendingDamageReadBufferId = Shader.PropertyToID("pendingDamageReadBuffer");
 
+        // Projectile system
+        public static readonly int ProjectileBufferId = Shader.PropertyToID("projectileBuffer");
+        public static readonly int LaunchRequestBufferId = Shader.PropertyToID("launchRequestBuffer");
+        public static readonly int MaxProjectilesId = Shader.PropertyToID("maxProjectiles");
+        public static readonly int ActiveProjectileIndicesId = Shader.PropertyToID("activeProjectileIndices");
+        public static readonly int ProjectileAttackerTeamIdId = Shader.PropertyToID("_ProjectileAttackerTeamId");
+        public static readonly int ProjectileAttackerColorId = Shader.PropertyToID("_ProjectileAttackerColor");
+        public static readonly int ProjectileDefenderColorId = Shader.PropertyToID("_ProjectileDefenderColor");
+        public static readonly int ProjectileTrailWidthId = Shader.PropertyToID("_ProjectileTrailWidth");
+        public static readonly int ProjectileTrailLengthScaleId = Shader.PropertyToID("_ProjectileTrailLengthScale");
+        public static readonly int ProjectileTrailMinLengthId = Shader.PropertyToID("_ProjectileTrailMinLength");
+        public static readonly int CurrentTimeId = Shader.PropertyToID("currentTime");
+
         // Flow fields
         public static readonly int FlowFieldDirectionsId = Shader.PropertyToID("flowFieldDirections");
+        public static readonly int FlowFieldDirectionsReadBufferId = Shader.PropertyToID("flowFieldDirectionsReadBuffer");
         public static readonly int FlowFieldEnabledId = Shader.PropertyToID("flowFieldEnabled");
         public static readonly int FlowFieldResolutionId = Shader.PropertyToID("flowFieldResolution");
         public static readonly int FlowFieldOriginId = Shader.PropertyToID("flowFieldOrigin");
@@ -80,6 +94,7 @@ namespace MassEngine
         public static readonly int DefenderFlowTargetPointId = Shader.PropertyToID("defenderFlowTargetPoint");
         public static readonly int DefenderFlowTargetAreaId = Shader.PropertyToID("defenderFlowTargetArea");
         public static readonly int DefenderFlowFieldDirectionsId = Shader.PropertyToID("defenderFlowFieldDirections");
+        public static readonly int DefenderFlowFieldDirectionsReadBufferId = Shader.PropertyToID("defenderFlowFieldDirectionsReadBuffer");
         public static readonly int DefenderFlowFieldEnabledId = Shader.PropertyToID("defenderFlowFieldEnabled");
         public static readonly int DefenderFlowFieldResolutionId = Shader.PropertyToID("defenderFlowFieldResolution");
         public static readonly int DefenderFlowFieldOriginId = Shader.PropertyToID("defenderFlowFieldOrigin");
@@ -111,6 +126,13 @@ namespace MassEngine
         // Density map
         public static readonly int DensityMapId = Shader.PropertyToID("densityMap");
         public static readonly int DensityMapWriteId = Shader.PropertyToID("densityMapWrite");
+        public static readonly int AttackerDensityMapId = Shader.PropertyToID("attackerDensityMap");
+        public static readonly int DefenderDensityMapId = Shader.PropertyToID("defenderDensityMap");
+        public static readonly int AttackerDensityMapWriteId = Shader.PropertyToID("attackerDensityMapWrite");
+        public static readonly int DefenderDensityMapWriteId = Shader.PropertyToID("defenderDensityMapWrite");
+        public static readonly int EngagementSlotAssignmentBufferId = Shader.PropertyToID("engagementSlotAssignmentBuffer");
+        public static readonly int EngagementSlotOccupancyBufferId = Shader.PropertyToID("engagementSlotOccupancyBuffer");
+        public static readonly int EngagementSlotOccupancyReadBufferId = Shader.PropertyToID("engagementSlotOccupancyReadBuffer");
 
         // LOD classification (per unit type)
         public static readonly int ClassifyUnitTypeIndexId = Shader.PropertyToID("classifyUnitTypeIndex");

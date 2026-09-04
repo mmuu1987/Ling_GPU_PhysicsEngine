@@ -1,4 +1,5 @@
 using UnityEngine;
+using MassEngine.Projectiles;
 
 namespace MassEngine
 {
@@ -69,9 +70,14 @@ namespace MassEngine
         private ComputePipelineOrchestrator pipelineOrchestrator;
         private MassGpuBufferManager bufferManager;
         private MassGpuRenderDispatcher renderDispatcher;
+        private ProjectileGpuRenderDispatcher projectileRenderDispatcher;
         private BattleTelemetry telemetry;
+        private ProjectileGpuManager projectileManager;
 
         private UnitTypeGpuSettings[] gpuSettingsCache;
+        private int[] agentUnitTypeIndices;
+        private MassGpuShaderSet shaders;
+        private float projectileSimulationTime;
         private AllocationSignature allocationSignature;
         private readonly FlowTargetOverride[] flowTargetOverrides = new FlowTargetOverride[2];
         private readonly TeamNavigationOverride[] teamNavigationOverrides = new TeamNavigationOverride[2];
@@ -138,7 +144,8 @@ namespace MassEngine
                         shaderConfig != null ? shaderConfig.spatialHashShader : null,
                         shaderConfig != null ? shaderConfig.runtimeFlowShader : null,
                         shaderConfig != null ? shaderConfig.combatSimulationShader : null,
-                        shaderConfig != null ? shaderConfig.lodClassificationShader : null);
+                        shaderConfig != null ? shaderConfig.lodClassificationShader : null,
+                        shaderConfig != null ? shaderConfig.projectileShader : null);
                     if (probe.IsValid)
                     {
                         Debug.Log("MassEngine: shader config completed - reinitializing scenario.", this);
@@ -161,6 +168,9 @@ namespace MassEngine
 
             RefreshAndUploadUnitTypeSettings();
 
+            if (battleStarted)
+                projectileSimulationTime += Mathf.Max(0f, Time.deltaTime);
+
             PipelineFrameContext context = CreateFrameContext();
             if (context.attackerFlow.rebuildThisFrame && telemetry != null)
                 telemetry.NotifyFlowRebuild(AttackerTeamId);
@@ -168,7 +178,26 @@ namespace MassEngine
                 telemetry.NotifyFlowRebuild(DefenderTeamId);
 
             pipelineOrchestrator.DispatchFrame(context);
-            renderDispatcher.Draw(unitTypeRegistry, bufferManager, ResolveRenderBounds());
+
+            if (projectileManager != null && bufferManager.MaxProjectiles > 0)
+            {
+                projectileManager.ProcessLaunchRequests(
+                    launchRequestBuffer: bufferManager.combatBuffers.launchRequestBuffer,
+                    agentPositionBuffer: bufferManager.agentPositionReadBuffer,
+                    targetAgentIndexBuffer: bufferManager.combatBuffers.targetAgentIndexBuffer,
+                    unitTypeIndices: agentUnitTypeIndices,
+                    unitTypeSettings: gpuSettingsCache,
+                    agentCount: unitTypeRegistry.TotalAgentCount,
+                    simulationTime: projectileSimulationTime
+                );
+                projectileManager.ClearExpiredProjectiles(Time.time);
+            }
+
+            Bounds renderBounds = ResolveRenderBounds();
+            renderDispatcher.Draw(unitTypeRegistry, bufferManager, renderBounds);
+            // Tracers draw straight from projectileBuffer via the GPU active list, so a
+            // paused battle keeps showing frozen shots and a cleared pool shows none.
+            projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds, AttackerTeamId);
 
             if (telemetry != null)
             {
@@ -204,17 +233,19 @@ namespace MassEngine
             loggedSearchRadiusClamp = false;
             loggedSettingsCacheMismatch = false;
             gpuDispatchBlockedByShaders = false;
+            projectileSimulationTime = 0f;
 
             Release();
 
             unitTypeRegistry = new UnitTypeRegistry();
             unitTypeRegistry.RegisterFromScenario(scenarioConfig);
 
-            MassGpuShaderSet shaders = MassGpuShaderSet.Find(
+            shaders = MassGpuShaderSet.Find(
                 shaderConfig != null ? shaderConfig.spatialHashShader : null,
                 shaderConfig != null ? shaderConfig.runtimeFlowShader : null,
                 shaderConfig != null ? shaderConfig.combatSimulationShader : null,
-                shaderConfig != null ? shaderConfig.lodClassificationShader : null);
+                shaderConfig != null ? shaderConfig.lodClassificationShader : null,
+                shaderConfig != null ? shaderConfig.projectileShader : null);
             gpuDispatchBlockedByShaders = !shaders.IsValid;
             if (gpuDispatchBlockedByShaders)
                 Debug.LogError("MassEngine shader config is incomplete (missing: " + shaders.DescribeMissing() + "); GPU dispatch is blocked until the shaders are assigned and the scenario reinitializes.", this);
@@ -222,7 +253,11 @@ namespace MassEngine
             bufferManager = new MassGpuBufferManager();
             pipelineOrchestrator = new ComputePipelineOrchestrator(shaders, bufferManager);
             renderDispatcher = new MassGpuRenderDispatcher();
+            projectileRenderDispatcher = new ProjectileGpuRenderDispatcher();
             telemetry = new BattleTelemetry(shaders.SpatialHashShader);
+
+            // 弹道管理器无参构造，buffer 由 BufferManager 分配后再 Initialize
+            projectileManager = new ProjectileGpuManager();
 
             if (gpuDispatchBlockedByShaders)
             {
@@ -254,9 +289,20 @@ namespace MassEngine
             allocationSignature = CurrentAllocationSignature();
 
             bufferManager.Allocate(totalAgents, gridCellCount, Simulation.maxAgentsPerCell, Flow.flowFieldResolution, Flow.flowFieldResolution, unitTypeCount);
+            if (!bufferManager.IsAllocated)
+            {
+                Debug.LogError("MassEngine: GPU buffer allocation failed; scenario initialization was aborted.", this);
+                return;
+            }
             unitTypeRegistry.InitializeAll(bufferManager, pipelineOrchestrator);
             UploadInitialAgents();
             bufferManager.ConfigureDrawArgs(unitTypeRegistry.RegisteredTypes);
+
+            if (bufferManager.projectileBuffer != null && bufferManager.MaxProjectiles > 0)
+            {
+                projectileManager.Initialize(shaders.ProjectileShader, shaders.CombatSimulationShader, bufferManager.projectileBuffer, bufferManager.MaxProjectiles, bufferManager.combatBuffers.launchRequestBuffer, unitTypeRegistry.TotalAgentCount);
+                projectileManager.ClearAllProjectiles();
+            }
 
             gpuSettingsCache = new UnitTypeGpuSettings[unitTypeCount];
             RefreshAndUploadUnitTypeSettings();
@@ -457,12 +503,20 @@ namespace MassEngine
                 unitTypeRegistry.ReleaseAll();
             unitTypeRegistry = null;
 
+            if (projectileManager != null)
+                projectileManager.Dispose();
+            projectileManager = null;
+
             if (bufferManager != null)
                 bufferManager.ReleaseAll();
             bufferManager = null;
+            if (projectileRenderDispatcher != null)
+                projectileRenderDispatcher.Release();
+            projectileRenderDispatcher = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
             gpuSettingsCache = null;
+            agentUnitTypeIndices = null;
             initialized = false;
         }
 
@@ -505,6 +559,7 @@ namespace MassEngine
 
             unitTypeRegistry.GenerateAgents(agents);
             unitTypeRegistry.FillCombatArrays(teamIds, hpValues, unitTypeIndices);
+            agentUnitTypeIndices = unitTypeIndices;
             bufferManager.UploadInitialData(agents, teamIds, hpValues, unitTypeIndices);
         }
 
@@ -516,6 +571,7 @@ namespace MassEngine
             int flowResolution = Flow.flowFieldResolution;
             int flowThreadGroups = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, flowResolution * flowResolution) / 64f));
             int densityMapThreadGroups = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, flowResolution) / 8f));
+            int projectileThreadGroups = bufferManager != null && bufferManager.MaxProjectiles > 0 ? Mathf.Max(1, Mathf.CeilToInt(bufferManager.MaxProjectiles / 64f)) : 0;
 
             return new PipelineFrameContext
             {
@@ -525,6 +581,8 @@ namespace MassEngine
                 unitTypeCount = unitTypeRegistry != null ? unitTypeRegistry.UnitTypeCount : 0,
                 agentThreadGroupsX = agentThreadGroups,
                 gridThreadGroupsX = gridThreadGroups,
+                projectileThreadGroupsX = projectileThreadGroups,
+                simulationTime = projectileSimulationTime,
                 battleStarted = battleStarted,
                 combatEnabled = true,
                 attackerTeamId = AttackerTeamId,
@@ -901,6 +959,15 @@ namespace MassEngine
                     return systemConfig.runtimeCombatConfig;
                 return fallbackCombat != null ? fallbackCombat : (fallbackCombat = CreateFallbackConfig<RuntimeCombatConfig>());
             }
+        }
+
+        /// <summary>
+        /// Deliberately has no fallback, unlike the configs above: tracers are optional
+        /// visuals, and a missing asset must mean "draw nothing", not "invent defaults".
+        /// </summary>
+        private ProjectileRenderConfig ProjectileRender
+        {
+            get { return systemConfig != null ? systemConfig.projectileRenderConfig : null; }
         }
 
         private static T CreateFallbackConfig<T>() where T : ScriptableObject

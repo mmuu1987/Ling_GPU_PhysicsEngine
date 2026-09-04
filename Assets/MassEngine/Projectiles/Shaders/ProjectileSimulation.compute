@@ -1,0 +1,161 @@
+#pragma kernel SimulateProjectiles
+#pragma kernel ClearProjectiles
+#pragma kernel CollectActiveProjectiles
+
+#include "../../Core/Shaders/AgentDataCommon.hlsl"
+
+// 弹道数据结构（与 C# ProjectileGpuData 对齐，64 字节）
+struct ProjectileData
+{
+    float3 position;        // 当前位置 (12 bytes)
+    float launchTime;       // 发射时间 (4 bytes)
+
+    float3 velocity;        // 当前速度 (12 bytes)
+    float damage;           // 伤害值 (4 bytes)
+
+    int targetAgentIndex;   // 目标索引（-1 = 空闲槽位）(4 bytes)
+    int sourceTeamId;       // 发射方队伍 (4 bytes)
+    float hitRadius;        // 命中半径 (4 bytes)
+    float gravity;          // 重力加速度 (4 bytes)
+
+    float maxLifetime;      // 最大飞行时间 (4 bytes)
+    float trailLength;      // 曳光长度 (4 bytes)
+    float2 padding;         // 对齐填充 (8 bytes)
+};
+
+// 缓冲区：使用引擎标准命名（与 MassGpuShaderPropertyIds 一致）
+RWStructuredBuffer<ProjectileData> projectileBuffer;
+// 渲染用：当前活跃槽位索引。只有 CollectActiveProjectiles 写入。
+AppendStructuredBuffer<uint> activeProjectileIndices;
+// Agent/battle buffers are declared by AgentDataCommon.hlsl.
+
+// 全局参数
+// deltaTime 和 currentTime 已在 AgentDataCommon.hlsl 中声明
+int maxProjectiles;
+
+// ========================================
+// ClearProjectiles Kernel
+// 清空所有弹道槽位（初始化用）
+// ========================================
+[numthreads(64, 1, 1)]
+void ClearProjectiles(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)maxProjectiles)
+        return;
+
+    ProjectileData proj = projectileBuffer[id.x];
+    proj.targetAgentIndex = -1;  // 标记为空闲
+    projectileBuffer[id.x] = proj;
+}
+
+// ========================================
+// SimulateProjectiles Kernel
+// 弹道物理模拟 + 碰撞检测 + 伤害累积
+// ========================================
+[numthreads(64, 1, 1)]
+void SimulateProjectiles(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)maxProjectiles)
+        return;
+
+    ProjectileData proj = projectileBuffer[id.x];
+
+    // 跳过空槽位
+    if (proj.targetAgentIndex < 0)
+        return;
+
+    // ========================================
+    // 1. 生命周期检查
+    // ========================================
+    float age = currentTime - proj.launchTime;
+    if (age > proj.maxLifetime)
+    {
+        proj.targetAgentIndex = -1;  // 超时，销毁弹道
+        projectileBuffer[id.x] = proj;
+        return;
+    }
+
+    // ========================================
+    // 2. 目标有效性检查
+    // ========================================
+    int targetIdx = proj.targetAgentIndex;
+
+    // 边界检查：防止越界访问
+    uint agentCount;
+    uint agentStride;
+    agentPositionReadBuffer.GetDimensions(agentCount, agentStride);
+
+    if (targetIdx < 0 || targetIdx >= (int)agentCount)
+    {
+        proj.targetAgentIndex = -1;
+        projectileBuffer[id.x] = proj;
+        return;
+    }
+
+    // 目标死亡或变为友军，销毁弹道
+    if (hpReadBuffer[targetIdx] <= 0 || teamIdReadBuffer[targetIdx] == proj.sourceTeamId)
+    {
+        proj.targetAgentIndex = -1;
+        projectileBuffer[id.x] = proj;
+        return;
+    }
+
+    // ========================================
+    // 3. 物理积分（重力 + 速度 + 位置）
+    // ========================================
+    float3 previousPosition = proj.position;
+    proj.velocity.y += proj.gravity * deltaTime;  // 重力加速度
+    proj.position += proj.velocity * deltaTime;   // 位移积分
+
+    // ========================================
+    // 4. 碰撞检测
+    // ========================================
+    float2 targetPos2D = agentPositionReadBuffer[targetIdx];
+    float3 targetPos3D = float3(targetPos2D.x, 0.0, targetPos2D.y);
+
+    // Swept segment-vs-sphere test prevents fast projectiles from tunnelling through
+    // targets when their per-frame travel exceeds the configured hit diameter.
+    float3 travel = proj.position - previousPosition;
+    float travelLengthSqr = dot(travel, travel);
+    float closestT = travelLengthSqr > 0.000001
+        ? saturate(dot(targetPos3D - previousPosition, travel) / travelLengthSqr)
+        : 0.0;
+    float3 closestPoint = previousPosition + travel * closestT;
+    float3 diff = closestPoint - targetPos3D;
+    float distSqr = dot(diff, diff);
+    float hitRadiusSqr = proj.hitRadius * proj.hitRadius;
+
+    if (distSqr <= hitRadiusSqr)
+    {
+        // ========================================
+        // 5. 命中：伤害累积
+        // ========================================
+        int dmg = (int)proj.damage;
+        InterlockedAdd(pendingDamageBuffer[targetIdx], dmg);
+
+        // 销毁弹道
+        proj.targetAgentIndex = -1;
+    }
+
+    // 写回弹道数据
+    projectileBuffer[id.x] = proj;
+}
+
+// ========================================
+// CollectActiveProjectiles Kernel
+// 压缩活跃槽位供 indirect draw 使用。必须在 SimulateProjectiles 之后调度，
+// 否则本帧命中/超时释放的槽位仍会被画出来。
+// ========================================
+[numthreads(64, 1, 1)]
+void CollectActiveProjectiles(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)maxProjectiles)
+        return;
+
+    // 空闲槽位（targetAgentIndex < 0）不追加：渲染实例数因此始终等于 GPU
+    // 真实活跃数，而不是 CPU 侧那份按最大生命周期保守估算的 ActiveCount。
+    if (projectileBuffer[id.x].targetAgentIndex < 0)
+        return;
+
+    activeProjectileIndices.Append(id.x);
+}

@@ -5,7 +5,7 @@ namespace MassEngine
 {
     /// <summary>
     /// Per-unit-type simulation parameters uploaded to the GPU as one
-    /// StructuredBuffer element per registered unit type. Field order and size (112
+    /// StructuredBuffer element per registered unit type. Field order and size (144
     /// bytes) must match struct UnitTypeSettings in AgentDataCommon.hlsl exactly.
     /// This is THE channel through which unit-type configuration reaches the compute
     /// pipeline; no per-unit-type scalar uniforms exist anymore.
@@ -13,7 +13,7 @@ namespace MassEngine
     [StructLayout(LayoutKind.Sequential)]
     public struct UnitTypeGpuSettings
     {
-        public const int StrideBytes = 112;
+        public const int StrideBytes = 144;
 
         public float agentRadius;
         public float separationStrength;
@@ -38,11 +38,20 @@ namespace MassEngine
         public float moveAnimationSpeedMin;
         public float moveAnimationSpeedMax;
         public float densityComfortPerSqm;
+        public float projectileRange;
+        public float projectileSpeed;
+        public float projectileGravity;
+        public float projectileHitRadius;
+        public float projectileMaxLifetime;
         public int padding3;
         public int teamId;
         public int padding0;
         public int padding1;
         public int padding2;
+        // 补齐到 36×4 = 144 字节（16字节对齐）
+        public int padding4;
+        public int padding5;
+        public int padding6;
 
         public static UnitTypeGpuSettings CreateDefaults(int teamId)
         {

@@ -69,6 +69,8 @@ namespace MassEngine
         public int unitTypeCount;
         public int agentThreadGroupsX;
         public int gridThreadGroupsX;
+        public int projectileThreadGroupsX;
+        public float simulationTime;
         public bool battleStarted;
         public bool combatEnabled;
         public int attackerTeamId;

@@ -13,6 +13,7 @@ namespace MassEngine
     {
         public const int AgentStrideBytes = 56;
         public const int LodLevels = 3;
+        public const int EngagementSlotsPerTarget = 8;
 
         public ComputeBuffer agentBuffer;
         public ComputeBuffer agentPositionReadBuffer;
@@ -36,16 +37,24 @@ namespace MassEngine
         public RenderTexture runtimeAttackerFlowPreviewTexture;
         public RenderTexture runtimeDefenderFlowPreviewTexture;
         public RenderTexture densityMapTexture;
+        public RenderTexture attackerDensityMapTexture;
+        public RenderTexture defenderDensityMapTexture;
 
         private ComputeBuffer[] visibleIndexBuffers = System.Array.Empty<ComputeBuffer>();
         private ComputeBuffer[] drawArgsBuffers = System.Array.Empty<ComputeBuffer>();
 
         public readonly CombatBufferSet combatBuffers = new CombatBufferSet();
 
+        public ComputeBuffer projectileBuffer;
+        /// <summary>Append list of projectile pool slots the GPU still considers alive; the render path's only source of instance count.</summary>
+        public ComputeBuffer activeProjectileIndexBuffer;
+        public ComputeBuffer projectileDrawArgsBuffer;
+
         public int AgentCount { get; private set; }
         public int GridCellCount { get; private set; }
         public int MaxAgentsPerCell { get; private set; }
         public int UnitTypeCount { get; private set; }
+        public int MaxProjectiles { get; private set; }
 
         public bool IsAllocated { get { return agentBuffer != null && AgentCount > 0; } }
 
@@ -72,6 +81,7 @@ namespace MassEngine
             GridCellCount = Mathf.Max(1, gridCellCount);
             MaxAgentsPerCell = Mathf.Max(1, maxAgentsPerCell);
             UnitTypeCount = Mathf.Max(0, unitTypeCount);
+            MaxProjectiles = agentCount > 0 ? Mathf.Max(1, agentCount / 4) : 0;
             int safeFlowResolutionX = Mathf.Max(1, flowFieldResolutionX);
             int safeFlowResolutionZ = Mathf.Max(1, flowFieldResolutionZ);
             int safeFlowCellCount = safeFlowResolutionX * safeFlowResolutionZ;
@@ -81,11 +91,19 @@ namespace MassEngine
 
             int agentStride = Marshal.SizeOf(typeof(AgentData));
             if (agentStride != AgentStrideBytes)
-                Debug.LogError("MassEngine AgentData stride must remain 56 bytes. Actual: " + agentStride);
+            {
+                Debug.LogError("MassEngine AgentData stride must remain 56 bytes. Actual: " + agentStride + " - refusing to allocate.");
+                ReleaseAll();
+                return;
+            }
 
             int settingsStride = Marshal.SizeOf(typeof(UnitTypeGpuSettings));
             if (settingsStride != UnitTypeGpuSettings.StrideBytes)
-                Debug.LogError("MassEngine UnitTypeGpuSettings stride must remain " + UnitTypeGpuSettings.StrideBytes + " bytes. Actual: " + settingsStride);
+            {
+                Debug.LogError("MassEngine UnitTypeGpuSettings stride must remain " + UnitTypeGpuSettings.StrideBytes + " bytes. Actual: " + settingsStride + " - refusing to allocate.");
+                ReleaseAll();
+                return;
+            }
 
             agentBuffer = new ComputeBuffer(AgentCount, AgentStrideBytes);
             agentPositionReadBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 2);
@@ -132,6 +150,8 @@ namespace MassEngine
             runtimeAttackerFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             runtimeDefenderFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             densityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
+            attackerDensityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
+            defenderDensityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
 
             // GPU buffer contents are undefined after allocation; zero-fill everything a
             // kernel may read before its first producer runs.
@@ -144,10 +164,24 @@ namespace MassEngine
             combatBuffers.hpReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.hpWriteBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.targetAgentIndexBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+            combatBuffers.engagementSlotAssignmentBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+            combatBuffers.engagementSlotOccupancyBuffer = new ComputeBuffer(AgentCount * EngagementSlotsPerTarget, sizeof(uint));
             combatBuffers.attackCooldownBuffer = new ComputeBuffer(AgentCount, sizeof(float));
             combatBuffers.homePositionBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 3);
             combatBuffers.pendingDamageReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.pendingDamageWriteBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+            combatBuffers.launchRequestBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+
+            // 初始化 launchRequestBuffer 为 0（计数器模式）
+            int[] initialLaunchRequests = new int[AgentCount];
+            combatBuffers.launchRequestBuffer.SetData(initialLaunchRequests);
+
+            if (MaxProjectiles > 0)
+            {
+                projectileBuffer = new ComputeBuffer(MaxProjectiles, 64);
+                activeProjectileIndexBuffer = CreateAppendIndexBuffer(MaxProjectiles);
+                projectileDrawArgsBuffer = CreateArgsBuffer();
+            }
 
             int bucketCount = UnitTypeCount * LodLevels;
             visibleIndexBuffers = new ComputeBuffer[bucketCount];
@@ -169,6 +203,7 @@ namespace MassEngine
             Vector2[] positions = new Vector2[agents.Length];
             Vector3[] homePositions = new Vector3[agents.Length];
             int[] targetIndices = new int[agents.Length];
+            int[] engagementAssignments = new int[agents.Length];
             float[] cooldowns = new float[agents.Length];
             int[] pendingDamage = new int[agents.Length];
 
@@ -177,12 +212,15 @@ namespace MassEngine
                 positions[i] = new Vector2(agents[i].position.x, agents[i].position.z);
                 homePositions[i] = agents[i].position;
                 targetIndices[i] = -1;
+                engagementAssignments[i] = -1;
             }
 
             agentPositionReadBuffer.SetData(positions);
             agentPositionWriteBuffer.SetData(positions);
             combatBuffers.homePositionBuffer.SetData(homePositions);
             combatBuffers.targetAgentIndexBuffer.SetData(targetIndices);
+            combatBuffers.engagementSlotAssignmentBuffer.SetData(engagementAssignments);
+            combatBuffers.engagementSlotOccupancyBuffer.SetData(new uint[agents.Length * EngagementSlotsPerTarget]);
             combatBuffers.attackCooldownBuffer.SetData(cooldowns);
             combatBuffers.pendingDamageReadBuffer.SetData(pendingDamage);
             combatBuffers.pendingDamageWriteBuffer.SetData(pendingDamage);
@@ -216,6 +254,26 @@ namespace MassEngine
         {
             for (int lod = 0; lod < LodLevels; lod++)
                 CopyCount(GetVisibleIndexBuffer(unitTypeIndex, lod), GetDrawArgsBuffer(unitTypeIndex, lod));
+        }
+
+        public void ResetProjectileAppendCounter()
+        {
+            SetCounter(activeProjectileIndexBuffer);
+        }
+
+        public void CopyProjectileCountToArgs()
+        {
+            CopyCount(activeProjectileIndexBuffer, projectileDrawArgsBuffer);
+        }
+
+        /// <summary>
+        /// Writes the projectile draw args for a mesh. This resets the instance count to
+        /// zero, so it must run before the per-frame CopyProjectileCountToArgs - calling it
+        /// mid-frame costs one frame of projectile visuals, never a stale instance count.
+        /// </summary>
+        public void ConfigureProjectileDrawArgs(Mesh mesh)
+        {
+            SetArgs(projectileDrawArgsBuffer, mesh);
         }
 
         public void ConfigureDrawArgs(IReadOnlyList<IUnitType> unitTypes)
@@ -265,6 +323,9 @@ namespace MassEngine
             ReleaseBuffer(ref unitTypeSettingsBuffer);
             ReleaseBuffer(ref spatialHashStatsBuffer);
             ReleaseBuffer(ref teamSpatialStatsBuffer);
+            ReleaseBuffer(ref projectileBuffer);
+            ReleaseBuffer(ref activeProjectileIndexBuffer);
+            ReleaseBuffer(ref projectileDrawArgsBuffer);
 
             for (int i = 0; i < visibleIndexBuffers.Length; i++)
                 ReleaseBuffer(ref visibleIndexBuffers[i]);
@@ -276,11 +337,14 @@ namespace MassEngine
             ReleaseRenderTexture(ref runtimeAttackerFlowPreviewTexture);
             ReleaseRenderTexture(ref runtimeDefenderFlowPreviewTexture);
             ReleaseRenderTexture(ref densityMapTexture);
+            ReleaseRenderTexture(ref attackerDensityMapTexture);
+            ReleaseRenderTexture(ref defenderDensityMapTexture);
 
             AgentCount = 0;
             GridCellCount = 0;
             MaxAgentsPerCell = 0;
             UnitTypeCount = 0;
+            MaxProjectiles = 0;
         }
 
         public static void ReleaseBuffer(ref ComputeBuffer buffer)

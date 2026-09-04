@@ -29,8 +29,10 @@
 2. hp≤0 → Dead（终态，清目标/冷却/速度）并返回                      [每帧]
    ── 非激活帧到此走轻路径：位置积分+写回后返回 ──
 3. 目标维护：现有目标失效则按决策通道计数分批（每 4 个决策通道一批）从空间哈希重新寻敌
-4. 攻击判定：距离≤attackRange（或曾攻击且≤退出半径）→ Attack，
-   冷却归零时 InterlockedAdd 伤害进目标的 pendingDamageWrite
+4. 攻击判定：
+   - 近战模式（projectileRange ≤ 0.01）：距离≤attackRange 时 InterlockedAdd 伤害
+   - 远程模式（projectileRange > 0.01）：距离≤projectileRange 时写入 launchRequestBuffer
+   - 冷却归零时触发攻击，冷却累积制保证 DPS 一致
 5. 无目标 → 队伍行为：攻方采流场（零向量时吸引力兜底直奔配置目标）；
    守方按模式：HOLD 原地驻守（接战迟滞见语义要点）/ FLOW_FIELD 采守方流场
    （索敌只受 aggro 半径限制；旧的 chase 追击距离参数已整链删除）
@@ -42,7 +44,8 @@
 
 - **伤害量化**：冷却累积制且**每决策通道结算全部到期攻击**（上限 4 次/通道）——
   LOD 降频下快攻单位的 DPS 不随镜头距离变化；每次攻击恰好 attackDamage；
-  PlayMode 测试断言"损失恒为 attackDamage 整数倍 + 击杀不早于节奏下限"。
+  PlayMode 测试断言「损失恒为 attackDamage 整数倍」，并逐帧校验全军伤害不超过节拍上界
+  （agents × damage × (elapsed / interval + 1)）——与攻击者如何分配目标无关，任何「忽略 attackInterval、每帧都打」的回归都当帧失败。
 - **hp 双缓冲**：邻居看到的是上帧快照——本帧被打死的目标仍会吸收本帧伤害，
   确定性的 1 帧过量伤害，换 dispatch 内零竞态。
 - **守方接战迟滞**：HOLD 守方保留已交战目标至 AttackExitRange（与攻方镜像）——
@@ -51,12 +54,17 @@
   出生点的守军曾因此永久无法索敌）。
 - **HOLD 守方保留分离力**：会互相推开解穿插，但位移被钳制在
   home 周围 defenderGuardRadius 内。
-- 攻击接触中强阻尼 + 接触限速（8% maxSpeed），战线不滑步。
+- 攻击接触中强阻尼 + 接触限速（18% maxSpeed），既抑制战线滑步，也为友军分离保留脱离重叠的速度余量。
+- 每个目标维护 8 个带帧戳的交战槽位占用计数；单位优先保留当前槽位，明显过载时才切换。
+- 本地寻敌按归一化距离、上一帧目标槽位总负载和稳定的单位/目标偏好评分；仅当当前目标过载且候选显著更优时切换，附近只剩一个敌人时不受负载上限阻断。
+- 切换阈值是**每 agent 独立**的迟滞余量（`0.18 + Hash01(agentIndex) * 0.55`），不是全军共享常量。共享常量下整组会在同一个寻敌拍上做出相同判断：满载槽位的 0.45 惩罚大于同批候选之间的距离差，于是全军作为一个整体在两个目标之间每 `LOCAL_TARGET_SEARCH_INTERVAL` 帧翻转一次，永不收敛。分散阈值让最容易换的先走，它们腾出的占用把负载比压回 1.0 以下，其余单位就地留下。余量由 agent 索引派生，因此确定、无额外 buffer 读取，也不破坏 warp 内的分支一致性。
+- 友军密度图作为流场的逐帧局部拥堵代价，在不重建整张流场的情况下选择相邻低负载通道。
 
 ## 参数
 
 - `CombatConfig`（按兵种）：targetAcquireRadius / attackRange / attackDamage /
-  attackInterval / maxHp
+  attackInterval / maxHp / projectileRange / projectileSpeed / projectileGravity /
+  projectileHitRadius / projectileMaxLifetime
 - `MovementConfig`（按兵种）：maxSpeed / velocityDamping / flowFieldWeight /
   flowFieldResponsiveness / 配置流场目标
 - `RuntimeCombatConfig`（全局）：defenderGuardRadius / deathClipDuration（无 VAT profile 时的兜底）

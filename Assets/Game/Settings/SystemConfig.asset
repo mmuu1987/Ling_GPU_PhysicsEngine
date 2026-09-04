@@ -16,3 +16,4 @@ MonoBehaviour:
   lodConfig: {fileID: 11400000, guid: 76f62f29a804c3d4aa767ca5a508c3a0, type: 2}
   runtimeFlowConfig: {fileID: 11400000, guid: c63088ce2a7c1be4095b744153c68b09, type: 2}
   runtimeCombatConfig: {fileID: 11400000, guid: 7a511705cb140d346a082ee4b06860eb, type: 2}
+  projectileRenderConfig: {fileID: 11400000, guid: 7f3a1c2e5b8d4a6f9e0c1d2b3a4f5e64, type: 2}

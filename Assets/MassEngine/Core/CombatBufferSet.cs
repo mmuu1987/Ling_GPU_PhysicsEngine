@@ -13,10 +13,13 @@ namespace MassEngine
         public ComputeBuffer hpReadBuffer;
         public ComputeBuffer hpWriteBuffer;
         public ComputeBuffer targetAgentIndexBuffer;
+        public ComputeBuffer engagementSlotAssignmentBuffer;
+        public ComputeBuffer engagementSlotOccupancyBuffer;
         public ComputeBuffer attackCooldownBuffer;
         public ComputeBuffer homePositionBuffer;
         public ComputeBuffer pendingDamageReadBuffer;
         public ComputeBuffer pendingDamageWriteBuffer;
+        public ComputeBuffer launchRequestBuffer;
 
         public void SwapPendingDamage()
         {
@@ -38,10 +41,13 @@ namespace MassEngine
             MassGpuBufferManager.ReleaseBuffer(ref hpReadBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref hpWriteBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref targetAgentIndexBuffer);
+            MassGpuBufferManager.ReleaseBuffer(ref engagementSlotAssignmentBuffer);
+            MassGpuBufferManager.ReleaseBuffer(ref engagementSlotOccupancyBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref attackCooldownBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref homePositionBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref pendingDamageReadBuffer);
             MassGpuBufferManager.ReleaseBuffer(ref pendingDamageWriteBuffer);
+            MassGpuBufferManager.ReleaseBuffer(ref launchRequestBuffer);
         }
     }
 }

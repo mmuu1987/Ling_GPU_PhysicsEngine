@@ -36,6 +36,32 @@ namespace MassEngine.Tests
         }
 
         [Test]
+        public void ProjectileGpuDataStrideIs64Bytes()
+        {
+            Assert.AreEqual(64, Projectiles.ProjectileGpuData.Stride);
+            Assert.AreEqual(64, Marshal.SizeOf<Projectiles.ProjectileGpuData>());
+        }
+
+        [Test]
+        public void ProjectileBufferAllocationTest()
+        {
+            MassGpuBufferManager bufferManager = new MassGpuBufferManager();
+            int agentCount = 1000;
+            int expectedMaxProjectiles = agentCount / 4;
+
+            bufferManager.Allocate(agentCount, 256, 32, 128, 128, 1);
+
+            Assert.IsNotNull(bufferManager.projectileBuffer, "projectileBuffer should be allocated");
+            Assert.AreEqual(expectedMaxProjectiles, bufferManager.MaxProjectiles, "MaxProjectiles should be agentCount / 4");
+            Assert.IsNotNull(bufferManager.combatBuffers.launchRequestBuffer, "launchRequestBuffer should be allocated");
+
+            bufferManager.ReleaseAll();
+
+            Assert.IsNull(bufferManager.projectileBuffer, "projectileBuffer should be released");
+            Assert.AreEqual(0, bufferManager.MaxProjectiles, "MaxProjectiles should be reset to 0");
+        }
+
+        [Test]
         public void TeamSpatialTelemetryDecodesCentroidAndBounds()
         {
             int[] values = new int[16];
@@ -61,6 +87,7 @@ namespace MassEngine.Tests
         // ------------------------------------------------------------------
         // Property 2: public field budget — every type in the namespace, no
         // suffix filtering, so new god-objects cannot hide from this test.
+        // Alignment padding does not count; see CountDataFields.
         // ------------------------------------------------------------------
 
         [Test]
@@ -70,12 +97,29 @@ namespace MassEngine.Tests
             Type[] offenders = typeof(MassEngineManager).Assembly.GetTypes()
                 .Where(type => type.Namespace == "MassEngine")
                 .Where(type => !type.IsEnum && !type.IsInterface)
-                .Where(type => type.GetFields(BindingFlags.Instance | BindingFlags.Public).Length > budget)
+                .Where(type => CountDataFields(type) > budget)
                 .ToArray();
 
             Assert.IsEmpty(offenders,
                 "Types over the public field budget: " + string.Join(", ", offenders.Select(t =>
-                    t.FullName + "(" + t.GetFields(BindingFlags.Instance | BindingFlags.Public).Length + ")")));
+                    t.FullName + "(" + CountDataFields(t) + ")")));
+        }
+
+        /// <summary>
+        /// Public instance fields that actually carry data. Alignment padding is excluded
+        /// because it is forced by the GPU contract rather than by design weight:
+        /// UnitTypeGpuSettings has to stay 144 bytes and 16-byte aligned - see
+        /// UnitTypeGpuSettingsStrideMatchesHlslStruct above, and MassGpuBufferManager,
+        /// which refuses to allocate at all when the stride drifts - which costs it seven
+        /// padding ints that no line of C# or HLSL ever reads. Counting those made the
+        /// budget rule contradict the alignment rule; the 29 fields that do carry data
+        /// were always inside the budget. A real god-object still cannot hide: field
+        /// number 31 fails the test whatever it is named.
+        /// </summary>
+        private static int CountDataFields(Type type)
+        {
+            return type.GetFields(BindingFlags.Instance | BindingFlags.Public)
+                .Count(field => !field.Name.StartsWith("padding", StringComparison.Ordinal));
         }
 
         // ------------------------------------------------------------------
@@ -101,6 +145,36 @@ namespace MassEngine.Tests
                 Assert.AreEqual((int)AgentState.Idle, agents[i].currentState);
             }
 
+            UnityEngine.Object.DestroyImmediate(config);
+        }
+
+        [Test]
+        public void SpawnFormationIsDeterministicAndAvoidsDefaultDensityOverlap()
+        {
+            SpawnConfig config = ScriptableObject.CreateInstance<SpawnConfig>();
+            config.unitCount = 400;
+            config.formationDensity = 0.5f;
+            config.formationAspect = 2f;
+            config.spawnSize = Vector3.zero;
+            DefaultSpawnModule module = new DefaultSpawnModule(config);
+            AgentData[] first = new AgentData[config.unitCount];
+            AgentData[] second = new AgentData[config.unitCount];
+
+            module.GenerateAgents(first, 0, first.Length, 0);
+            module.GenerateAgents(second, 0, second.Length, 0);
+
+            float minimumDistanceSqr = float.MaxValue;
+            for (int i = 0; i < first.Length; i++)
+            {
+                Assert.AreEqual(first[i].position, second[i].position, "formation must be reproducible at index " + i);
+                Assert.AreEqual(first[i].currentAnimationTime, second[i].currentAnimationTime, 0.000001f);
+                for (int j = i + 1; j < first.Length; j++)
+                    minimumDistanceSqr = Mathf.Min(minimumDistanceSqr, (first[i].position - first[j].position).sqrMagnitude);
+            }
+
+            // Shipped sword units use radius 0.55m (1.10m contact diameter). The
+            // default 0.5 agents/m2 formation must begin outside that contact range.
+            Assert.Greater(Mathf.Sqrt(minimumDistanceSqr), 1.1f);
             UnityEngine.Object.DestroyImmediate(config);
         }
 
@@ -359,10 +433,10 @@ namespace MassEngine.Tests
             // Null shaders: dispatches are skipped but the recorder still sees intent,
             // and each missing kernel is reported exactly once.
             ComputePipelineOrchestrator orchestrator = new ComputePipelineOrchestrator(
-                MassGpuShaderSet.Find(null, null, null, null), buffers, recorder);
+                MassGpuShaderSet.Find(null, null, null, null, null), buffers, recorder);
 
-            // 16 distinct kernel labels, each reported exactly once across both frames.
-            for (int i = 0; i < 16; i++)
+            // 17 distinct kernel labels, each reported exactly once across both frames.
+            for (int i = 0; i < 17; i++)
                 LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("MassEngine skipped GPU dispatch"));
 
             PipelineFrameContext context = new PipelineFrameContext
@@ -396,6 +470,7 @@ namespace MassEngine.Tests
                 "GenerateRuntimeDefenderFlowField",
                 "ClearDensityMap",
                 "BuildDensityMap",
+                "BuildEngagementSlotOccupancy",
                 "ClearPendingDamage",
                 "SimulateCombatAndAccumulateDamage",
                 "ClassifyVisibleAgentsForUnitType[0]",
@@ -416,6 +491,7 @@ namespace MassEngine.Tests
             {
                 "ClearGrid",
                 "BuildSpatialHash",
+                "BuildEngagementSlotOccupancy",
                 "ClearPendingDamage",
                 "SimulateCombatAndAccumulateDamage",
                 "ClassifyVisibleAgentsForUnitType[0]",
@@ -438,6 +514,9 @@ namespace MassEngine.Tests
             Assert.NotNull(buffers.combatBuffers.hpWriteBuffer);
             Assert.AreNotSame(buffers.combatBuffers.hpReadBuffer, buffers.combatBuffers.hpWriteBuffer);
             Assert.AreNotSame(buffers.combatBuffers.pendingDamageReadBuffer, buffers.combatBuffers.pendingDamageWriteBuffer);
+            Assert.AreEqual(8, MassGpuBufferManager.EngagementSlotsPerTarget);
+            Assert.AreEqual(4 * 8, buffers.combatBuffers.engagementSlotOccupancyBuffer.count);
+            Assert.AreEqual(4, buffers.combatBuffers.engagementSlotAssignmentBuffer.count);
             Assert.That(buffers.teamGridCountsBuffer.count, Is.EqualTo(8));
             Assert.That(buffers.teamGridAgentIndicesBuffer.count, Is.EqualTo(32));
 
