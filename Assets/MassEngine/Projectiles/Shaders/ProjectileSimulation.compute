@@ -1,5 +1,6 @@
 #pragma kernel SimulateProjectiles
 #pragma kernel ClearProjectiles
+#pragma kernel CollectActiveProjectiles
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
 
@@ -24,6 +25,8 @@ struct ProjectileData
 
 // 缓冲区：使用引擎标准命名（与 MassGpuShaderPropertyIds 一致）
 RWStructuredBuffer<ProjectileData> projectileBuffer;
+// 渲染用：当前活跃槽位索引。只有 CollectActiveProjectiles 写入。
+AppendStructuredBuffer<uint> activeProjectileIndices;
 // Agent/battle buffers are declared by AgentDataCommon.hlsl.
 
 // 全局参数
@@ -136,4 +139,23 @@ void SimulateProjectiles(uint3 id : SV_DispatchThreadID)
 
     // 写回弹道数据
     projectileBuffer[id.x] = proj;
+}
+
+// ========================================
+// CollectActiveProjectiles Kernel
+// 压缩活跃槽位供 indirect draw 使用。必须在 SimulateProjectiles 之后调度，
+// 否则本帧命中/超时释放的槽位仍会被画出来。
+// ========================================
+[numthreads(64, 1, 1)]
+void CollectActiveProjectiles(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)maxProjectiles)
+        return;
+
+    // 空闲槽位（targetAgentIndex < 0）不追加：渲染实例数因此始终等于 GPU
+    // 真实活跃数，而不是 CPU 侧那份按最大生命周期保守估算的 ActiveCount。
+    if (projectileBuffer[id.x].targetAgentIndex < 0)
+        return;
+
+    activeProjectileIndices.Append(id.x);
 }

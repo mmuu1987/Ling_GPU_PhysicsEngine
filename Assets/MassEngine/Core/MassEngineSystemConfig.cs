@@ -9,5 +9,8 @@ namespace MassEngine
         public LodConfig lodConfig;
         public RuntimeFlowConfig runtimeFlowConfig;
         public RuntimeCombatConfig runtimeCombatConfig;
+
+        /// <summary>Optional: leave empty and projectiles simulate without any tracer visuals.</summary>
+        public MassEngine.Projectiles.ProjectileRenderConfig projectileRenderConfig;
     }
 }

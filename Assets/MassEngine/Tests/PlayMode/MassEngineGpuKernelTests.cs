@@ -1,5 +1,7 @@
 #if UNITY_EDITOR
 using System.Collections;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
@@ -30,6 +32,9 @@ namespace MassEngine.Tests
         private bool projectileSimulationEnabled;
         private bool projectileProcessingEnabled;
         private float projectileSimulationTime;
+        // TotalLaunched as of the previous active-list check, so the helper can tell an
+        // upload frame (list legally one frame behind) from a quiet one (must match exactly).
+        private int activeListLaunchCursor = -1;
 
         // LOD/sim-cadence/flow overrides used by DispatchOneFrame (defaults = full rate, flow off).
         private float lodNearRadius = 100f;
@@ -171,22 +176,56 @@ namespace MassEngine.Tests
             bool sawDeath = false;
             int firstDeathFrame = -1;
 
+            // Army-wide cadence bound, sampled every frame. Every agent - both teams trade
+            // here - may land at most one hit per attackInterval, so total damage after N
+            // frames can never exceed agents * damage * (elapsed / interval + 1). That is a
+            // statement about the cadence alone, independent of how the attackers
+            // distributed themselves over victims.
+            int worstFrame = -1;
+            int worstLost = 0;
+            int worstBound = 0;
+            int victimFocus = 0;
+            int victimIndex = -1;
+
             for (int frame = 0; frame < framesForFirstBlood && !sawDeath; frame++)
             {
                 DispatchOneFrame(battleStarted: true);
 
-                if ((frame & 7) == 0 || frame == framesForFirstBlood - 1)
+                buffers.combatBuffers.hpReadBuffer.GetData(hp);
+                int armyLost = 0;
+                for (int i = 0; i < TotalAgents; i++)
                 {
-                    buffers.combatBuffers.hpReadBuffer.GetData(hp);
-                    for (int i = 0; i < TotalAgents; i++)
+                    if (hp[i] < 100)
+                        sawDamage = true;
+                    armyLost += 100 - Mathf.Max(0, hp[i]);
+                    if (hp[i] <= 0 && !sawDeath)
                     {
-                        if (hp[i] < 100)
-                            sawDamage = true;
-                        if (hp[i] <= 0 && !sawDeath)
-                        {
-                            sawDeath = true;
-                            firstDeathFrame = frame;
-                        }
+                        sawDeath = true;
+                        firstDeathFrame = frame;
+                        victimIndex = i;
+                    }
+                }
+
+                int elapsedIntervals = Mathf.FloorToInt(((frame + 1) * FrameDt) / AttackInterval);
+                int bound = TotalAgents * AttackDamage * (elapsedIntervals + 1);
+                // Tightest frame, not just violations, so the report always carries the
+                // real numbers: a difference of zero means the cadence budget was met
+                // exactly, anything positive means attackInterval was outrun.
+                if (worstFrame < 0 || armyLost - bound > worstLost - worstBound)
+                {
+                    worstFrame = frame;
+                    worstLost = armyLost;
+                    worstBound = bound;
+                }
+
+                if (sawDeath && victimIndex >= 0)
+                {
+                    int[] deathTargets = new int[TotalAgents];
+                    buffers.combatBuffers.targetAgentIndexBuffer.GetData(deathTargets);
+                    for (int i = 0; i < AttackerCount; i++)
+                    {
+                        if (deathTargets[i] == victimIndex)
+                            victimFocus++;
                     }
                 }
 
@@ -194,18 +233,29 @@ namespace MassEngine.Tests
                     yield return null;
             }
 
+            string cadence = "first death on frame " + firstDeathFrame + "; victim " + victimIndex +
+                " was targeted by " + victimFocus + " of " + AttackerCount + " attackers at death; " +
+                "army damage peaked at " + worstLost + " against a cadence bound of " + worstBound +
+                " on frame " + worstFrame;
+
             Assert.IsTrue(sawDamage, "no damage was ever applied on the GPU");
             Assert.IsTrue(sawDeath, "no agent died although damage should be lethal within the frame budget");
 
-            // Attack CADENCE guard: killing a 100 hp target with 10 dmg needs 10 hits =
-            // 9 full cooldown periods after the first hit. A regression that ignores
-            // attackInterval (hitting every frame) would kill within ~15 frames and MUST
-            // fail here. Sampling every 8 frames only ever reports a LATER frame, so the
-            // lower bound is safe.
-            int framesPerCooldown = Mathf.FloorToInt(AttackInterval / FrameDt);
-            int minKillFrame = 9 * framesPerCooldown;
-            Assert.GreaterOrEqual(firstDeathFrame, minKillFrame,
-                "first kill at frame " + firstDeathFrame + " is faster than the attack interval permits (" + minKillFrame + "); attackInterval is being ignored");
+            // Attack CADENCE guard, measured army-wide rather than per victim. Every agent
+            // - both teams trade in this fixture - may land at most one hit per
+            // attackInterval, so total damage after N frames can never exceed
+            // agents * damage * (elapsed / interval + 1). A regression that ignores
+            // attackInterval and hits every frame outruns that within a few frames.
+            //
+            // This replaces a lower bound on the FIRST DEATH frame, which silently assumed
+            // 4v4 hands every attacker its own victim. It does not: the engagement slot
+            // capacity here is 8, so four attackers on one defender run a load ratio of
+            // 0.5 and never trigger redistribution. Two attackers per victim is legal and
+            // kills in five rounds, which failed an assertion about cadence for a reason
+            // that had nothing to do with cadence. The bound below is a statement about
+            // the cadence alone, independent of how attackers distribute over victims.
+            Assert.LessOrEqual(worstLost, worstBound,
+                "army damage outran the attack cadence, so attackInterval is being ignored. " + cadence);
 
             // Damage is quantized to whole attacks: every hp value must be reachable by
             // subtracting N * attackDamage from maxHp.
@@ -832,8 +882,27 @@ namespace MassEngine.Tests
             buffers.combatBuffers.targetAgentIndexBuffer.SetData(targets);
             buffers.combatBuffers.engagementSlotAssignmentBuffer.SetData(assignments);
 
+            // Per-frame history, because a single end-of-run sample cannot tell "never
+            // redirected" apart from "redirected and swung back": the retarget cadence is
+            // LOCAL_TARGET_SEARCH_INTERVAL frames, so frame 8 lands exactly on a beat.
+            System.Text.StringBuilder history = new System.Text.StringBuilder("targets per frame");
             for (int frame = 0; frame < 8; frame++)
+            {
                 DispatchOneFrame(battleStarted: true);
+                buffers.combatBuffers.targetAgentIndexBuffer.GetData(targets);
+                int onFirst = 0;
+                int onSecond = 0;
+                for (int i = 0; i < attackerCount; i++)
+                {
+                    if (targets[i] == attackerCount)
+                        onFirst++;
+                    else if (targets[i] == attackerCount + 1)
+                        onSecond++;
+                }
+
+                history.Append(" [").Append(dispatchedFrames).Append(": ")
+                    .Append(onFirst).Append('/').Append(onSecond).Append(']');
+            }
             yield return null;
 
             buffers.combatBuffers.targetAgentIndexBuffer.GetData(targets);
@@ -846,8 +915,15 @@ namespace MassEngine.Tests
                 else if (targets[i] == attackerCount + 1)
                     secondTargetCount++;
             }
-            Assert.Greater(firstTargetCount, 0, "hysteresis must keep part of the force on the original target");
-            Assert.Greater(secondTargetCount, 0, "overloaded targeting must redirect part of the force to the second defender");
+            // The redirect decision reads engagement occupancy, so report what the GPU
+            // actually saw. Without it a failure cannot be told apart from a stale
+            // occupancy stamp, an unmatched search cadence or a scoring problem.
+            string load = DescribeEngagementLoad(new[] { attackerCount, attackerCount + 1 }) +
+                ", " + history;
+            Assert.Greater(firstTargetCount, 0,
+                "hysteresis must keep part of the force on the original target; " + load);
+            Assert.Greater(secondTargetCount, 0,
+                "overloaded targeting must redirect part of the force to the second defender; " + load);
 
             hp[attackerCount] = 0;
             hp[attackerCount + 1] = 10000;
@@ -862,6 +938,41 @@ namespace MassEngine.Tests
                 Assert.AreEqual(attackerCount + 1, targets[i], "the sole surviving defender must remain targetable regardless of load");
 
             gridMaxAgentsPerCell = 16;
+        }
+
+        /// <summary>
+        /// Engagement occupancy as the combat kernel reads it: only slots stamped with the
+        /// current frame count, which is what CurrentEngagementOccupancy requires.
+        /// </summary>
+        private string DescribeEngagementLoad(int[] targetIndices)
+        {
+            int slots = MassGpuBufferManager.EngagementSlotsPerTarget;
+            uint[] occupancy = new uint[fixtureTotalAgents * slots];
+            buffers.combatBuffers.engagementSlotOccupancyBuffer.GetData(occupancy);
+            uint stamp = (uint)dispatchedFrames & 0x00FFFFFFu;
+
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            text.Append("frame ").Append(dispatchedFrames).Append(", engagement load");
+            foreach (int targetIndex in targetIndices)
+            {
+                int fresh = 0;
+                int stale = 0;
+                for (int slot = 0; slot < slots; slot++)
+                {
+                    uint packed = occupancy[targetIndex * slots + slot];
+                    if ((packed >> 8) == stamp)
+                        fresh += (int)(packed & 0xFFu);
+                    else
+                        stale += (int)(packed & 0xFFu);
+                }
+
+                text.Append(" [target ").Append(targetIndex).Append(": fresh ").Append(fresh);
+                if (stale > 0)
+                    text.Append(", stale ").Append(stale);
+                text.Append(']');
+            }
+
+            return text.ToString();
         }
 
         private int[] ReadDensityMap()
@@ -1223,6 +1334,7 @@ namespace MassEngine.Tests
             projectileSimulationEnabled = true;
             projectileProcessingEnabled = true;
             projectileSimulationTime = 0f;
+            activeListLaunchCursor = -1;
         }
 
         private int[] ReadStates()
@@ -1261,7 +1373,10 @@ namespace MassEngine.Tests
         {
             // Requirement 3.3, 3.4, 3.5, 10.3: projectile travels, detects collision,
             // accumulates damage, and is destroyed on hit.
-            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 10f);
+            // 6f, not 10f: BuildScenario arms every type with targetAcquireRadius = 8f, so a
+            // wider gap acquires no target, nothing is ever launched, and the test used to
+            // fail on "no damage" while the launch path itself was fine.
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 6f);
 
             int[] initialHpSnapshot = (int[])initialHp.Clone();
             bool anyDamage = false;
@@ -1378,6 +1493,332 @@ namespace MassEngine.Tests
             for (int i = 0; i < fixtureTotalAgents; i++)
                 Assert.AreEqual(0, launchRequests[i], "melee unit " + i + " should never write launch request");
         }
+
+        // ------------------------------------------------------------------
+        // Projectile render contract: the active-index list and its indirect draw args.
+        // Pixels are not asserted - the contract that matters is that the instance count
+        // equals the GPU's own live-slot count, every frame, including hits and resets.
+        // ------------------------------------------------------------------
+
+        private uint ReadProjectileInstanceCount()
+        {
+            uint[] args = new uint[5];
+            buffers.projectileDrawArgsBuffer.GetData(args);
+            return args[1];
+        }
+
+        /// <summary>
+        /// Asserts the rendered instance count and index list agree with the pool itself:
+        /// no duplicates, every listed slot actually alive, and the same cardinality.
+        /// Called after frames rather than at the end, so the frame a slot is released is
+        /// covered - a release must leave the list immediately, which is what the strict
+        /// branch below pins down.
+        ///
+        /// A launch is the one legal skew. ProcessLaunchRequests runs after the compute
+        /// dispatch (the fixture mirrors MassEngineManager.Update here), so a slot filled
+        /// this frame is only collected on the next one. TotalLaunched tells us exactly
+        /// which frames uploaded, and only those are allowed to run a frame behind.
+        /// </summary>
+        private void AssertActiveListMatchesPool(string context)
+        {
+            ProjectileGpuData[] pool = new ProjectileGpuData[buffers.MaxProjectiles];
+            buffers.projectileBuffer.GetData(pool);
+
+            int expected = 0;
+            for (int i = 0; i < pool.Length; i++)
+            {
+                if (pool[i].targetAgentIndex >= 0)
+                    expected++;
+            }
+
+            uint count = ReadProjectileInstanceCount();
+            int launched = projectileManager != null ? projectileManager.TotalLaunched : 0;
+            bool uploadedThisFrame = activeListLaunchCursor < 0 || launched != activeListLaunchCursor;
+            activeListLaunchCursor = launched;
+
+            if (uploadedThisFrame)
+            {
+                // Never more than the pool holds - a stale or duplicated slot would show up
+                // as an excess instance - but the freshly uploaded ones may still be pending.
+                Assert.LessOrEqual((int)count, expected,
+                    context + ": indirect instance count exceeds the number of live pool slots");
+            }
+            else
+            {
+                Assert.AreEqual(expected, (int)count,
+                    context + ": indirect instance count disagrees with the number of live pool slots");
+            }
+
+            uint[] indices = new uint[buffers.MaxProjectiles];
+            buffers.activeProjectileIndexBuffer.GetData(indices);
+
+            HashSet<uint> seen = new HashSet<uint>();
+            for (int i = 0; i < (int)count; i++)
+            {
+                uint slot = indices[i];
+                Assert.Less(slot, (uint)buffers.MaxProjectiles, context + ": active index out of range");
+                Assert.IsTrue(seen.Add(slot), context + ": slot " + slot + " appears twice in the active list");
+                Assert.GreaterOrEqual(pool[slot].targetAgentIndex, 0,
+                    context + ": active list points at idle slot " + slot + ", which would render a stale trail");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ActiveProjectileListDrivesNonZeroInstanceCount()
+        {
+            // 6f, not more: BuildScenario arms every type with targetAcquireRadius = 8f,
+            // so a wider gap acquires no target at all and nothing is ever launched.
+            // At speed 20 this still leaves ~15 frames of flight to observe.
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 6f);
+
+            uint peak = 0;
+            for (int frame = 0; frame < 240 && peak == 0; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+
+                AssertActiveListMatchesPool("frame " + frame);
+                uint count = ReadProjectileInstanceCount();
+                if (count > peak)
+                    peak = count;
+            }
+
+            Assert.Greater(peak, 0u,
+                "projectiles were launched but the indirect draw args never reported a single instance, so nothing would render");
+        }
+
+        [UnityTest]
+        public IEnumerator ActiveProjectileListDropsSlotOnHit()
+        {
+            // 6f, not more: BuildScenario arms every type with targetAcquireRadius = 8f,
+            // so a wider gap acquires no target at all and nothing is ever launched.
+            // At speed 20 this still leaves ~15 frames of flight to observe.
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 6f);
+
+            int[] hpBefore = (int[])initialHp.Clone();
+            int[] hp = new int[fixtureTotalAgents];
+            bool sawFlight = false;
+            bool sawDamage = false;
+
+            for (int frame = 0; frame < 240 && !sawDamage; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+
+                // Checked every frame: the frame a hit releases a slot is exactly the frame
+                // where a CPU-side count would still be advertising it as renderable.
+                AssertActiveListMatchesPool("frame " + frame);
+                if (ReadProjectileInstanceCount() > 0)
+                    sawFlight = true;
+
+                buffers.combatBuffers.hpReadBuffer.GetData(hp);
+                for (int i = AttackerCount; i < fixtureTotalAgents; i++)
+                {
+                    if (hp[i] < hpBefore[i])
+                    {
+                        sawDamage = true;
+                        break;
+                    }
+                }
+            }
+
+            Assert.IsTrue(sawFlight, "no projectile was ever reported as renderable");
+            Assert.IsTrue(sawDamage, "no projectile hit landed, so slot release on hit was never exercised");
+
+            // Keep firing for a while: AssertActiveListMatchesPool is the real assertion
+            // here, and it must hold across every launch/hit cycle, not just the first.
+            for (int frame = 0; frame < 60; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+                AssertActiveListMatchesPool("sustained frame " + frame);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ActiveProjectileListDropsExpiredSlot()
+        {
+            // Deterministic counterpart to the hit test: one hand-placed projectile with a
+            // two-frame lifetime, so the drop from 1 to 0 instances is unambiguous.
+            BuildRangedScenario(attackerRanged: false, defenderRanged: false, distance: 100f);
+            projectileProcessingEnabled = false;
+
+            ProjectileGpuData projectile = ProjectileGpuData.CreateEmpty();
+            projectile.position = new Vector3(-50f, 0f, 0f);
+            projectile.velocity = Vector3.zero;
+            projectile.targetAgentIndex = AttackerCount;
+            projectile.sourceTeamId = 0;
+            projectile.launchTime = projectileSimulationTime;
+            projectile.maxLifetime = FrameDt * 2f;
+            projectile.hitRadius = 0.1f;
+            buffers.projectileBuffer.SetData(new[] { projectile }, 0, 0, 1);
+
+            DispatchOneFrame(battleStarted: true);
+            yield return null;
+            Assert.AreEqual(1u, ReadProjectileInstanceCount(),
+                "a freshly placed live projectile was not picked up by the active list");
+            AssertActiveListMatchesPool("before expiry");
+
+            for (int frame = 0; frame < 4; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+            }
+
+            Assert.AreEqual(0u, ReadProjectileInstanceCount(),
+                "the expired slot is still being drawn");
+            AssertActiveListMatchesPool("after expiry");
+        }
+
+        [UnityTest]
+        public IEnumerator PausedProjectileRenderListStaysStable()
+        {
+            // Pausing must freeze the visuals, not blank them: the list is rebuilt every
+            // frame regardless of battleStarted, so it has to come out identical each time.
+            BuildRangedScenario(attackerRanged: false, defenderRanged: false, distance: 100f);
+            projectileProcessingEnabled = false;
+
+            int poolSize = buffers.MaxProjectiles;
+            Assert.GreaterOrEqual(poolSize, 2, "fixture pool is too small to cover a multi-instance list");
+
+            ProjectileGpuData[] placed = new ProjectileGpuData[poolSize];
+            for (int i = 0; i < poolSize; i++)
+            {
+                placed[i] = ProjectileGpuData.CreateEmpty();
+                placed[i].position = new Vector3(-50f + i, 1f + i, 0f);
+                placed[i].velocity = new Vector3(10f, 0f, 0f);
+                placed[i].targetAgentIndex = AttackerCount;
+                placed[i].sourceTeamId = i % 2;
+                placed[i].launchTime = projectileSimulationTime;
+                placed[i].maxLifetime = 60f;
+                placed[i].trailLength = 1f;
+            }
+            buffers.projectileBuffer.SetData(placed);
+
+            uint firstCount = 0;
+            for (int frame = 0; frame < 6; frame++)
+            {
+                DispatchOneFrame(battleStarted: false);
+                yield return null;
+
+                uint count = ReadProjectileInstanceCount();
+                if (frame == 0)
+                    firstCount = count;
+
+                Assert.AreEqual((uint)poolSize, count,
+                    "paused frame " + frame + ": every placed projectile must stay renderable while paused");
+                Assert.AreEqual(firstCount, count, "paused frame " + frame + ": instance count drifted while paused");
+                AssertActiveListMatchesPool("paused frame " + frame);
+
+                ProjectileGpuData[] now = new ProjectileGpuData[poolSize];
+                buffers.projectileBuffer.GetData(now);
+                for (int i = 0; i < poolSize; i++)
+                {
+                    Assert.That(now[i].position, Is.EqualTo(placed[i].position),
+                        "paused frame " + frame + ": projectile " + i + " moved while paused");
+                    Assert.AreEqual(placed[i].targetAgentIndex, now[i].targetAgentIndex,
+                        "paused frame " + frame + ": projectile " + i + " changed lifecycle state while paused");
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator ClearingProjectilesEmptiesActiveListAndAllowsRefight()
+        {
+            // 6f, not more: BuildScenario arms every type with targetAcquireRadius = 8f,
+            // so a wider gap acquires no target at all and nothing is ever launched.
+            // At speed 20 this still leaves ~15 frames of flight to observe.
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 6f);
+
+            uint before = 0;
+            for (int frame = 0; frame < 240 && before == 0; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+                before = ReadProjectileInstanceCount();
+            }
+            Assert.Greater(before, 0u, "no projectile was renderable before the reset");
+
+            // Stands in for ResetScenario, which clears the pool the same way.
+            projectileManager.ClearAllProjectiles();
+            DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            Assert.AreEqual(0u, ReadProjectileInstanceCount(),
+                "projectiles were cleared but the indirect draw still reports instances, so trails would linger after a reset");
+            AssertActiveListMatchesPool("after clear");
+
+            uint after = 0;
+            for (int frame = 0; frame < 240 && after == 0; frame++)
+            {
+                DispatchOneFrame(battleStarted: true);
+                yield return null;
+                after = ReadProjectileInstanceCount();
+                AssertActiveListMatchesPool("refight frame " + frame);
+            }
+            Assert.Greater(after, 0u, "the battle could not produce renderable projectiles again after a reset");
+        }
+
+        [UnityTest]
+        public IEnumerator MissingRenderResourcesWarnOnceAndKeepSimulating()
+        {
+            // 6f, not more: BuildScenario arms every type with targetAcquireRadius = 8f,
+            // so a wider gap acquires no target at all and nothing is ever launched.
+            // At speed 20 this still leaves ~15 frames of flight to observe.
+            BuildRangedScenario(attackerRanged: true, defenderRanged: false, distance: 6f);
+
+            ProjectileRenderConfig config = ScriptableObject.CreateInstance<ProjectileRenderConfig>();
+            config.hideFlags = HideFlags.DontSave;
+            config.material = null;
+            ProjectileGpuRenderDispatcher dispatcher = new ProjectileGpuRenderDispatcher();
+            Bounds bounds = new Bounds(Vector3.zero, new Vector3(200f, 120f, 200f));
+
+            // One warning total, however many frames run: a repeated log would drown the
+            // console at 60 fps and read as an error loop. Expect proves at least one
+            // arrives (an unfulfilled expectation fails at teardown); the counter below
+            // proves no second one does. Counting beats LogAssert.NoUnexpectedReceived
+            // here, which would also trip over unrelated fixture warnings such as the
+            // MovementConfig default notice.
+            LogAssert.Expect(LogType.Warning, new Regex("projectile trails skipped"));
+
+            int skipWarnings = 0;
+            Application.LogCallback countSkips = (condition, stackTrace, type) =>
+            {
+                if (type == LogType.Warning && condition.Contains("projectile trails skipped"))
+                    skipWarnings++;
+            };
+            Application.logMessageReceived += countSkips;
+
+            try
+            {
+                uint peak = 0;
+                for (int frame = 0; frame < 240; frame++)
+                {
+                    DispatchOneFrame(battleStarted: true);
+                    dispatcher.Draw(config, buffers, bounds, attackerTeamId: 0);
+                    yield return null;
+
+                    AssertActiveListMatchesPool("unconfigured frame " + frame);
+                    uint count = ReadProjectileInstanceCount();
+                    if (count > peak)
+                        peak = count;
+                }
+
+                Assert.Greater(peak, 0u,
+                    "the simulation stalled when render resources were missing; visuals are optional, physics is not");
+            }
+            finally
+            {
+                Application.logMessageReceived -= countSkips;
+                dispatcher.Release();
+                Object.DestroyImmediate(config);
+            }
+
+            Assert.AreEqual(1, skipWarnings,
+                "the missing-material warning must be logged exactly once, not once per frame");
+        }
+
+        // PLACEHOLDER_RENDER_TESTS
 
         private void BuildRangedScenario(bool attackerRanged, bool defenderRanged, float distance = 1f)
         {

@@ -261,7 +261,17 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         // Require a material improvement before abandoning a live target. This keeps
         // load balancing responsive without making one-frame occupancy lag visible as
         // target ping-pong.
-        if (neighborhood.bestEnemyScore + 0.18 < currentScore)
+        //
+        // The margin is per-agent, not a shared constant. With a shared 0.18 the whole
+        // force decides identically: a saturated target costs 0.45 of load penalty while
+        // the distance term spreads far less than that, so every attacker in the group
+        // clears the same threshold on the same retarget beat and the army flips between
+        // two victims as one body, every LOCAL_TARGET_SEARCH_INTERVAL frames, forever.
+        // Spreading the threshold instead lets the cheapest movers leave first; the
+        // occupancy they free drops the ratio below 1.0 and the rest stay put. Derived
+        // from the agent index, so it stays deterministic and costs no extra buffer read.
+        float moveMargin = 0.18 + Hash01(id.x ^ 0x7F4A7C15u) * 0.55;
+        if (neighborhood.bestEnemyScore + moveMargin < currentScore)
             targetIndex = neighborhood.bestEnemyIndex;
     }
 

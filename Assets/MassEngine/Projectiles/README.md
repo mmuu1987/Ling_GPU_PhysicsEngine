@@ -9,10 +9,15 @@ Combat kernel 写 launchRequestBuffer
   -> CPU 异步读取请求/位置/目标快照并立即清空请求源
   -> ProjectileGpuManager 批量写入环形弹道池
   -> Projectile kernel 积分、扫掠碰撞、写 pendingDamage
+  -> CollectActiveProjectiles kernel 压缩活跃槽位到 activeProjectileIndexBuffer
+  -> CopyCount 写 projectileDrawArgsBuffer 的 instance count
+  -> ProjectileGpuRenderDispatcher 一次 DrawMeshInstancedIndirect 画曳光
   -> 下一帧 Combat kernel 结算伤害
 ```
 
-弹道调度位于 Combat 之后、LOD 之前。战斗暂停时弹道不移动，生命周期也不推进。
+弹道调度位于 Combat 之后、LOD 之前，`CollectActiveProjectiles` 紧跟在 `SimulateProjectiles` 之后，
+所以本帧释放的槽位本帧就不再渲染。战斗暂停时弹道不移动，生命周期也不推进，但活跃列表照常重建：
+池内容没变，列表结果一致，已有曳光冻结在屏幕上而不是闪灭。
 
 ## 数据契约
 
@@ -39,6 +44,36 @@ maxLifetime + trailLength + padding
 
 这些值通过 `UnitTypeGpuSettings` 统一上传，不使用逐兵种 scalar uniform。
 
+渲染参数位于独立的 `ProjectileRenderConfig`（`MassEngine/Projectile Render Config`），
+由 `MassEngineSystemConfig.projectileRenderConfig` 引用：
+
+- `renderProjectiles`：总开关，关掉只停止绘制，不影响仿真
+- `mesh`：留空则用内置的单位 quad（不是错误路径），只在需要自定义曳光形状时才指定
+- `material`：必需，指向 `ProjectileTrail.mat`
+- `trailWidth` / `trailLengthScale` / `trailMinLength`：曳光宽度、按 `trailLength` 缩放的长度和长度下限
+- `attackerColor` / `defenderColor`：按 `sourceTeamId` 与 `MassEngineManager.AttackerTeamId` 比较后取色
+- `shadowCasting` / `receiveShadows`：默认都关，曳光是纯叠加视觉
+
+配置资产在运行时只读，dispatcher 不回写任何字段。
+
+## 渲染
+
+`ProjectileGpuRenderDispatcher` 每帧发出一次 `Graphics.DrawMeshInstancedIndirect`：
+
+- instance count 只来自 `projectileDrawArgsBuffer`，由 `ComputeBuffer.CopyCount` 从 append buffer 的计数器写入，
+  **不是** CPU 侧的 `ProjectileGpuManager.ActiveCount`（那是保守估算，命中后会晚于 GPU 释放）。
+- `ProjectileTrail.shader` 用 procedural instancing：`setup()` 里 `activeProjectileIndices[unity_InstanceID]`
+  取到槽位，直接从 `projectileBuffer` 读位置/速度/阵营/`trailLength`，手工写 `unity_ObjectToWorld` 与
+  `unity_WorldToObject`。空闲槽位不会进入活跃列表，因此永远不会到达顶点阶段。
+- 四边形沿飞行轴 billboard（`cross(dir, toCam)`，退化时回退到 `cross(dir, up)` 再回退 `(1,0,0)`），
+  局部 +x 是弹头、`uv.x` 向尾部淡出，所以侧视也不会退化成看不见的薄边。
+- 没有 GameObject、Transform、粒子系统，渲染路径上也没有 `GetData` 或新增 `AsyncGPUReadback`。
+- draw args 的 mesh 部分只在 mesh 或 args buffer 变化时写一次；`SetArgs` 会顺带把 instance count 归零，
+  所以那一帧主动跳过绘制——比放过一次过期计数便宜。
+- 缺 material、缺 mesh 或 buffer 未分配时只打印一次警告并跳过绘制，仿真不受影响。
+- `Bounds` 沿用 `MassEngineManager.ResolveRenderBounds()`，高度 ±60m，覆盖整个战场和合理弹道高度。
+- `Release()` 销毁内置 quad 并清空缓存，`ResetScenario` / 重新分配 / 组件禁用后不残留曳光也不泄漏 buffer。
+
 ## 生命周期与容量
 
 - buffer 由 `MassGpuBufferManager` 创建和释放，`ProjectileGpuManager` 只借用。
@@ -55,11 +90,20 @@ maxLifetime + trailLength + padding
 
 - EditMode：64 字节布局、buffer 分配和释放。
 - PlayMode：完整请求消费、实际命中伤害、生命周期释放、近战兼容、暂停冻结。
+- PlayMode（渲染契约）：indirect instance count 非零、命中/过期当帧移出活跃列表、暂停数帧列表与位置稳定、
+  清空后归零且能再次开战、缺渲染资源时只警告一次且仿真继续。断言的是 GPU 活跃索引、indirect args 和生命周期，
+  不做像素级截图比较。
+- PlayMode（冒烟）：`WarSandboxSmokeTests` 加载 `Assets/Game/Scenes/WarSandbox.unity`，开战→暂停→继续→重置→再开战，
+  全程无异常日志且弹道能真正进入 indirect draw args。
 - 运行时关注 `TotalLaunched`、`ActiveCount` 和 `OverflowCount`。
 
 ## 已知限制
 
 - 只检测指定目标，不处理途中命中或范围伤害。
 - 发射后不制导，目标位置变化可能导致落空。
-- 尚无弹道渲染、风阻、风场和复杂碰撞体。
+- 尚无风阻、风场和复杂碰撞体。
+- 曳光是单 pass 半透明四边形，没有拖尾贴图、发光、命中特效、音效和屏幕震动。
+- `trailLength` 发射时固定写 1，长度实际由 `trailLengthScale` / `trailMinLength` 控制，还不随速度或兵种变化。
+- 曳光 `ZWrite Off`，互相之间不做深度排序；地形和 Agent 仍能正常遮挡它们。
 - CPU 活跃数是保守估算，提前命中的槽位可能等到最大生命周期后才再次计入可用容量。
+- 暂停战斗后的一两帧内，已经进入异步 readback 管线的发射请求仍会落盘成新弹道，屏幕上可能多出几条曳光。暂停期间不再产生新请求，所以这一漂移几帧内自行停止；弹道位置和生命周期从暂停那一刻就已经冻结。

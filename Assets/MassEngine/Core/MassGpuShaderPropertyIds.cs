@@ -71,6 +71,13 @@ namespace MassEngine
         public static readonly int ProjectileBufferId = Shader.PropertyToID("projectileBuffer");
         public static readonly int LaunchRequestBufferId = Shader.PropertyToID("launchRequestBuffer");
         public static readonly int MaxProjectilesId = Shader.PropertyToID("maxProjectiles");
+        public static readonly int ActiveProjectileIndicesId = Shader.PropertyToID("activeProjectileIndices");
+        public static readonly int ProjectileAttackerTeamIdId = Shader.PropertyToID("_ProjectileAttackerTeamId");
+        public static readonly int ProjectileAttackerColorId = Shader.PropertyToID("_ProjectileAttackerColor");
+        public static readonly int ProjectileDefenderColorId = Shader.PropertyToID("_ProjectileDefenderColor");
+        public static readonly int ProjectileTrailWidthId = Shader.PropertyToID("_ProjectileTrailWidth");
+        public static readonly int ProjectileTrailLengthScaleId = Shader.PropertyToID("_ProjectileTrailLengthScale");
+        public static readonly int ProjectileTrailMinLengthId = Shader.PropertyToID("_ProjectileTrailMinLength");
         public static readonly int CurrentTimeId = Shader.PropertyToID("currentTime");
 
         // Flow fields

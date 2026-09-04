@@ -46,6 +46,9 @@ namespace MassEngine
         public readonly CombatBufferSet combatBuffers = new CombatBufferSet();
 
         public ComputeBuffer projectileBuffer;
+        /// <summary>Append list of projectile pool slots the GPU still considers alive; the render path's only source of instance count.</summary>
+        public ComputeBuffer activeProjectileIndexBuffer;
+        public ComputeBuffer projectileDrawArgsBuffer;
 
         public int AgentCount { get; private set; }
         public int GridCellCount { get; private set; }
@@ -174,7 +177,11 @@ namespace MassEngine
             combatBuffers.launchRequestBuffer.SetData(initialLaunchRequests);
 
             if (MaxProjectiles > 0)
+            {
                 projectileBuffer = new ComputeBuffer(MaxProjectiles, 64);
+                activeProjectileIndexBuffer = CreateAppendIndexBuffer(MaxProjectiles);
+                projectileDrawArgsBuffer = CreateArgsBuffer();
+            }
 
             int bucketCount = UnitTypeCount * LodLevels;
             visibleIndexBuffers = new ComputeBuffer[bucketCount];
@@ -249,6 +256,26 @@ namespace MassEngine
                 CopyCount(GetVisibleIndexBuffer(unitTypeIndex, lod), GetDrawArgsBuffer(unitTypeIndex, lod));
         }
 
+        public void ResetProjectileAppendCounter()
+        {
+            SetCounter(activeProjectileIndexBuffer);
+        }
+
+        public void CopyProjectileCountToArgs()
+        {
+            CopyCount(activeProjectileIndexBuffer, projectileDrawArgsBuffer);
+        }
+
+        /// <summary>
+        /// Writes the projectile draw args for a mesh. This resets the instance count to
+        /// zero, so it must run before the per-frame CopyProjectileCountToArgs - calling it
+        /// mid-frame costs one frame of projectile visuals, never a stale instance count.
+        /// </summary>
+        public void ConfigureProjectileDrawArgs(Mesh mesh)
+        {
+            SetArgs(projectileDrawArgsBuffer, mesh);
+        }
+
         public void ConfigureDrawArgs(IReadOnlyList<IUnitType> unitTypes)
         {
             if (unitTypes == null)
@@ -297,6 +324,8 @@ namespace MassEngine
             ReleaseBuffer(ref spatialHashStatsBuffer);
             ReleaseBuffer(ref teamSpatialStatsBuffer);
             ReleaseBuffer(ref projectileBuffer);
+            ReleaseBuffer(ref activeProjectileIndexBuffer);
+            ReleaseBuffer(ref projectileDrawArgsBuffer);
 
             for (int i = 0; i < visibleIndexBuffers.Length; i++)
                 ReleaseBuffer(ref visibleIndexBuffers[i]);

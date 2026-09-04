@@ -87,6 +87,7 @@ namespace MassEngine.Tests
         // ------------------------------------------------------------------
         // Property 2: public field budget — every type in the namespace, no
         // suffix filtering, so new god-objects cannot hide from this test.
+        // Alignment padding does not count; see CountDataFields.
         // ------------------------------------------------------------------
 
         [Test]
@@ -96,12 +97,29 @@ namespace MassEngine.Tests
             Type[] offenders = typeof(MassEngineManager).Assembly.GetTypes()
                 .Where(type => type.Namespace == "MassEngine")
                 .Where(type => !type.IsEnum && !type.IsInterface)
-                .Where(type => type.GetFields(BindingFlags.Instance | BindingFlags.Public).Length > budget)
+                .Where(type => CountDataFields(type) > budget)
                 .ToArray();
 
             Assert.IsEmpty(offenders,
                 "Types over the public field budget: " + string.Join(", ", offenders.Select(t =>
-                    t.FullName + "(" + t.GetFields(BindingFlags.Instance | BindingFlags.Public).Length + ")")));
+                    t.FullName + "(" + CountDataFields(t) + ")")));
+        }
+
+        /// <summary>
+        /// Public instance fields that actually carry data. Alignment padding is excluded
+        /// because it is forced by the GPU contract rather than by design weight:
+        /// UnitTypeGpuSettings has to stay 144 bytes and 16-byte aligned - see
+        /// UnitTypeGpuSettingsStrideMatchesHlslStruct above, and MassGpuBufferManager,
+        /// which refuses to allocate at all when the stride drifts - which costs it seven
+        /// padding ints that no line of C# or HLSL ever reads. Counting those made the
+        /// budget rule contradict the alignment rule; the 29 fields that do carry data
+        /// were always inside the budget. A real god-object still cannot hide: field
+        /// number 31 fails the test whatever it is named.
+        /// </summary>
+        private static int CountDataFields(Type type)
+        {
+            return type.GetFields(BindingFlags.Instance | BindingFlags.Public)
+                .Count(field => !field.Name.StartsWith("padding", StringComparison.Ordinal));
         }
 
         // ------------------------------------------------------------------

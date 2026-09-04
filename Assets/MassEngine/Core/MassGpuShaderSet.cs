@@ -29,6 +29,8 @@ namespace MassEngine
         public readonly int ClassifyVisibleAgentsForUnitType;
         public readonly int SimulateProjectiles;
         public readonly int ClearProjectiles;
+        /// <summary>Render-only kernel: a shader without it still simulates, it just draws no trails.</summary>
+        public readonly int CollectActiveProjectiles;
 
         public bool IsValid
         {
@@ -100,6 +102,9 @@ namespace MassEngine
             ProjectileShader = projectileShader;
             SimulateProjectiles = FindKernelOrInvalid(projectileShader, "SimulateProjectiles");
             ClearProjectiles = FindKernelOrInvalid(projectileShader, "ClearProjectiles");
+            // Deliberately absent from IsValid: projectile visuals are optional, and a
+            // missing collect kernel must not block the whole simulation pipeline.
+            CollectActiveProjectiles = FindKernelOrInvalid(projectileShader, "CollectActiveProjectiles");
         }
 
         public static MassGpuShaderSet Find(

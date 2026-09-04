@@ -18,7 +18,7 @@ namespace MassEngine
     /// GPU compute pipeline scheduler. Dispatch order (Requirement 9.1, density stage
     /// added in this engine): SpatialHash -> RuntimeFlow (conditional) -> DensityMap ->
     /// EngagementSlotOccupancy -> CombatSimulation -> ProjectileSimulation ->
-    /// LodClassification (once per unit type) -> buffer swap.
+    /// CollectActiveProjectiles -> LodClassification (once per unit type) -> buffer swap.
     /// </summary>
     public sealed class ComputePipelineOrchestrator
     {
@@ -54,6 +54,7 @@ namespace MassEngine
 
             DispatchCombatSimulation(frameContext);
             DispatchProjectileSimulation(frameContext);
+            DispatchProjectileActiveList(frameContext);
             DispatchLodClassification(frameContext);
             buffers.SwapSimulationBuffers();
         }
@@ -113,6 +114,34 @@ namespace MassEngine
                 shaders.SimulateProjectiles,
                 Mathf.Max(1, context.projectileThreadGroupsX),
                 "SimulateProjectiles");
+        }
+
+        /// <summary>
+        /// Compresses the projectile pool into the append list the indirect draw reads,
+        /// then publishes its count into the draw args. Runs AFTER SimulateProjectiles so
+        /// slots released by this frame's hits and expiries are already excluded.
+        /// </summary>
+        private void DispatchProjectileActiveList(PipelineFrameContext context)
+        {
+            if (buffers.activeProjectileIndexBuffer == null || buffers.projectileDrawArgsBuffer == null)
+                return;
+
+            // Rebuilt every frame whether the battle runs or is paused: while paused the
+            // pool contents are unchanged, so the list comes out identical and existing
+            // trails stay on screen frozen instead of blinking out.
+            buffers.ResetProjectileAppendCounter();
+
+            if (context.projectileThreadGroupsX > 0)
+            {
+                SetBuffer(shaders.ProjectileShader, shaders.CollectActiveProjectiles, ProjectileBufferId, buffers.projectileBuffer);
+                SetBuffer(shaders.ProjectileShader, shaders.CollectActiveProjectiles, ActiveProjectileIndicesId, buffers.activeProjectileIndexBuffer);
+                DispatchOptional(shaders.ProjectileShader, shaders.CollectActiveProjectiles, context.projectileThreadGroupsX, "CollectActiveProjectiles");
+            }
+
+            // Always published, including on the skipped paths above: the args then carry
+            // instance count 0 and the renderer draws nothing, rather than replaying a
+            // stale count over a pool that has since been cleared.
+            buffers.CopyProjectileCountToArgs();
         }
 
         /// <summary>
@@ -391,6 +420,26 @@ namespace MassEngine
         private void Dispatch(ComputeShader shader, int kernel, int groupsX, string label)
         {
             Dispatch(shader, kernel, groupsX, 1, label);
+        }
+
+        /// <summary>
+        /// Dispatch for kernels that only drive optional visuals: a missing one degrades to
+        /// a single warning instead of the hard error the simulation kernels report, because
+        /// losing it must not read as a broken pipeline.
+        /// </summary>
+        private void DispatchOptional(ComputeShader shader, int kernel, int groupsX, string label)
+        {
+            if (dispatchListener != null)
+                dispatchListener.OnDispatch(label);
+
+            if (shader == null || kernel < 0)
+            {
+                if (reportedMissingKernels.Add(label))
+                    Debug.LogWarning("MassEngine skipped optional GPU dispatch: " + label + " shader or kernel is missing (reported once) - the visuals it feeds stay off, simulation is unaffected.");
+                return;
+            }
+
+            shader.Dispatch(kernel, Mathf.Max(1, groupsX), 1, 1);
         }
 
         private void Dispatch(ComputeShader shader, int kernel, int groupsX, int groupsY, string label)

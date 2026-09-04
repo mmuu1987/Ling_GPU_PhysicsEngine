@@ -70,6 +70,7 @@ namespace MassEngine
         private ComputePipelineOrchestrator pipelineOrchestrator;
         private MassGpuBufferManager bufferManager;
         private MassGpuRenderDispatcher renderDispatcher;
+        private ProjectileGpuRenderDispatcher projectileRenderDispatcher;
         private BattleTelemetry telemetry;
         private ProjectileGpuManager projectileManager;
 
@@ -192,7 +193,11 @@ namespace MassEngine
                 projectileManager.ClearExpiredProjectiles(Time.time);
             }
 
-            renderDispatcher.Draw(unitTypeRegistry, bufferManager, ResolveRenderBounds());
+            Bounds renderBounds = ResolveRenderBounds();
+            renderDispatcher.Draw(unitTypeRegistry, bufferManager, renderBounds);
+            // Tracers draw straight from projectileBuffer via the GPU active list, so a
+            // paused battle keeps showing frozen shots and a cleared pool shows none.
+            projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds, AttackerTeamId);
 
             if (telemetry != null)
             {
@@ -248,6 +253,7 @@ namespace MassEngine
             bufferManager = new MassGpuBufferManager();
             pipelineOrchestrator = new ComputePipelineOrchestrator(shaders, bufferManager);
             renderDispatcher = new MassGpuRenderDispatcher();
+            projectileRenderDispatcher = new ProjectileGpuRenderDispatcher();
             telemetry = new BattleTelemetry(shaders.SpatialHashShader);
 
             // 弹道管理器无参构造，buffer 由 BufferManager 分配后再 Initialize
@@ -504,6 +510,9 @@ namespace MassEngine
             if (bufferManager != null)
                 bufferManager.ReleaseAll();
             bufferManager = null;
+            if (projectileRenderDispatcher != null)
+                projectileRenderDispatcher.Release();
+            projectileRenderDispatcher = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
             gpuSettingsCache = null;
@@ -950,6 +959,15 @@ namespace MassEngine
                     return systemConfig.runtimeCombatConfig;
                 return fallbackCombat != null ? fallbackCombat : (fallbackCombat = CreateFallbackConfig<RuntimeCombatConfig>());
             }
+        }
+
+        /// <summary>
+        /// Deliberately has no fallback, unlike the configs above: tracers are optional
+        /// visuals, and a missing asset must mean "draw nothing", not "invent defaults".
+        /// </summary>
+        private ProjectileRenderConfig ProjectileRender
+        {
+            get { return systemConfig != null ? systemConfig.projectileRenderConfig : null; }
         }
 
         private static T CreateFallbackConfig<T>() where T : ScriptableObject
