@@ -291,7 +291,7 @@ namespace MassEngine
             // retry the whole Release+Allocate cycle until the configs actually change.
             allocationSignature = CurrentAllocationSignature();
 
-            bufferManager.Allocate(totalAgents, gridCellCount, Simulation.maxAgentsPerCell, Flow.flowFieldResolution, Flow.flowFieldResolution, unitTypeCount);
+            bufferManager.Allocate(totalAgents, gridCellCount, Simulation.maxAgentsPerCell, Flow.flowFieldResolution, Flow.flowFieldResolution, unitTypeCount, ResolveScenarioTeamCount());
             if (!bufferManager.IsAllocated)
             {
                 Debug.LogError("MassEngine: GPU buffer allocation failed; scenario initialization was aborted.", this);
@@ -372,6 +372,17 @@ namespace MassEngine
         /// Runtime flow target override for a team (e.g. from a mouse click). Stored on
         /// the manager — configuration assets are never written.
         /// </summary>
+        /// <summary>
+        /// How many teams can actually receive navigation orders. The engine still builds exactly
+        /// two flow fields, so a third army fights and dies per team but follows the attacker
+        /// field instead of a field of its own. Callers use this to skip orders that would only
+        /// log a warning; folding the flow fields into a per-team array lifts the limit.
+        /// </summary>
+        public int NavigableTeamCount
+        {
+            get { return teamNavigationOverrides.Length; }
+        }
+
         public void SetFlowTargetOverride(int teamId, Vector3 point)
         {
             if (teamId < 0 || teamId >= flowTargetOverrides.Length)
@@ -903,7 +914,7 @@ namespace MassEngine
                     UnitTypeConfig config = scenarioConfig.unitTypes[i];
                     if (config == null || config.spawnConfig == null || config.spawnConfig.unitCount <= 0)
                         continue;
-                    if (config.teamId != 0 && config.teamId != 1)
+                    if (config.teamId < 0)
                         continue;
                     agentCount += config.spawnConfig.unitCount;
                     unitTypeCount++;
@@ -921,6 +932,30 @@ namespace MassEngine
                 scenarioConfigId = scenarioConfig != null ? scenarioConfig.GetInstanceID() : 0,
                 teamLayoutHash = teamLayoutHash
             };
+        }
+
+        /// <summary>
+        /// How many teams the GPU layout has to partition for: the highest teamId that actually
+        /// spawns units, plus one. Never fewer than two, because the flow fields, the telemetry
+        /// HUD and the war-sandbox controller all still assume an attacker and a defender slot
+        /// exist even when a scenario fields only one of them.
+        /// </summary>
+        private int ResolveScenarioTeamCount()
+        {
+            int teamCount = MassGpuBufferManager.DefaultTeamCount;
+            if (scenarioConfig == null || scenarioConfig.unitTypes == null)
+                return teamCount;
+
+            for (int i = 0; i < scenarioConfig.unitTypes.Length; i++)
+            {
+                UnitTypeConfig config = scenarioConfig.unitTypes[i];
+                if (config == null || config.spawnConfig == null || config.spawnConfig.unitCount <= 0 || config.teamId < 0)
+                    continue;
+
+                teamCount = Mathf.Max(teamCount, config.teamId + 1);
+            }
+
+            return teamCount;
         }
 
         private int ComputeGridCellCount()

@@ -365,7 +365,7 @@ namespace MassEngine.Game
                 fontStyle = FontStyle.Bold,
                 fontSize = 18
             };
-            GUILayout.Label(FormatResultTitle(result.phase), titleStyle, GUILayout.Height(26f));
+            GUILayout.Label(FormatResultTitle(result), titleStyle, GUILayout.Height(26f));
             GUILayout.Label(
                 "胜因  " + FormatVictoryReason(result.victoryReason) +
                 "    战斗时长  " + FormatBattleTime(result.battleSeconds));
@@ -401,12 +401,15 @@ namespace MassEngine.Game
             GUILayout.EndArea();
         }
 
-        private static string FormatResultTitle(WarSandboxBattlePhase value)
+        // Not static any more: past two armies only winnerTeamId knows who won, and turning
+        // that into a name needs the controller's roster.
+        private string FormatResultTitle(WarSandboxBattleResult result)
         {
-            switch (value)
+            switch (result.phase)
             {
                 case WarSandboxBattlePhase.AttackerVictory: return "\u653b\u65b9\u80dc\u5229";
                 case WarSandboxBattlePhase.DefenderVictory: return "\u5b88\u65b9\u80dc\u5229";
+                case WarSandboxBattlePhase.ArmyVictory: return FormatTeamName(result.winnerTeamId) + "\u80dc\u5229";
                 default: return "\u540c\u5f52\u4e8e\u5c3d";
             }
         }
@@ -852,8 +855,14 @@ namespace MassEngine.Game
             feedbackUntil = Time.unscaledTime + 2f;
         }
 
-        private static string FormatTeamName(int teamId)
+        // Reads the roster instead of assuming two armies, so a third army is named rather than
+        // labelled "守方". Falls back to the old pair only when the controller has no such army.
+        private string FormatTeamName(int teamId)
         {
+            ArmyRuntimeState army = controller != null ? controller.GetArmy(teamId) : null;
+            if (army != null && !string.IsNullOrEmpty(army.displayName))
+                return army.displayName;
+
             return teamId == 0 ? "攻方" : "守方";
         }
 
@@ -888,6 +897,7 @@ namespace MassEngine.Game
         {
             return value == WarSandboxBattlePhase.AttackerVictory ||
                    value == WarSandboxBattlePhase.DefenderVictory ||
+                   value == WarSandboxBattlePhase.ArmyVictory ||
                    value == WarSandboxBattlePhase.Draw;
         }
 
@@ -899,6 +909,7 @@ namespace MassEngine.Game
                 case WarSandboxBattlePhase.Paused: return "已暂停";
                 case WarSandboxBattlePhase.AttackerVictory: return "攻方胜利";
                 case WarSandboxBattlePhase.DefenderVictory: return "守方胜利";
+                case WarSandboxBattlePhase.ArmyVictory: return "战斗结束";
                 case WarSandboxBattlePhase.Draw: return "同归于尽";
                 default: return "部署";
             }

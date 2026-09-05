@@ -27,10 +27,35 @@ namespace MassEngine
         public float battleSeconds;
         public int attackerFlowRebuilds;
         public int defenderFlowRebuilds;
+        // teamId 0 and 1 kept as named fields because every existing HUD and test reads
+        // them; they mirror the first two entries of the per-team arrays below.
         public TeamSpatialTelemetry attackers;
         public TeamSpatialTelemetry defenders;
+        /// <summary>Survivors per teamId. Filled on both sample paths, including the legacy fallback.</summary>
+        public int[] aliveByTeam;
+        /// <summary>
+        /// Spatial stats per teamId. Only the team-spatial-stats path fills this; the legacy hp
+        /// fallback leaves it null, which is why alive counts live in their own array.
+        /// </summary>
+        public TeamSpatialTelemetry[] teams;
         public double sampleTime;
         public bool valid;
+
+        public int GetAliveCount(int teamId)
+        {
+            return aliveByTeam != null && teamId >= 0 && teamId < aliveByTeam.Length ? aliveByTeam[teamId] : 0;
+        }
+
+        public TeamSpatialTelemetry GetTeam(int teamId)
+        {
+            return teams != null && teamId >= 0 && teamId < teams.Length ? teams[teamId] : default;
+        }
+
+        /// <summary>How many teamIds this sample covers. Zero before the first readback lands.</summary>
+        public int TeamCount
+        {
+            get { return aliveByTeam != null ? aliveByTeam.Length : 0; }
+        }
     }
 
     /// <summary>
@@ -212,16 +237,39 @@ namespace MassEngine
                 return;
 
             int[] values = request.GetData<int>().ToArray();
-            bool attackersValid = TryDecodeTeamSpatialStats(values, 0, out TeamSpatialTelemetry attackers);
-            bool defendersValid = TryDecodeTeamSpatialStats(values, 1, out TeamSpatialTelemetry defenders);
-            snapshot.attackers = attackers;
-            snapshot.defenders = defenders;
-            snapshot.aliveAttackers = attackersValid ? attackers.aliveCount : 0;
-            snapshot.aliveDefenders = defendersValid ? defenders.aliveCount : 0;
+            // The buffer is sized teamCount * TeamStatsSlotsPerTeam, so its length is the only
+            // team count this callback needs; it stays correct when the layout is widened.
+            int teamCount = values.Length / MassGpuBufferManager.TeamStatsSlotsPerTeam;
+            EnsureTeamArrays(teamCount);
+            for (int teamId = 0; teamId < teamCount; teamId++)
+            {
+                // A team with no survivors decodes as invalid (count 0), which zeroes its slot
+                // rather than leaving the previous sample's stats behind.
+                TryDecodeTeamSpatialStats(values, teamId, out snapshot.teams[teamId]);
+                snapshot.aliveByTeam[teamId] = snapshot.teams[teamId].valid ? snapshot.teams[teamId].aliveCount : 0;
+            }
+
+            snapshot.attackers = snapshot.GetTeam(0);
+            snapshot.defenders = snapshot.GetTeam(1);
+            snapshot.aliveAttackers = snapshot.GetAliveCount(0);
+            snapshot.aliveDefenders = snapshot.GetAliveCount(1);
             snapshot.sampleTime = sampleTime;
             // A completed sample is valid even when both teams have zero survivors;
             // victory/draw evaluation depends on observing that terminal state.
             snapshot.valid = true;
+        }
+
+        /// <summary>
+        /// Sizes the per-team arrays for this sample. Reallocates only on a team-count change, so
+        /// a steady-state readback does not allocate every half second.
+        /// </summary>
+        private void EnsureTeamArrays(int teamCount)
+        {
+            int length = Mathf.Max(0, teamCount);
+            if (snapshot.aliveByTeam == null || snapshot.aliveByTeam.Length != length)
+                snapshot.aliveByTeam = new int[length];
+            if (snapshot.teams == null || snapshot.teams.Length != length)
+                snapshot.teams = new TeamSpatialTelemetry[length];
         }
 
         public static bool TryDecodeTeamSpatialStats(int[] values, int teamId, out TeamSpatialTelemetry team)
@@ -285,22 +333,29 @@ namespace MassEngine
 
             NativeArray<int> hpValues = request.GetData<int>();
             int count = Mathf.Min(hpValues.Length, cachedTeamIds.Length);
-            int aliveAttackers = 0;
-            int aliveDefenders = 0;
+
+            // Widest teamId present decides the array length: this path has no buffer layout to
+            // read it from, and a scenario's teamIds are contiguous from 0 by construction.
+            int teamCount = 0;
+            for (int i = 0; i < cachedTeamIds.Length; i++)
+                teamCount = Mathf.Max(teamCount, cachedTeamIds[i] + 1);
+
+            EnsureTeamArrays(teamCount);
+            for (int teamId = 0; teamId < teamCount; teamId++)
+                snapshot.aliveByTeam[teamId] = 0;
 
             for (int i = 0; i < count; i++)
             {
                 if (hpValues[i] <= 0)
                     continue;
 
-                if (cachedTeamIds[i] == 0)
-                    aliveAttackers++;
-                else
-                    aliveDefenders++;
+                int teamId = cachedTeamIds[i];
+                if (teamId >= 0 && teamId < teamCount)
+                    snapshot.aliveByTeam[teamId]++;
             }
 
-            snapshot.aliveAttackers = aliveAttackers;
-            snapshot.aliveDefenders = aliveDefenders;
+            snapshot.aliveAttackers = snapshot.GetAliveCount(0);
+            snapshot.aliveDefenders = snapshot.GetAliveCount(1);
             snapshot.sampleTime = sampleTime;
             snapshot.valid = true;
         }
