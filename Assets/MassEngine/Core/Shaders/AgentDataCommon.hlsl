@@ -23,6 +23,11 @@
 #define FLOW_TARGET_NONE 0
 #define FLOW_TARGET_POINT 1
 #define FLOW_TARGET_AREA 2
+// Per-team stride of the runtime flow scratch buffers. Stats: [0] = cells sampled,
+// [1]/[2] = enemy position sum at 1m precision, [3] = sectors that met the quorum.
+// Targets: one float4 per sector, so this doubles as the sector-count ceiling.
+#define FLOW_STATS_PER_TEAM 4
+#define FLOW_TARGETS_PER_TEAM 8
 // Hard upper bound for the local target search radius (cells). The effective radius is
 // min(localTargetSearchCellRadius, ceil(targetAcquireRadius / cellSize)) and is driven
 // from C# so a configured acquire radius is never silently truncated without a warning.
@@ -85,6 +90,24 @@ struct UnitTypeSettings
     int padding6;
 };
 
+// One team's flow configuration, uploaded once per frame for every team.
+//
+// These used to be uniforms (attackerFlowTargetMode / defenderFlowTargetPoint / ...). They
+// cannot stay uniforms past two teams: the combat kernel reads each agent's OWN team
+// parameters, while a uniform would only ever hold the values of whichever team was
+// dispatched last. That would silently steer every team with one team's target.
+struct TeamFlowParams
+{
+    // x = targetMode (FLOW_TARGET_*), y = flow field enabled, z = dynamic targeting enabled,
+    // w = minimum enemies a sector needs before it becomes a target.
+    int4 modes;
+    // xy = configured target point (world xz), z = dynamic target stop radius,
+    // w = sector count.
+    float4 target;
+    // xy = configured target area center (world xz), zw = area size (world xz).
+    float4 area;
+};
+
 RWStructuredBuffer<AgentData> agentBuffer;
 StructuredBuffer<float2> agentPositionReadBuffer;
 RWStructuredBuffer<float2> agentPositionBuffer;
@@ -106,24 +129,26 @@ StructuredBuffer<uint> gridCountsReadBuffer;
 StructuredBuffer<uint> gridAgentIndicesReadBuffer;
 StructuredBuffer<uint> teamGridCountsReadBuffer;
 StructuredBuffer<uint> teamGridAgentIndicesReadBuffer;
+// Team-partitioned flow field: one float2 per cell per team, addressed as
+// teamId * FlowFieldCellCount() + cellIndex (see FlowFieldTeamCellIndex). Every team
+// shares one grid - same resolution, origin and cell size - which is what lets the cell
+// index stay team-independent.
 RWStructuredBuffer<float2> flowFieldDirections;
-RWStructuredBuffer<float2> defenderFlowFieldDirections;
 StructuredBuffer<float2> flowFieldDirectionsReadBuffer;
-StructuredBuffer<float2> defenderFlowFieldDirectionsReadBuffer;
 Texture2D<uint> densityMap;
 RWTexture2D<uint> densityMapWrite;
 Texture2D<uint> attackerDensityMap;
 Texture2D<uint> defenderDensityMap;
 RWTexture2D<uint> attackerDensityMapWrite;
 RWTexture2D<uint> defenderDensityMapWrite;
-RWStructuredBuffer<uint> runtimeAttackerTargetDensity;
-RWStructuredBuffer<int> runtimeAttackerFlowStats;
-RWStructuredBuffer<float4> runtimeAttackerFlowTargets;
-RWTexture2D<float4> runtimeAttackerFlowPreviewTexture;
-RWStructuredBuffer<uint> runtimeDefenderTargetDensity;
-RWStructuredBuffer<int> runtimeDefenderFlowStats;
-RWStructuredBuffer<float4> runtimeDefenderFlowTargets;
-RWTexture2D<float4> runtimeDefenderFlowPreviewTexture;
+// Team-partitioned runtime flow scratch, all indexed off flowTeamId by the flow kernels.
+// Strides: cellCount, FLOW_STATS_PER_TEAM, FLOW_TARGETS_PER_TEAM.
+RWStructuredBuffer<uint> runtimeFlowTargetDensity;
+RWStructuredBuffer<int> runtimeFlowStats;
+RWStructuredBuffer<float4> runtimeFlowTargets;
+// Rebound per dispatch to the team being rebuilt, so the shader keeps a single texture
+// however many teams exist.
+RWTexture2D<float4> runtimeFlowPreviewTexture;
 int runtimeFlowPreviewMode;
 int flowPreviewEnabled;
 
@@ -185,28 +210,18 @@ float cellSize;
 uint maxAgentsPerCell;
 float boundaryPadding;
 
-int flowFieldEnabled;
+// The one flow grid every team shares. Per-team resolution/origin would mean per-team
+// cell indices, which is the simplification this whole layer is built on.
 int2 flowFieldResolution;
 float2 flowFieldOrigin;
 float flowFieldCellSize;
-int attackerFlowTargetMode;
-float4 attackerFlowTargetPoint;
-float4 attackerFlowTargetArea;
-int defenderFlowTargetMode;
-float4 defenderFlowTargetPoint;
-float4 defenderFlowTargetArea;
-int runtimeDynamicAttackerFlowEnabled;
-int runtimeDynamicDefenderFlowEnabled;
-int dynamicFlowSectorCount;
-float dynamicFlowTargetStopRadius;
-int dynamicFlowMinDefendersPerTarget;
-int dynamicDefenderFlowSectorCount;
-float dynamicDefenderFlowTargetStopRadius;
-int dynamicDefenderFlowMinAttackersPerTarget;
-int defenderFlowFieldEnabled;
-int2 defenderFlowFieldResolution;
-float2 defenderFlowFieldOrigin;
-float defenderFlowFieldCellSize;
+// One record per team, indexed by raw teamId, length teamCount. Replaced the pairs of
+// attacker*/defender* flow uniforms.
+StructuredBuffer<TeamFlowParams> teamFlowParamsReadBuffer;
+// Which team the flow kernels are rebuilding this dispatch. One team per dispatch, so the
+// kernels can keep their 1D thread mapping over cells and read a single team's parameters.
+// Meaningless to the combat kernel - agents there read their own team's record instead.
+int flowTeamId;
 
 #define MAX_STATIC_OBSTACLES 8
 int staticObstacleCount;
@@ -567,57 +582,37 @@ float2 FlowFieldCellCenter(int2 cell)
     return flowFieldOrigin + ((float2)cell + 0.5) * flowFieldCellSize;
 }
 
-int2 PositionXzToDefenderFlowFieldCell(float2 positionXZ)
+// Where a team's slice of the flow field starts. Teams share the grid, so this is just a
+// stride, but going through one helper keeps every kernel honest about the partitioning.
+uint FlowFieldTeamCellIndex(int teamId, uint cellIndex)
 {
-    float2 local = (positionXZ - defenderFlowFieldOrigin) / max(defenderFlowFieldCellSize, 0.0001);
-    int2 cell = (int2)floor(local);
-    cell.x = clamp(cell.x, 0, defenderFlowFieldResolution.x - 1);
-    cell.y = clamp(cell.y, 0, defenderFlowFieldResolution.y - 1);
-    return cell;
+    return (uint)max(0, teamId) * FlowFieldCellCount() + cellIndex;
 }
 
-int2 PositionToDefenderFlowFieldCell(float3 position)
+// A team with no allocated record navigates by nothing rather than by team 0's field: an
+// out-of-range teamId must never be clamped into another team's slice.
+TeamFlowParams GetTeamFlowParams(int teamId)
 {
-    return PositionXzToDefenderFlowFieldCell(position.xz);
+    if (teamId >= 0 && teamId < teamCount)
+        return teamFlowParamsReadBuffer[teamId];
+
+    TeamFlowParams disabled;
+    disabled.modes = int4(FLOW_TARGET_NONE, 0, 0, 0);
+    disabled.target = float4(0.0, 0.0, 0.0, 0.0);
+    disabled.area = float4(0.0, 0.0, 0.0, 0.0);
+    return disabled;
 }
 
-uint DefenderFlowFieldCellToIndex(int2 cell)
+float2 SampleFlowDirection(uint index, int teamId, float3 position)
 {
-    return (uint)(cell.y * defenderFlowFieldResolution.x + cell.x);
-}
-
-uint DefenderFlowFieldCellCount()
-{
-    return (uint)max(1, defenderFlowFieldResolution.x * defenderFlowFieldResolution.y);
-}
-
-float2 DefenderFlowFieldCellCenter(int2 cell)
-{
-    return defenderFlowFieldOrigin + ((float2)cell + 0.5) * defenderFlowFieldCellSize;
-}
-
-float2 SampleFlowDirection(uint index, float3 position)
-{
-    if (flowFieldEnabled == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
+    if (teamId < 0 || teamId >= teamCount)
         return 0.0;
 
-    float2 direction = flowFieldDirectionsReadBuffer[FlowFieldCellToIndex(PositionToFlowFieldCell(position))];
-    float lengthSqr = dot(direction, direction);
-    if (lengthSqr <= 0.0001)
+    if (teamFlowParamsReadBuffer[teamId].modes.y == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
         return 0.0;
 
-    if (lengthSqr > 1.0)
-        direction *= rsqrt(lengthSqr);
-
-    return direction;
-}
-
-float2 SampleDefenderFlowDirection(uint index, float3 position)
-{
-    if (defenderFlowFieldEnabled == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
-        return 0.0;
-
-    float2 direction = defenderFlowFieldDirectionsReadBuffer[DefenderFlowFieldCellToIndex(PositionToDefenderFlowFieldCell(position))];
+    uint cell = FlowFieldTeamCellIndex(teamId, FlowFieldCellToIndex(PositionToFlowFieldCell(position)));
+    float2 direction = flowFieldDirectionsReadBuffer[cell];
     float lengthSqr = dot(direction, direction);
     if (lengthSqr <= 0.0001)
         return 0.0;
@@ -1028,14 +1023,6 @@ bool IsEnemy(uint selfIndex, uint otherIndex)
         return false;
 
     return teamIdReadBuffer[selfIndex] != teamIdReadBuffer[otherIndex];
-}
-
-// Which flow field and flow-target configuration a team reads. Still a two-way split
-// because the flow layer itself is still two fields; every team other than the defender
-// follows the attacker field. Step 2 (flow folding) is what makes this per-team.
-bool UsesDefenderFlowSlot(uint index)
-{
-    return enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == defenderTeamId;
 }
 
 int TeamStanceOf(uint index)

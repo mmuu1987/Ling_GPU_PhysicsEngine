@@ -86,45 +86,24 @@ namespace MassEngine
         // Flow fields
         public static readonly int FlowFieldDirectionsId = Shader.PropertyToID("flowFieldDirections");
         public static readonly int FlowFieldDirectionsReadBufferId = Shader.PropertyToID("flowFieldDirectionsReadBuffer");
-        public static readonly int FlowFieldEnabledId = Shader.PropertyToID("flowFieldEnabled");
         public static readonly int FlowFieldResolutionId = Shader.PropertyToID("flowFieldResolution");
         public static readonly int FlowFieldOriginId = Shader.PropertyToID("flowFieldOrigin");
         public static readonly int FlowFieldCellSizeId = Shader.PropertyToID("flowFieldCellSize");
-        public static readonly int AttackerFlowTargetModeId = Shader.PropertyToID("attackerFlowTargetMode");
-        public static readonly int AttackerFlowTargetPointId = Shader.PropertyToID("attackerFlowTargetPoint");
-        public static readonly int AttackerFlowTargetAreaId = Shader.PropertyToID("attackerFlowTargetArea");
-        public static readonly int DefenderFlowTargetModeId = Shader.PropertyToID("defenderFlowTargetMode");
-        public static readonly int DefenderFlowTargetPointId = Shader.PropertyToID("defenderFlowTargetPoint");
-        public static readonly int DefenderFlowTargetAreaId = Shader.PropertyToID("defenderFlowTargetArea");
-        public static readonly int DefenderFlowFieldDirectionsId = Shader.PropertyToID("defenderFlowFieldDirections");
-        public static readonly int DefenderFlowFieldDirectionsReadBufferId = Shader.PropertyToID("defenderFlowFieldDirectionsReadBuffer");
-        public static readonly int DefenderFlowFieldEnabledId = Shader.PropertyToID("defenderFlowFieldEnabled");
-        public static readonly int DefenderFlowFieldResolutionId = Shader.PropertyToID("defenderFlowFieldResolution");
-        public static readonly int DefenderFlowFieldOriginId = Shader.PropertyToID("defenderFlowFieldOrigin");
-        public static readonly int DefenderFlowFieldCellSizeId = Shader.PropertyToID("defenderFlowFieldCellSize");
+        /// <summary>Per-team flow configuration. Replaced the attacker*/defender* uniform pairs.</summary>
+        public static readonly int TeamFlowParamsReadBufferId = Shader.PropertyToID("teamFlowParamsReadBuffer");
+        /// <summary>Which team the flow kernels rebuild this dispatch.</summary>
+        public static readonly int FlowTeamIdId = Shader.PropertyToID("flowTeamId");
         public static readonly int StaticObstacleCountId = Shader.PropertyToID("staticObstacleCount");
         public static readonly int StaticObstaclePaddingId = Shader.PropertyToID("staticObstaclePadding");
         public static readonly int StaticObstacleRectsId = Shader.PropertyToID("staticObstacleRects");
 
         // Runtime dynamic flow
-        public static readonly int RuntimeAttackerTargetDensityId = Shader.PropertyToID("runtimeAttackerTargetDensity");
-        public static readonly int RuntimeAttackerFlowStatsId = Shader.PropertyToID("runtimeAttackerFlowStats");
-        public static readonly int RuntimeAttackerFlowTargetsId = Shader.PropertyToID("runtimeAttackerFlowTargets");
-        public static readonly int RuntimeAttackerFlowPreviewTextureId = Shader.PropertyToID("runtimeAttackerFlowPreviewTexture");
-        public static readonly int RuntimeDefenderTargetDensityId = Shader.PropertyToID("runtimeDefenderTargetDensity");
-        public static readonly int RuntimeDefenderFlowStatsId = Shader.PropertyToID("runtimeDefenderFlowStats");
-        public static readonly int RuntimeDefenderFlowTargetsId = Shader.PropertyToID("runtimeDefenderFlowTargets");
-        public static readonly int RuntimeDefenderFlowPreviewTextureId = Shader.PropertyToID("runtimeDefenderFlowPreviewTexture");
+        public static readonly int RuntimeFlowTargetDensityId = Shader.PropertyToID("runtimeFlowTargetDensity");
+        public static readonly int RuntimeFlowStatsId = Shader.PropertyToID("runtimeFlowStats");
+        public static readonly int RuntimeFlowTargetsId = Shader.PropertyToID("runtimeFlowTargets");
+        public static readonly int RuntimeFlowPreviewTextureId = Shader.PropertyToID("runtimeFlowPreviewTexture");
         public static readonly int RuntimeFlowPreviewModeId = Shader.PropertyToID("runtimeFlowPreviewMode");
         public static readonly int FlowPreviewEnabledId = Shader.PropertyToID("flowPreviewEnabled");
-        public static readonly int RuntimeDynamicAttackerFlowEnabledId = Shader.PropertyToID("runtimeDynamicAttackerFlowEnabled");
-        public static readonly int RuntimeDynamicDefenderFlowEnabledId = Shader.PropertyToID("runtimeDynamicDefenderFlowEnabled");
-        public static readonly int DynamicFlowSectorCountId = Shader.PropertyToID("dynamicFlowSectorCount");
-        public static readonly int DynamicFlowTargetStopRadiusId = Shader.PropertyToID("dynamicFlowTargetStopRadius");
-        public static readonly int DynamicFlowMinDefendersPerTargetId = Shader.PropertyToID("dynamicFlowMinDefendersPerTarget");
-        public static readonly int DynamicDefenderFlowSectorCountId = Shader.PropertyToID("dynamicDefenderFlowSectorCount");
-        public static readonly int DynamicDefenderFlowTargetStopRadiusId = Shader.PropertyToID("dynamicDefenderFlowTargetStopRadius");
-        public static readonly int DynamicDefenderFlowMinAttackersPerTargetId = Shader.PropertyToID("dynamicDefenderFlowMinAttackersPerTarget");
 
         // Density map
         public static readonly int DensityMapId = Shader.PropertyToID("densityMap");

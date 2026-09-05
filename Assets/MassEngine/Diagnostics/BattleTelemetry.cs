@@ -34,6 +34,11 @@ namespace MassEngine
         /// <summary>Survivors per teamId. Filled on both sample paths, including the legacy fallback.</summary>
         public int[] aliveByTeam;
         /// <summary>
+        /// Flow rebuilds per teamId, grown on demand. attackerFlowRebuilds/defenderFlowRebuilds
+        /// mirror entries 0 and 1; a third army's rebuilds only show up here.
+        /// </summary>
+        public int[] flowRebuildsByTeam;
+        /// <summary>
         /// Spatial stats per teamId. Only the team-spatial-stats path fills this; the legacy hp
         /// fallback leaves it null, which is why alive counts live in their own array.
         /// </summary>
@@ -149,9 +154,18 @@ namespace MassEngine
 
         public void NotifyFlowRebuild(int teamId)
         {
+            if (teamId < 0)
+                return;
+
+            if (snapshot.flowRebuildsByTeam == null || snapshot.flowRebuildsByTeam.Length <= teamId)
+                System.Array.Resize(ref snapshot.flowRebuildsByTeam, teamId + 1);
+            snapshot.flowRebuildsByTeam[teamId]++;
+
+            // Teams 0 and 1 keep their named counters because every existing HUD and test reads
+            // those; before per-team flow fields every other team was miscounted as the defender.
             if (teamId == 0)
                 snapshot.attackerFlowRebuilds++;
-            else
+            else if (teamId == 1)
                 snapshot.defenderFlowRebuilds++;
         }
 

@@ -8,9 +8,9 @@ namespace MassEngine.Game
     /// designer/player intent into MassEngine runtime overrides; it never writes config
     /// assets and owns no duplicate simulation.
     ///
-    /// Army slots are indexed by raw teamId and sized from the scenario. Combat and victory
-    /// are per team, but navigation orders only reach the teams the engine keeps a flow field
-    /// for (MassEngineManager.NavigableTeamCount), which is still two.
+    /// Army slots are indexed by raw teamId and sized from the scenario. Combat, victory and
+    /// navigation are all per team: every army in the scenario owns a slice of the flow field
+    /// and takes its own orders.
     /// </summary>
     [DefaultExecutionOrder(-50)]
     [DisallowMultipleComponent]
@@ -595,9 +595,9 @@ namespace MassEngine.Game
         }
 
         /// <summary>
-        /// The order is recorded for every army, but only the teams the engine keeps a flow field
-        /// for can act on its navigation half. A team past that limit still fights, dies and wins
-        /// per team; it just walks the attacker field until the flow fields become per-team.
+        /// Whether the engine allocated a flow field slice for this team. Every team in the
+        /// scenario does; the check remains as a guard against an order for a team the engine
+        /// never heard of (a stale HUD selection after the scenario shrank, say).
         /// </summary>
         private bool IsNavigableTeam(int teamId)
         {
