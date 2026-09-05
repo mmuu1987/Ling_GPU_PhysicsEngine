@@ -82,7 +82,7 @@ float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPositi
 
 float2 BlendPursuitWithNavigation(uint selfIndex, float3 position, float2 pursuitDirection, float targetDistance, UnitTypeSettings settings)
 {
-    float2 navigationDirection = IsDefenderTeam(selfIndex)
+    float2 navigationDirection = UsesDefenderFlowSlot(selfIndex)
         ? SampleDefenderFlowDirection(selfIndex, position)
         : SampleFlowDirection(selfIndex, position);
     if (dot(navigationDirection, navigationDirection) <= 0.0001)
@@ -276,8 +276,12 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     }
 
     float2 desiredDirection = 0.0;
-    bool isDefender = IsDefenderTeam(id.x);
-    bool defenderHoldingPosition = isDefender && defenderMovementMode == DEFENDER_MODE_HOLD_POSITION;
+    // Two independent questions that used to be one flag: which flow configuration this
+    // team reads (still attacker-or-defender until step 2 folds the flow layer), and what
+    // this team's stance is (now per-team).
+    bool usesDefenderFlow = UsesDefenderFlowSlot(id.x);
+    int teamStance = TeamStanceOf(id.x);
+    bool holdingPosition = IsHoldStance(id.x);
     bool wasAttacking = agent.currentState == STATE_ATTACK;
     bool inAttackHold = false;
     bool hasEngageTarget = false;
@@ -330,7 +334,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
             else
             {
                 hasEngageTarget = true;
-                if (!defenderHoldingPosition)
+                if (!holdingPosition)
                 {
                     float2 toSlot = engagementPoint - agent.position.xz;
                     float2 pursuitDirection = dot(toSlot, toSlot) > 0.0001 ? normalize(toSlot) : normalize(toTarget);
@@ -343,32 +347,31 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     if (targetIndex < 0)
     {
         engagementSlotAssignmentBuffer[id.x] = -1;
-        if (isDefender)
+        if (holdingPosition)
         {
-            if (defenderHoldingPosition)
+            // no locomotion goal; separation below still resolves overlap
+        }
+        else if (teamStance == TEAM_STANCE_GUARD_HOME)
+        {
+            // Nothing uploads GuardHome yet. It is the leash an explicit "defend this spot"
+            // order will use, kept reachable so the branch does not rot in the meantime.
+            float2 toHome = homePositionReadBuffer[id.x].xz - agent.position.xz;
+            if (dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius)
+                desiredDirection = normalize(toHome);
+        }
+        else if (usesDefenderFlow)
+        {
+            desiredDirection = SampleDefenderFlowDirection(id.x, agent.position);
+            if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
+                defenderFlowTargetMode != FLOW_TARGET_NONE &&
+                settings.attractionStrength > 0.0)
             {
-                // no locomotion goal; separation below still resolves overlap
-            }
-            else if (defenderMovementMode == DEFENDER_MODE_FLOW_FIELD)
-            {
-                desiredDirection = SampleDefenderFlowDirection(id.x, agent.position);
-                if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
-                    defenderFlowTargetMode != FLOW_TARGET_NONE &&
-                    settings.attractionStrength > 0.0)
-                {
-                    // Attraction fallback: when the flow field yields no direction (not yet
-                    // generated, or outside coverage) steer straight at the configured target.
-                    float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, defenderFlowTargetMode, defenderFlowTargetPoint, defenderFlowTargetArea);
-                    float stopRadius = max(0.0, dynamicDefenderFlowTargetStopRadius);
-                    if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
-                        desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
-                }
-            }
-            else
-            {
-                float2 toHome = homePositionReadBuffer[id.x].xz - agent.position.xz;
-                if (dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius)
-                    desiredDirection = normalize(toHome);
+                // Attraction fallback: when the flow field yields no direction (not yet
+                // generated, or outside coverage) steer straight at the configured target.
+                float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, defenderFlowTargetMode, defenderFlowTargetPoint, defenderFlowTargetArea);
+                float stopRadius = max(0.0, dynamicDefenderFlowTargetStopRadius);
+                if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
+                    desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
             }
         }
         else
@@ -442,12 +445,12 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     // (1 - d*dtSim) drifted the damp/steer equilibrium ~20% between LOD cadences.
     float dampPerFrame = saturate(1.0 - settings.velocityDamping * dt);
     bool steersThisFrame = agent.currentState != STATE_ATTACK &&
-                           !defenderHoldingPosition &&
+                           !holdingPosition &&
                            dot(desiredDirection, desiredDirection) > 0.0001;
     if (!steersThisFrame)
         agent.velocity *= pow(dampPerFrame, (float)simInterval);
 
-    if (defenderHoldingPosition)
+    if (holdingPosition)
     {
         // Hold-position defenders keep separation (overlap resolution) but never chase a
         // locomotion goal; their displacement is clamped to the guard radius around home.

@@ -204,7 +204,6 @@ namespace MassEngine
             // actually allocated or a stray id writes out of bounds.
             shaders.SetInt(TeamCountId, Mathf.Max(1, buffers.TeamCount));
             shaders.SetInt(LocalTargetSearchCellRadiusId, Mathf.Max(1, context.localTargetSearchCellRadius));
-            shaders.SetInt(DefenderMovementModeId, context.defenderMovementMode);
             shaders.SetFloat(DefenderGuardRadiusId, Mathf.Max(0f, context.defenderGuardRadius));
 
             UploadTeamFlowConstants(context.attackerFlow, FlowFieldEnabledId, FlowFieldResolutionId, FlowFieldOriginId, FlowFieldCellSizeId,
@@ -366,6 +365,9 @@ namespace MassEngine
             SetBuffer(combat, simulate, TeamGridCountsReadBufferId, buffers.teamGridCountsBuffer);
             SetBuffer(combat, simulate, TeamGridAgentIndicesReadBufferId, buffers.teamGridAgentIndicesBuffer);
             SetBuffer(combat, simulate, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
+            // Only SimulateCombatAndAccumulateDamage reads stances: the locomotion branch and
+            // the target-usability test both live there. Other kernels never ask.
+            SetBuffer(combat, simulate, TeamStanceReadBufferId, buffers.teamStanceBuffer);
             SetBuffer(combat, simulate, HpBufferId, buffers.combatBuffers.hpWriteBuffer);
             SetBuffer(combat, simulate, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             SetBuffer(combat, simulate, TargetAgentIndexBufferId, buffers.combatBuffers.targetAgentIndexBuffer);

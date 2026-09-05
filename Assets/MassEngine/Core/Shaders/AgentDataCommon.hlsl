@@ -14,8 +14,12 @@
 #define STATE_ENGAGE 2
 #define STATE_ATTACK 3
 #define STATE_DEAD 4
-#define DEFENDER_MODE_HOLD_POSITION 0
-#define DEFENDER_MODE_FLOW_FIELD 1
+// Per-team stance, uploaded in teamStanceReadBuffer and indexed by raw teamId. Hold is 0
+// so an un-uploaded buffer freezes everyone rather than marching teams that should not.
+// GuardHome has no producer yet; it keeps the leash branch reachable for a future order.
+#define TEAM_STANCE_HOLD 0
+#define TEAM_STANCE_ADVANCE 1
+#define TEAM_STANCE_GUARD_HOME 2
 #define FLOW_TARGET_NONE 0
 #define FLOW_TARGET_POINT 1
 #define FLOW_TARGET_AREA 2
@@ -199,7 +203,6 @@ int dynamicFlowMinDefendersPerTarget;
 int dynamicDefenderFlowSectorCount;
 float dynamicDefenderFlowTargetStopRadius;
 int dynamicDefenderFlowMinAttackersPerTarget;
-int defenderMovementMode;
 int defenderFlowFieldEnabled;
 int2 defenderFlowFieldResolution;
 float2 defenderFlowFieldOrigin;
@@ -215,9 +218,13 @@ int battleStarted;
 int attackerTeamId;
 int defenderTeamId;
 // How many teams the team-partitioned buffers (teamGridCounts / teamGridAgentIndices /
-// teamSpatialStats) were sized for. Any teamId outside [0, teamCount) must be skipped,
-// never clamped: clamping would silently merge a stray team into team 0's bucket.
+// teamSpatialStats / teamStanceReadBuffer) were sized for. Any teamId outside
+// [0, teamCount) must be skipped, never clamped: clamping would silently merge a stray
+// team into team 0's bucket.
 int teamCount;
+// One TEAM_STANCE_* value per team, indexed by raw teamId. This replaced the single
+// defenderMovementMode uniform: stance is a property of a team, not of "the defender".
+StructuredBuffer<int> teamStanceReadBuffer;
 int localTargetSearchCellRadius;
 float defenderGuardRadius;
 
@@ -1023,9 +1030,30 @@ bool IsEnemy(uint selfIndex, uint otherIndex)
     return teamIdReadBuffer[selfIndex] != teamIdReadBuffer[otherIndex];
 }
 
-bool IsDefenderTeam(uint index)
+// Which flow field and flow-target configuration a team reads. Still a two-way split
+// because the flow layer itself is still two fields; every team other than the defender
+// follows the attacker field. Step 2 (flow folding) is what makes this per-team.
+bool UsesDefenderFlowSlot(uint index)
 {
     return enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == defenderTeamId;
+}
+
+int TeamStanceOf(uint index)
+{
+    int teamId = teamIdReadBuffer[index];
+    // A teamId outside the allocated range has no stance record. Advance matches what such
+    // an agent did before stances existed: it fell through to the attacker branch.
+    if (teamId < 0 || teamId >= teamCount)
+        return TEAM_STANCE_ADVANCE;
+
+    return teamStanceReadBuffer[teamId];
+}
+
+// Gated on enableTwoTeamCombat so a crowd-only frame (combat disabled) leaves nobody
+// holding, exactly as the old defender predicate did.
+bool IsHoldStance(uint index)
+{
+    return enableTwoTeamCombat != 0 && TeamStanceOf(index) == TEAM_STANCE_HOLD;
 }
 
 // retainExisting: true when validating an agent's CURRENT target (hysteresis applies),
@@ -1037,22 +1065,16 @@ bool TargetIsUsable(uint selfIndex, uint otherIndex, float distSqr, float3 selfP
     if (selfIndex == otherIndex || !IsAliveIndex(otherIndex) || !IsEnemy(selfIndex, otherIndex))
         return false;
 
-    if (IsDefenderTeam(selfIndex))
+    if (IsHoldStance(selfIndex))
     {
-        if (defenderMovementMode == DEFENDER_MODE_HOLD_POSITION)
-        {
-            float holdRange = retainExisting ? AttackExitRange(selfIndex) : GetAttackRange(selfIndex);
-            return distSqr <= holdRange * holdRange;
-        }
-
-        // FLOW_FIELD defenders: aggro-radius only. A spawn-anchored chase leash broke
-        // this doctrine outright (defenders relocated by their flow field could never
-        // acquire targets again); leashing belongs to a future explicit doctrine, not here.
-        float defenderAcquireRadius = GetTargetAcquireRadius(selfIndex);
-        float aggroSqr = defenderAcquireRadius * defenderAcquireRadius;
-        return distSqr <= aggroSqr;
+        float holdRange = retainExisting ? AttackExitRange(selfIndex) : GetAttackRange(selfIndex);
+        return distSqr <= holdRange * holdRange;
     }
 
+    // Everyone not holding acquires on aggro radius alone - advancing defenders used to
+    // take a separate branch with identical arithmetic. No spawn-anchored chase leash
+    // here: it broke the doctrine outright (defenders relocated by their flow field could
+    // never acquire targets again); leashing belongs to an explicit order, not to this.
     float acquireRadius = GetTargetAcquireRadius(selfIndex);
     float acquireSqr = acquireRadius * acquireRadius;
     return distSqr <= acquireSqr;
@@ -1147,11 +1169,14 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     result.bestEnemyIndex = -1;
     result.bestEnemyScore = 1e20;
     result.separation = 0.0;
-    // Team buckets are indexed by raw teamId, so the enemy bucket is the opposing team's id
-    // rather than a fixed 0/1 slot. A teamId outside [0, teamCount) disables the enemy sweep
-    // instead of reading past the end of the team grid.
-    uint enemyTeamSlot = IsDefenderTeam(selfIndex) ? (uint)attackerTeamId : (uint)defenderTeamId;
-    bool sweepEnemies = searchForEnemy && enemyTeamSlot < (uint)max(0, teamCount);
+    // Every team except the agent's own is hostile (no alliance concept yet), so the sweep
+    // walks all teamCount-1 opposing buckets instead of one fixed slot. This is the only
+    // place where widening the team dimension actually costs more work per agent. A teamId
+    // outside [0, teamCount) has no bucket of its own and disables the sweep rather than
+    // reading past the end of the team grid.
+    int selfTeamId = teamIdReadBuffer[selfIndex];
+    uint teamSlotCount = (uint)max(0, teamCount);
+    bool sweepEnemies = searchForEnemy && selfTeamId >= 0 && (uint)selfTeamId < teamSlotCount;
 
     [loop]
     for (int dz = -queryCellRadius; dz <= queryCellRadius; dz++)
@@ -1166,23 +1191,30 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
             uint cellIndex = CellToIndex(cell);
             if (sweepEnemies)
             {
-                uint enemyCellIndex = enemyTeamSlot * gridCellCount + cellIndex;
-                uint enemyCount = min(teamGridCountsReadBuffer[enemyCellIndex], maxAgentsPerCell);
-                for (uint i = 0; i < enemyCount; i++)
+                [loop]
+                for (uint enemyTeamSlot = 0; enemyTeamSlot < teamSlotCount; enemyTeamSlot++)
                 {
-                    uint otherIndex = teamGridAgentIndicesReadBuffer[enemyCellIndex * maxAgentsPerCell + i];
-                    if (!IsAliveIndex(otherIndex))
+                    if (enemyTeamSlot == (uint)selfTeamId)
                         continue;
 
-                    float2 toOther = agentPositionReadBuffer[otherIndex] - selfPosition;
-                    float distSqr = dot(toOther, toOther);
-                    if (TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
+                    uint enemyCellIndex = enemyTeamSlot * gridCellCount + cellIndex;
+                    uint enemyCount = min(teamGridCountsReadBuffer[enemyCellIndex], maxAgentsPerCell);
+                    for (uint i = 0; i < enemyCount; i++)
                     {
-                        float score = TargetSelectionScore(selfIndex, otherIndex, distSqr);
-                        if (score < result.bestEnemyScore)
+                        uint otherIndex = teamGridAgentIndicesReadBuffer[enemyCellIndex * maxAgentsPerCell + i];
+                        if (!IsAliveIndex(otherIndex))
+                            continue;
+
+                        float2 toOther = agentPositionReadBuffer[otherIndex] - selfPosition;
+                        float distSqr = dot(toOther, toOther);
+                        if (TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
                         {
-                            result.bestEnemyScore = score;
-                            result.bestEnemyIndex = (int)otherIndex;
+                            float score = TargetSelectionScore(selfIndex, otherIndex, distSqr);
+                            if (score < result.bestEnemyScore)
+                            {
+                                result.bestEnemyScore = score;
+                                result.bestEnemyIndex = (int)otherIndex;
+                            }
                         }
                     }
                 }

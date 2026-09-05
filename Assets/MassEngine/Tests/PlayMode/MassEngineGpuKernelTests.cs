@@ -48,6 +48,10 @@ namespace MassEngine.Tests
         private Vector3 attackerFlowTargetPoint;
         private int attackerFlowMinPerTarget = 8;
         private int gridMaxAgentsPerCell = 16;
+        // Per-team stance uploaded before every dispatch. Null means the historical two-team
+        // default: attacker advances, defender holds - which is what defenderMovementMode = 0
+        // expressed back when stance was a single uniform owned by "the defender".
+        private int[] fixtureTeamStances;
         private int staticObstacleCount;
         private float staticObstaclePadding;
         private readonly Vector4[] staticObstacleRects = new Vector4[StaticObstacleMath.MaxObstacleCount];
@@ -76,6 +80,7 @@ namespace MassEngine.Tests
                 Assert.Ignore("Compute shaders unavailable on this device; GPU kernel tests skipped.");
 
             gridMaxAgentsPerCell = 16;
+            fixtureTeamStances = null;
             staticObstacleCount = 0;
             staticObstaclePadding = 0f;
             for (int i = 0; i < staticObstacleRects.Length; i++)
@@ -428,6 +433,49 @@ namespace MassEngine.Tests
         {
             buffers.UploadInitialData(initialAgents, initialTeamIds, initialHp, initialUnitTypeIndices);
             dispatchedFrames = 0;
+        }
+
+        /// <summary>
+        /// Sizes the stance table to whatever team count the buffers were allocated with, so a
+        /// widened layout is filled to the end instead of leaving trailing teams on the
+        /// zero-initialized Hold that a short array would keep.
+        /// </summary>
+        private void UploadFixtureTeamStances()
+        {
+            int teamCount = buffers.TeamCount;
+            int[] stances = new int[teamCount];
+            for (int teamId = 0; teamId < teamCount; teamId++)
+            {
+                stances[teamId] = fixtureTeamStances != null && teamId < fixtureTeamStances.Length
+                    ? fixtureTeamStances[teamId]
+                    : (int)(teamId == 1 ? TeamStance.Hold : TeamStance.Advance);
+            }
+
+            buffers.UploadTeamStances(stances);
+        }
+
+        /// <summary>
+        /// Asserts every agent of one team either left its spawn or did not move at all,
+        /// comparing against initialAgents because ResetBattlefield respawns from that array.
+        /// </summary>
+        private void AssertTeamDisplacement(Vector2[] positions, int teamId, bool expectMoved)
+        {
+            int inspected = 0;
+            for (int i = 0; i < fixtureTotalAgents; i++)
+            {
+                if (initialTeamIds[i] != teamId)
+                    continue;
+
+                inspected++;
+                Vector2 spawn = new Vector2(initialAgents[i].position.x, initialAgents[i].position.z);
+                float moved = Vector2.Distance(positions[i], spawn);
+                if (expectMoved)
+                    Assert.That(moved, Is.GreaterThan(0.1f), "advancing agent " + i + " (team " + teamId + ") never left its spawn");
+                else
+                    Assert.That(moved, Is.LessThan(0.001f), "holding agent " + i + " (team " + teamId + ") drifted " + moved + "m");
+            }
+
+            Assert.That(inspected, Is.GreaterThan(0), "no agent belongs to team " + teamId);
         }
 
         [UnityTest]
@@ -1167,6 +1215,99 @@ namespace MassEngine.Tests
                 Assert.That(widenedPositions[i], Is.EqualTo(baselinePositions[i]), "agent " + i + " position diverged after widening teamCount");
         }
 
+        [UnityTest]
+        public IEnumerator EveryNonSelfTeamIsHostile()
+        {
+            // Step 3 of multi-group navigation: the enemy sweep walks every bucket except the
+            // agent's own, instead of the single "opposite" bucket it used to pick. Nobody ever
+            // scanned team 2's bucket before, so a third army was invisible - it took zero
+            // damage while shooting the two original teams freely.
+            const int frames = 40;
+            const int thirdTeamId = 2;
+            const int thirdArmyStart = AttackerCount + DefenderCount / 2;
+
+            // The back half of the defenders defects to a third army. Every team holds, so this
+            // measures hostility alone: SetUp parks the lines 1m apart, inside the attack range
+            // a holding stance acquires on, and nobody moves to muddy the comparison.
+            for (int i = thirdArmyStart; i < TotalAgents; i++)
+                initialTeamIds[i] = thirdTeamId;
+            fixtureTeamStances = new[] { (int)TeamStance.Hold, (int)TeamStance.Hold, (int)TeamStance.Hold };
+
+            AllocateFixtureBuffers(thirdTeamId + 1);
+            int[] hp = new int[fixtureTotalAgents];
+            Vector2[] positions = new Vector2[fixtureTotalAgents];
+            int[] targets = new int[fixtureTotalAgents];
+            yield return RunFixtureBattle(frames, hp, positions, targets);
+
+            // Outbound: the third army sees the other two. Per agent, because every one of them
+            // has an enemy within attack range.
+            for (int i = thirdArmyStart; i < TotalAgents; i++)
+            {
+                Assert.That(targets[i], Is.GreaterThanOrEqualTo(0), "third-army agent " + i + " found no enemy at all");
+                Assert.That(initialTeamIds[targets[i]], Is.Not.EqualTo(thirdTeamId),
+                    "third-army agent " + i + " targeted its own team " + targets[i]);
+            }
+
+            // Inbound: somebody sweeps the third army's bucket. Counted over the team rather
+            // than asserted per agent - which enemy an attacker settles on is decided by the
+            // selection score and engagement slots, and this test is not about that split.
+            int targetingThirdArmy = 0;
+            int thirdArmyDamaged = 0;
+            for (int i = 0; i < AttackerCount; i++)
+            {
+                if (targets[i] >= 0 && initialTeamIds[targets[i]] == thirdTeamId)
+                    targetingThirdArmy++;
+            }
+            for (int i = thirdArmyStart; i < TotalAgents; i++)
+            {
+                if (hp[i] < initialHp[i])
+                    thirdArmyDamaged++;
+            }
+            Assert.That(targetingThirdArmy, Is.GreaterThan(0), "no team-0 agent ever targeted the third army: its bucket was never swept");
+            Assert.That(thirdArmyDamaged, Is.GreaterThan(0), "the third army took no damage: it was hostile to others but invisible to them");
+
+            int originalTeamsDamaged = 0;
+            for (int i = 0; i < thirdArmyStart; i++)
+            {
+                if (hp[i] < initialHp[i])
+                    originalTeamsDamaged++;
+            }
+            Assert.That(originalTeamsDamaged, Is.GreaterThan(0), "the two original teams stopped fighting once a third one existed");
+        }
+
+        [UnityTest]
+        public IEnumerator SwappingTeamStancesSwapsWhichArmyHolds()
+        {
+            // Stance used to be one uniform meaning "the defender holds"; it is now one entry
+            // per teamId. Swapping the two entries has to swap which army stays put - a shader
+            // that still keys the hold branch off defenderTeamId pins team 1 in both runs.
+            const int frames = 30;
+
+            // 5m apart: outside attack range (3m), inside acquire radius (8m). An advancing team
+            // acquires at that distance and closes in; a holding team acquires on attack range
+            // alone, so it neither targets nor moves. Separation and density steering are off in
+            // this fixture, so "holding" means no displacement at all, not merely a slow drift.
+            for (int i = 0; i < TotalAgents; i++)
+            {
+                bool attacker = initialTeamIds[i] == 0;
+                int lane = attacker ? i : i - AttackerCount;
+                initialAgents[i].position = new Vector3(attacker ? -2.5f : 2.5f, 0f, lane * 1.5f);
+                initialAgents[i].velocity = Vector3.zero;
+            }
+
+            Vector2[] attackerAdvances = new Vector2[fixtureTotalAgents];
+            fixtureTeamStances = new[] { (int)TeamStance.Advance, (int)TeamStance.Hold };
+            yield return RunFixtureBattle(frames, new int[fixtureTotalAgents], attackerAdvances, new int[fixtureTotalAgents]);
+            AssertTeamDisplacement(attackerAdvances, teamId: 0, expectMoved: true);
+            AssertTeamDisplacement(attackerAdvances, teamId: 1, expectMoved: false);
+
+            Vector2[] defenderAdvances = new Vector2[fixtureTotalAgents];
+            fixtureTeamStances = new[] { (int)TeamStance.Hold, (int)TeamStance.Advance };
+            yield return RunFixtureBattle(frames, new int[fixtureTotalAgents], defenderAdvances, new int[fixtureTotalAgents]);
+            AssertTeamDisplacement(defenderAdvances, teamId: 0, expectMoved: false);
+            AssertTeamDisplacement(defenderAdvances, teamId: 1, expectMoved: true);
+        }
+
         // ------------------------------------------------------------------
         // Helpers
         // ------------------------------------------------------------------
@@ -1303,6 +1444,7 @@ namespace MassEngine.Tests
         {
             registry.FillGpuSettings(settingsCache);
             buffers.UploadUnitTypeSettings(settingsCache);
+            UploadFixtureTeamStances();
 
             if (battleStarted)
                 projectileSimulationTime += FrameDt;
@@ -1329,7 +1471,6 @@ namespace MassEngine.Tests
                 rebuildDensityMap = true,
                 densityMapThreadGroupsX = 2,
                 densityMapThreadGroupsY = 2,
-                defenderMovementMode = 0,
                 defenderGuardRadius = 50f,
                 localTargetSearchCellRadius = 4,
                 staticObstacleCount = staticObstacleCount,
