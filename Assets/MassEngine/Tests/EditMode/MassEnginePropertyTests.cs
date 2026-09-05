@@ -550,6 +550,35 @@ namespace MassEngine.Tests
             buffers.ReleaseAll();
         }
 
+        [Test]
+        public void TeamPartitionedBuffersScaleWithTeamCount()
+        {
+            // Two teams stay the default so every existing caller keeps its layout unchanged.
+            MassGpuBufferManager legacy = new MassGpuBufferManager();
+            legacy.Allocate(4, 4, 4, 8, 8, 1);
+            Assert.That(legacy.TeamCount, Is.EqualTo(MassGpuBufferManager.DefaultTeamCount));
+            Assert.That(legacy.TeamStatsSlotCount, Is.EqualTo(16));
+            Assert.That(legacy.teamSpatialStatsBuffer.count, Is.EqualTo(16));
+            legacy.ReleaseAll();
+
+            // Deliberately odd and not a power of two: catches code that still assumes two
+            // teams, or that indexes team records with a mask instead of a multiply.
+            const int teamCount = 5;
+            MassGpuBufferManager buffers = new MassGpuBufferManager();
+            buffers.Allocate(4, 4, 4, 8, 8, 1, teamCount);
+
+            Assert.That(buffers.TeamCount, Is.EqualTo(teamCount));
+            Assert.That(buffers.teamGridCountsBuffer.count, Is.EqualTo(4 * teamCount));
+            Assert.That(buffers.teamGridAgentIndicesBuffer.count, Is.EqualTo(4 * 4 * teamCount));
+            Assert.That(buffers.TeamStatsSlotCount,
+                Is.EqualTo(teamCount * MassGpuBufferManager.TeamStatsSlotsPerTeam));
+            Assert.That(buffers.teamSpatialStatsBuffer.count, Is.EqualTo(buffers.TeamStatsSlotCount));
+
+            // A TeamCount surviving release would size the next allocation from a dead value.
+            buffers.ReleaseAll();
+            Assert.That(buffers.TeamCount, Is.EqualTo(0));
+        }
+
         // ------------------------------------------------------------------
         // Formation derivation + scenario physics ledger
         // ------------------------------------------------------------------

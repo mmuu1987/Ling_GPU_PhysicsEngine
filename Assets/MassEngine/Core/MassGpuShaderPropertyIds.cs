@@ -53,6 +53,7 @@ namespace MassEngine
         public static readonly int BattleStartedId = Shader.PropertyToID("battleStarted");
         public static readonly int AttackerTeamIdId = Shader.PropertyToID("attackerTeamId");
         public static readonly int DefenderTeamIdId = Shader.PropertyToID("defenderTeamId");
+        public static readonly int TeamCountId = Shader.PropertyToID("teamCount");
         public static readonly int LocalTargetSearchCellRadiusId = Shader.PropertyToID("localTargetSearchCellRadius");
         public static readonly int DefenderGuardRadiusId = Shader.PropertyToID("defenderGuardRadius");
         public static readonly int DefenderMovementModeId = Shader.PropertyToID("defenderMovementMode");

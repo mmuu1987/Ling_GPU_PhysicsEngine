@@ -1124,9 +1124,83 @@ namespace MassEngine.Tests
                 "the lone defender became untargetable when attackers overflowed the mixed spatial cell");
         }
 
+        [UnityTest]
+        public IEnumerator RaisingTeamCountDoesNotChangeTwoTeamOutcome()
+        {
+            // Regression gate for step 1 of multi-group navigation: widening the team
+            // dimension of the partitioned buffers must not move a two-team battle. A kernel
+            // that still hard-codes bucket 0/1 instead of indexing by the agent's own teamId
+            // looks for the enemy in the wrong segment once the layout is wider, and this
+            // diverges on the first frame anyone acquires a target.
+            // Long enough for two attack intervals (12.5 frames each), so the cooldown
+            // path is exercised too and the comparison is not decided by a single strike.
+            const int frames = 40;
+            const int widenedTeamCount = 5;
+
+            int[] baselineHp = new int[fixtureTotalAgents];
+            Vector2[] baselinePositions = new Vector2[fixtureTotalAgents];
+            int[] baselineTargets = new int[fixtureTotalAgents];
+            AllocateFixtureBuffers(MassGpuBufferManager.DefaultTeamCount);
+            yield return RunFixtureBattle(frames, baselineHp, baselinePositions, baselineTargets);
+
+            // Without damage an identical rerun would prove nothing: reading the team
+            // buckets is what the enemy sweep does, and it only shows up in the readback
+            // once somebody has been hit. Damage, not death - fixture hp takes ten strikes.
+            int baselineDamaged = 0;
+            for (int i = 0; i < fixtureTotalAgents; i++)
+            {
+                if (baselineHp[i] < initialHp[i])
+                    baselineDamaged++;
+            }
+            Assert.That(baselineDamaged, Is.GreaterThan(0), "baseline battle dealt no damage to compare against");
+
+            int[] widenedHp = new int[fixtureTotalAgents];
+            Vector2[] widenedPositions = new Vector2[fixtureTotalAgents];
+            int[] widenedTargets = new int[fixtureTotalAgents];
+            AllocateFixtureBuffers(widenedTeamCount);
+            Assert.That(buffers.TeamCount, Is.EqualTo(widenedTeamCount), "fixture rebuild did not widen the team dimension");
+            yield return RunFixtureBattle(frames, widenedHp, widenedPositions, widenedTargets);
+
+            CollectionAssert.AreEqual(baselineHp, widenedHp, "hp diverged after widening teamCount");
+            CollectionAssert.AreEqual(baselineTargets, widenedTargets, "target selection diverged after widening teamCount");
+            for (int i = 0; i < fixtureTotalAgents; i++)
+                Assert.That(widenedPositions[i], Is.EqualTo(baselinePositions[i]), "agent " + i + " position diverged after widening teamCount");
+        }
+
         // ------------------------------------------------------------------
         // Helpers
         // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Rebuilds the GPU buffers for the current scenario with an explicit team count.
+        /// The rig (scenario, registry, shader set) is reused; only the buffer layout and
+        /// the orchestrator bound to it are recreated.
+        /// </summary>
+        private void AllocateFixtureBuffers(int teamCount)
+        {
+            if (buffers != null)
+                buffers.ReleaseAll();
+
+            buffers = new MassGpuBufferManager();
+            orchestrator = new ComputePipelineOrchestrator(shaderSet, buffers);
+            buffers.Allocate(fixtureTotalAgents, 64, gridMaxAgentsPerCell, 16, 16, registry.UnitTypeCount, teamCount);
+            registry.InitializeAll(buffers, orchestrator);
+        }
+
+        /// <summary>Runs a fixed number of combat frames from the pristine fixture state, then reads the result back.</summary>
+        private IEnumerator RunFixtureBattle(int frames, int[] hp, Vector2[] positions, int[] targets)
+        {
+            ResetBattlefield();
+            projectileSimulationTime = 0f;
+
+            for (int frame = 0; frame < frames; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            buffers.combatBuffers.hpReadBuffer.GetData(hp);
+            buffers.agentPositionReadBuffer.GetData(positions);
+            buffers.combatBuffers.targetAgentIndexBuffer.GetData(targets);
+        }
 
         private void BuildScenario(
             int attackerCount,

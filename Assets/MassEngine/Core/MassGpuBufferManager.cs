@@ -14,6 +14,10 @@ namespace MassEngine
         public const int AgentStrideBytes = 56;
         public const int LodLevels = 3;
         public const int EngagementSlotsPerTarget = 8;
+        /// <summary>Per-team slot count inside teamSpatialStats: [count, minX, minZ, maxX, maxZ, reserved x3].</summary>
+        public const int TeamStatsSlotsPerTeam = 8;
+        /// <summary>Default team count; two-team combat (attacker vs defender) is the historical layout.</summary>
+        public const int DefaultTeamCount = 2;
 
         public ComputeBuffer agentBuffer;
         public ComputeBuffer agentPositionReadBuffer;
@@ -55,6 +59,10 @@ namespace MassEngine
         public int MaxAgentsPerCell { get; private set; }
         public int UnitTypeCount { get; private set; }
         public int MaxProjectiles { get; private set; }
+        /// <summary>How many teams the team-partitioned buffers were sized for. Kernels must clamp teamId to [0, TeamCount).</summary>
+        public int TeamCount { get; private set; }
+        /// <summary>Total int slots in teamSpatialStatsBuffer.</summary>
+        public int TeamStatsSlotCount { get { return TeamCount * TeamStatsSlotsPerTeam; } }
 
         public bool IsAllocated { get { return agentBuffer != null && AgentCount > 0; } }
 
@@ -73,7 +81,7 @@ namespace MassEngine
             return index >= 0 && index < drawArgsBuffers.Length ? drawArgsBuffers[index] : null;
         }
 
-        public void Allocate(int agentCount, int gridCellCount, int maxAgentsPerCell, int flowFieldResolutionX, int flowFieldResolutionZ, int unitTypeCount)
+        public void Allocate(int agentCount, int gridCellCount, int maxAgentsPerCell, int flowFieldResolutionX, int flowFieldResolutionZ, int unitTypeCount, int teamCount = DefaultTeamCount)
         {
             ReleaseAll();
 
@@ -82,6 +90,7 @@ namespace MassEngine
             MaxAgentsPerCell = Mathf.Max(1, maxAgentsPerCell);
             UnitTypeCount = Mathf.Max(0, unitTypeCount);
             MaxProjectiles = agentCount > 0 ? Mathf.Max(1, agentCount / 4) : 0;
+            TeamCount = Mathf.Max(1, teamCount);
             int safeFlowResolutionX = Mathf.Max(1, flowFieldResolutionX);
             int safeFlowResolutionZ = Mathf.Max(1, flowFieldResolutionZ);
             int safeFlowCellCount = safeFlowResolutionX * safeFlowResolutionZ;
@@ -120,7 +129,7 @@ namespace MassEngine
             }
 
             gridAgentIndicesBuffer = new ComputeBuffer(GridCellCount * MaxAgentsPerCell, sizeof(int));
-            long teamGridIndexCapacity = gridIndexCapacity * 2L;
+            long teamGridIndexCapacity = gridIndexCapacity * TeamCount;
             if (teamGridIndexCapacity > int.MaxValue / sizeof(int))
             {
                 Debug.LogError("MassEngine: team combat grid would need " + teamGridIndexCapacity + " entries; refusing to allocate. Shrink simulationWorldSize, raise cellSize, or lower maxAgentsPerCell.");
@@ -128,7 +137,7 @@ namespace MassEngine
                 return;
             }
 
-            teamGridCountsBuffer = new ComputeBuffer(GridCellCount * 2, sizeof(int));
+            teamGridCountsBuffer = new ComputeBuffer(GridCellCount * TeamCount, sizeof(int));
             teamGridAgentIndicesBuffer = new ComputeBuffer((int)teamGridIndexCapacity, sizeof(int));
             flowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
             defenderFlowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
@@ -141,12 +150,12 @@ namespace MassEngine
             unitTypeIndexBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             unitTypeSettingsBuffer = new ComputeBuffer(UnitTypeCount, UnitTypeGpuSettings.StrideBytes);
             spatialHashStatsBuffer = new ComputeBuffer(4, sizeof(int));
-            teamSpatialStatsBuffer = new ComputeBuffer(16, sizeof(int));
+            teamSpatialStatsBuffer = new ComputeBuffer(TeamStatsSlotCount, sizeof(int));
             // stats[3] carries a sentinel no kernel ever writes: if a telemetry readback
             // sees it gone, GPU memory was wiped (device reset/TDR) and the manager
             // reinitializes. Slots 1-2 stay reserved; slot 0 is the overflow counter.
             spatialHashStatsBuffer.SetData(new[] { 0, 0, 0, DeviceResetSentinel });
-            teamSpatialStatsBuffer.SetData(new int[16]);
+            teamSpatialStatsBuffer.SetData(new int[TeamStatsSlotCount]);
             runtimeAttackerFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             runtimeDefenderFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             densityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
@@ -158,7 +167,7 @@ namespace MassEngine
             flowFieldDirectionsBuffer.SetData(new Vector2[safeFlowCellCount]);
             defenderFlowFieldDirectionsBuffer.SetData(new Vector2[safeFlowCellCount]);
             gridCountsBuffer.SetData(new int[GridCellCount]);
-            teamGridCountsBuffer.SetData(new int[GridCellCount * 2]);
+            teamGridCountsBuffer.SetData(new int[GridCellCount * TeamCount]);
 
             combatBuffers.teamIdBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.hpReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
@@ -345,6 +354,7 @@ namespace MassEngine
             MaxAgentsPerCell = 0;
             UnitTypeCount = 0;
             MaxProjectiles = 0;
+            TeamCount = 0;
         }
 
         public static void ReleaseBuffer(ref ComputeBuffer buffer)
