@@ -75,7 +75,7 @@ void ClearRuntimeFlowResources(uint3 id : SV_DispatchThreadID)
 void BuildRuntimeFlowTargetDensity(uint3 id : SV_DispatchThreadID)
 {
     TeamFlowParams params = GetTeamFlowParams(flowTeamId);
-    if (params.modes.z == 0 || enableTwoTeamCombat == 0 || battleStarted == 0)
+    if (params.modes.z == 0 || combatEnabled == 0 || battleStarted == 0)
         return;
 
     uint count;
@@ -113,7 +113,7 @@ groupshared float2 gsSectorPositionSum[64];
 void SelectRuntimeFlowTargets(uint3 groupId : SV_GroupID, uint groupThreadIndex : SV_GroupIndex)
 {
     TeamFlowParams params = GetTeamFlowParams(flowTeamId);
-    bool active = params.modes.z != 0 && enableTwoTeamCombat != 0 && battleStarted != 0
+    bool active = params.modes.z != 0 && combatEnabled != 0 && battleStarted != 0
         && runtimeFlowStats[FlowStatsIndex(0u)] > 0;
 
     uint sectorCount = (uint)clamp((int)params.target.w, 1, FLOW_TARGETS_PER_TEAM);
@@ -182,7 +182,7 @@ void GenerateRuntimeFlowField(uint3 id : SV_DispatchThreadID)
     int minEnemiesPerTarget = params.modes.w;
 
     bool useConfiguredTarget = targetMode != FLOW_TARGET_NONE;
-    if (!useConfiguredTarget && (params.modes.z == 0 || enableTwoTeamCombat == 0 || battleStarted == 0))
+    if (!useConfiguredTarget && (params.modes.z == 0 || combatEnabled == 0 || battleStarted == 0))
     {
         // No target and no active dynamic targeting: clear the field explicitly so a
         // removed target cannot leave stale directions behind (agents would otherwise

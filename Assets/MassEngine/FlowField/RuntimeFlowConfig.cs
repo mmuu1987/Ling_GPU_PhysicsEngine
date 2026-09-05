@@ -35,5 +35,32 @@ namespace MassEngine
         [Range(1, 8)] public int dynamicDefenderFlowSectorCount = 5;
         [Min(0f)] public float dynamicDefenderFlowTargetStopRadius = 2f;
         [Min(1)] public int dynamicDefenderFlowMinAttackersPerTarget = 8;
+
+        /// <summary>
+        /// Whether this doctrine gives <paramref name="teamId"/> a flow field at all. Only team 1
+        /// carries its own toggle - that pair of fields is what a two-army config models. Any
+        /// further team inherits the attacker doctrine (advance with dynamic targeting) and
+        /// diverges at runtime through MassEngineManager.SetTeamNavigationOverride, rather than
+        /// through new config fields that would drop the settings in every serialized asset.
+        ///
+        /// Public so the scene gizmos answer this the same way the manager does. A gizmo that
+        /// recomputed the rule reported a third army's configured target as ignored while the GPU
+        /// went on executing it.
+        /// </summary>
+        public bool ResolveTeamFlowEnabled(int teamId)
+        {
+            return teamId == MassEngineManager.DefenderTeamId ? defenderFlowFieldEnabled : flowFieldEnabled;
+        }
+
+        /// <summary>
+        /// Whether <paramref name="teamId"/> steers its field at enemy density centroids.
+        /// Subordinate to <see cref="ResolveTeamFlowEnabled"/>: with no field there is nothing to steer.
+        /// </summary>
+        public bool ResolveTeamDynamicTargeting(int teamId)
+        {
+            return teamId == MassEngineManager.DefenderTeamId
+                ? runtimeDynamicDefenderFlowEnabled
+                : runtimeDynamicAttackerFlowEnabled;
+        }
     }
 }

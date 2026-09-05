@@ -226,7 +226,7 @@ namespace MassEngine
             shaders.SetInt(MaxAgentsPerCellId, Mathf.Max(1, context.grid.maxAgentsPerCell));
             shaders.SetFloat(BoundaryPaddingId, Mathf.Max(0f, context.grid.boundaryPadding));
 
-            shaders.SetInt(EnableTwoTeamCombatId, context.combatEnabled ? 1 : 0);
+            shaders.SetInt(CombatEnabledId, context.combatEnabled ? 1 : 0);
             shaders.SetInt(BattleStartedId, context.battleStarted ? 1 : 0);
             shaders.SetInt(AttackerTeamIdId, context.attackerTeamId);
             shaders.SetInt(DefenderTeamIdId, context.defenderTeamId);
