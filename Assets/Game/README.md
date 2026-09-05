@@ -65,5 +65,6 @@ F/F1/F2/F3 使用低频 GPU 质心/范围遥测平滑跟随存活群体；右键
 
 ## 性能档位
 
-默认产品档为 10k vs 10k（实测 113 FPS）；50k vs 50k 是约 30 FPS 的大型战役档；
-100k/200k 每方属于压力与容量展示。详见 [PerformanceBaseline.md](PerformanceBaseline.md)。
+默认产品档为 **50k vs 50k**（约 30 FPS），也是 `WarSandbox.unity` 的实配值；
+10k vs 10k 是轻量档（113 FPS），编辑器里迭代时用；100k/200k 每方属于压力与容量展示。
+详见 [PerformanceBaseline.md](PerformanceBaseline.md)。
