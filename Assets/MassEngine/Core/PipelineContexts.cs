@@ -78,7 +78,6 @@ namespace MassEngine
         public bool rebuildDensityMap;
         public int densityMapThreadGroupsX;
         public int densityMapThreadGroupsY;
-        public int defenderMovementMode;
         public float defenderGuardRadius;
         public int localTargetSearchCellRadius;
         public bool flowPreviewEnabled;

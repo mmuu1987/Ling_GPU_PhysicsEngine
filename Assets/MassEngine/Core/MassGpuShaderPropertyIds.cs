@@ -56,10 +56,12 @@ namespace MassEngine
         public static readonly int TeamCountId = Shader.PropertyToID("teamCount");
         public static readonly int LocalTargetSearchCellRadiusId = Shader.PropertyToID("localTargetSearchCellRadius");
         public static readonly int DefenderGuardRadiusId = Shader.PropertyToID("defenderGuardRadius");
-        public static readonly int DefenderMovementModeId = Shader.PropertyToID("defenderMovementMode");
 
         // Combat buffers
         public static readonly int TeamIdReadBufferId = Shader.PropertyToID("teamIdReadBuffer");
+        // One stance per team, indexed by raw teamId. Replaced the defenderMovementMode
+        // uniform: stance belongs to a team, not to whichever team is "the defender".
+        public static readonly int TeamStanceReadBufferId = Shader.PropertyToID("teamStanceReadBuffer");
         public static readonly int HpBufferId = Shader.PropertyToID("hpBuffer");
         public static readonly int HpReadBufferId = Shader.PropertyToID("hpReadBuffer");
         public static readonly int TargetAgentIndexBufferId = Shader.PropertyToID("targetAgentIndexBuffer");

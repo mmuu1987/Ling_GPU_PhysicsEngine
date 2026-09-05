@@ -81,6 +81,8 @@ namespace MassEngine
         private AllocationSignature allocationSignature;
         private readonly FlowTargetOverride[] flowTargetOverrides = new FlowTargetOverride[2];
         private readonly TeamNavigationOverride[] teamNavigationOverrides = new TeamNavigationOverride[2];
+        // Reused per frame so the stance upload does not allocate; resized when TeamCount changes.
+        private int[] teamStanceCache;
         private readonly bool[] flowFieldDirty = { true, true };
         private readonly int[] lastFlowTargetHash = new int[2];
         private readonly float[] nextDynamicFlowRebuildTime = new float[2];
@@ -167,6 +169,7 @@ namespace MassEngine
                 return;
 
             RefreshAndUploadUnitTypeSettings();
+            RefreshAndUploadTeamStances();
 
             if (battleStarted)
                 projectileSimulationTime += Mathf.Max(0f, Time.deltaTime);
@@ -546,6 +549,40 @@ namespace MassEngine
             }
         }
 
+        /// <summary>
+        /// Rebuilds the per-team stance table and pushes it to the GPU. Reproduces exactly what
+        /// the old defenderMovementMode uniform expressed, only per team instead of only for
+        /// the defender, so a two-team frame behaves bit-for-bit as before.
+        /// </summary>
+        private void RefreshAndUploadTeamStances()
+        {
+            if (bufferManager == null || !bufferManager.IsAllocated)
+                return;
+
+            int teamCount = bufferManager.TeamCount;
+            if (teamStanceCache == null || teamStanceCache.Length != teamCount)
+                teamStanceCache = new int[teamCount];
+
+            for (int teamId = 0; teamId < teamCount; teamId++)
+                teamStanceCache[teamId] = (int)ResolveTeamStance(teamId);
+
+            bufferManager.UploadTeamStances(teamStanceCache);
+        }
+
+        /// <summary>
+        /// Only the defender ever stood its ground: its flow toggle doubled as "advance or hold".
+        /// Every other team advanced regardless of any toggle, because the attacker locomotion
+        /// branch sampled its flow field unconditionally. That asymmetry stays until explicit
+        /// orders own the stance instead of the navigation config.
+        /// </summary>
+        private TeamStance ResolveTeamStance(int teamId)
+        {
+            if (teamId == DefenderTeamId)
+                return ResolveTeamFlowEnabled(teamId) ? TeamStance.Advance : TeamStance.Hold;
+
+            return TeamStance.Advance;
+        }
+
         private void UploadInitialAgents()
         {
             if (unitTypeRegistry == null || bufferManager == null || !bufferManager.IsAllocated)
@@ -592,7 +629,6 @@ namespace MassEngine
                 rebuildDensityMap = total > 0,
                 densityMapThreadGroupsX = densityMapThreadGroups,
                 densityMapThreadGroupsY = densityMapThreadGroups,
-                defenderMovementMode = ResolveTeamFlowEnabled(DefenderTeamId) ? 1 : 0,
                 defenderGuardRadius = RuntimeCombat.defenderGuardRadius,
                 localTargetSearchCellRadius = ComputeLocalTargetSearchCellRadius(),
                 flowPreviewEnabled = Flow.runtimeFlowPreviewEnabled,

@@ -38,6 +38,8 @@ namespace MassEngine
         public ComputeBuffer unitTypeSettingsBuffer;
         public ComputeBuffer spatialHashStatsBuffer;
         public ComputeBuffer teamSpatialStatsBuffer;
+        /// <summary>One stance per team (TeamStance values), indexed by raw teamId.</summary>
+        public ComputeBuffer teamStanceBuffer;
         public RenderTexture runtimeAttackerFlowPreviewTexture;
         public RenderTexture runtimeDefenderFlowPreviewTexture;
         public RenderTexture densityMapTexture;
@@ -151,11 +153,16 @@ namespace MassEngine
             unitTypeSettingsBuffer = new ComputeBuffer(UnitTypeCount, UnitTypeGpuSettings.StrideBytes);
             spatialHashStatsBuffer = new ComputeBuffer(4, sizeof(int));
             teamSpatialStatsBuffer = new ComputeBuffer(TeamStatsSlotCount, sizeof(int));
+            teamStanceBuffer = new ComputeBuffer(TeamCount, sizeof(int));
             // stats[3] carries a sentinel no kernel ever writes: if a telemetry readback
             // sees it gone, GPU memory was wiped (device reset/TDR) and the manager
             // reinitializes. Slots 1-2 stay reserved; slot 0 is the overflow counter.
             spatialHashStatsBuffer.SetData(new[] { 0, 0, 0, DeviceResetSentinel });
             teamSpatialStatsBuffer.SetData(new int[TeamStatsSlotCount]);
+            // Hold is 0, so a stance buffer nobody uploaded freezes every team. That is a
+            // failure anyone spots in one frame, unlike defaulting to Advance, which would
+            // silently march the teams that were meant to hold their ground.
+            teamStanceBuffer.SetData(new int[TeamCount]);
             runtimeAttackerFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             runtimeDefenderFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             densityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
@@ -253,6 +260,20 @@ namespace MassEngine
             unitTypeSettingsBuffer.SetData(settings);
         }
 
+        /// <summary>
+        /// Uploads one stance per team, indexed by raw teamId. Entries past TeamCount are
+        /// ignored; an array shorter than TeamCount is rejected outright rather than
+        /// partially applied, which would leave some teams on a stale stance. The caller
+        /// owns the teamId-to-stance mapping, this only moves it to the GPU.
+        /// </summary>
+        public void UploadTeamStances(int[] stances)
+        {
+            if (teamStanceBuffer == null || stances == null || stances.Length < TeamCount)
+                return;
+
+            teamStanceBuffer.SetData(stances, 0, 0, TeamCount);
+        }
+
         public void ResetAppendCounters(int unitTypeIndex)
         {
             for (int lod = 0; lod < LodLevels; lod++)
@@ -332,6 +353,7 @@ namespace MassEngine
             ReleaseBuffer(ref unitTypeSettingsBuffer);
             ReleaseBuffer(ref spatialHashStatsBuffer);
             ReleaseBuffer(ref teamSpatialStatsBuffer);
+            ReleaseBuffer(ref teamStanceBuffer);
             ReleaseBuffer(ref projectileBuffer);
             ReleaseBuffer(ref activeProjectileIndexBuffer);
             ReleaseBuffer(ref projectileDrawArgsBuffer);
