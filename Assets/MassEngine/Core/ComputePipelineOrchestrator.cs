@@ -199,6 +199,10 @@ namespace MassEngine
             shaders.SetInt(BattleStartedId, context.battleStarted ? 1 : 0);
             shaders.SetInt(AttackerTeamIdId, context.attackerTeamId);
             shaders.SetInt(DefenderTeamIdId, context.defenderTeamId);
+            // Read from the buffer manager, not the frame context: this bounds every teamId
+            // the kernels index team-partitioned buffers with, so it must match what was
+            // actually allocated or a stray id writes out of bounds.
+            shaders.SetInt(TeamCountId, Mathf.Max(1, buffers.TeamCount));
             shaders.SetInt(LocalTargetSearchCellRadiusId, Mathf.Max(1, context.localTargetSearchCellRadius));
             shaders.SetInt(DefenderMovementModeId, context.defenderMovementMode);
             shaders.SetFloat(DefenderGuardRadiusId, Mathf.Max(0f, context.defenderGuardRadius));

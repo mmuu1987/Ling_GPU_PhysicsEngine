@@ -48,6 +48,7 @@ namespace MassEngine
         private static readonly int TeamIdReadBufferId = Shader.PropertyToID("teamIdReadBuffer");
         private static readonly int ObservationZoneEnabledId = Shader.PropertyToID("telemetryObservationZoneEnabled");
         private static readonly int ObservationZoneId = Shader.PropertyToID("telemetryObservationZone");
+        private static readonly int TeamCountId = Shader.PropertyToID("teamCount");
 
         private readonly float sampleInterval;
         private readonly ComputeShader spatialHashShader;
@@ -185,6 +186,9 @@ namespace MassEngine
 
         private void DispatchTeamSpatialStats(MassGpuBufferManager buffers)
         {
+            // Telemetry dispatches these kernels itself, outside ComputePipelineOrchestrator, so
+            // it must upload teamCount too - at 0 both kernels would bail out on every thread.
+            spatialHashShader.SetInt(TeamCountId, Mathf.Max(1, buffers.TeamCount));
             spatialHashShader.SetBuffer(clearTeamSpatialStatsKernel, TeamSpatialStatsId, buffers.teamSpatialStatsBuffer);
 
             spatialHashShader.SetBuffer(buildTeamSpatialStatsKernel, AgentBufferId, buffers.agentBuffer);
@@ -197,7 +201,7 @@ namespace MassEngine
                 ObservationZoneId,
                 new Vector4(observationZoneCenter.x, observationZoneCenter.z, observationZoneRadius, 0f));
 
-            spatialHashShader.Dispatch(clearTeamSpatialStatsKernel, 1, 1, 1);
+            spatialHashShader.Dispatch(clearTeamSpatialStatsKernel, Mathf.Max(1, (buffers.TeamStatsSlotCount + 63) / 64), 1, 1);
             spatialHashShader.Dispatch(buildTeamSpatialStatsKernel, Mathf.Max(1, (buffers.AgentCount + 63) / 64), 1, 1);
         }
 
@@ -223,11 +227,11 @@ namespace MassEngine
         public static bool TryDecodeTeamSpatialStats(int[] values, int teamId, out TeamSpatialTelemetry team)
         {
             team = default;
-            if (values == null || (teamId != 0 && teamId != 1))
+            if (values == null || teamId < 0)
                 return false;
 
-            int offset = teamId * 8;
-            if (values.Length < offset + 8 || values[offset] <= 0)
+            int offset = teamId * MassGpuBufferManager.TeamStatsSlotsPerTeam;
+            if (values.Length < offset + MassGpuBufferManager.TeamStatsSlotsPerTeam || values[offset] <= 0)
                 return false;
 
             int count = values[offset];

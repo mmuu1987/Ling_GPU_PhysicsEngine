@@ -91,8 +91,10 @@ RWStructuredBuffer<uint> teamGridAgentIndices;
 // [0] = agents dropped this frame because their cell was full (visibility for the
 // silent failure mode where overflow victims vanish from neighborhood queries).
 RWStructuredBuffer<int> spatialHashStats;
-// Two fixed-size records used by low-frequency telemetry. Per-team layout (8 ints):
-// alive count, sum X, sum Z, min X, min Z, max X, max Z, reserved.
+// One fixed-size record per team, used by low-frequency telemetry. Per-team layout:
+// alive count, sum X, sum Z, min X, min Z, max X, max Z, observation-zone count.
+// Total length is teamCount * TEAM_STATS_SLOTS_PER_TEAM (mirrors MassGpuBufferManager).
+#define TEAM_STATS_SLOTS_PER_TEAM 8
 RWStructuredBuffer<int> teamSpatialStats;
 int telemetryObservationZoneEnabled;
 float4 telemetryObservationZone;
@@ -212,6 +214,10 @@ int enableTwoTeamCombat;
 int battleStarted;
 int attackerTeamId;
 int defenderTeamId;
+// How many teams the team-partitioned buffers (teamGridCounts / teamGridAgentIndices /
+// teamSpatialStats) were sized for. Any teamId outside [0, teamCount) must be skipped,
+// never clamped: clamping would silently merge a stray team into team 0's bucket.
+int teamCount;
 int localTargetSearchCellRadius;
 float defenderGuardRadius;
 
@@ -1141,7 +1147,11 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     result.bestEnemyIndex = -1;
     result.bestEnemyScore = 1e20;
     result.separation = 0.0;
-    uint enemyTeamSlot = IsDefenderTeam(selfIndex) ? 0u : 1u;
+    // Team buckets are indexed by raw teamId, so the enemy bucket is the opposing team's id
+    // rather than a fixed 0/1 slot. A teamId outside [0, teamCount) disables the enemy sweep
+    // instead of reading past the end of the team grid.
+    uint enemyTeamSlot = IsDefenderTeam(selfIndex) ? (uint)attackerTeamId : (uint)defenderTeamId;
+    bool sweepEnemies = searchForEnemy && enemyTeamSlot < (uint)max(0, teamCount);
 
     [loop]
     for (int dz = -queryCellRadius; dz <= queryCellRadius; dz++)
@@ -1154,7 +1164,7 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                 continue;
 
             uint cellIndex = CellToIndex(cell);
-            if (searchForEnemy)
+            if (sweepEnemies)
             {
                 uint enemyCellIndex = enemyTeamSlot * gridCellCount + cellIndex;
                 uint enemyCount = min(teamGridCountsReadBuffer[enemyCellIndex], maxAgentsPerCell);
