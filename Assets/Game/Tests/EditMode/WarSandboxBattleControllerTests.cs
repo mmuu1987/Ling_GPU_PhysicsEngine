@@ -406,6 +406,142 @@ namespace MassEngine.Game.Tests
             Assert.That(report.yMax, Is.LessThanOrEqualTo(screenHeight));
         }
 
+        [Test]
+        public void AnnihilationEndsOnlyWhenOneArmyIsLeftStanding()
+        {
+            // Three armies still fielding units: nobody has won anything yet.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80, 40 }, new[] { 3, 2, 1 },
+                out WarSandboxBattlePhase phase, out int winner), Is.False);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.Running));
+            Assert.That(winner, Is.EqualTo(-1));
+
+            // The third army outlasts both of the teams the old phases could name.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80, 40 }, new[] { 0, 0, 11 }, out phase, out winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.ArmyVictory));
+            Assert.That(winner, Is.EqualTo(2));
+
+            // Everyone emptied inside one sample.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80, 40 }, new[] { 0, 0, 0 }, out phase, out winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.Draw));
+            Assert.That(winner, Is.EqualTo(-1));
+        }
+
+        [Test]
+        public void TwoArmyBattlesKeepReportingTheAttackerAndDefenderPhases()
+        {
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80 }, new[] { 73, 0 },
+                out WarSandboxBattlePhase phase, out int winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.AttackerVictory));
+            Assert.That(winner, Is.EqualTo(0));
+
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80 }, new[] { 0, 5 }, out phase, out winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.DefenderVictory));
+            Assert.That(winner, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AnArmyThatNeverTookTheFieldIsNotADefeatedOne()
+        {
+            // Team 1 is an empty slot between two real armies: it must not end the battle, and
+            // it must not be mistaken for the loser once one of the real armies is wiped out.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 0, 40 }, new[] { 120, 0, 40 },
+                out WarSandboxBattlePhase phase, out int winner), Is.False);
+            Assert.That(winner, Is.EqualTo(-1));
+
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 0, 40 }, new[] { 0, 0, 40 }, out phase, out winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.ArmyVictory));
+            Assert.That(winner, Is.EqualTo(2));
+
+            // One army alone on the field has no battle to win.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 0 }, new[] { 120, 0 }, out phase, out winner), Is.False);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.Running));
+        }
+
+        [Test]
+        public void CaptureNamesTheWinnerEvenWhenThePhaseCannot()
+        {
+            BattleTelemetrySnapshot telemetry = new BattleTelemetrySnapshot { valid = true };
+
+            Assert.That(WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.AttackerVictory, 120, 80, telemetry).winnerTeamId, Is.EqualTo(0));
+            Assert.That(WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.DefenderVictory, 120, 80, telemetry).winnerTeamId, Is.EqualTo(1));
+            Assert.That(WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.Draw, 120, 80, telemetry).winnerTeamId, Is.EqualTo(-1));
+            Assert.That(WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.ArmyVictory, 120, 80, telemetry,
+                WarSandboxVictoryReason.Annihilation, 2).winnerTeamId, Is.EqualTo(2));
+        }
+
+        private static bool ResolveAnnihilation(
+            int[] initialCounts,
+            int[] aliveCounts,
+            out WarSandboxBattlePhase phase,
+            out int winnerTeamId)
+        {
+            return WarSandboxVictory.TryResolveAnnihilation(initialCounts, aliveCounts, out phase, out winnerTeamId);
+        }
+
+        [Test]
+        public void RebuildArmyStatesWidensToTheScenarioTeamCount()
+        {
+            Assert.That(controller.IssueOrder(ArmyOrder.Hold(1)), Is.True);
+            AddThirdArmy(40, new Vector3(0f, 0f, 60f));
+
+            controller.RebuildArmyStates();
+
+            ArmyRuntimeState third = controller.GetArmy(2);
+            Assert.That(third, Is.Not.Null);
+            Assert.That(third.teamId, Is.EqualTo(2));
+            Assert.That(third.initialUnitCount, Is.EqualTo(40));
+            Assert.That(third.spawnCenter, Is.EqualTo(new Vector3(0f, 0f, 60f)));
+            Assert.That(third.displayName, Is.Not.EqualTo(controller.GetArmy(0).displayName));
+            Assert.That(controller.SelectArmy(2), Is.True);
+            Assert.That(controller.GetArmy(3), Is.Null);
+
+            // Widening must not drop what the armies that already existed were doing.
+            Assert.That(controller.GetArmy(1).currentOrder.type, Is.EqualTo(ArmyOrderType.Hold));
+            Assert.That(controller.GetArmy(0).initialUnitCount, Is.EqualTo(120));
+        }
+
+        [Test]
+        public void ThirdArmyTakesOrdersEvenWithoutAFlowFieldOfItsOwn()
+        {
+            AddThirdArmy(40, new Vector3(0f, 0f, 60f));
+            controller.RebuildArmyStates();
+
+            // Recorded here as the reason a third army cannot be steered yet, not as a goal.
+            Assert.That(manager.NavigableTeamCount, Is.EqualTo(2));
+
+            Assert.That(controller.IssueOrder(ArmyOrder.Attack(2)), Is.True);
+            Assert.That(controller.GetArmy(2).currentOrder.type, Is.EqualTo(ArmyOrderType.Attack));
+
+            Assert.That(controller.IssueOrder(ArmyOrder.Retreat(2)), Is.True);
+            Assert.That(controller.GetArmy(2).currentOrder.target, Is.EqualTo(new Vector3(0f, 0f, 60f)));
+
+            Assert.That(controller.IssueMoveOrder(2, new Vector3(5f, 0f, 5f), false), Is.True);
+            Assert.That(controller.GetMoveRoutePointCount(2), Is.EqualTo(1));
+        }
+
+        private void AddThirdArmy(int count, Vector3 center)
+        {
+            // Reuses the SetUp unit types so TearDown still destroys every instance it created.
+            scenario.unitTypes = new[]
+            {
+                scenario.unitTypes[0],
+                scenario.unitTypes[1],
+                CreateUnitType("ThirdArmy", 2, count, center)
+            };
+        }
+
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
             MethodInfo method = typeof(MassEngineManager).GetMethod(

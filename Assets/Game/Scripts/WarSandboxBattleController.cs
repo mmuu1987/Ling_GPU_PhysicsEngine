@@ -4,9 +4,13 @@ using UnityEngine;
 namespace MassEngine.Game
 {
     /// <summary>
-    /// Thin game-layer coordinator for the current two-army engine. It translates
+    /// Thin game-layer coordinator for a battle of any number of armies. It translates
     /// designer/player intent into MassEngine runtime overrides; it never writes config
     /// assets and owns no duplicate simulation.
+    ///
+    /// Army slots are indexed by raw teamId and sized from the scenario. Combat and victory
+    /// are per team, but navigation orders only reach the teams the engine keeps a flow field
+    /// for (MassEngineManager.NavigableTeamCount), which is still two.
     /// </summary>
     [DefaultExecutionOrder(-50)]
     [DisallowMultipleComponent]
@@ -18,7 +22,7 @@ namespace MassEngine.Game
         public bool pauseOnStart = true;
 
         [Header("Runtime")]
-        [Range(0, 1)] public int selectedTeam;
+        [Min(0)] public int selectedTeam;
         [Min(1f)] public float moveWaypointArrivalRadius = 8f;
         [Range(2, 16)] public int maxMoveRoutePoints = 8;
 
@@ -39,22 +43,23 @@ namespace MassEngine.Game
             new StaticObstacleRect(new Vector2(0f, 90f), new Vector2(14f, 110f))
         };
 
-        private readonly ArmyRuntimeState[] armies =
-        {
-            new ArmyRuntimeState { teamId = 0, displayName = "攻方" },
-            new ArmyRuntimeState { teamId = 1, displayName = "守方" }
-        };
-        private readonly List<Vector3>[] moveRoutes =
-        {
-            new List<Vector3>(),
-            new List<Vector3>()
-        };
+        // Indexed by raw teamId and widened by RebuildArmyStates to whatever the scenario
+        // fields. An unused teamId in the middle stays an empty army rather than shifting the
+        // ones after it, so the index a caller passes always means the same team.
+        private ArmyRuntimeState[] armies = BuildArmies(MinimumArmyCount);
+        private List<Vector3>[] moveRoutes = BuildMoveRoutes(MinimumArmyCount);
         private static readonly StaticObstacleRect[] DefaultStaticObstacles =
         {
             new StaticObstacleRect(new Vector2(0f, -90f), new Vector2(14f, 110f)),
             new StaticObstacleRect(new Vector2(0f, 90f), new Vector2(14f, 110f))
         };
 
+        // The attacker and defender slots exist even in a scenario that fields neither, because
+        // the flow fields, the HUD and the control-point mode all still name those two teams.
+        private const int MinimumArmyCount = 2;
+
+        private int[] victoryInitialCounts;
+        private int[] victoryAliveCounts;
         private WarSandboxBattlePhase phase = WarSandboxBattlePhase.Setup;
         private WarSandboxBattleResult battleResult;
         private float simulationSpeed = 1f;
@@ -120,6 +125,65 @@ namespace MassEngine.Game
                 Time.timeScale = 1f;
             if (manager != null)
                 manager.SetStaticObstacles(null, 0f);
+        }
+
+        private static ArmyRuntimeState[] BuildArmies(int teamCount)
+        {
+            ArmyRuntimeState[] built = new ArmyRuntimeState[Mathf.Max(MinimumArmyCount, teamCount)];
+            for (int teamId = 0; teamId < built.Length; teamId++)
+                built[teamId] = new ArmyRuntimeState { teamId = teamId, displayName = DefaultArmyName(teamId) };
+
+            return built;
+        }
+
+        private static List<Vector3>[] BuildMoveRoutes(int teamCount)
+        {
+            List<Vector3>[] built = new List<Vector3>[Mathf.Max(MinimumArmyCount, teamCount)];
+            for (int teamId = 0; teamId < built.Length; teamId++)
+                built[teamId] = new List<Vector3>();
+
+            return built;
+        }
+
+        /// <summary>
+        /// Teams 0 and 1 keep the names the HUD has always shown them under; anything past that
+        /// is numbered, because nothing in a many-army battle makes one of them "the defender".
+        /// </summary>
+        private static string DefaultArmyName(int teamId)
+        {
+            if (teamId == 0)
+                return "攻方";
+            if (teamId == 1)
+                return "守方";
+
+            return "第" + (teamId + 1) + "军团";
+        }
+
+        /// <summary>
+        /// Grows the army slots to cover teamCount, keeping every existing state object so a
+        /// standing order survives the widening. Never shrinks: a slot whose units are gone
+        /// reports initialUnitCount 0, which the victory rule already treats as "did not field
+        /// an army", and dropping it would invalidate a teamId a caller still holds.
+        /// </summary>
+        private void EnsureArmyCapacity(int teamCount)
+        {
+            int required = Mathf.Max(MinimumArmyCount, teamCount);
+            if (armies != null && armies.Length >= required)
+                return;
+
+            ArmyRuntimeState[] grownArmies = BuildArmies(required);
+            List<Vector3>[] grownRoutes = BuildMoveRoutes(required);
+            if (armies != null)
+            {
+                for (int teamId = 0; teamId < armies.Length; teamId++)
+                {
+                    grownArmies[teamId] = armies[teamId];
+                    grownRoutes[teamId] = moveRoutes[teamId];
+                }
+            }
+
+            armies = grownArmies;
+            moveRoutes = grownRoutes;
         }
 
         public ArmyRuntimeState GetArmy(int teamId)
@@ -237,25 +301,25 @@ namespace MassEngine.Game
             switch (order.type)
             {
                 case ArmyOrderType.Attack:
-                    manager.ClearFlowTargetOverride(order.teamId);
-                    manager.SetTeamNavigationOverride(order.teamId, true, true);
+                    ClearFlowTarget(order.teamId);
+                    ApplyTeamNavigation(order.teamId, true, true);
                     break;
 
                 case ArmyOrderType.Move:
                     if (!order.hasTarget)
                         return false;
-                    manager.SetTeamNavigationOverride(order.teamId, true, false);
-                    manager.SetFlowTargetOverride(order.teamId, order.target);
+                    ApplyTeamNavigation(order.teamId, true, false);
+                    ApplyFlowTarget(order.teamId, order.target);
                     break;
 
                 case ArmyOrderType.Hold:
-                    manager.ClearFlowTargetOverride(order.teamId);
-                    manager.SetTeamNavigationOverride(order.teamId, false, false);
+                    ClearFlowTarget(order.teamId);
+                    ApplyTeamNavigation(order.teamId, false, false);
                     break;
 
                 case ArmyOrderType.Retreat:
-                    manager.SetTeamNavigationOverride(order.teamId, true, false);
-                    manager.SetFlowTargetOverride(order.teamId, army.spawnCenter);
+                    ApplyTeamNavigation(order.teamId, true, false);
+                    ApplyFlowTarget(order.teamId, army.spawnCenter);
                     order.target = army.spawnCenter;
                     order.hasTarget = true;
                     break;
@@ -306,7 +370,9 @@ namespace MassEngine.Game
             if (!snapshot.valid)
                 return army.initialUnitCount;
 
-            return teamId == 0 ? snapshot.aliveAttackers : snapshot.aliveDefenders;
+            // Past the teams the telemetry sample covers GetAliveCount returns 0, which would
+            // read as annihilated; fall back to the roster instead of inventing a defeat.
+            return teamId < snapshot.TeamCount ? snapshot.GetAliveCount(teamId) : army.initialUnitCount;
         }
 
         public void StartOrResumeBattle()
@@ -378,9 +444,23 @@ namespace MassEngine.Game
             if (manager == null || manager.scenarioConfig == null || manager.scenarioConfig.unitTypes == null)
                 return;
 
-            int[] counts = new int[2];
-            Vector3[] weightedCenters = new Vector3[2];
             UnitTypeConfig[] unitTypes = manager.scenarioConfig.unitTypes;
+
+            // First pass only sizes the slots; the counting pass below needs them to exist.
+            int teamCount = MinimumArmyCount;
+            for (int i = 0; i < unitTypes.Length; i++)
+            {
+                UnitTypeConfig unitType = unitTypes[i];
+                if (unitType == null || unitType.spawnConfig == null || unitType.teamId < 0)
+                    continue;
+
+                teamCount = Mathf.Max(teamCount, unitType.teamId + 1);
+            }
+
+            EnsureArmyCapacity(teamCount);
+
+            int[] counts = new int[armies.Length];
+            Vector3[] weightedCenters = new Vector3[armies.Length];
 
             for (int i = 0; i < unitTypes.Length; i++)
             {
@@ -401,7 +481,9 @@ namespace MassEngine.Game
                     : Vector3.zero;
             }
 
-            initialized = counts[0] > 0 || counts[1] > 0;
+            initialized = false;
+            for (int teamId = 0; teamId < counts.Length; teamId++)
+                initialized |= counts[teamId] > 0;
         }
 
         private void EvaluateVictory()
@@ -413,20 +495,26 @@ namespace MassEngine.Game
             if (!snapshot.valid || snapshot.totalAgents <= 0)
                 return;
 
-            bool attackersDefeated = armies[0].initialUnitCount > 0 && snapshot.aliveAttackers <= 0;
-            bool defendersDefeated = armies[1].initialUnitCount > 0 && snapshot.aliveDefenders <= 0;
-            if (!attackersDefeated && !defendersDefeated)
+            if (victoryInitialCounts == null || victoryInitialCounts.Length != armies.Length)
+            {
+                victoryInitialCounts = new int[armies.Length];
+                victoryAliveCounts = new int[armies.Length];
+            }
+
+            for (int teamId = 0; teamId < armies.Length; teamId++)
+            {
+                victoryInitialCounts[teamId] = armies[teamId].initialUnitCount;
+                victoryAliveCounts[teamId] = GetAliveUnitCount(teamId);
+            }
+
+            if (!WarSandboxVictory.TryResolveAnnihilation(
+                    victoryInitialCounts,
+                    victoryAliveCounts,
+                    out WarSandboxBattlePhase resultPhase,
+                    out int winnerTeamId))
                 return;
 
-            WarSandboxBattlePhase resultPhase;
-            if (attackersDefeated && defendersDefeated)
-                resultPhase = WarSandboxBattlePhase.Draw;
-            else
-                resultPhase = attackersDefeated
-                    ? WarSandboxBattlePhase.DefenderVictory
-                    : WarSandboxBattlePhase.AttackerVictory;
-
-            CompleteBattle(resultPhase, snapshot, WarSandboxVictoryReason.Annihilation);
+            CompleteBattle(resultPhase, snapshot, WarSandboxVictoryReason.Annihilation, winnerTeamId);
         }
 
         private void EvaluateControlPoint()
@@ -454,15 +542,19 @@ namespace MassEngine.Game
         private void CompleteBattle(
             WarSandboxBattlePhase resultPhase,
             BattleTelemetrySnapshot snapshot,
-            WarSandboxVictoryReason victoryReason)
+            WarSandboxVictoryReason victoryReason,
+            int winnerTeamId = -1)
         {
             phase = resultPhase;
+            // The attacker/defender totals stay in the result because every reader of it is still
+            // written around those two; a many-army battle names its winner in winnerTeamId.
             battleResult = WarSandboxBattleResult.Capture(
                 phase,
                 armies[0].initialUnitCount,
                 armies[1].initialUnitCount,
                 snapshot,
-                victoryReason);
+                victoryReason,
+                winnerTeamId);
             manager.PauseBattle();
         }
 
@@ -493,13 +585,41 @@ namespace MassEngine.Game
                 if (route.Count <= 1)
                     continue;
 
-                TeamSpatialTelemetry team = teamId == 0 ? snapshot.attackers : snapshot.defenders;
+                TeamSpatialTelemetry team = snapshot.GetTeam(teamId);
                 if (!team.valid || !WarSandboxMoveRoute.HasReached(team.centroid, route[0], moveWaypointArrivalRadius))
                     continue;
 
                 route.RemoveAt(0);
                 IssueOrderInternal(ArmyOrder.Move(teamId, route[0]), false);
             }
+        }
+
+        /// <summary>
+        /// The order is recorded for every army, but only the teams the engine keeps a flow field
+        /// for can act on its navigation half. A team past that limit still fights, dies and wins
+        /// per team; it just walks the attacker field until the flow fields become per-team.
+        /// </summary>
+        private bool IsNavigableTeam(int teamId)
+        {
+            return manager != null && teamId >= 0 && teamId < manager.NavigableTeamCount;
+        }
+
+        private void ApplyTeamNavigation(int teamId, bool enabled, bool dynamicTargeting)
+        {
+            if (IsNavigableTeam(teamId))
+                manager.SetTeamNavigationOverride(teamId, enabled, dynamicTargeting);
+        }
+
+        private void ApplyFlowTarget(int teamId, Vector3 point)
+        {
+            if (IsNavigableTeam(teamId))
+                manager.SetFlowTargetOverride(teamId, point);
+        }
+
+        private void ClearFlowTarget(int teamId)
+        {
+            if (IsNavigableTeam(teamId))
+                manager.ClearFlowTargetOverride(teamId);
         }
 
         private void ResolveManager()
@@ -533,6 +653,7 @@ namespace MassEngine.Game
         {
             return value == WarSandboxBattlePhase.AttackerVictory ||
                    value == WarSandboxBattlePhase.DefenderVictory ||
+                   value == WarSandboxBattlePhase.ArmyVictory ||
                    value == WarSandboxBattlePhase.Draw;
         }
     }
