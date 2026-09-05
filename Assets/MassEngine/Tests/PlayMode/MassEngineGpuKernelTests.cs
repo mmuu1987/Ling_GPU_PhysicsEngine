@@ -1577,6 +1577,62 @@ namespace MassEngine.Tests
             Assert.That(snapshot.defenders.observationZoneCount, Is.Zero);
         }
 
+        [UnityTest]
+        public IEnumerator ClearTeamSpatialStatsCoversEveryThreadGroup()
+        {
+            // ClearTeamSpatialStats is [numthreads(64,1,1)] over teamCount * TeamStatsSlotsPerTeam
+            // slots, so eight teams still fit in a single group - and eight is every arrangement
+            // ConfigValidator's MaxTeamId lets a scenario author. The multi-group dispatch is
+            // therefore unreachable from a scene and only tested from here. A dispatch that
+            // forgot to divide would leave every team from the ninth on with whatever the buffer
+            // already held: without the min/max sentinels planted, BuildTeamSpatialStats has
+            // nothing to beat with InterlockedMin/Max, so that team reports bounds it never
+            // occupied rather than an empty box.
+            const int teamCount = 12;
+            const int sentinelMin = 2147483647;
+            const int sentinelMax = -2147483647;
+
+            AllocateFixtureBuffers(teamCount);
+            int slotCount = buffers.TeamStatsSlotCount;
+            Assert.That(slotCount, Is.EqualTo(teamCount * MassGpuBufferManager.TeamStatsSlotsPerTeam));
+            Assert.That(slotCount, Is.GreaterThan(64), "fixture no longer spans more than one thread group");
+            ResetBattlefield();
+
+            // Allocate zeroes this buffer, which would make "cleared" and "never written" read
+            // the same for the five slots the kernel clears to zero. Poison it so only the
+            // sentinel layout can pass.
+            int[] poison = new int[slotCount];
+            for (int i = 0; i < slotCount; i++)
+                poison[i] = 0x5A5A5A5A;
+            buffers.teamSpatialStatsBuffer.SetData(poison);
+
+            // Telemetry owns the group-count arithmetic under test, so go through it rather than
+            // dispatching the kernel here with a second copy of the same expression.
+            new BattleTelemetry(shaderSet.SpatialHashShader, 0.1f).Tick(buffers, 1f);
+            yield return null;
+
+            // Synchronous read: the question is what the clear wrote, not when the async
+            // telemetry readback lands.
+            int[] slots = new int[slotCount];
+            buffers.teamSpatialStatsBuffer.GetData(slots);
+
+            // The fixture only fields teams 0 and 1, so every team above them is left exactly as
+            // the clear wrote it - BuildTeamSpatialStats has no agent to fold in.
+            for (int teamId = 2; teamId < teamCount; teamId++)
+            {
+                int offset = teamId * MassGpuBufferManager.TeamStatsSlotsPerTeam;
+                for (int slot = 0; slot < MassGpuBufferManager.TeamStatsSlotsPerTeam; slot++)
+                {
+                    int expected = slot == 3 || slot == 4
+                        ? sentinelMin
+                        : slot == 5 || slot == 6 ? sentinelMax : 0;
+                    Assert.That(slots[offset + slot], Is.EqualTo(expected),
+                        "team " + teamId + " slot " + slot + " (buffer index " + (offset + slot) +
+                        " of " + slotCount + ") was not cleared");
+                }
+            }
+        }
+
         private void DispatchOneFrame(bool battleStarted)
         {
             registry.FillGpuSettings(settingsCache);

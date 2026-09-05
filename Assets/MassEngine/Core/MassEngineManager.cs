@@ -839,11 +839,8 @@ namespace MassEngine
             if (runtime.active)
                 return runtime.enabled;
 
-            // Only team 1 carries its own config toggle - that pair of fields is what a two-army
-            // RuntimeFlowConfig models. Teams past it inherit the attacker doctrine (advance with
-            // dynamic targeting) and diverge through SetTeamNavigationOverride instead of through
-            // new config fields, which would drop the settings in every serialized asset.
-            return teamId == DefenderTeamId ? Flow.defenderFlowFieldEnabled : Flow.flowFieldEnabled;
+            // The config owns the doctrine itself, so the scene gizmos can read the same rule.
+            return Flow.ResolveTeamFlowEnabled(teamId);
         }
 
         private bool ResolveTeamDynamicTargeting(int teamId)
@@ -852,9 +849,7 @@ namespace MassEngine
             if (runtime.active)
                 return runtime.dynamicTargeting;
 
-            return teamId == DefenderTeamId
-                ? Flow.runtimeDynamicDefenderFlowEnabled
-                : Flow.runtimeDynamicAttackerFlowEnabled;
+            return Flow.ResolveTeamDynamicTargeting(teamId);
         }
 
         /// <summary>

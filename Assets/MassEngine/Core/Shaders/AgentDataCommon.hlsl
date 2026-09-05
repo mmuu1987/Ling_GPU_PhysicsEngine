@@ -228,7 +228,11 @@ int staticObstacleCount;
 float staticObstaclePadding;
 float4 staticObstacleRects[MAX_STATIC_OBSTACLES];
 
-int enableTwoTeamCombat;
+// Whether this frame resolves combat at all - not how many teams are on the field. It was
+// named enableTwoTeamCombat back when two teams were the only arrangement the pipeline had,
+// which read as a team-count switch long after IsEnemy became "any team but mine". A
+// crowd-only frame leaves it at 0, and then nobody is an enemy and nobody holds.
+int combatEnabled;
 int battleStarted;
 int attackerTeamId;
 int defenderTeamId;
@@ -1019,7 +1023,7 @@ bool IsAliveIndex(uint index)
 
 bool IsEnemy(uint selfIndex, uint otherIndex)
 {
-    if (enableTwoTeamCombat == 0)
+    if (combatEnabled == 0)
         return false;
 
     return teamIdReadBuffer[selfIndex] != teamIdReadBuffer[otherIndex];
@@ -1036,11 +1040,11 @@ int TeamStanceOf(uint index)
     return teamStanceReadBuffer[teamId];
 }
 
-// Gated on enableTwoTeamCombat so a crowd-only frame (combat disabled) leaves nobody
+// Gated on combatEnabled so a crowd-only frame (combat disabled) leaves nobody
 // holding, exactly as the old defender predicate did.
 bool IsHoldStance(uint index)
 {
-    return enableTwoTeamCombat != 0 && TeamStanceOf(index) == TEAM_STANCE_HOLD;
+    return combatEnabled != 0 && TeamStanceOf(index) == TEAM_STANCE_HOLD;
 }
 
 // retainExisting: true when validating an agent's CURRENT target (hysteresis applies),
