@@ -73,6 +73,12 @@ namespace MassEngine.Game
         public float ControlPointProgress { get { return controlPointProgress; } }
         public int AttackersInControlPoint { get { return TelemetrySnapshot.attackers.observationZoneCount; } }
         public int DefendersInControlPoint { get { return TelemetrySnapshot.defenders.observationZoneCount; } }
+        /// <summary>
+        /// Armies the roster currently holds, sized from the scenario by RebuildArmyStates.
+        /// The HUD iterates this instead of assuming the attacker/defender pair, which is what
+        /// makes a third army selectable rather than invisible.
+        /// </summary>
+        public int ArmyCount { get { return armies != null ? armies.Length : 0; } }
         public ArmyRuntimeState SelectedArmy { get { return GetArmy(selectedTeam); } }
         public BattleTelemetrySnapshot TelemetrySnapshot
         {
@@ -149,7 +155,11 @@ namespace MassEngine.Game
         /// Teams 0 and 1 keep the names the HUD has always shown them under; anything past that
         /// is numbered, because nothing in a many-army battle makes one of them "the defender".
         /// </summary>
-        private static string DefaultArmyName(int teamId)
+        /// <summary>
+        /// The army's HUD name. The front line keeps its doctrine names; any further army is
+        /// numbered, which is why a third army reads as "第3军团" rather than as another defender.
+        /// </summary>
+        public static string DefaultArmyName(int teamId)
         {
             if (teamId == 0)
                 return "攻方";

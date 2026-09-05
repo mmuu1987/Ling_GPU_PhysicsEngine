@@ -28,9 +28,13 @@ namespace MassEngine.Game.Editor
     }
 
     /// <summary>
-    /// Product-scale presets for the current two-team sandbox. A preset is authoring
-    /// intent: applying it writes SpawnConfig assets with Undo, then the editor window
-    /// invokes ScenarioAutoFit to keep deployment and engine dimensions consistent.
+    /// Product-scale presets for the two main armies. A preset is authoring intent: applying it
+    /// writes SpawnConfig assets with Undo, then the editor window invokes ScenarioAutoFit to keep
+    /// deployment and engine dimensions consistent.
+    ///
+    /// Scaling deliberately stops at the front line (teams 0 and 1). ScenarioAutoFit only re-centers
+    /// those two as well, so a third army's head count and position are both the designer's: scaling
+    /// it without moving it would grow its footprint into the front line it was authored to clear.
     /// </summary>
     public static class WarSandboxScenarioPresets
     {
@@ -63,6 +67,10 @@ namespace MassEngine.Game.Editor
             }
         }
 
+        /// <summary>
+        /// Scales the two main armies to the requested head count each. Teams 2 and up keep the
+        /// count they were authored with - see the class summary for why.
+        /// </summary>
         public static void ApplyPerTeamUnitCount(ScenarioConfig scenario, int unitsPerTeam)
         {
             if (scenario == null || scenario.unitTypes == null)
@@ -71,6 +79,26 @@ namespace MassEngine.Game.Editor
             unitsPerTeam = Mathf.Max(1, unitsPerTeam);
             ApplyTeamUnitCount(CollectTeamSpawns(scenario, 0), unitsPerTeam);
             ApplyTeamUnitCount(CollectTeamSpawns(scenario, 1), unitsPerTeam);
+        }
+
+        /// <summary>
+        /// Teams the scenario spans, from the widest teamId present. Two at minimum, so an
+        /// attacker-only scenario still reads as a battle with an empty defending side.
+        /// </summary>
+        public static int ResolveTeamCount(ScenarioConfig scenario)
+        {
+            int teamCount = 2;
+            if (scenario == null || scenario.unitTypes == null)
+                return teamCount;
+
+            for (int i = 0; i < scenario.unitTypes.Length; i++)
+            {
+                UnitTypeConfig unitType = scenario.unitTypes[i];
+                if (unitType != null)
+                    teamCount = Mathf.Max(teamCount, unitType.teamId + 1);
+            }
+
+            return teamCount;
         }
 
         public static int ResolveTeamUnitCount(ScenarioConfig scenario, int teamId)

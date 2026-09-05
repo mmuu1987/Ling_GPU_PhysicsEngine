@@ -26,13 +26,17 @@ namespace MassEngine.Game.Editor
             EnsureDirectory(SettingsDirectory);
             EnsureDirectory(SceneDirectory);
 
-            UnitTypeConfig attacker = CreateUnitType("AttackerUnitConfig", "Attacker Sword", 0, -1f);
-            UnitTypeConfig defender = CreateUnitType("DefenderUnitConfig", "Defender Sword", 1, 1f);
+            UnitTypeConfig attacker = CreateUnitType("AttackerUnitConfig", "Attacker Sword", 0, null);
+            UnitTypeConfig defender = CreateUnitType("DefenderUnitConfig", "Defender Sword", 1, null);
+            // A third army so the sandbox's N-team support is visible on first Play. The HUD,
+            // minimap and telemetry all iterate the roster; with only two teams every one of
+            // those paths looked correct while still being hardcoded to attacker/defender.
+            UnitTypeConfig thirdArmy = CreateUnitType("ThirdArmyUnitConfig", "Third Army Sword", 2, attacker.spawnConfig);
 
             ScenarioConfig scenario = LoadOrCreate<ScenarioConfig>("ScenarioConfig", out bool scenarioCreated);
             if (scenarioCreated || scenario.unitTypes == null || scenario.unitTypes.Length == 0)
             {
-                scenario.unitTypes = new[] { attacker, defender };
+                scenario.unitTypes = new[] { attacker, defender, thirdArmy };
                 EditorUtility.SetDirty(scenario);
             }
 
@@ -87,18 +91,16 @@ namespace MassEngine.Game.Editor
             Debug.Log("MassEngine sample scene written to " + SampleScenePath + ". Assign VAT profiles / materials on the RenderConfig assets to see units rendered.");
         }
 
-        private static UnitTypeConfig CreateUnitType(string assetName, string displayName, int teamId, float sideSign)
+        /// <param name="mainArmySpawn">
+        /// A main army's spawn, needed only by team 2 and up to clear the front line's Z extent.
+        /// Null for teams 0 and 1, which are placed from their own footprint alone.
+        /// </param>
+        private static UnitTypeConfig CreateUnitType(string assetName, string displayName, int teamId, SpawnConfig mainArmySpawn)
         {
             SpawnConfig spawn = LoadOrCreate<SpawnConfig>(assetName + "_Spawn", out bool spawnCreated);
             if (spawnCreated)
             {
-                spawn.unitCount = 10000;
-                // Spawn centers derive from the auto footprint (depth along X): half the
-                // formation depth plus a 15m engagement gap keeps hostile spawn rects
-                // from overlapping - hardcoded centers violated the physics ledger the
-                // moment the footprint grew past them.
-                Vector3 footprint = spawn.ResolveSpawnSize();
-                spawn.spawnCenter = new Vector3(sideSign * (footprint.x * 0.5f + 15f), 0f, 0f);
+                ApplySampleDeployment(spawn, teamId, mainArmySpawn);
                 EditorUtility.SetDirty(spawn);
             }
 
@@ -124,6 +126,43 @@ namespace MassEngine.Game.Editor
             }
 
             return unitType;
+        }
+
+        /// <summary>
+        /// Where one sample army starts. Teams 0/1 face each other along X with centers derived
+        /// from the auto footprint (depth along X): half the formation depth plus an engagement
+        /// gap keeps hostile spawn rects from overlapping - hardcoded centers violated the
+        /// physics ledger the moment the footprint grew past them.
+        ///
+        /// Team 2 and up deploy along +Z instead, as a smaller force pressing in from the north.
+        /// A ring layout would be the general answer, but spawn rects are axis-aligned: placed on
+        /// a ring without rotating the footprint to face the middle they overlap each other.
+        /// </summary>
+        private static void ApplySampleDeployment(SpawnConfig spawn, int teamId, SpawnConfig mainArmySpawn)
+        {
+            const float engagementGap = 15f;
+            const int mainArmyUnitCount = 10000;
+
+            if (teamId <= 1 || mainArmySpawn == null)
+            {
+                spawn.unitCount = mainArmyUnitCount;
+                float sideSign = teamId == 0 ? -1f : 1f;
+                Vector3 footprint = spawn.ResolveSpawnSize();
+                spawn.spawnCenter = new Vector3(sideSign * (footprint.x * 0.5f + engagementGap), 0f, 0f);
+                return;
+            }
+
+            // Wide and shallow, so it reads as a flanking third force rather than a third block.
+            spawn.unitCount = Mathf.Max(1, mainArmyUnitCount / 4);
+            spawn.formationAspect = 4f;
+            float ownDepth = spawn.ResolveSpawnSize().x;
+            float frontLineHalf = mainArmySpawn.ResolveSpawnSize().z * 0.5f;
+            // Stacked further out for each extra team so a fourth army does not land on the third.
+            float lane = teamId - 2;
+            spawn.spawnCenter = new Vector3(
+                0f,
+                0f,
+                frontLineHalf + engagementGap + ownDepth * (0.5f + lane) + lane * engagementGap);
         }
 
         private static MassEngineSystemConfig CreateSystemConfig(out SimulationConfig simulation, out bool simulationCreated, out RuntimeFlowConfig flow, out bool flowCreated, out LodConfig lod)

@@ -14,6 +14,11 @@ namespace MassEngine.Game.Editor
     /// their edge-to-edge engagement gap remains stable as head counts change.
     /// Spawn footprints themselves are runtime-derived from formationDensity and are
     /// NOT written here; manual spawnSize overrides are left untouched (they are intent).
+    ///
+    /// Teams 2 and up keep the spawn center they were authored with. That is the contract, not a
+    /// gap: only the front line has a symmetric answer. Placing extra armies on a ring would need
+    /// the footprint rotated to face the middle, and spawn rects are axis-aligned - on a ring they
+    /// would overlap their neighbours. World/grid/flow sizing below still counts every team.
     /// </summary>
     public static class ScenarioAutoFit
     {
@@ -77,7 +82,7 @@ namespace MassEngine.Game.Editor
                 report.SuggestedWorldSize.x + "x" + report.SuggestedWorldSize.y +
                 ", cellSize " + report.SuggestedCellSize +
                 ", maxAgentsPerCell " + report.SuggestedMaxAgentsPerCell + ", " + flowNote +
-                ", engagement gap " + engagementGap + "m" +
+                ", engagement gap " + engagementGap + "m (front line only; teams 2+ keep their authored centers)" +
                 ". LOD radii are a camera/visual choice and were not changed — for large worlds consider raising " +
                 "LodConfig near/mid radii and setting maxRenderDistance.", manager);
 
@@ -96,6 +101,7 @@ namespace MassEngine.Game.Editor
             {
                 UnitTypeConfig unitType = unitTypes[i];
                 SpawnConfig spawn = unitType != null ? unitType.spawnConfig : null;
+                // Teams 2 and up are placed by the designer - see the class summary.
                 if (spawn == null || !fittedSpawns.Add(spawn) || (unitType.teamId != 0 && unitType.teamId != 1))
                     continue;
 
