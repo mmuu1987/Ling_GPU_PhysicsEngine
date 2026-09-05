@@ -332,19 +332,41 @@ namespace MassEngine.Tests
         }
 
         [Test]
-        public void UnsupportedTeamIdIsRejectedLoudlyNotSilently()
+        public void ExtraArmyTeamIdRegistersWhileOutOfRangeIdsAreRejectedLoudly()
         {
-            var unit = MakeUnitTypeConfig(teamId: 2, unitCount: 5, maxSpeed: 6f, attackDamage: 10, agentRadius: 0.45f);
+            // teamId 2 is a third army, not a typo: every team owns a flow field slice and a grid
+            // partition indexed by its id, so the registry must let one through.
+            var third = MakeUnitTypeConfig(teamId: 2, unitCount: 5, maxSpeed: 6f, attackDamage: 10, agentRadius: 0.45f);
             ScenarioConfig scenario = ScriptableObject.CreateInstance<ScenarioConfig>();
-            scenario.unitTypes = new[] { unit.config };
+            scenario.unitTypes = new[] { third.config };
             UnitTypeRegistry registry = new UnitTypeRegistry();
 
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("teamId must be 0"));
+            registry.RegisterFromScenario(scenario);
+            Assert.AreEqual(1, registry.UnitTypeCount, "A third army must simulate, not be skipped.");
+            Assert.AreEqual(2, registry.RegisteredTypes[0].TeamId);
+            registry.ReleaseAll();
+
+            // Past the ceiling it is a typo again: those buffers are sized from the widest teamId.
+            var beyond = MakeUnitTypeConfig(
+                teamId: ConfigValidator.MaxTeamId + 1, unitCount: 5, maxSpeed: 6f, attackDamage: 10, agentRadius: 0.45f);
+            scenario.unitTypes = new[] { beyond.config };
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("teamId must be in"));
             registry.RegisterFromScenario(scenario);
 
-            Assert.AreEqual(0, registry.UnitTypeCount, "Unsupported team ids must be rejected, not silently mis-simulated.");
+            Assert.AreEqual(0, registry.UnitTypeCount, "Out-of-range team ids must be rejected, not silently mis-simulated.");
 
-            unit.Destroy();
+            var negative = MakeUnitTypeConfig(teamId: -1, unitCount: 5, maxSpeed: 6f, attackDamage: 10, agentRadius: 0.45f);
+            scenario.unitTypes = new[] { negative.config };
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("teamId must be in"));
+            registry.RegisterFromScenario(scenario);
+
+            Assert.AreEqual(0, registry.UnitTypeCount);
+
+            negative.Destroy();
+            beyond.Destroy();
+            third.Destroy();
             UnityEngine.Object.DestroyImmediate(scenario);
         }
 

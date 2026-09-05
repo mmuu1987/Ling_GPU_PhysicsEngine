@@ -29,6 +29,13 @@ namespace MassEngine
     /// </summary>
     public static class ConfigValidator
     {
+        /// <summary>
+        /// Highest teamId a scenario may use. Every team-partitioned buffer is indexed by raw
+        /// teamId, so this ceiling is about memory rather than doctrine: a mistyped teamId would
+        /// otherwise reserve a flow field slice and a grid partition for a team that has no units.
+        /// </summary>
+        public const int MaxTeamId = 7;
+
         public static ValidationResult Validate(UnitTypeConfig config)
         {
             ValidationResult result = new ValidationResult();
@@ -44,8 +51,10 @@ namespace MassEngine
             else if (config.spawnConfig.unitCount <= 0)
                 result.AddError("SpawnConfig.unitCount must be greater than 0.");
 
-            if (config.teamId != 0 && config.teamId != 1)
-                result.AddError("teamId must be 0 (attacker) or 1 (defender); the pipeline currently maintains exactly two team flow fields. Unit type will be skipped.");
+            if (config.teamId < 0 || config.teamId > MaxTeamId)
+                result.AddError(
+                    "teamId must be in [0, " + MaxTeamId + "] (0 = attacker, 1 = defender, 2+ = extra armies); " +
+                    "each team owns a flow field slice and a grid partition indexed by this id. Unit type will be skipped.");
 
             if (config.movementConfig == null)
                 result.AddWarning("MovementConfig is null; built-in defaults will be used (asset is not modified).");

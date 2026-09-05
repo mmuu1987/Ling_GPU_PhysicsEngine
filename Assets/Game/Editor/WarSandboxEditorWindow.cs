@@ -89,9 +89,7 @@ namespace MassEngine.Game.Editor
             ScenarioConfig scenario = manager.scenarioConfig;
             if (scenario != null)
             {
-                int attackers = WarSandboxScenarioPresets.ResolveTeamUnitCount(scenario, 0);
-                int defenders = WarSandboxScenarioPresets.ResolveTeamUnitCount(scenario, 1);
-                EditorGUILayout.LabelField("当前双方兵力", attackers + " vs " + defenders);
+                EditorGUILayout.LabelField("当前各方兵力", DescribeTeamStrengths(scenario));
             }
 
             SimulationConfig simulation = manager.systemConfig != null ? manager.systemConfig.simulationConfig : null;
@@ -136,6 +134,24 @@ namespace MassEngine.Game.Editor
             Undo.CollapseUndoOperations(undoGroup);
         }
 
+        /// <summary>
+        /// Head count per team, in teamId order. Reads the roster rather than the attacker/defender
+        /// pair so an extra army shows up here instead of silently inflating the agent budget.
+        /// </summary>
+        private static string DescribeTeamStrengths(ScenarioConfig scenario)
+        {
+            int teamCount = WarSandboxScenarioPresets.ResolveTeamCount(scenario);
+            var text = new System.Text.StringBuilder();
+            for (int teamId = 0; teamId < teamCount; teamId++)
+            {
+                if (teamId > 0)
+                    text.Append(" vs ");
+                text.Append(WarSandboxScenarioPresets.ResolveTeamUnitCount(scenario, teamId));
+            }
+
+            return text.ToString();
+        }
+
         private static void DrawArmy(int index, UnitTypeConfig unitType)
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
@@ -152,7 +168,9 @@ namespace MassEngine.Game.Editor
 
             SerializedObject unitObject = new SerializedObject(unitType);
             unitObject.Update();
-            EditorGUILayout.PropertyField(unitObject.FindProperty("teamId"), new GUIContent("阵营（0攻/1守）"));
+            EditorGUILayout.PropertyField(
+                unitObject.FindProperty("teamId"),
+                new GUIContent("阵营（0=攻方，1=守方，2 及以上为额外军团）"));
             unitObject.ApplyModifiedProperties();
 
             SpawnConfig spawn = unitType.spawnConfig;

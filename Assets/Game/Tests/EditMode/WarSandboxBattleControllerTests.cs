@@ -279,6 +279,33 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void TeamPaletteGivesEveryArmyItsOwnStableColour()
+        {
+            // The HUD colours the selector, force readout, minimap and world markers from this one
+            // table, so a repeat or a throw past its end would mislabel an army rather than fail loudly.
+            var seen = new System.Collections.Generic.List<Color>();
+            for (int teamId = 0; teamId < 24; teamId++)
+            {
+                Color colour = WarSandboxTeamPalette.Resolve(teamId);
+                Assert.That(WarSandboxTeamPalette.Resolve(teamId), Is.EqualTo(colour), "team " + teamId + " must be stable");
+
+                for (int i = 0; i < seen.Count; i++)
+                {
+                    float distance = Mathf.Abs(seen[i].r - colour.r) + Mathf.Abs(seen[i].g - colour.g) +
+                                     Mathf.Abs(seen[i].b - colour.b);
+                    Assert.That(distance, Is.GreaterThan(0.05f), "team " + teamId + " duplicates team " + i);
+                }
+
+                seen.Add(colour);
+            }
+
+            // Attacker red and defender blue are the colours the existing HUD screenshots use.
+            Assert.That(WarSandboxTeamPalette.Resolve(0).r, Is.GreaterThan(WarSandboxTeamPalette.Resolve(0).b));
+            Assert.That(WarSandboxTeamPalette.Resolve(1).b, Is.GreaterThan(WarSandboxTeamPalette.Resolve(1).r));
+            Assert.That(WarSandboxTeamPalette.Resolve(-1), Is.EqualTo(Color.white));
+        }
+
+        [Test]
         public void CameraZoomRejectsInputSpikesAndAlwaysStaysBounded()
         {
             float distance = 100f;
@@ -499,6 +526,7 @@ namespace MassEngine.Game.Tests
             controller.RebuildArmyStates();
 
             ArmyRuntimeState third = controller.GetArmy(2);
+            Assert.That(controller.ArmyCount, Is.EqualTo(3));
             Assert.That(third, Is.Not.Null);
             Assert.That(third.teamId, Is.EqualTo(2));
             Assert.That(third.initialUnitCount, Is.EqualTo(40));
@@ -518,7 +546,8 @@ namespace MassEngine.Game.Tests
             AddThirdArmy(40, new Vector3(0f, 0f, 60f));
             controller.RebuildArmyStates();
 
-            // Recorded here as the reason a third army cannot be steered yet, not as a goal.
+            // The engine sizes its per-team flow state in Initialize, which an unstarted manager
+            // has not run: orders must still be accepted for a team whose slice does not exist yet.
             Assert.That(manager.NavigableTeamCount, Is.EqualTo(2));
 
             Assert.That(controller.IssueOrder(ArmyOrder.Attack(2)), Is.True);

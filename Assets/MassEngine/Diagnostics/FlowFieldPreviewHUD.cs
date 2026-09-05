@@ -17,10 +17,11 @@ namespace MassEngine
         [Range(64, 512)] public int previewSize = 192;
         /// <summary>
         /// Teams whose preview to stack down the right edge, drawn in this order. Replaced the
-        /// attacker/defender pair of toggles now that every team owns a slice of the flow field;
-        /// the default is team 0 only, which is what those toggles defaulted to.
+        /// attacker/defender pair of toggles now that every team owns a slice of the flow field.
+        /// Left empty (the default) it shows every allocated team, so a third army's field needs
+        /// no hand-typed entry; fill it to pin the list to specific teams.
         /// </summary>
-        public int[] previewTeamIds = { 0 };
+        public int[] previewTeamIds = { };
 
         private void Reset()
         {
@@ -35,12 +36,12 @@ namespace MassEngine
             float x = Screen.width - previewSize - 8f;
             float y = 8f;
 
-            if (previewTeamIds == null)
-                return;
+            bool everyTeam = previewTeamIds == null || previewTeamIds.Length == 0;
+            int entryCount = everyTeam ? manager.Buffers.TeamCount : previewTeamIds.Length;
 
-            for (int i = 0; i < previewTeamIds.Length; i++)
+            for (int i = 0; i < entryCount; i++)
             {
-                int teamId = previewTeamIds[i];
+                int teamId = everyTeam ? i : previewTeamIds[i];
                 // Null means the team has no slice (id out of range for this scenario). Skipping
                 // is deliberate: falling back to team 0's texture would label another team's field.
                 RenderTexture preview = manager.Buffers.GetFlowPreviewTexture(teamId);
