@@ -12,11 +12,12 @@
 | `Scripts/ClickFlowTargetSetter.cs` | 点击地面 → `manager.SetFlowTargetOverride(teamId, point)`（运行时覆盖，不写资产）+ 可选自动开战 |
 | `Scripts/ArmyOrder.cs` | 游戏层军团命令与运行时状态：进攻、移动、防守、撤退 |
 | `Scripts/WarSandboxBattleController.cs` | 把军团意图接入引擎运行时导航 API，管理暂停、倍速、胜负与重开 |
+| `Scripts/WarSandboxScenarioPreset.cs` | 可复用战场方案资产：快照部署、世界网格、流场、规则、据点与静态障碍 |
 | `Scripts/WarSandboxCommandHUD.cs` | 右侧运行时指挥面板与快捷键；移动命令消费下一次地面点击 |
 | `Scripts/Gizmos/` | Scene 视图的阵型/流场/目标 Gizmo（ScenarioGizmos 挂场景物体上） |
 | `Scripts/CameraControls/` | 观战相机。场景在用：MyCameraManager（+其依赖 LocalRotationAndScale）。备用整洁版套件：RigCameraManager + SceneViewCameraRig/Input/Settings/BoundsUtility + CameraMouseOrbit（原 *_Stage7 副本，2026-07-27 已去后缀改名，暂无场景引用） |
 | `Editor/WarSandboxSampleCreator.cs` | 菜单 MassEngine/Create Sample Configs And Scene：一键生成可跑的示例场景与配置（非破坏式：已存在的资产不动） |
-| `Editor/WarSandboxEditorWindow.cs` | 菜单 MassEngine/War Sandbox Editor：切换产品规模预设，编辑军团兵力、密度和阵型，以固定交战间距自动布阵并调用 Auto-Fit |
+| `Editor/WarSandboxEditorWindow.cs` | 菜单 MassEngine/War Sandbox Editor：编辑/Auto-Fit 军团，并新建、覆盖保存或载入完整战场方案 |
 | `PerformanceBaseline.md` | 20k～400k 总单位的封版实测与产品档位 |
 
 ## 玩法（当前）
@@ -55,13 +56,17 @@ F/F1/F2/F3 使用低频 GPU 质心/范围遥测平滑跟随存活群体；右键
 需要切换规模时，可选择标准 1万、大型 5万、超大型 10万、压力测试 20万或自定义预设，
 再点 `应用预设并 Auto-Fit`。预设按每个阵营的现有兵种比例分配总兵力，并作为一个 Undo 操作应用。
 
+要复用整张战场，在同一窗口的“可复用战场方案”区域点击`新建并捕获当前战场`。方案会保存
+Scenario/System 引用、各兵种阵营与部署、Simulation/RuntimeFlow/RuntimeCombat 参数，以及战斗规则、
+据点和静态障碍。选择已有方案后可覆盖保存或载入；载入会明确确认并支持 Undo，Play Mode 中不可操作。
+
 ## 扩展这款游戏
 
 - 新兵种：见 `../MassEngine/UnitTypes/README.md`（三步，零改引擎）
 - 新指令类型/新阵营 UI：写在本层，通过 `MassEngineManager` 的公共 API
   （StartBattle/StopBattle/ResetScenario/SetFlowTargetOverride）驱动引擎
-- 战争沙盒编辑器（长期目标）：本层将来放编辑器 UI 与关卡序列化，
-  引擎侧无需改动
+- 战场方案扩展：继续在本层扩充 `WarSandboxScenarioPreset` 快照和编辑器工作流，
+  引擎侧无需反向依赖游戏层
 
 ## 性能档位
 
