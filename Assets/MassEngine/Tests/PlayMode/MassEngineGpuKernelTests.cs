@@ -47,6 +47,9 @@ namespace MassEngine.Tests
         private int attackerFlowTargetMode;
         private Vector3 attackerFlowTargetPoint;
         private int attackerFlowMinPerTarget = 8;
+        // Per-team flow records handed to DispatchOneFrame. Null means the historical layout the
+        // attackerFlow* fields above express: team 0 navigates, every other team's field is off.
+        private TeamFlowFrameSettings[] fixtureTeamFlows;
         private int gridMaxAgentsPerCell = 16;
         // Per-team stance uploaded before every dispatch. Null means the historical two-team
         // default: attacker advances, defender holds - which is what defenderMovementMode = 0
@@ -81,6 +84,7 @@ namespace MassEngine.Tests
 
             gridMaxAgentsPerCell = 16;
             fixtureTeamStances = null;
+            fixtureTeamFlows = null;
             staticObstacleCount = 0;
             staticObstaclePadding = 0f;
             for (int i = 0; i < staticObstacleRects.Length; i++)
@@ -455,6 +459,79 @@ namespace MassEngine.Tests
         }
 
         /// <summary>
+        /// One flow record per allocated team. Team 0 is driven by the attackerFlow* fields, which
+        /// is what the single attacker record used to carry; the rest stay off unless a test fills
+        /// fixtureTeamFlows. The grid values are stamped over every record on purpose: the flow
+        /// buffers are partitioned as teamId * cellCount + cell, which only holds while every team
+        /// shares one grid, so a test cannot accidentally give one team a grid of its own.
+        /// </summary>
+        private TeamFlowFrameSettings[] BuildFixtureTeamFlows()
+        {
+            int teamCount = Mathf.Max(1, buffers.TeamCount);
+            TeamFlowFrameSettings[] flows = new TeamFlowFrameSettings[teamCount];
+            for (int teamId = 0; teamId < teamCount; teamId++)
+            {
+                if (fixtureTeamFlows != null && teamId < fixtureTeamFlows.Length)
+                    flows[teamId] = fixtureTeamFlows[teamId];
+                else if (teamId == 0)
+                    flows[teamId] = new TeamFlowFrameSettings
+                    {
+                        enabled = attackerFlowEnabled,
+                        rebuildThisFrame = attackerFlowRebuild,
+                        dynamicFlowEnabled = attackerFlowDynamic,
+                        targetMode = attackerFlowTargetMode,
+                        targetPoint = attackerFlowTargetPoint,
+                        sectorCount = 5,
+                        minAgentsPerTarget = attackerFlowMinPerTarget
+                    };
+
+                flows[teamId].threadGroupsX = 4;
+                flows[teamId].resolutionX = 16;
+                flows[teamId].resolutionZ = 16;
+                flows[teamId].origin = new Vector2(-8f, -8f);
+                flows[teamId].cellSize = 1f;
+            }
+
+            return flows;
+        }
+
+        /// <summary>
+        /// Reads one team's slice of the direction field. The slice offset is the whole point of
+        /// the readback: one buffer now holds every team's cells back to back.
+        /// </summary>
+        private Vector2[] ReadFlowDirections(int teamId)
+        {
+            Vector2[] directions = new Vector2[buffers.FlowCellCount];
+            buffers.flowFieldDirectionsBuffer.GetData(directions, 0, teamId * buffers.FlowCellCount, directions.Length);
+            return directions;
+        }
+
+        /// <summary>
+        /// A record that rebuilds this frame and steers at one configured point. Grid fields are
+        /// left out on purpose - BuildFixtureTeamFlows stamps the shared grid over every record.
+        /// </summary>
+        private static TeamFlowFrameSettings NavigatingTeamFlow(Vector3 targetPoint)
+        {
+            return new TeamFlowFrameSettings
+            {
+                enabled = true,
+                rebuildThisFrame = true,
+                targetMode = 1, // FLOW_TARGET_POINT
+                targetPoint = targetPoint,
+                sectorCount = 5,
+                minAgentsPerTarget = 8
+            };
+        }
+
+        /// <summary>Reads one team's slice of the runtime flow stats.</summary>
+        private int[] ReadFlowStats(int teamId)
+        {
+            int[] stats = new int[MassGpuBufferManager.FlowStatsSlotsPerTeam];
+            buffers.runtimeFlowStatsBuffer.GetData(stats, 0, teamId * MassGpuBufferManager.FlowStatsSlotsPerTeam, stats.Length);
+            return stats;
+        }
+
+        /// <summary>
         /// Asserts every agent of one team either left its spawn or did not move at all,
         /// comparing against initialAgents because ResetBattlefield respawns from that array.
         /// </summary>
@@ -531,8 +608,7 @@ namespace MassEngine.Tests
             DispatchOneFrame(battleStarted: false);
             yield return null;
 
-            Vector2[] directions = new Vector2[16 * 16];
-            buffers.flowFieldDirectionsBuffer.GetData(directions);
+            Vector2[] directions = ReadFlowDirections(0);
             int nonZero = 0;
             for (int i = 0; i < directions.Length; i++)
             {
@@ -545,7 +621,7 @@ namespace MassEngine.Tests
             DispatchOneFrame(battleStarted: false);
             yield return null;
 
-            buffers.flowFieldDirectionsBuffer.GetData(directions);
+            directions = ReadFlowDirections(0);
             for (int i = 0; i < directions.Length; i++)
                 Assert.AreEqual(0f, directions[i].sqrMagnitude, 0.000001f, "cell " + i + " kept a ghost direction after target removal");
         }
@@ -564,8 +640,7 @@ namespace MassEngine.Tests
             DispatchOneFrame(battleStarted: false);
             yield return null;
 
-            Vector2[] directions = new Vector2[16 * 16];
-            buffers.flowFieldDirectionsBuffer.GetData(directions);
+            Vector2[] directions = ReadFlowDirections(0);
             Vector2 westCell = directions[8 * 16 + 2]; // world (-5.5, 0.5)
             Assert.Greater(westCell.x, 0.2f, "detour must still make eastward progress: " + westCell);
             Assert.Greater(Mathf.Abs(westCell.y), 0.2f, "blocked direct ray must bend around a wall corner: " + westCell);
@@ -735,13 +810,11 @@ namespace MassEngine.Tests
             DispatchOneFrame(battleStarted: true);
             yield return null;
 
-            int[] stats = new int[4];
-            buffers.runtimeAttackerFlowStatsBuffer.GetData(stats);
+            int[] stats = ReadFlowStats(0);
             Assert.AreEqual(4, stats[0], "density build must count the 4 living defenders");
             Assert.AreEqual(1, stats[3], "exactly one sector meets the min-agents bar");
 
-            Vector2[] directions = new Vector2[16 * 16];
-            buffers.flowFieldDirectionsBuffer.GetData(directions);
+            Vector2[] directions = ReadFlowDirections(0);
             Vector2 westCell = directions[14 * 16 + 2]; // world (-5.5, 6.5), same sector as the cluster
             Assert.Greater(westCell.x, 0.7f, "sector path: west cells must point east at the cluster, got " + westCell);
 
@@ -752,9 +825,9 @@ namespace MassEngine.Tests
             DispatchOneFrame(battleStarted: true);
             yield return null;
 
-            buffers.runtimeAttackerFlowStatsBuffer.GetData(stats);
+            stats = ReadFlowStats(0);
             Assert.AreEqual(0, stats[3], "no sector may meet a bar of 50");
-            buffers.flowFieldDirectionsBuffer.GetData(directions);
+            directions = ReadFlowDirections(0);
             westCell = directions[14 * 16 + 2];
             Assert.Greater(westCell.x, 0.7f, "fallback path: west cells must point east at the centroid, got " + westCell);
 
@@ -762,6 +835,70 @@ namespace MassEngine.Tests
             attackerFlowRebuild = false;
             attackerFlowDynamic = false;
             attackerFlowMinPerTarget = 8;
+        }
+
+        [UnityTest]
+        public IEnumerator ThreeTeamsEachFollowOwnFlowField()
+        {
+            // Step 2 of multi-group navigation: one team-partitioned direction buffer replaced the
+            // attacker/defender pair, so a third army owns a field instead of borrowing another
+            // team's. Three point targets pulling three different ways is what tells per-team
+            // slices apart from a shared one: a kernel writing the wrong slice, or a dispatch loop
+            // that stops after two teams, leaves two of these three readbacks identical or blank.
+            const int centerCell = 8 * 16 + 8; // cell (8, 8) = world (0.5, 0.5), inside every field
+
+            AllocateFixtureBuffers(3);
+            ResetBattlefield();
+            fixtureTeamFlows = new[]
+            {
+                NavigatingTeamFlow(new Vector3(7f, 0f, 0.5f)),
+                NavigatingTeamFlow(new Vector3(-7f, 0f, 0.5f)),
+                NavigatingTeamFlow(new Vector3(0.5f, 0f, 7f))
+            };
+
+            DispatchOneFrame(battleStarted: false);
+            yield return null;
+
+            Vector2 east = ReadFlowDirections(0)[centerCell];
+            Vector2 west = ReadFlowDirections(1)[centerCell];
+            Vector2 north = ReadFlowDirections(2)[centerCell];
+            // Normalized directions with no obstacles in the way, so each axis is within
+            // rounding of +/-1: a slice that picked up a neighbour's target fails by sign.
+            Assert.Greater(east.x, 0.9f, "team 0 must steer east at its own target, got " + east);
+            Assert.Less(west.x, -0.9f, "team 1 must steer west at its own target, got " + west);
+            Assert.Greater(north.y, 0.9f, "team 2 must steer north at its own target, got " + north);
+
+            fixtureTeamFlows = null;
+        }
+
+        [UnityTest]
+        public IEnumerator DisabledTeamFlowLeavesOtherTeamsFields()
+        {
+            // The acceptance gate for the merge: the shipped scenario runs with the defender's
+            // field switched off, and folding both fields into one buffer must not quietly turn
+            // it on. Team 1 asks for nothing while team 0 rebuilds; team 1's slice has to stay
+            // zeroed rather than inherit whatever the dispatched team wrote.
+            const int centerCell = 8 * 16 + 8;
+
+            AllocateFixtureBuffers(2);
+            ResetBattlefield();
+            fixtureTeamFlows = new[]
+            {
+                NavigatingTeamFlow(new Vector3(7f, 0f, 0.5f)),
+                new TeamFlowFrameSettings { enabled = false }
+            };
+
+            DispatchOneFrame(battleStarted: false);
+            yield return null;
+
+            Vector2[] navigating = ReadFlowDirections(0);
+            Assert.Greater(navigating[centerCell].x, 0.9f, "the navigating team lost its field, got " + navigating[centerCell]);
+
+            Vector2[] idle = ReadFlowDirections(1);
+            for (int i = 0; i < idle.Length; i++)
+                Assert.AreEqual(0f, idle[i].sqrMagnitude, 0.000001f, "disabled team 1 cell " + i + " picked up a direction");
+
+            fixtureTeamFlows = null;
         }
 
         [UnityTest]
@@ -1486,22 +1623,7 @@ namespace MassEngine.Tests
                     maxAgentsPerCell = gridMaxAgentsPerCell,
                     boundaryPadding = 0.5f
                 },
-                attackerFlow = new TeamFlowFrameSettings
-                {
-                    enabled = attackerFlowEnabled,
-                    rebuildThisFrame = attackerFlowRebuild,
-                    dynamicFlowEnabled = attackerFlowDynamic,
-                    threadGroupsX = 4,
-                    resolutionX = 16,
-                    resolutionZ = 16,
-                    origin = new Vector2(-8f, -8f),
-                    cellSize = 1f,
-                    targetMode = attackerFlowTargetMode,
-                    targetPoint = attackerFlowTargetPoint,
-                    sectorCount = 5,
-                    minAgentsPerTarget = attackerFlowMinPerTarget
-                },
-                defenderFlow = new TeamFlowFrameSettings { enabled = false, resolutionX = 16, resolutionZ = 16, origin = new Vector2(-8f, -8f), cellSize = 1f },
+                teamFlows = BuildFixtureTeamFlows(),
                 lod = new LodFrameSettings
                 {
                     lodCenterPosition = Vector3.zero,

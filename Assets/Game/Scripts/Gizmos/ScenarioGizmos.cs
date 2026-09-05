@@ -168,15 +168,22 @@ namespace MassEngine.Game
 
         private static Texture ResolveAttackerPreviewTexture(MassEngineManager sourceManager)
         {
-            return sourceManager != null && sourceManager.Buffers != null
-                ? sourceManager.Buffers.runtimeAttackerFlowPreviewTexture
-                : null;
+            return ResolvePreviewTexture(sourceManager, MassEngineManager.AttackerTeamId);
         }
 
         private static Texture ResolveDefenderPreviewTexture(MassEngineManager sourceManager)
         {
+            return ResolvePreviewTexture(sourceManager, MassEngineManager.DefenderTeamId);
+        }
+
+        /// <summary>
+        /// Preview textures are one per team now. This gizmo still draws only the two configured
+        /// armies - a further army is visible through FlowFieldPreviewHUD at runtime.
+        /// </summary>
+        private static Texture ResolvePreviewTexture(MassEngineManager sourceManager, int teamId)
+        {
             return sourceManager != null && sourceManager.Buffers != null
-                ? sourceManager.Buffers.runtimeDefenderFlowPreviewTexture
+                ? sourceManager.Buffers.GetFlowPreviewTexture(teamId)
                 : null;
         }
     }

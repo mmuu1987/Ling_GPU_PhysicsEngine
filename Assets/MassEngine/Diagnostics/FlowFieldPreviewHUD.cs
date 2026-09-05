@@ -15,8 +15,12 @@ namespace MassEngine
     {
         public MassEngineManager manager;
         [Range(64, 512)] public int previewSize = 192;
-        public bool showAttackerFlow = true;
-        public bool showDefenderFlow;
+        /// <summary>
+        /// Teams whose preview to stack down the right edge, drawn in this order. Replaced the
+        /// attacker/defender pair of toggles now that every team owns a slice of the flow field;
+        /// the default is team 0 only, which is what those toggles defaulted to.
+        /// </summary>
+        public int[] previewTeamIds = { 0 };
 
         private void Reset()
         {
@@ -31,17 +35,21 @@ namespace MassEngine
             float x = Screen.width - previewSize - 8f;
             float y = 8f;
 
-            if (showAttackerFlow && manager.Buffers.runtimeAttackerFlowPreviewTexture != null)
-            {
-                GUI.DrawTexture(new Rect(x, y, previewSize, previewSize), manager.Buffers.runtimeAttackerFlowPreviewTexture, ScaleMode.ScaleToFit, false);
-                GUI.Label(new Rect(x, y + previewSize, previewSize, 20f), "Attacker Flow");
-                y += previewSize + 26f;
-            }
+            if (previewTeamIds == null)
+                return;
 
-            if (showDefenderFlow && manager.Buffers.runtimeDefenderFlowPreviewTexture != null)
+            for (int i = 0; i < previewTeamIds.Length; i++)
             {
-                GUI.DrawTexture(new Rect(x, y, previewSize, previewSize), manager.Buffers.runtimeDefenderFlowPreviewTexture, ScaleMode.ScaleToFit, false);
-                GUI.Label(new Rect(x, y + previewSize, previewSize, 20f), "Defender Flow");
+                int teamId = previewTeamIds[i];
+                // Null means the team has no slice (id out of range for this scenario). Skipping
+                // is deliberate: falling back to team 0's texture would label another team's field.
+                RenderTexture preview = manager.Buffers.GetFlowPreviewTexture(teamId);
+                if (preview == null)
+                    continue;
+
+                GUI.DrawTexture(new Rect(x, y, previewSize, previewSize), preview, ScaleMode.ScaleToFit, false);
+                GUI.Label(new Rect(x, y + previewSize, previewSize, 20f), "Team " + teamId + " Flow");
+                y += previewSize + 26f;
             }
         }
     }

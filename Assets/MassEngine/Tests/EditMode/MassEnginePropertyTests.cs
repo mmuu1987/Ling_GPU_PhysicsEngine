@@ -448,8 +448,11 @@ namespace MassEngine.Tests
                 rebuildDensityMap = true,
                 densityMapThreadGroupsX = 1,
                 densityMapThreadGroupsY = 1,
-                attackerFlow = new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 },
-                defenderFlow = new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 }
+                teamFlows = new[]
+                {
+                    new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 },
+                    new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 }
+                }
             };
 
             orchestrator.DispatchFrame(context);
@@ -460,14 +463,16 @@ namespace MassEngine.Tests
             {
                 "ClearGrid",
                 "BuildSpatialHash",
-                "ClearRuntimeAttackerFlowResources",
-                "BuildRuntimeAttackerTargetDensity",
-                "SelectRuntimeAttackerFlowTargets",
-                "GenerateRuntimeAttackerFlowField",
-                "ClearRuntimeDefenderFlowResources",
-                "BuildRuntimeDefenderTargetDensity",
-                "SelectRuntimeDefenderFlowTargets",
-                "GenerateRuntimeDefenderFlowField",
+                // Teams share the four kernels and are told apart by the label suffix, which is
+                // also how the flowTeamId uniform is set - one team per dispatch group.
+                "ClearRuntimeFlowResources[team0]",
+                "BuildRuntimeFlowTargetDensity[team0]",
+                "SelectRuntimeFlowTargets[team0]",
+                "GenerateRuntimeFlowField[team0]",
+                "ClearRuntimeFlowResources[team1]",
+                "BuildRuntimeFlowTargetDensity[team1]",
+                "SelectRuntimeFlowTargets[team1]",
+                "GenerateRuntimeFlowField[team1]",
                 "ClearDensityMap",
                 "BuildDensityMap",
                 "BuildEngagementSlotOccupancy",
@@ -484,8 +489,11 @@ namespace MassEngine.Tests
             // skip those stages (a regression to per-frame rebuild is a real perf cliff).
             recorder.Labels.Clear();
             context.rebuildDensityMap = false;
-            context.attackerFlow = new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 };
-            context.defenderFlow = new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 };
+            context.teamFlows = new[]
+            {
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 },
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 }
+            };
             orchestrator.DispatchFrame(context);
             string[] gatedExpected =
             {
@@ -498,6 +506,77 @@ namespace MassEngine.Tests
                 "ClassifyVisibleAgentsForUnitType[1]"
             };
             CollectionAssert.AreEqual(gatedExpected, recorder.Labels, "gated-off frame must skip flow and density stages");
+
+            buffers.ReleaseAll();
+        }
+
+        /// <summary>
+        /// Three armies, each with its own flow field slice: the teams that asked for a rebuild
+        /// get their own dispatch group, and the one that did not is skipped entirely. This is
+        /// what a third army following its own orders looks like at the dispatch layer - before
+        /// the fields were per team, team 2 had no field of its own to rebuild.
+        /// </summary>
+        [Test]
+        public void EveryTeamThatRebuildsGetsItsOwnFlowDispatch()
+        {
+            MassGpuBufferManager buffers = new MassGpuBufferManager();
+            buffers.Allocate(agentCount: 8, gridCellCount: 16, maxAgentsPerCell: 4, flowFieldResolutionX: 8, flowFieldResolutionZ: 8, unitTypeCount: 1, teamCount: 3);
+
+            DispatchRecorder recorder = new DispatchRecorder();
+            ComputePipelineOrchestrator orchestrator = new ComputePipelineOrchestrator(
+                MassGpuShaderSet.Find(null, null, null, null, null), buffers, recorder);
+
+            // 2 grid + 4 flow x 2 rebuilding teams + 3 combat + 1 LOD label, each reported once.
+            for (int i = 0; i < 14; i++)
+                LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("MassEngine skipped GPU dispatch"));
+
+            PipelineFrameContext context = new PipelineFrameContext
+            {
+                totalAgentCount = 8,
+                unitTypeCount = 1,
+                agentThreadGroupsX = 1,
+                gridThreadGroupsX = 1,
+                rebuildDensityMap = false,
+                teamFlows = new[]
+                {
+                    new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                    new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                    new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 }
+                }
+            };
+
+            orchestrator.DispatchFrame(context);
+
+            string[] expectedFlow =
+            {
+                "ClearRuntimeFlowResources[team0]",
+                "BuildRuntimeFlowTargetDensity[team0]",
+                "SelectRuntimeFlowTargets[team0]",
+                "GenerateRuntimeFlowField[team0]",
+                "ClearRuntimeFlowResources[team2]",
+                "BuildRuntimeFlowTargetDensity[team2]",
+                "SelectRuntimeFlowTargets[team2]",
+                "GenerateRuntimeFlowField[team2]"
+            };
+            CollectionAssert.AreEqual(
+                expectedFlow,
+                recorder.Labels.Where(label => label.Contains("RuntimeFlow")).ToArray(),
+                "each rebuilding team needs its own dispatch group, and team 1 asked for none");
+
+            // A frame context carrying more teams than the buffers were sized for must not
+            // dispatch the extra team: its slice does not exist, so it would corrupt another's.
+            recorder.Labels.Clear();
+            context.teamFlows = new[]
+            {
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 }
+            };
+            orchestrator.DispatchFrame(context);
+            CollectionAssert.IsEmpty(
+                recorder.Labels.Where(label => label.Contains("RuntimeFlow")).ToArray(),
+                "a team beyond the allocated team count must never be dispatched");
 
             buffers.ReleaseAll();
         }

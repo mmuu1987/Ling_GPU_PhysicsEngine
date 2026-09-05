@@ -544,9 +544,14 @@ namespace MassEngine.Game.Tests
 
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
+            // Signature spelled out because there are two overloads now: the single-team
+            // builder this test drives, and the array builder that fans it out over every team.
             MethodInfo method = typeof(MassEngineManager).GetMethod(
                 "BuildTeamFlowSettings",
-                BindingFlags.Instance | BindingFlags.NonPublic);
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                null,
+                new[] { typeof(int), typeof(int), typeof(int) },
+                null);
             Assert.That(method, Is.Not.Null);
             return (TeamFlowFrameSettings)method.Invoke(manager, new object[] { teamId, 1, 16 });
         }

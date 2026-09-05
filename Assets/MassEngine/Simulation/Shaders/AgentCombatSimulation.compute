@@ -82,9 +82,7 @@ float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPositi
 
 float2 BlendPursuitWithNavigation(uint selfIndex, float3 position, float2 pursuitDirection, float targetDistance, UnitTypeSettings settings)
 {
-    float2 navigationDirection = UsesDefenderFlowSlot(selfIndex)
-        ? SampleDefenderFlowDirection(selfIndex, position)
-        : SampleFlowDirection(selfIndex, position);
+    float2 navigationDirection = SampleFlowDirection(selfIndex, teamIdReadBuffer[selfIndex], position);
     if (dot(navigationDirection, navigationDirection) <= 0.0001)
         return pursuitDirection;
 
@@ -276,10 +274,11 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     }
 
     float2 desiredDirection = 0.0;
-    // Two independent questions that used to be one flag: which flow configuration this
-    // team reads (still attacker-or-defender until step 2 folds the flow layer), and what
-    // this team's stance is (now per-team).
-    bool usesDefenderFlow = UsesDefenderFlowSlot(id.x);
+    // Every team now reads its own flow field and its own flow configuration, so the
+    // attacker-or-defender split that used to live here is gone. Stance stays a separate
+    // question from navigation: a team can hold position with a flow field configured.
+    int selfTeamId = teamIdReadBuffer[id.x];
+    TeamFlowParams selfFlow = GetTeamFlowParams(selfTeamId);
     int teamStance = TeamStanceOf(id.x);
     bool holdingPosition = IsHoldStance(id.x);
     bool wasAttacking = agent.currentState == STATE_ATTACK;
@@ -359,30 +358,17 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
             if (dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius)
                 desiredDirection = normalize(toHome);
         }
-        else if (usesDefenderFlow)
+        else
         {
-            desiredDirection = SampleDefenderFlowDirection(id.x, agent.position);
+            desiredDirection = SampleFlowDirection(id.x, selfTeamId, agent.position);
             if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
-                defenderFlowTargetMode != FLOW_TARGET_NONE &&
+                selfFlow.modes.x != FLOW_TARGET_NONE &&
                 settings.attractionStrength > 0.0)
             {
                 // Attraction fallback: when the flow field yields no direction (not yet
                 // generated, or outside coverage) steer straight at the configured target.
-                float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, defenderFlowTargetMode, defenderFlowTargetPoint, defenderFlowTargetArea);
-                float stopRadius = max(0.0, dynamicDefenderFlowTargetStopRadius);
-                if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
-                    desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
-            }
-        }
-        else
-        {
-            desiredDirection = SampleFlowDirection(id.x, agent.position);
-            if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
-                attackerFlowTargetMode != FLOW_TARGET_NONE &&
-                settings.attractionStrength > 0.0)
-            {
-                float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, attackerFlowTargetMode, attackerFlowTargetPoint, attackerFlowTargetArea);
-                float stopRadius = max(0.0, dynamicFlowTargetStopRadius);
+                float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, selfFlow.modes.x, selfFlow.target, selfFlow.area);
+                float stopRadius = max(0.0, selfFlow.target.z);
                 if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
                     desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
             }
