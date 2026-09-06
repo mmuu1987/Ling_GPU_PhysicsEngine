@@ -28,6 +28,7 @@ GPU PlayMode 测试需要支持 Compute Shader 的图形设备。
 
 ## 文档入口
 
+- [产品总策划案](GAME_DESIGN.md)
 - [引擎总览](Assets/MassEngine/README.md)
 - [游戏层](Assets/Game/README.md)
 - [性能基线](Assets/Game/PerformanceBaseline.md)

@@ -9,7 +9,7 @@ MassEngine 是以 Compute Shader 为核心的海量单位模拟引擎。逐帧�
 | `Core` | 数据契约、buffer 所有权、管线调度、场景入口 |
 | `UnitTypes` | 兵种组合、模块接口和配置校验 |
 | `Spatial` | 空间哈希和邻域查询 |
-| `FlowField` | 双队伍流场、动态目标和静态障碍 |
+| `FlowField` | 按 teamId 分区的多军团流场、动态目标和静态障碍 |
 | `Crowd` | 分离、密度压力和车道偏置参数 |
 | `Simulation` | 战斗、状态与移动主 kernel |
 | `Projectiles` | 远程发射请求、弹道积分和命中伤害 |
@@ -49,7 +49,7 @@ GPU: SpatialHash -> RuntimeFlow(按需) -> DensityMap(按需)
 
 ## 当前边界
 
-- 流场和战斗身份固定支持 team 0/1；N 队伍尚未实现。
+- 流场和战斗身份按 `teamId` 支持多军团；游戏层当前以 `teamId` 直接对应军团，暂不支持结盟。
 - LOD 会降低远处 Agent 的决策频率，因此结果受 LOD 中心影响，并非镜头无关的严格确定性模拟。
 - 弹道池固定为 Agent 数量约 25%，满池时丢弃新请求并记录溢出。
 - 弹道请求仍需回读三份动态数组；更大规模应改为 GPU 端压缩或完全 GPU 分配。
