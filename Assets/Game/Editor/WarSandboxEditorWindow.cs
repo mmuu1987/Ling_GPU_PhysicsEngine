@@ -15,6 +15,9 @@ namespace MassEngine.Game.Editor
         [SerializeField, Min(0f)] private float engagementGap = WarSandboxFormationLayout.DefaultEngagementGap;
         [SerializeField] private WarSandboxScalePreset scalePreset = WarSandboxScalePreset.Standard10K;
         [SerializeField, Min(1)] private int customUnitsPerTeam = 10000;
+        [SerializeField] private WarSandboxDeploymentPlan deploymentPlan;
+        private string planFeedback;
+        private MessageType planFeedbackType;
 
         [MenuItem("MassEngine/War Sandbox Editor")]
         public static void Open()
@@ -24,6 +27,7 @@ namespace MassEngine.Game.Editor
 
         private void OnEnable()
         {
+            minSize = new Vector2(360f, 400f);
             ResolveManager();
         }
 
@@ -44,6 +48,14 @@ namespace MassEngine.Game.Editor
                 return;
             }
 
+            scroll = EditorGUILayout.BeginScrollView(scroll);
+            using (new EditorGUI.DisabledScope(EditorApplication.isPlayingOrWillChangePlaymode))
+                DrawAuthoring();
+            EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawAuthoring()
+        {
             EditorGUI.BeginChangeCheck();
             ScenarioConfig scenarioConfig = (ScenarioConfig)EditorGUILayout.ObjectField(
                 "战役方案", manager.scenarioConfig, typeof(ScenarioConfig), false);
@@ -58,6 +70,7 @@ namespace MassEngine.Game.Editor
                 EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);
             }
 
+            DrawDeploymentPlans();
             DrawToolbar();
 
             ScenarioConfig scenario = manager.scenarioConfig;
@@ -67,10 +80,104 @@ namespace MassEngine.Game.Editor
                 return;
             }
 
-            scroll = EditorGUILayout.BeginScrollView(scroll);
             for (int i = 0; i < scenario.unitTypes.Length; i++)
                 DrawArmy(i, scenario.unitTypes[i]);
-            EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawDeploymentPlans()
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("部署方案", EditorStyles.boldLabel);
+            EditorGUI.BeginChangeCheck();
+            deploymentPlan = (WarSandboxDeploymentPlan)EditorGUILayout.ObjectField(
+                "方案资产", deploymentPlan, typeof(WarSandboxDeploymentPlan), false);
+            if (EditorGUI.EndChangeCheck())
+                planFeedback = null;
+
+            if (deploymentPlan != null)
+                EditorGUILayout.LabelField("已存兵种数", deploymentPlan.UnitTypeCount.ToString());
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button(new GUIContent("另存方案", EditorGUIUtility.IconContent("SaveAs").image)))
+                SaveDeploymentPlanAs();
+            using (new EditorGUI.DisabledScope(deploymentPlan == null))
+            {
+                if (GUILayout.Button(new GUIContent("覆盖方案", EditorGUIUtility.IconContent("SaveActive").image)) &&
+                    EditorUtility.DisplayDialog("覆盖部署方案", "替换「" + deploymentPlan.name + "」中的部署数据？", "覆盖", "取消"))
+                    CaptureDeploymentPlan(deploymentPlan);
+                if (GUILayout.Button(new GUIContent("载入方案", EditorGUIUtility.IconContent("FolderOpened Icon").image)))
+                    LoadDeploymentPlan();
+            }
+            EditorGUILayout.EndHorizontal();
+            if (!string.IsNullOrEmpty(planFeedback))
+                EditorGUILayout.HelpBox(planFeedback, planFeedbackType);
+        }
+
+        private void SaveDeploymentPlanAs()
+        {
+            string path = EditorUtility.SaveFilePanelInProject(
+                "另存部署方案", "DeploymentPlan", "asset", "选择部署方案的保存位置");
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            Object existing = AssetDatabase.LoadMainAssetAtPath(path);
+            if (existing != null)
+            {
+                WarSandboxDeploymentPlan existingPlan = existing as WarSandboxDeploymentPlan;
+                if (existingPlan == null)
+                {
+                    SetPlanFeedback("该路径已有其他类型的资产，未覆盖。", MessageType.Error);
+                    return;
+                }
+                if (EditorUtility.DisplayDialog("覆盖部署方案", "替换「" + existingPlan.name + "」中的部署数据？", "覆盖", "取消") &&
+                    CaptureDeploymentPlan(existingPlan))
+                    deploymentPlan = existingPlan;
+                return;
+            }
+
+            WarSandboxDeploymentPlan created = CreateInstance<WarSandboxDeploymentPlan>();
+            if (!created.TryCapture(manager, engagementGap, out string error))
+            {
+                DestroyImmediate(created);
+                SetPlanFeedback(error, MessageType.Error);
+                return;
+            }
+            AssetDatabase.CreateAsset(created, path);
+            AssetDatabase.SaveAssets();
+            deploymentPlan = created;
+            EditorGUIUtility.PingObject(created);
+            SetPlanFeedback("已保存：" + created.name, MessageType.Info);
+        }
+
+        private bool CaptureDeploymentPlan(WarSandboxDeploymentPlan plan)
+        {
+            if (!plan.TryCapture(manager, engagementGap, out string error))
+            {
+                SetPlanFeedback(error, MessageType.Error);
+                return false;
+            }
+            AssetDatabase.SaveAssets();
+            SetPlanFeedback("已保存：" + plan.name, MessageType.Info);
+            return true;
+        }
+
+        private void LoadDeploymentPlan()
+        {
+            if (!deploymentPlan.TryApply(manager, out string error))
+            {
+                SetPlanFeedback(error, MessageType.Error);
+                return;
+            }
+            Undo.RecordObject(this, "Load War Sandbox Deployment");
+            engagementGap = deploymentPlan.EngagementGap;
+            SceneView.RepaintAll();
+            SetPlanFeedback("已载入：" + deploymentPlan.name, MessageType.Info);
+        }
+
+        private void SetPlanFeedback(string message, MessageType type)
+        {
+            planFeedback = message;
+            planFeedbackType = type;
         }
 
         private void DrawToolbar()
