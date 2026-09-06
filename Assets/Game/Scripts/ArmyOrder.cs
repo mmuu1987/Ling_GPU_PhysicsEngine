@@ -232,5 +232,84 @@ namespace MassEngine.Game
                 return Mathf.MoveTowards(current, 0f, step * 0.5f);
             return Mathf.Clamp(current, -1f, 1f);
         }
+
+        /// <summary>
+        /// Resolves a control point owned by any team. A contested point pauses capture;
+        /// an empty point slowly returns to neutral. Changing owners first removes the
+        /// current owner's progress, then the new owner captures from zero.
+        /// </summary>
+        public static WarSandboxControlPointState ResolveCapture(
+            int currentOwnerTeamId,
+            float currentProgress,
+            int[] teamsInZone,
+            float deltaTime,
+            float captureSeconds)
+        {
+            float step = Mathf.Max(0f, deltaTime) / Mathf.Max(1f, captureSeconds);
+            int occupyingTeamId = -1;
+            int occupyingTeamCount = 0;
+            if (teamsInZone != null)
+            {
+                for (int teamId = 0; teamId < teamsInZone.Length; teamId++)
+                {
+                    if (teamsInZone[teamId] <= 0)
+                        continue;
+
+                    occupyingTeamId = teamId;
+                    occupyingTeamCount++;
+                }
+            }
+
+            int ownerTeamId = currentOwnerTeamId;
+            float progress = ownerTeamId >= 0 ? Mathf.Clamp01(currentProgress) : 0f;
+
+            if (occupyingTeamCount == 0)
+            {
+                progress = Mathf.MoveTowards(progress, 0f, step * 0.5f);
+                if (Mathf.Approximately(progress, 0f))
+                    ownerTeamId = -1;
+            }
+            else if (occupyingTeamCount > 1)
+            {
+                // Multiple teams in the zone freeze the current owner and progress.
+            }
+            else if (ownerTeamId < 0)
+            {
+                ownerTeamId = occupyingTeamId;
+                progress = Mathf.Clamp01(progress + step);
+            }
+            else if (ownerTeamId == occupyingTeamId)
+            {
+                progress = Mathf.Clamp01(progress + step);
+            }
+            else
+            {
+                float remaining = progress - step;
+                if (remaining > 0f)
+                {
+                    progress = remaining;
+                }
+                else
+                {
+                    ownerTeamId = occupyingTeamId;
+                    progress = Mathf.Clamp01(-remaining);
+                }
+            }
+
+            return new WarSandboxControlPointState
+            {
+                ownerTeamId = ownerTeamId,
+                progress = progress,
+                captured = occupyingTeamCount == 1 && ownerTeamId == occupyingTeamId && progress >= 1f
+            };
+        }
+    }
+
+    [Serializable]
+    public struct WarSandboxControlPointState
+    {
+        public int ownerTeamId;
+        public float progress;
+        public bool captured;
     }
 }

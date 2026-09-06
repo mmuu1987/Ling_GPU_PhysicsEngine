@@ -150,6 +150,49 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void MultiArmyControlPointPausesContestedCaptureAndNamesTheWinner()
+        {
+            WarSandboxControlPointState state = WarSandboxControlPoint.ResolveCapture(
+                -1, 0f, new[] { 0, 5, 0 }, 10f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(1));
+            Assert.That(state.progress, Is.EqualTo(0.5f));
+            Assert.That(state.captured, Is.False);
+
+            state = WarSandboxControlPoint.ResolveCapture(
+                state.ownerTeamId, state.progress, new[] { 0, 5, 2 }, 20f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(1));
+            Assert.That(state.progress, Is.EqualTo(0.5f));
+            Assert.That(state.captured, Is.False);
+
+            state = WarSandboxControlPoint.ResolveCapture(
+                state.ownerTeamId, state.progress, new[] { 0, 0, 2 }, 10f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(2));
+            Assert.That(state.progress, Is.EqualTo(0f));
+            Assert.That(state.captured, Is.False);
+
+            state = WarSandboxControlPoint.ResolveCapture(
+                state.ownerTeamId, state.progress, new[] { 0, 0, 2 }, 20f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(2));
+            Assert.That(state.progress, Is.EqualTo(1f));
+            Assert.That(state.captured, Is.True);
+        }
+
+        [Test]
+        public void MultiArmyControlPointReturnsToNeutralWhenEmpty()
+        {
+            WarSandboxControlPointState state = WarSandboxControlPoint.ResolveCapture(
+                2, 0.4f, new[] { 0, 0, 0 }, 4f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(2));
+            Assert.That(state.progress, Is.EqualTo(0.3f));
+
+            state = WarSandboxControlPoint.ResolveCapture(
+                state.ownerTeamId, state.progress, new[] { 0, 0, 0 }, 60f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(-1));
+            Assert.That(state.progress, Is.EqualTo(0f));
+            Assert.That(state.captured, Is.False);
+        }
+
+        [Test]
         public void GameModeCanOnlyChangeDuringDeployment()
         {
             Assert.That(controller.SetGameMode(WarSandboxGameMode.ControlPoint), Is.True);
@@ -214,6 +257,22 @@ namespace MassEngine.Game.Tests
             Assert.That(controller.GetArmy(1).currentOrder.type, Is.EqualTo(ArmyOrderType.Move));
             Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(controller.controlPointCenter));
             Assert.That(controller.GetArmy(1).currentOrder.target, Is.EqualTo(controller.controlPointCenter));
+        }
+
+        [Test]
+        public void ControlPointBattleOrdersEveryFieldedArmyToTheObjective()
+        {
+            controller.controlPointCenter = new Vector3(15f, 0f, -12f);
+            AddThirdArmy(40, new Vector3(0f, 0f, 60f));
+            controller.RebuildArmyStates();
+            controller.SetGameMode(WarSandboxGameMode.ControlPoint);
+
+            Assert.That(controller.StartDefaultBattle(), Is.True);
+            for (int teamId = 0; teamId < 3; teamId++)
+            {
+                Assert.That(controller.GetArmy(teamId).currentOrder.type, Is.EqualTo(ArmyOrderType.Move));
+                Assert.That(controller.GetArmy(teamId).currentOrder.target, Is.EqualTo(controller.controlPointCenter));
+            }
         }
 
         [TestCase(10000)]

@@ -63,16 +63,48 @@ namespace MassEngine.Game
         private WarSandboxBattlePhase phase = WarSandboxBattlePhase.Setup;
         private WarSandboxBattleResult battleResult;
         private float simulationSpeed = 1f;
-        private float controlPointProgress;
+        private int controlPointOwnerTeamId = -1;
+        private float controlPointCaptureProgress;
+        private int[] controlPointZoneCounts;
         private bool initialized;
         private WarSandboxStaticObstaclePresenter obstaclePresenter;
 
         public WarSandboxBattlePhase Phase { get { return phase; } }
         public WarSandboxBattleResult BattleResult { get { return battleResult; } }
         public float SimulationSpeed { get { return simulationSpeed; } }
-        public float ControlPointProgress { get { return controlPointProgress; } }
-        public int AttackersInControlPoint { get { return TelemetrySnapshot.attackers.observationZoneCount; } }
-        public int DefendersInControlPoint { get { return TelemetrySnapshot.defenders.observationZoneCount; } }
+        /// <summary>
+        /// Signed compatibility view: team 0 is positive, team 1 is negative, and a
+        /// later team is represented by the generic owner/progress properties below.
+        /// </summary>
+        public float ControlPointProgress
+        {
+            get
+            {
+                if (controlPointOwnerTeamId == 0)
+                    return controlPointCaptureProgress;
+                if (controlPointOwnerTeamId == 1)
+                    return -controlPointCaptureProgress;
+                return 0f;
+            }
+        }
+        public float ControlPointCaptureProgress { get { return controlPointCaptureProgress; } }
+        public int ControlPointOwnerTeamId { get { return controlPointOwnerTeamId; } }
+        public bool IsControlPointContested
+        {
+            get
+            {
+                int occupyingTeams = 0;
+                for (int teamId = 0; teamId < (controlPointZoneCounts != null ? controlPointZoneCounts.Length : 0); teamId++)
+                {
+                    if (controlPointZoneCounts[teamId] > 0)
+                        occupyingTeams++;
+                }
+
+                return occupyingTeams > 1;
+            }
+        }
+        public int AttackersInControlPoint { get { return GetControlPointUnitCount(0); } }
+        public int DefendersInControlPoint { get { return GetControlPointUnitCount(1); } }
         /// <summary>
         /// Armies the roster currently holds, sized from the scenario by RebuildArmyStates.
         /// The HUD iterates this instead of assuming the attacker/defender pair, which is what
@@ -83,6 +115,13 @@ namespace MassEngine.Game
         public BattleTelemetrySnapshot TelemetrySnapshot
         {
             get { return manager != null && manager.Telemetry != null ? manager.Telemetry.Snapshot : default; }
+        }
+
+        public int GetControlPointUnitCount(int teamId)
+        {
+            return controlPointZoneCounts != null && teamId >= 0 && teamId < controlPointZoneCounts.Length
+                ? controlPointZoneCounts[teamId]
+                : 0;
         }
 
         private void Reset()
@@ -243,7 +282,7 @@ namespace MassEngine.Game
                 return false;
 
             gameMode = value;
-            controlPointProgress = 0f;
+            ResetControlPointState();
             ConfigureControlPointTelemetry();
             return true;
         }
@@ -435,7 +474,7 @@ namespace MassEngine.Game
             Time.timeScale = 1f;
             phase = WarSandboxBattlePhase.Setup;
             battleResult = default;
-            controlPointProgress = 0f;
+            ResetControlPointState();
             initialized = false;
             RebuildArmyStates();
             ConfigureControlPointTelemetry();
@@ -468,6 +507,7 @@ namespace MassEngine.Game
             }
 
             EnsureArmyCapacity(teamCount);
+            EnsureControlPointZoneCounts();
 
             int[] counts = new int[armies.Length];
             Vector3[] weightedCenters = new Vector3[armies.Length];
@@ -533,20 +573,40 @@ namespace MassEngine.Game
                 return;
 
             BattleTelemetrySnapshot snapshot = TelemetrySnapshot;
-            if (!snapshot.valid)
+            if (!snapshot.valid || snapshot.teams == null)
                 return;
 
-            controlPointProgress = WarSandboxControlPoint.ResolveProgress(
-                controlPointProgress,
-                snapshot.attackers.observationZoneCount,
-                snapshot.defenders.observationZoneCount,
+            EnsureControlPointZoneCounts();
+            int fieldedTeamCount = 0;
+            for (int teamId = 0; teamId < armies.Length; teamId++)
+            {
+                TeamSpatialTelemetry team = snapshot.GetTeam(teamId);
+                controlPointZoneCounts[teamId] = team.valid ? Mathf.Max(0, team.observationZoneCount) : 0;
+                if (armies[teamId].initialUnitCount > 0)
+                    fieldedTeamCount++;
+            }
+
+            if (fieldedTeamCount < 2)
+                return;
+
+            WarSandboxControlPointState state = WarSandboxControlPoint.ResolveCapture(
+                controlPointOwnerTeamId,
+                controlPointCaptureProgress,
+                controlPointZoneCounts,
                 Time.deltaTime,
                 controlPointCaptureSeconds);
+            controlPointOwnerTeamId = state.ownerTeamId;
+            controlPointCaptureProgress = state.progress;
 
-            if (controlPointProgress >= 1f)
-                CompleteBattle(WarSandboxBattlePhase.AttackerVictory, snapshot, WarSandboxVictoryReason.ControlPoint);
-            else if (controlPointProgress <= -1f)
-                CompleteBattle(WarSandboxBattlePhase.DefenderVictory, snapshot, WarSandboxVictoryReason.ControlPoint);
+            if (!state.captured)
+                return;
+
+            WarSandboxBattlePhase resultPhase = state.ownerTeamId == 0 && fieldedTeamCount <= 2
+                ? WarSandboxBattlePhase.AttackerVictory
+                : state.ownerTeamId == 1 && fieldedTeamCount <= 2
+                    ? WarSandboxBattlePhase.DefenderVictory
+                    : WarSandboxBattlePhase.ArmyVictory;
+            CompleteBattle(resultPhase, snapshot, WarSandboxVictoryReason.ControlPoint, state.ownerTeamId);
         }
 
         private void CompleteBattle(
@@ -566,6 +626,24 @@ namespace MassEngine.Game
                 victoryReason,
                 winnerTeamId);
             manager.PauseBattle();
+        }
+
+        private void ResetControlPointState()
+        {
+            controlPointOwnerTeamId = -1;
+            controlPointCaptureProgress = 0f;
+            if (controlPointZoneCounts == null)
+                return;
+
+            for (int teamId = 0; teamId < controlPointZoneCounts.Length; teamId++)
+                controlPointZoneCounts[teamId] = 0;
+        }
+
+        private void EnsureControlPointZoneCounts()
+        {
+            int required = armies != null ? armies.Length : MinimumArmyCount;
+            if (controlPointZoneCounts == null || controlPointZoneCounts.Length != required)
+                controlPointZoneCounts = new int[required];
         }
 
         private void ConfigureControlPointTelemetry()

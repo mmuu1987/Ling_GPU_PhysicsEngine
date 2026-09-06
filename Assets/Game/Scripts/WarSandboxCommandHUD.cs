@@ -436,22 +436,54 @@ namespace MassEngine.Game
                 return;
 
             Rect commandPanel = ResolvePanelRect();
-            float width = Mathf.Min(360f, Mathf.Max(180f, commandPanel.x - 16f));
-            Rect panel = new Rect(8f, 92f, width, 58f);
+            float width = Mathf.Min(420f, Mathf.Max(220f, commandPanel.x - 16f));
+            Rect panel = new Rect(8f, 92f, width, 78f);
             GUI.Box(panel, GUIContent.none);
-            GUI.Label(
-                new Rect(panel.x + 8f, panel.y + 4f, panel.width - 16f, 20f),
-                "中央据点  攻 " + controller.AttackersInControlPoint + "  |  守 " + controller.DefendersInControlPoint);
 
-            Rect bar = new Rect(panel.x + 8f, panel.y + 30f, panel.width - 16f, 16f);
+            GUIStyle summaryStyle = new GUIStyle(GUI.skin.label)
+            {
+                wordWrap = true,
+                fontSize = 11
+            };
+            GUI.Label(
+                new Rect(panel.x + 8f, panel.y + 4f, panel.width - 16f, 28f),
+                FormatControlPointCounts(),
+                summaryStyle);
+
+            string status = controller.IsControlPointContested
+                ? "争夺中"
+                : controller.ControlPointOwnerTeamId >= 0
+                    ? FormatTeamName(controller.ControlPointOwnerTeamId) + "占领 " +
+                      Mathf.RoundToInt(controller.ControlPointCaptureProgress * 100f) + "%"
+                    : "未占领";
+            GUI.Label(new Rect(panel.x + 8f, panel.y + 32f, panel.width - 16f, 18f), "中央据点  " + status);
+
+            Rect bar = new Rect(panel.x + 8f, panel.y + 56f, panel.width - 16f, 14f);
             DrawSolidRect(bar, new Color(0.1f, 0.12f, 0.14f, 0.9f));
-            float half = bar.width * 0.5f;
-            float progress = Mathf.Clamp(controller.ControlPointProgress, -1f, 1f);
-            if (progress > 0f)
-                DrawSolidRect(new Rect(bar.center.x, bar.y, half * progress, bar.height), new Color(1f, 0.32f, 0.2f));
-            else if (progress < 0f)
-                DrawSolidRect(new Rect(bar.center.x + half * progress, bar.y, -half * progress, bar.height), new Color(0.25f, 0.55f, 1f));
-            DrawSolidRect(new Rect(bar.center.x - 1f, bar.y, 2f, bar.height), Color.white);
+            float progress = Mathf.Clamp01(controller.ControlPointCaptureProgress);
+            if (progress > 0f && controller.ControlPointOwnerTeamId >= 0)
+                DrawSolidRect(
+                    new Rect(bar.x, bar.y, bar.width * progress, bar.height),
+                    WarSandboxTeamPalette.Resolve(controller.ControlPointOwnerTeamId));
+        }
+
+        private string FormatControlPointCounts()
+        {
+            string result = "据点兵力  ";
+            bool hasArmy = false;
+            for (int teamId = 0; teamId < ResolveArmyCount(); teamId++)
+            {
+                ArmyRuntimeState army = controller.GetArmy(teamId);
+                if (army == null || army.initialUnitCount <= 0)
+                    continue;
+
+                if (hasArmy)
+                    result += "  |  ";
+                result += FormatTeamName(teamId) + " " + controller.GetControlPointUnitCount(teamId);
+                hasArmy = true;
+            }
+
+            return hasArmy ? result : "据点兵力  无可用军团";
         }
 
         private void ResolveReferences()
