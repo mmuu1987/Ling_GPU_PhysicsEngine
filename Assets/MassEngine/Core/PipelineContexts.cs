@@ -99,6 +99,10 @@ namespace MassEngine
         public float cullingRadius;
         public float maxRenderDistance;
         public bool farIncludeDead;
+        // Corpse despawn, mirrored by CorpseLifetime. corpseLingerSeconds <= 0 disables it.
+        public float corpseLingerSeconds;
+        public float corpseSinkSeconds;
+        public float corpseSinkDepth;
         public Vector4[] frustumPlanes;
         public int nearAnimationInterval;
         public int midAnimationInterval;

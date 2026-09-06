@@ -43,7 +43,9 @@ namespace MassEngine
         public float projectileGravity;
         public float projectileHitRadius;
         public float projectileMaxLifetime;
-        public int padding3;
+        // CPU-side projectile render input. This occupies the former unused padding slot;
+        // the uploaded struct remains 144 bytes and the simulation kernels do not read it.
+        public float projectileTrailLength;
         public int teamId;
         public int padding0;
         public int padding1;
@@ -80,6 +82,7 @@ namespace MassEngine
                 moveAnimationSpeedMin = 0.85f,
                 moveAnimationSpeedMax = 1.15f,
                 densityComfortPerSqm = 0.6f,
+                projectileTrailLength = 1f,
                 teamId = teamId
             };
         }

@@ -178,6 +178,19 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     // （移除了原来的 launchRequestBuffer[id.x] = 0;）
 
     AgentData agent = agentBuffer[id.x];
+
+    // A despawned corpse is finished, so it stops costing simulation work here. It has
+    // already left every visible list, it was never entered into the spatial hash
+    // (BuildSpatialHash skips dead agents), and nothing can target it. Its hp has been 0
+    // in BOTH hp buffers and its position identical in BOTH position mirrors since the
+    // second frame after death, and target/slot/cooldown were cleared on the death frame
+    // itself - so every write below would store the value that is already there.
+    // Returning changes no observable state; it only stops tens of thousands of bodies
+    // from re-writing their whole record every frame for the rest of the battle.
+    // corpseLingerSeconds = 0 disables despawn, and then nothing reaches this path.
+    if (IsCorpseDespawned(agent))
+        return;
+
     float dt = SafeDt();
     int hpSelf = hpReadBuffer[id.x];
 

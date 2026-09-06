@@ -205,10 +205,17 @@ namespace MassEngine
             }
 
             Bounds renderBounds = ResolveRenderBounds();
-            renderDispatcher.Draw(unitTypeRegistry, bufferManager, renderBounds);
+            // Corpse sink is a render-only offset: the agent keeps its death position in
+            // agentBuffer, the vertex shader lowers it. Same numbers the classify kernel
+            // uses to decide when the body is gone for good.
+            renderDispatcher.Draw(unitTypeRegistry, bufferManager, renderBounds, new Vector4(
+                Mathf.Max(0f, Lod.corpseLingerSeconds),
+                Mathf.Max(0f, Lod.corpseSinkSeconds),
+                Mathf.Max(0f, Lod.corpseSinkDepth),
+                0f));
             // Tracers draw straight from projectileBuffer via the GPU active list, so a
             // paused battle keeps showing frozen shots and a cleared pool shows none.
-            projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds, AttackerTeamId);
+            projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds);
 
             if (telemetry != null)
             {
@@ -706,6 +713,9 @@ namespace MassEngine
                     cullingRadius = Lod.cullingRadius,
                     maxRenderDistance = Lod.maxRenderDistance,
                     farIncludeDead = Lod.farIncludeDead,
+                    corpseLingerSeconds = Lod.corpseLingerSeconds,
+                    corpseSinkSeconds = Lod.corpseSinkSeconds,
+                    corpseSinkDepth = Lod.corpseSinkDepth,
                     frustumPlanes = BuildFrustumPlanes(),
                     nearAnimationInterval = Lod.nearAnimationInterval,
                     midAnimationInterval = Lod.midAnimationInterval,

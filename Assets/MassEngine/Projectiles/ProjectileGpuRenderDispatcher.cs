@@ -22,9 +22,10 @@ namespace MassEngine.Projectiles
         private Mesh configuredMesh;
         private ComputeBuffer configuredArgs;
         private ProjectileRenderConfig blockConfig;
-        private int blockAttackerTeamId = int.MinValue;
+        // Reused so the per-frame path allocates nothing; SetVectorArray copies the contents.
+        private readonly Vector4[] teamColorUpload = new Vector4[ProjectileRenderConfig.MaxTeamColors];
 
-        public void Draw(ProjectileRenderConfig config, MassGpuBufferManager buffers, Bounds bounds, int attackerTeamId)
+        public void Draw(ProjectileRenderConfig config, MassGpuBufferManager buffers, Bounds bounds)
         {
             if (config == null || !config.renderProjectiles)
                 return;
@@ -66,8 +67,8 @@ namespace MassEngine.Projectiles
                 return;
             }
 
-            if (blockConfig != config || blockAttackerTeamId != attackerTeamId)
-                FillBlock(config, attackerTeamId);
+            if (blockConfig != config)
+                FillBlock(config);
 
             block.SetBuffer(ProjectileBufferId, projectiles);
             block.SetBuffer(ActiveProjectileIndicesId, activeIndices);
@@ -112,24 +113,30 @@ namespace MassEngine.Projectiles
             configuredMesh = null;
             configuredArgs = null;
             blockConfig = null;
-            blockAttackerTeamId = int.MinValue;
             block.Clear();
             reportedSkips.Clear();
         }
 
-        private void FillBlock(ProjectileRenderConfig config, int attackerTeamId)
+        private void FillBlock(ProjectileRenderConfig config)
         {
             // Prefilled off the render path, exactly like ResolvedUnitTypeRuntime does for
             // agents: Draw then only rebinds the two buffers.
             block.Clear();
-            block.SetFloat(ProjectileAttackerTeamIdId, attackerTeamId);
-            block.SetColor(ProjectileAttackerColorId, config.attackerColor);
-            block.SetColor(ProjectileDefenderColorId, config.defenderColor);
+            // SetVectorArray hands the values through untouched, unlike SetColor, so the
+            // gamma-to-linear step SetColor would have done has to happen here or every
+            // tracer renders too bright in a linear project.
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            for (int teamId = 0; teamId < teamColorUpload.Length; teamId++)
+            {
+                Color color = config.ResolveTeamColor(teamId);
+                teamColorUpload[teamId] = linear ? (Vector4)color.linear : (Vector4)color;
+            }
+
+            block.SetVectorArray(ProjectileTeamColorsId, teamColorUpload);
             block.SetFloat(ProjectileTrailWidthId, Mathf.Max(0.001f, config.trailWidth));
             block.SetFloat(ProjectileTrailLengthScaleId, Mathf.Max(0f, config.trailLengthScale));
             block.SetFloat(ProjectileTrailMinLengthId, Mathf.Max(0f, config.trailMinLength));
             blockConfig = config;
-            blockAttackerTeamId = attackerTeamId;
         }
 
         /// <summary>

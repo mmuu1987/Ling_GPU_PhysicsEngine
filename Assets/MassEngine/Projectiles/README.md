@@ -41,6 +41,7 @@ maxLifetime + trailLength + padding
 - `projectileGravity`：0 为直线，负值（如 `-9.8`）为向下重力
 - `projectileHitRadius`：命中半径
 - `projectileMaxLifetime`：最大仿真时间
+- `projectileTrailLength`：该兵种曳光的基础长度，渲染时再乘以共享的 `trailLengthScale`
 
 这些值通过 `UnitTypeGpuSettings` 统一上传，不使用逐兵种 scalar uniform。
 
@@ -51,7 +52,8 @@ maxLifetime + trailLength + padding
 - `mesh`：留空则用内置的单位 quad（不是错误路径），只在需要自定义曳光形状时才指定
 - `material`：必需，指向 `ProjectileTrail.mat`
 - `trailWidth` / `trailLengthScale` / `trailMinLength`：曳光宽度、按 `trailLength` 缩放的长度和长度下限
-- `attackerColor` / `defenderColor`：按 `sourceTeamId` 与 `MassEngineManager.AttackerTeamId` 比较后取色
+- `teamColors`：按 `sourceTeamId` 直接索引的调色盘（第 i 项 = 阵营 i），超出长度的阵营复用最后一项，空列表退到白色；
+  允许 HDR（分量 > 1），曳光是细的半透明线条，亮度就是可读性
 - `shadowCasting` / `receiveShadows`：默认都关，曳光是纯叠加视觉
 
 配置资产在运行时只读，dispatcher 不回写任何字段。
@@ -103,7 +105,8 @@ maxLifetime + trailLength + padding
 - 发射后不制导，目标位置变化可能导致落空。
 - 尚无风阻、风场和复杂碰撞体。
 - 曳光是单 pass 半透明四边形，没有拖尾贴图、发光、命中特效、音效和屏幕震动。
-- `trailLength` 发射时固定写 1，长度实际由 `trailLengthScale` / `trailMinLength` 控制，还不随速度或兵种变化。
+- `trailLength` 由兵种 `CombatConfig.projectileTrailLength` 提供，渲染时再由共享的
+  `trailLengthScale` / `trailMinLength` 做统一缩放和下限保护。
 - 曳光 `ZWrite Off`，互相之间不做深度排序；地形和 Agent 仍能正常遮挡它们。
 - CPU 活跃数是保守估算，提前命中的槽位可能等到最大生命周期后才再次计入可用容量。
 - 暂停战斗后的一两帧内，已经进入异步 readback 管线的发射请求仍会落盘成新弹道，屏幕上可能多出几条曳光。暂停期间不再产生新请求，所以这一漂移几帧内自行停止；弹道位置和生命周期从暂停那一刻就已经冻结。

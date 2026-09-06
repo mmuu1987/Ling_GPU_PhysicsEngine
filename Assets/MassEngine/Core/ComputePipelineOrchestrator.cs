@@ -211,6 +211,10 @@ namespace MassEngine
             float maxRender = Mathf.Max(0f, context.lod.maxRenderDistance);
             shaders.SetFloat(MaxRenderDistanceSqrId, maxRender * maxRender);
             shaders.SetInt(FarIncludeDeadId, context.lod.farIncludeDead ? 1 : 0);
+            // 0 linger = corpses never despawn; the classify kernel then keeps clamping
+            // a dead agent's animation time at its death clip, as it did before.
+            shaders.SetFloat(CorpseLingerSecondsId, Mathf.Max(0f, context.lod.corpseLingerSeconds));
+            shaders.SetFloat(CorpseSinkSecondsId, Mathf.Max(0f, context.lod.corpseSinkSeconds));
             shaders.SetInt(NearAnimationIntervalId, Mathf.Max(1, context.lod.nearAnimationInterval));
             shaders.SetInt(MidAnimationIntervalId, Mathf.Max(1, context.lod.midAnimationInterval));
             shaders.SetInt(FarAnimationIntervalId, Mathf.Max(1, context.lod.farAnimationInterval));

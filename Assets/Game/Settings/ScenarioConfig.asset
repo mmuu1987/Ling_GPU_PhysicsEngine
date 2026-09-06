@@ -13,6 +13,9 @@ MonoBehaviour:
   m_Name: ScenarioConfig
   m_EditorClassIdentifier: 
   unitTypes:
+  - {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e11, type: 2}
   - {fileID: 11400000, guid: 36995f38277f0664e9acfc908c78a479, type: 2}
+  - {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e21, type: 2}
   - {fileID: 11400000, guid: 32b2073c876649843b9080f65c8db217, type: 2}
+  - {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e31, type: 2}
   - {fileID: 11400000, guid: f4ca1f42eb4e5620bb754451c92bfb0b, type: 2}

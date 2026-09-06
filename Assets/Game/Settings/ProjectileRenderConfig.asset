@@ -18,7 +18,9 @@ MonoBehaviour:
   trailWidth: 0.15
   trailLengthScale: 2
   trailMinLength: 0.8
-  attackerColor: {r: 1, g: 0.82, b: 0.35, a: 0.9}
-  defenderColor: {r: 0.45, g: 0.78, b: 1, a: 0.9}
+  teamColors:
+  - {r: 1, g: 0.82, b: 0.35, a: 0.9}
+  - {r: 0.4, g: 1, b: 1.85, a: 1}
+  - {r: 1.4, g: 0.5, b: 1.7, a: 1}
   shadowCasting: 0
   receiveShadows: 0

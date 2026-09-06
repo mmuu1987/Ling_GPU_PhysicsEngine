@@ -14,6 +14,8 @@ namespace MassEngine
         public static readonly int CullingRadiusId = Shader.PropertyToID("cullingRadius");
         public static readonly int MaxRenderDistanceSqrId = Shader.PropertyToID("maxRenderDistanceSqr");
         public static readonly int FarIncludeDeadId = Shader.PropertyToID("farIncludeDead");
+        public static readonly int CorpseLingerSecondsId = Shader.PropertyToID("corpseLingerSeconds");
+        public static readonly int CorpseSinkSecondsId = Shader.PropertyToID("corpseSinkSeconds");
         public static readonly int FrustumPlanesId = Shader.PropertyToID("frustumPlanes");
         public static readonly int NearAnimationIntervalId = Shader.PropertyToID("nearAnimationInterval");
         public static readonly int MidAnimationIntervalId = Shader.PropertyToID("midAnimationInterval");
@@ -75,9 +77,12 @@ namespace MassEngine
         public static readonly int LaunchRequestBufferId = Shader.PropertyToID("launchRequestBuffer");
         public static readonly int MaxProjectilesId = Shader.PropertyToID("maxProjectiles");
         public static readonly int ActiveProjectileIndicesId = Shader.PropertyToID("activeProjectileIndices");
-        public static readonly int ProjectileAttackerTeamIdId = Shader.PropertyToID("_ProjectileAttackerTeamId");
-        public static readonly int ProjectileAttackerColorId = Shader.PropertyToID("_ProjectileAttackerColor");
-        public static readonly int ProjectileDefenderColorId = Shader.PropertyToID("_ProjectileDefenderColor");
+        /// <summary>
+        /// float4[ProjectileRenderConfig.MaxTeamColors], indexed by the projectile's raw
+        /// sourceTeamId. Replaced the attacker/defender color pair, which forced every extra
+        /// army to borrow the defender's tracer.
+        /// </summary>
+        public static readonly int ProjectileTeamColorsId = Shader.PropertyToID("_ProjectileTeamColors");
         public static readonly int ProjectileTrailWidthId = Shader.PropertyToID("_ProjectileTrailWidth");
         public static readonly int ProjectileTrailLengthScaleId = Shader.PropertyToID("_ProjectileTrailLengthScale");
         public static readonly int ProjectileTrailMinLengthId = Shader.PropertyToID("_ProjectileTrailMinLength");
@@ -124,6 +129,8 @@ namespace MassEngine
 
         // Render path
         public static readonly int VisibleAgentIndicesId = Shader.PropertyToID("visibleAgentIndices");
+        // xyz = (linger seconds, sink seconds, sink depth); x <= 0 disables the sink.
+        public static readonly int CorpseSinkId = Shader.PropertyToID("_MassCorpseSink");
         public static readonly int VATPosTexId = Shader.PropertyToID("_VATPosTex");
         public static readonly int VATNormTexId = Shader.PropertyToID("_VATNormTex");
         public static readonly int VATTexWidthId = Shader.PropertyToID("_VATTexWidth");

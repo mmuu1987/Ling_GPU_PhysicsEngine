@@ -18,6 +18,14 @@ void ClassifyVisibleAgentsForUnitType(uint3 id : SV_DispatchThreadID)
         return;
 
     AgentData agent = agentBuffer[id.x];
+
+    // Already despawned: its age accumulator is pinned at the despawn ceiling, so the
+    // read-modify-write below would store the record unchanged. The same test inside
+    // AppendVisibleAgentForUnitType still earns its keep - it catches the ONE frame on
+    // which the age reaches the ceiling, and that frame must still be written back.
+    if (IsCorpseDespawned(agent))
+        return;
+
     AppendVisibleAgentForUnitType(id.x, agent);
     agentBuffer[id.x] = agent;
 }

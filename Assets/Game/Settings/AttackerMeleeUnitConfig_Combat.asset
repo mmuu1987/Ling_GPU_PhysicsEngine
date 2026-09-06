@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010006, type: 3}
-  m_Name: DefenderUnitConfig_Combat
+  m_Name: AttackerMeleeUnitConfig_Combat
   m_EditorClassIdentifier: 
-  targetAcquireRadius: 20
+  targetAcquireRadius: 25
   attackRange: 1.8
-  attackDamage: 10
-  attackInterval: 0.8
-  maxHp: 100
-  projectileRange: 20
-  projectileSpeed: 15
-  projectileGravity: 0
-  projectileHitRadius: 0.5
-  projectileMaxLifetime: 5
-  projectileTrailLength: 1.4
+  attackDamage: 14
+  attackInterval: 0.9
+  maxHp: 140
+  projectileRange: 0
+  projectileSpeed: 20
+  projectileGravity: -9.8
+  projectileHitRadius: 0.8
+  projectileMaxLifetime: 3
+  projectileTrailLength: 1.15

@@ -79,7 +79,8 @@ struct UnitTypeSettings
     float projectileGravity;
     float projectileHitRadius;
     float projectileMaxLifetime;
-    int padding3;
+    // Consumed by the CPU projectile launcher; kept here to mirror the 144-byte stride.
+    float projectileTrailLength;
     int teamId;
     int padding0;
     int padding1;
@@ -189,6 +190,11 @@ int enableFrustumCulling;
 float cullingRadius;
 float maxRenderDistanceSqr; // 0 = unlimited
 int farIncludeDead; // 1 = corpses render in the far tier too (no 120m corpse pop line)
+// Corpse despawn. A dead agent's currentAnimationTime doubles as its corpse age, so no
+// extra per-agent state is needed. 0 linger = corpses never despawn (legacy behaviour).
+// Mirrored by CorpseLifetime.cs.
+float corpseLingerSeconds;
+float corpseSinkSeconds;
 float4 frustumPlanes[6];
 
 int nearAnimationInterval;
@@ -489,9 +495,28 @@ float GetClipDurationForState(UnitTypeSettings settings, int state)
     return max(settings.idleClipDuration, 0.0001);
 }
 
+// Corpse age at which a body is dropped from every visible list. 0 = never despawn.
+float GetCorpseDespawnSeconds()
+{
+    return corpseLingerSeconds > 0.0 ? corpseLingerSeconds + max(corpseSinkSeconds, 0.0) : 0.0;
+}
+
+// A dead agent whose corpse age reached the despawn point. It stays in agentBuffer (its
+// slot is never recycled) but is submitted for nothing: no draw, no animation step, and
+// no combat/locomotion pass either - the classification and combat kernels both return
+// on this test before they touch the record. Because nothing writes a retired body again,
+// LOWERING corpseLingerSeconds at runtime no longer clamps an already-retired age back
+// down to the new ceiling; the comparison below still holds, so the body stays retired.
+bool IsCorpseDespawned(AgentData agent)
+{
+    return corpseLingerSeconds > 0.0
+        && agent.currentState == STATE_DEAD
+        && agent.currentAnimationTime >= GetCorpseDespawnSeconds();
+}
+
 // Advances the VAT time accumulator. Looping states wrap at their OWN clip duration so
-// the wrap point is phase-aligned with the clip (no visual pop); Dead clamps at the end
-// of the death clip and stays there.
+// the wrap point is phase-aligned with the clip (no visual pop); Dead keeps counting
+// past the end of the death clip because that accumulator doubles as the corpse age.
 void UpdateAnimationTime(uint index, inout AgentData agent, int interval)
 {
     interval = max(interval, 1);
@@ -511,7 +536,18 @@ void UpdateAnimationTime(uint index, inout AgentData agent, int interval)
     }
 
     float nextTime = agent.currentAnimationTime + deltaTime * interval * animationSpeed;
-    agent.currentAnimationTime = loop ? fmod(nextTime, duration) : min(nextTime, duration);
+    if (loop)
+    {
+        agent.currentAnimationTime = fmod(nextTime, duration);
+        return;
+    }
+
+    // Dead: run past the death clip so the linger/sink schedule has an age to read. The
+    // VAT sampler clamps the death clip to its last frame, so the pose still holds. The
+    // ceiling keeps the float bounded: the despawn point, or the clip end when corpses
+    // are configured to stay forever.
+    float ceiling = corpseLingerSeconds > 0.0 ? GetCorpseDespawnSeconds() : duration;
+    agent.currentAnimationTime = min(nextTime, ceiling);
 }
 
 void SetAgentState(inout AgentData agent, int state)
@@ -1261,6 +1297,12 @@ void AppendVisibleAgentForUnitType(uint index, inout AgentData agent)
     bool includeFar = farIncludeDead != 0 || IsAliveIndex(index);
 
     UpdateAnimationTime(index, agent, animationInterval);
+
+    // Despawned corpses leave the render path entirely: no draw, no shadow, no animation
+    // fetch. Reached only on the frame the age first reaches its ceiling - from the next
+    // frame the classification kernel returns before it even calls this.
+    if (IsCorpseDespawned(agent))
+        return;
 
     // The near ring is the only shadow-casting tier and the same visible list feeds
     // every camera and the ShadowCaster pass: culling it against the main camera's

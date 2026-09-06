@@ -11,7 +11,9 @@ namespace MassEngine.Game.Editor
     /// the runtime warning uses) and writes it into the config assets with Undo.
     /// Designer workflow: set unit counts / formation intent → Auto-Fit → Play.
     /// Teams 0 and 1 are symmetrically re-centered from their resolved footprint so
-    /// their edge-to-edge engagement gap remains stable as head counts change.
+    /// their edge-to-edge engagement gap remains stable as head counts change. Scenario order
+    /// is rank order within a team: the first unit type it lists gets the gap, the rest stack
+    /// up behind it, which is how a melee screen and its archers keep their relative places.
     /// Spawn footprints themselves are runtime-derived from formationDensity and are
     /// NOT written here; manual spawnSize overrides are left untouched (they are intent).
     ///
@@ -97,16 +99,23 @@ namespace MassEngine.Game.Editor
         private static void FitHostileSpawnCenters(UnitTypeConfig[] unitTypes, float engagementGap)
         {
             var fittedSpawns = new HashSet<SpawnConfig>();
+            // X depth each front-line team has already spent, indexed by teamId. Without it every
+            // block of a team lands flush against the gap, stacked on top of its own ranks.
+            float[] deployedDepth = new float[2];
             for (int i = 0; i < unitTypes.Length; i++)
             {
                 UnitTypeConfig unitType = unitTypes[i];
                 SpawnConfig spawn = unitType != null ? unitType.spawnConfig : null;
                 // Teams 2 and up are placed by the designer - see the class summary.
-                if (spawn == null || !fittedSpawns.Add(spawn) || (unitType.teamId != 0 && unitType.teamId != 1))
+                if (spawn == null || (unitType.teamId != 0 && unitType.teamId != 1))
+                    continue;
+                // Unit types sharing one SpawnConfig are one block sharing one rank, not two.
+                if (!fittedSpawns.Add(spawn))
                     continue;
 
-                Vector3 fittedCenter = WarSandboxFormationLayout.ResolveCenteredSpawnCenter(
-                    spawn, unitType.teamId, engagementGap);
+                Vector3 fittedCenter = WarSandboxFormationLayout.ResolveRankedSpawnCenter(
+                    spawn, unitType.teamId, engagementGap, deployedDepth[unitType.teamId]);
+                deployedDepth[unitType.teamId] += Mathf.Max(0f, spawn.ResolveSpawnSize().x);
                 if (spawn.spawnCenter == fittedCenter)
                     continue;
 

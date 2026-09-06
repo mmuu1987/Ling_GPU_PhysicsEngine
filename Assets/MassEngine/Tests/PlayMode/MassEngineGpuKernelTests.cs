@@ -41,6 +41,9 @@ namespace MassEngine.Tests
         private float lodMidRadius = 200f;
         private int simFarInterval = 1;
         private float maxRenderDistance;
+        // Corpse despawn overrides. 0 linger = off, which is what every other test wants.
+        private float corpseLingerSeconds;
+        private float corpseSinkSeconds;
         private bool attackerFlowEnabled;
         private bool attackerFlowRebuild;
         private bool attackerFlowDynamic;
@@ -83,6 +86,8 @@ namespace MassEngine.Tests
                 Assert.Ignore("Compute shaders unavailable on this device; GPU kernel tests skipped.");
 
             gridMaxAgentsPerCell = 16;
+            corpseLingerSeconds = 0f;
+            corpseSinkSeconds = 0f;
             fixtureTeamStances = null;
             fixtureTeamFlows = null;
             staticObstacleCount = 0;
@@ -593,6 +598,141 @@ namespace MassEngine.Tests
             uint[] args = new uint[5];
             buffers.GetDrawArgsBuffer(unitTypeIndex, lodLevel).GetData(args);
             return (int)args[1];
+        }
+
+        private int TotalVisibleInstances()
+        {
+            int total = 0;
+            for (int unitType = 0; unitType < registry.UnitTypeCount; unitType++)
+            {
+                for (int lod = 0; lod < MassGpuBufferManager.LodLevels; lod++)
+                    total += ReadInstanceCount(unitType, lod);
+            }
+
+            return total;
+        }
+
+        [UnityTest]
+        public IEnumerator DespawnedCorpsesLeaveEveryVisibleList()
+        {
+            // The near ring is exempt from distance and frustum culling, so with the whole
+            // fixture inside it the only thing that can drop an instance is the corpse cull.
+            lodNearRadius = 1000f;
+            lodMidRadius = 2000f;
+
+            int[] dead = new int[TotalAgents];
+            buffers.combatBuffers.hpReadBuffer.SetData(dead);
+            buffers.combatBuffers.hpWriteBuffer.SetData(dead);
+
+            // Despawn off: the combat kernel flags everyone Dead and zeroes the corpse age,
+            // and every body must still be submitted - this is the behaviour that predates
+            // the despawn rule, and the baseline the second half of the test moves away from.
+            corpseLingerSeconds = 0f;
+            corpseSinkSeconds = 0f;
+            for (int frame = 0; frame < 60; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            Assert.AreEqual(TotalAgents, TotalVisibleInstances(),
+                "0 corpseLingerSeconds must keep every corpse on the render path forever");
+
+            // Now give them a 2s + 0.5s schedule. It has to be LONGER than the corpse age
+            // already accumulated above, or the knob change alone would retire every body on
+            // the spot and the linger->sink->despawn climb would never run at all. It also
+            // keeps the pin below honest: retirement stops every write to a body, so a
+            // threshold lowered UNDER an already-retired corpse can no longer pull its
+            // accumulator back down - the body stays retired either way, but its age would
+            // still read the older, higher value.
+            corpseLingerSeconds = 2f;
+            corpseSinkSeconds = 0.5f;
+            // Enough frames to climb from any age reached above to the despawn point; the
+            // slack covers the dispatch order inside a frame.
+            int framesToDespawn = Mathf.CeilToInt((corpseLingerSeconds + corpseSinkSeconds) / FrameDt) + 4;
+            for (int frame = 0; frame < framesToDespawn; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            Assert.AreEqual(0, TotalVisibleInstances(),
+                "corpses older than linger+sink must be dropped from every visible list");
+
+            AgentData[] agents = new AgentData[TotalAgents];
+            buffers.agentBuffer.GetData(agents);
+            float despawnAt = CorpseLifetime.DespawnSeconds(corpseLingerSeconds, corpseSinkSeconds);
+            for (int i = 0; i < TotalAgents; i++)
+            {
+                Assert.AreEqual((int)AgentState.Dead, agents[i].currentState, "agent " + i + " should be a corpse");
+                Assert.AreEqual(despawnAt, agents[i].currentAnimationTime, 0.0001f,
+                    "corpse age must be pinned at the despawn point, not grow without bound");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator RetiredCorpsesStopBeingWrittenWithoutDriftingOrFlickering()
+        {
+            // Skipping the writes is only sound because a body is IMMUTABLE by the time it
+            // despawns: hp and the position mirror are double buffered, so retiring a corpse
+            // before both sides hold the same value would make the reads alternate between
+            // two values every frame (health flicker, corpse strobing). The fixture marches
+            // first, so the two mirrors genuinely disagree at the moment of death.
+            lodNearRadius = 1000f;
+            lodMidRadius = 2000f;
+            attackerFlowEnabled = true;
+            attackerFlowRebuild = true;
+            attackerFlowTargetMode = 1; // FLOW_TARGET_POINT
+            attackerFlowTargetPoint = new Vector3(6f, 0f, 6f);
+            corpseLingerSeconds = 0.2f;
+            corpseSinkSeconds = 0.1f;
+
+            Vector2[] spawnMirror = new Vector2[TotalAgents];
+            buffers.agentPositionReadBuffer.GetData(spawnMirror);
+
+            for (int frame = 0; frame < 20; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            Vector2[] marchedMirror = new Vector2[TotalAgents];
+            buffers.agentPositionReadBuffer.GetData(marchedMirror);
+            Assert.That(marchedMirror, Is.Not.EqualTo(spawnMirror),
+                "the fixture must actually move before the kill, or the mirror check below proves nothing");
+
+            int[] dead = new int[TotalAgents];
+            buffers.combatBuffers.hpReadBuffer.SetData(dead);
+            buffers.combatBuffers.hpWriteBuffer.SetData(dead);
+
+            int framesToDespawn = Mathf.CeilToInt((corpseLingerSeconds + corpseSinkSeconds) / FrameDt) + 4;
+            for (int frame = 0; frame < framesToDespawn; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            AgentData[] retired = new AgentData[TotalAgents];
+            buffers.agentBuffer.GetData(retired);
+            Vector2[] retiredMirror = new Vector2[TotalAgents];
+            buffers.agentPositionReadBuffer.GetData(retiredMirror);
+
+            // An ODD number of further frames: the mirrors swap once per frame, so a value
+            // that never reached both sides reads back as the other side's contents here.
+            for (int frame = 0; frame < 31; frame++)
+                DispatchOneFrame(battleStarted: true);
+            yield return null;
+
+            AgentData[] later = new AgentData[TotalAgents];
+            buffers.agentBuffer.GetData(later);
+            Vector2[] laterMirror = new Vector2[TotalAgents];
+            buffers.agentPositionReadBuffer.GetData(laterMirror);
+            int[] laterHp = new int[TotalAgents];
+            buffers.combatBuffers.hpReadBuffer.GetData(laterHp);
+
+            Assert.AreEqual(0, TotalVisibleInstances(), "a retired corpse must never come back to a visible list");
+            for (int i = 0; i < TotalAgents; i++)
+            {
+                Assert.AreEqual((int)AgentState.Dead, later[i].currentState, "agent " + i + " must still be a corpse");
+                Assert.AreEqual(0, laterHp[i], "corpse " + i + " must not read back alive once nothing writes its hp");
+                Assert.AreEqual(retired[i].position, later[i].position, "corpse " + i + " must not drift after retirement");
+                Assert.AreEqual(retired[i].currentAnimationTime, later[i].currentAnimationTime, 0f,
+                    "corpse " + i + " age must stay pinned once both kernels stop writing it");
+                Assert.AreEqual(retiredMirror[i], laterMirror[i],
+                    "corpse " + i + " position mirror must read identically on both sides of the swap");
+            }
         }
 
         [UnityTest]
@@ -1686,6 +1826,8 @@ namespace MassEngine.Tests
                     nearLodRadius = lodNearRadius,
                     midLodRadius = lodMidRadius,
                     maxRenderDistance = maxRenderDistance,
+                    corpseLingerSeconds = corpseLingerSeconds,
+                    corpseSinkSeconds = corpseSinkSeconds,
                     nearAnimationInterval = 1,
                     midAnimationInterval = 1,
                     farAnimationInterval = 1,
@@ -2188,7 +2330,7 @@ namespace MassEngine.Tests
                 for (int frame = 0; frame < 240; frame++)
                 {
                     DispatchOneFrame(battleStarted: true);
-                    dispatcher.Draw(config, buffers, bounds, attackerTeamId: 0);
+                    dispatcher.Draw(config, buffers, bounds);
                     yield return null;
 
                     AssertActiveListMatchesPool("unconfigured frame " + frame);

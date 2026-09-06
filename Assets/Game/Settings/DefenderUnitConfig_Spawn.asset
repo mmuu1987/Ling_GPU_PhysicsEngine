@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010002, type: 3}
   m_Name: DefenderUnitConfig_Spawn
   m_EditorClassIdentifier: 
-  unitCount: 50000
-  spawnCenter: {x: 136.8034, y: 0, z: 0}
+  unitCount: 20000
+  spawnCenter: {x: 203.88544, y: 0, z: 0}
   formationDensity: 0.5
-  formationAspect: 2
+  formationAspect: 5
   spawnSize: {x: 0, y: 0, z: 0}

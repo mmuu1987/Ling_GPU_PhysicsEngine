@@ -247,6 +247,80 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void RankedDeploymentStacksATeamBackFromTheGapWithoutOverlap()
+        {
+            SpawnConfig melee = ScriptableObject.CreateInstance<SpawnConfig>();
+            SpawnConfig archers = ScriptableObject.CreateInstance<SpawnConfig>();
+            try
+            {
+                // The shipped attacker roster: a 30k melee screen with 20k archers behind it.
+                melee.unitCount = 30000;
+                melee.formationDensity = 0.5f;
+                melee.formationAspect = 3.3333333f;
+                archers.unitCount = 20000;
+                archers.formationDensity = 0.5f;
+                archers.formationAspect = 5f;
+
+                const float requestedGap = 50f;
+                float meleeDepth = melee.ResolveSpawnSize().x;
+                melee.spawnCenter = WarSandboxFormationLayout.ResolveRankedSpawnCenter(melee, 0, requestedGap, 0f);
+                archers.spawnCenter = WarSandboxFormationLayout.ResolveRankedSpawnCenter(archers, 0, requestedGap, meleeDepth);
+
+                // The front rank owns the gap, exactly as a single-block team would.
+                Assert.That(
+                    melee.spawnCenter.x + meleeDepth * 0.5f,
+                    Is.EqualTo(-requestedGap * 0.5f).Within(0.001f));
+                // The rear rank begins where the front one ends: no overlap, no wasted lane.
+                Assert.That(
+                    archers.spawnCenter.x + archers.ResolveSpawnSize().x * 0.5f,
+                    Is.EqualTo(melee.spawnCenter.x - meleeDepth * 0.5f).Within(0.001f));
+                // Equal front widths are what make the two ranks read as one formation.
+                Assert.That(
+                    archers.ResolveSpawnSize().z,
+                    Is.EqualTo(melee.ResolveSpawnSize().z).Within(0.01f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(melee);
+                Object.DestroyImmediate(archers);
+            }
+        }
+
+        [Test]
+        public void SplittingATeamIntoRanksKeepsItsTotalFootprint()
+        {
+            // Why the mixed-arms roster needed no world/grid/flow re-fit: 30k + 20k at the
+            // authored aspects occupy the same rectangle the old single 50k block did.
+            SpawnConfig single = ScriptableObject.CreateInstance<SpawnConfig>();
+            SpawnConfig melee = ScriptableObject.CreateInstance<SpawnConfig>();
+            SpawnConfig archers = ScriptableObject.CreateInstance<SpawnConfig>();
+            try
+            {
+                single.unitCount = 50000;
+                single.formationDensity = 0.5f;
+                single.formationAspect = 2f;
+                melee.unitCount = 30000;
+                melee.formationDensity = 0.5f;
+                melee.formationAspect = 3.3333333f;
+                archers.unitCount = 20000;
+                archers.formationDensity = 0.5f;
+                archers.formationAspect = 5f;
+
+                Assert.That(
+                    melee.ResolveSpawnSize().x + archers.ResolveSpawnSize().x,
+                    Is.EqualTo(single.ResolveSpawnSize().x).Within(0.01f));
+                Assert.That(melee.ResolveSpawnSize().z, Is.EqualTo(single.ResolveSpawnSize().z).Within(0.01f));
+                Assert.That(archers.ResolveSpawnSize().z, Is.EqualTo(single.ResolveSpawnSize().z).Within(0.01f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(single);
+                Object.DestroyImmediate(melee);
+                Object.DestroyImmediate(archers);
+            }
+        }
+
+        [Test]
         public void ScalePresetPreservesUnitTypeSharesAndExactTeamTotals()
         {
             ScenarioConfig presetScenario = ScriptableObject.CreateInstance<ScenarioConfig>();

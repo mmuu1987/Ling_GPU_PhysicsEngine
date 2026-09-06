@@ -32,9 +32,37 @@ namespace MassEngine.Projectiles
         [Tooltip("Floor on tracer length in metres, so slow or freshly launched shots stay visible.")]
         public float trailMinLength = 0.8f;
 
+        /// <summary>
+        /// Palette length uploaded to the tracer shader. Matches ConfigValidator.MaxTeamId + 1,
+        /// so every team a scenario may legally field has a slot.
+        /// </summary>
+        public const int MaxTeamColors = 8;
+
         [Header("Team Colors")]
-        public Color attackerColor = new Color(1f, 0.82f, 0.35f, 0.9f);
-        public Color defenderColor = new Color(0.45f, 0.78f, 1f, 0.9f);
+        [Tooltip("Tracer color per teamId: entry i colors team i's shots, so a third army stops " +
+                 "borrowing the defender's. Channels above 1 are intentional - tracers are thin " +
+                 "alpha-blended lines, and brightness is what makes them read against lit terrain " +
+                 "and fog. A team past the end of the list reuses the last entry.")]
+        [ColorUsage(true, true)]
+        public Color[] teamColors =
+        {
+            new Color(1f, 0.82f, 0.35f, 0.9f),
+            new Color(0.4f, 1f, 1.85f, 1f),
+            new Color(1.4f, 0.5f, 1.7f, 1f)
+        };
+
+        /// <summary>
+        /// The tracer color for a team: its own entry, the last authored entry when the palette is
+        /// shorter than the roster, or white when it is empty - a missing palette must not black
+        /// out every tracer, because an invisible projectile reads as a broken simulation.
+        /// </summary>
+        public Color ResolveTeamColor(int teamId)
+        {
+            if (teamColors == null || teamColors.Length == 0)
+                return Color.white;
+
+            return teamColors[Mathf.Clamp(teamId, 0, teamColors.Length - 1)];
+        }
 
         [Header("Shadows")]
         [Tooltip("Tracers are small, numerous and additive; shadows cost far more than they read.")]
