@@ -16,8 +16,12 @@ namespace MassEngine.Game.Editor
         [SerializeField] private WarSandboxScalePreset scalePreset = WarSandboxScalePreset.Standard10K;
         [SerializeField, Min(1)] private int customUnitsPerTeam = 10000;
         [SerializeField] private WarSandboxDeploymentPlan deploymentPlan;
+        [SerializeField] private UnitTypeConfig rosterTemplate;
+        [SerializeField, Min(0)] private int newUnitTeamId;
         private string planFeedback;
+        private string rosterFeedback;
         private MessageType planFeedbackType;
+        private MessageType rosterFeedbackType;
 
         [MenuItem("MassEngine/War Sandbox Editor")]
         public static void Open()
@@ -80,8 +84,56 @@ namespace MassEngine.Game.Editor
                 return;
             }
 
+            DrawRosterComposer(scenario);
             for (int i = 0; i < scenario.unitTypes.Length; i++)
-                DrawArmy(i, scenario.unitTypes[i]);
+                DrawArmy(scenario, i, scenario.unitTypes[i]);
+        }
+
+        private void DrawRosterComposer(ScenarioConfig scenario)
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("军团与兵种编排", EditorStyles.boldLabel);
+            rosterTemplate = (UnitTypeConfig)EditorGUILayout.ObjectField(
+                "复制兵种模板", rosterTemplate, typeof(UnitTypeConfig), false);
+            newUnitTeamId = Mathf.Max(0, EditorGUILayout.IntField("新编成 teamId", newUnitTeamId));
+            EditorGUILayout.LabelField(
+                "当前军团数", WarSandboxScenarioPresets.ResolveTeamCount(scenario).ToString());
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("添加兵种编成"))
+                AddRosterEntry(newUnitTeamId, "");
+            if (GUILayout.Button("添加新军团"))
+                AddRosterEntry(WarSandboxRosterEditor.ResolveNextTeamId(scenario), "Army");
+            EditorGUILayout.EndHorizontal();
+            if (!string.IsNullOrEmpty(rosterFeedback))
+                EditorGUILayout.HelpBox(rosterFeedback, rosterFeedbackType);
+        }
+
+        private void AddRosterEntry(int teamId, string prefix)
+        {
+            string templateName = rosterTemplate != null ? rosterTemplate.unitTypeName : string.Empty;
+            string displayName = string.IsNullOrEmpty(prefix)
+                ? templateName + " Variant"
+                : prefix + " " + (teamId + 1) + " " + templateName;
+            if (!WarSandboxRosterEditor.TryAddUnitType(
+                    manager.scenarioConfig, rosterTemplate, teamId, displayName,
+                    out UnitTypeConfig added, out string error))
+            {
+                SetRosterFeedback(error, MessageType.Error);
+                return;
+            }
+
+            newUnitTeamId = teamId;
+            rosterTemplate = added;
+            EditorSceneManager.MarkSceneDirty(manager.gameObject.scene);
+            SetRosterFeedback("已添加：" + added.unitTypeName, MessageType.Info);
+            GUIUtility.ExitGUI();
+        }
+
+        private void SetRosterFeedback(string message, MessageType type)
+        {
+            rosterFeedback = message;
+            rosterFeedbackType = type;
         }
 
         private void DrawDeploymentPlans()
@@ -259,10 +311,24 @@ namespace MassEngine.Game.Editor
             return text.ToString();
         }
 
-        private static void DrawArmy(int index, UnitTypeConfig unitType)
+        private void DrawArmy(ScenarioConfig scenario, int index, UnitTypeConfig unitType)
         {
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-            EditorGUILayout.LabelField("军团 " + (index + 1), EditorStyles.boldLabel);
+            EditorGUILayout.BeginHorizontal();
+            string label = unitType != null && !string.IsNullOrEmpty(unitType.unitTypeName)
+                ? unitType.unitTypeName
+                : "未命名编成";
+            EditorGUILayout.LabelField("编成 " + (index + 1) + "  " + label, EditorStyles.boldLabel);
+            if (GUILayout.Button(new GUIContent("移除", EditorGUIUtility.IconContent("TreeEditor.Trash").image),
+                    GUILayout.Width(58f)))
+            {
+                if (WarSandboxRosterEditor.RemoveUnitType(scenario, index, out string error))
+                    SetRosterFeedback("已从当前战役移除编成；资产仍保留。", MessageType.Info);
+                else
+                    SetRosterFeedback(error, MessageType.Error);
+                GUIUtility.ExitGUI();
+            }
+            EditorGUILayout.EndHorizontal();
 
             if (unitType == null)
             {

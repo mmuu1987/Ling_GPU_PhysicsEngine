@@ -4,7 +4,7 @@ Unity 6 GPU 海量单位战争模拟实验工程。单位的空间哈希、流�
 
 ## 当前能力
 
-- 多兵种、双阵营的大规模 Agent 模拟
+- 多兵种、多军团的大规模 Agent 模拟
 - GPU 空间哈希、动态/静态流场与密度避让
 - 近战、远程弹道、伤害和状态机
 - VAT 动画、三级 LOD、视锥裁剪与间接绘制
@@ -28,9 +28,12 @@ GPU PlayMode 测试需要支持 Compute Shader 的图形设备。
 
 ## 文档入口
 
+- [产品总策划案](GAME_DESIGN.md)
+- [执行路线图](ROADMAP.md)
 - [引擎总览](Assets/MassEngine/README.md)
 - [游戏层](Assets/Game/README.md)
 - [性能基线](Assets/Game/PerformanceBaseline.md)
 - [弹道系统](Assets/MassEngine/Projectiles/README.md)
 
-模块细节以对应目录的 `README.md` 和当前代码为准。阶段计划、一次性审计报告和完成日志不再保留在主文档区。
+产品方向以 `GAME_DESIGN.md` 为准，阶段状态见 `ROADMAP.md`；当前任务交接仅记录在本地 `NEXT_TASK.md`。
+模块细节以对应目录的 `README.md` 和当前代码为准，不把策划目标当成已实现能力。
