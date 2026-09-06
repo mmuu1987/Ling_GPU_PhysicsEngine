@@ -16,7 +16,7 @@
 | `Scripts/Gizmos/` | Scene 视图的阵型/流场/目标 Gizmo（ScenarioGizmos 挂场景物体上） |
 | `Scripts/CameraControls/` | 观战相机。场景在用：MyCameraManager（+其依赖 LocalRotationAndScale）。备用整洁版套件：RigCameraManager + SceneViewCameraRig/Input/Settings/BoundsUtility + CameraMouseOrbit（原 *_Stage7 副本，2026-07-27 已去后缀改名，暂无场景引用） |
 | `Editor/WarSandboxSampleCreator.cs` | 菜单 MassEngine/Create Sample Configs And Scene：一键生成可跑的示例场景与配置（非破坏式：已存在的资产不动） |
-| `Editor/WarSandboxEditorWindow.cs` | 菜单 MassEngine/War Sandbox Editor：切换产品规模预设，编辑军团兵力、密度和阵型，以固定交战间距自动布阵并调用 Auto-Fit |
+| `Editor/WarSandboxEditorWindow.cs` | 菜单 MassEngine/War Sandbox Editor：切换产品规模预设，编辑军团兵力、密度和阵型，增删兵种编成，以固定交战间距自动布阵并调用 Auto-Fit |
 | `Editor/WarSandboxDeploymentPlan.cs` | 编辑器部署快照：保存/恢复多军团编成、阵型、手工位置及配平后的空间尺寸，支持 Undo |
 | `PerformanceBaseline.md` | 20k～400k 总单位的封版实测与产品档位 |
 
@@ -57,6 +57,12 @@ F/F1/F2/F3 使用低频 GPU 质心/范围遥测平滑跟随存活群体；右键
 需要切换规模时，可选择标准 1万、大型 5万、超大型 10万、压力测试 20万或自定义预设，
 再点 `应用预设并 Auto-Fit`。预设按每个阵营的现有兵种比例分配总兵力，并作为一个 Undo 操作应用。
 
+在非 Play Mode 下，编辑器的“军团与兵种编排”区域可选择一个已保存的 `UnitTypeConfig` 作为模板，
+通过“添加兵种编成”复制到当前战役，或通过“添加新军团”使用下一个未占用的 `teamId` 创建编成。
+复制会创建独立的 `UnitTypeConfig` 和 `SpawnConfig` 资产，因此新编成可单独调整兵力、出生中心、阵型和
+`teamId`，移动/战斗/动画/渲染等模板引用仍保持共享；“移除”只从当前 `ScenarioConfig` 编成列表中解绑，
+不会删除资产，并可用 Undo 恢复。模板、SpawnConfig 或 ScenarioConfig 未保存时，操作会拒绝且不写入部分结果。
+
 部署方案通过同一窗口的 `另存方案` 保存为独立资产；选择方案后可 `覆盖方案` 或 `载入方案`。
 它保存兵种引用与顺序、teamId、兵力、出生中心、密度、宽深比、手动脚印、交战间距，以及当前世界/网格/流场尺寸。
 载入精确恢复这些数值，不会重新 Auto-Fit 或移动手工位置；一次 Undo 可撤销整次载入，
@@ -71,7 +77,7 @@ F/F1/F2/F3 使用低频 GPU 质心/范围遥测平滑跟随存活群体；右键
 - 新兵种：见 `../MassEngine/UnitTypes/README.md`（三步，零改引擎）
 - 新指令类型/新阵营 UI：写在本层，通过 `MassEngineManager` 的公共 API
   （StartBattle/StopBattle/ResetScenario/SetFlowTargetOverride）驱动引擎
-- 战争沙盒编辑器（当前阶段）：已有部署方案保存/载入；下一步补军团/兵种编排入口，
+- 战争沙盒编辑器（当前阶段）：已有部署方案保存/载入和军团/兵种编排入口，待编辑器真机验收；
   后续纳入场景规则与障碍布局，引擎侧无需改动
 
 ## 性能档位
