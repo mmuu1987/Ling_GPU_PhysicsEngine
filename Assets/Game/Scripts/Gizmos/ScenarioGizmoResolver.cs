@@ -9,8 +9,7 @@ namespace MassEngine.Game
             MassEngineManager manager,
             ScenarioConfig scenarioOverride,
             Color attackerColor,
-            Color defenderColor,
-            Color neutralColor)
+            Color defenderColor)
         {
             var units = new List<ScenarioGizmoUnit>();
             ScenarioConfig scenario = scenarioOverride != null
@@ -27,7 +26,12 @@ namespace MassEngine.Game
                     continue;
 
                 string roleName = config.teamId == 0 ? "Attacker" : config.teamId == 1 ? "Defender" : "Team " + config.teamId;
-                Color color = config.teamId == 0 ? attackerColor : config.teamId == 1 ? defenderColor : neutralColor;
+                // The front line keeps its authored colours; a further army borrows the runtime HUD's
+                // palette, so one army reads as one colour across the Scene view, the troop table
+                // and the minimap.
+                Color color = config.teamId == 0
+                    ? attackerColor
+                    : config.teamId == 1 ? defenderColor : WarSandboxTeamPalette.Resolve(config.teamId);
                 units.Add(new ScenarioGizmoUnit(config, roleName, color));
             }
 

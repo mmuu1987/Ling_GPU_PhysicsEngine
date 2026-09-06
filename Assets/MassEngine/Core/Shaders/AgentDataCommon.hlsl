@@ -14,11 +14,20 @@
 #define STATE_ENGAGE 2
 #define STATE_ATTACK 3
 #define STATE_DEAD 4
-#define DEFENDER_MODE_HOLD_POSITION 0
-#define DEFENDER_MODE_FLOW_FIELD 1
+// Per-team stance, uploaded in teamStanceReadBuffer and indexed by raw teamId. Hold is 0
+// so an un-uploaded buffer freezes everyone rather than marching teams that should not.
+// GuardHome has no producer yet; it keeps the leash branch reachable for a future order.
+#define TEAM_STANCE_HOLD 0
+#define TEAM_STANCE_ADVANCE 1
+#define TEAM_STANCE_GUARD_HOME 2
 #define FLOW_TARGET_NONE 0
 #define FLOW_TARGET_POINT 1
 #define FLOW_TARGET_AREA 2
+// Per-team stride of the runtime flow scratch buffers. Stats: [0] = cells sampled,
+// [1]/[2] = enemy position sum at 1m precision, [3] = sectors that met the quorum.
+// Targets: one float4 per sector, so this doubles as the sector-count ceiling.
+#define FLOW_STATS_PER_TEAM 4
+#define FLOW_TARGETS_PER_TEAM 8
 // Hard upper bound for the local target search radius (cells). The effective radius is
 // min(localTargetSearchCellRadius, ceil(targetAcquireRadius / cellSize)) and is driven
 // from C# so a configured acquire radius is never silently truncated without a warning.
@@ -70,7 +79,8 @@ struct UnitTypeSettings
     float projectileGravity;
     float projectileHitRadius;
     float projectileMaxLifetime;
-    int padding3;
+    // Consumed by the CPU projectile launcher; kept here to mirror the 144-byte stride.
+    float projectileTrailLength;
     int teamId;
     int padding0;
     int padding1;
@@ -79,6 +89,24 @@ struct UnitTypeSettings
     int padding4;
     int padding5;
     int padding6;
+};
+
+// One team's flow configuration, uploaded once per frame for every team.
+//
+// These used to be uniforms (attackerFlowTargetMode / defenderFlowTargetPoint / ...). They
+// cannot stay uniforms past two teams: the combat kernel reads each agent's OWN team
+// parameters, while a uniform would only ever hold the values of whichever team was
+// dispatched last. That would silently steer every team with one team's target.
+struct TeamFlowParams
+{
+    // x = targetMode (FLOW_TARGET_*), y = flow field enabled, z = dynamic targeting enabled,
+    // w = minimum enemies a sector needs before it becomes a target.
+    int4 modes;
+    // xy = configured target point (world xz), z = dynamic target stop radius,
+    // w = sector count.
+    float4 target;
+    // xy = configured target area center (world xz), zw = area size (world xz).
+    float4 area;
 };
 
 RWStructuredBuffer<AgentData> agentBuffer;
@@ -102,24 +130,26 @@ StructuredBuffer<uint> gridCountsReadBuffer;
 StructuredBuffer<uint> gridAgentIndicesReadBuffer;
 StructuredBuffer<uint> teamGridCountsReadBuffer;
 StructuredBuffer<uint> teamGridAgentIndicesReadBuffer;
+// Team-partitioned flow field: one float2 per cell per team, addressed as
+// teamId * FlowFieldCellCount() + cellIndex (see FlowFieldTeamCellIndex). Every team
+// shares one grid - same resolution, origin and cell size - which is what lets the cell
+// index stay team-independent.
 RWStructuredBuffer<float2> flowFieldDirections;
-RWStructuredBuffer<float2> defenderFlowFieldDirections;
 StructuredBuffer<float2> flowFieldDirectionsReadBuffer;
-StructuredBuffer<float2> defenderFlowFieldDirectionsReadBuffer;
 Texture2D<uint> densityMap;
 RWTexture2D<uint> densityMapWrite;
 Texture2D<uint> attackerDensityMap;
 Texture2D<uint> defenderDensityMap;
 RWTexture2D<uint> attackerDensityMapWrite;
 RWTexture2D<uint> defenderDensityMapWrite;
-RWStructuredBuffer<uint> runtimeAttackerTargetDensity;
-RWStructuredBuffer<int> runtimeAttackerFlowStats;
-RWStructuredBuffer<float4> runtimeAttackerFlowTargets;
-RWTexture2D<float4> runtimeAttackerFlowPreviewTexture;
-RWStructuredBuffer<uint> runtimeDefenderTargetDensity;
-RWStructuredBuffer<int> runtimeDefenderFlowStats;
-RWStructuredBuffer<float4> runtimeDefenderFlowTargets;
-RWTexture2D<float4> runtimeDefenderFlowPreviewTexture;
+// Team-partitioned runtime flow scratch, all indexed off flowTeamId by the flow kernels.
+// Strides: cellCount, FLOW_STATS_PER_TEAM, FLOW_TARGETS_PER_TEAM.
+RWStructuredBuffer<uint> runtimeFlowTargetDensity;
+RWStructuredBuffer<int> runtimeFlowStats;
+RWStructuredBuffer<float4> runtimeFlowTargets;
+// Rebound per dispatch to the team being rebuilt, so the shader keeps a single texture
+// however many teams exist.
+RWTexture2D<float4> runtimeFlowPreviewTexture;
 int runtimeFlowPreviewMode;
 int flowPreviewEnabled;
 
@@ -160,6 +190,11 @@ int enableFrustumCulling;
 float cullingRadius;
 float maxRenderDistanceSqr; // 0 = unlimited
 int farIncludeDead; // 1 = corpses render in the far tier too (no 120m corpse pop line)
+// Corpse despawn. A dead agent's currentAnimationTime doubles as its corpse age, so no
+// extra per-agent state is needed. 0 linger = corpses never despawn (legacy behaviour).
+// Mirrored by CorpseLifetime.cs.
+float corpseLingerSeconds;
+float corpseSinkSeconds;
 float4 frustumPlanes[6];
 
 int nearAnimationInterval;
@@ -181,43 +216,40 @@ float cellSize;
 uint maxAgentsPerCell;
 float boundaryPadding;
 
-int flowFieldEnabled;
+// The one flow grid every team shares. Per-team resolution/origin would mean per-team
+// cell indices, which is the simplification this whole layer is built on.
 int2 flowFieldResolution;
 float2 flowFieldOrigin;
 float flowFieldCellSize;
-int attackerFlowTargetMode;
-float4 attackerFlowTargetPoint;
-float4 attackerFlowTargetArea;
-int defenderFlowTargetMode;
-float4 defenderFlowTargetPoint;
-float4 defenderFlowTargetArea;
-int runtimeDynamicAttackerFlowEnabled;
-int runtimeDynamicDefenderFlowEnabled;
-int dynamicFlowSectorCount;
-float dynamicFlowTargetStopRadius;
-int dynamicFlowMinDefendersPerTarget;
-int dynamicDefenderFlowSectorCount;
-float dynamicDefenderFlowTargetStopRadius;
-int dynamicDefenderFlowMinAttackersPerTarget;
-int defenderMovementMode;
-int defenderFlowFieldEnabled;
-int2 defenderFlowFieldResolution;
-float2 defenderFlowFieldOrigin;
-float defenderFlowFieldCellSize;
+// One record per team, indexed by raw teamId, length teamCount. Replaced the pairs of
+// attacker*/defender* flow uniforms.
+StructuredBuffer<TeamFlowParams> teamFlowParamsReadBuffer;
+// Which team the flow kernels are rebuilding this dispatch. One team per dispatch, so the
+// kernels can keep their 1D thread mapping over cells and read a single team's parameters.
+// Meaningless to the combat kernel - agents there read their own team's record instead.
+int flowTeamId;
 
 #define MAX_STATIC_OBSTACLES 8
 int staticObstacleCount;
 float staticObstaclePadding;
 float4 staticObstacleRects[MAX_STATIC_OBSTACLES];
 
-int enableTwoTeamCombat;
+// Whether this frame resolves combat at all - not how many teams are on the field. It was
+// named enableTwoTeamCombat back when two teams were the only arrangement the pipeline had,
+// which read as a team-count switch long after IsEnemy became "any team but mine". A
+// crowd-only frame leaves it at 0, and then nobody is an enemy and nobody holds.
+int combatEnabled;
 int battleStarted;
 int attackerTeamId;
 int defenderTeamId;
 // How many teams the team-partitioned buffers (teamGridCounts / teamGridAgentIndices /
-// teamSpatialStats) were sized for. Any teamId outside [0, teamCount) must be skipped,
-// never clamped: clamping would silently merge a stray team into team 0's bucket.
+// teamSpatialStats / teamStanceReadBuffer) were sized for. Any teamId outside
+// [0, teamCount) must be skipped, never clamped: clamping would silently merge a stray
+// team into team 0's bucket.
 int teamCount;
+// One TEAM_STANCE_* value per team, indexed by raw teamId. This replaced the single
+// defenderMovementMode uniform: stance is a property of a team, not of "the defender".
+StructuredBuffer<int> teamStanceReadBuffer;
 int localTargetSearchCellRadius;
 float defenderGuardRadius;
 
@@ -463,9 +495,28 @@ float GetClipDurationForState(UnitTypeSettings settings, int state)
     return max(settings.idleClipDuration, 0.0001);
 }
 
+// Corpse age at which a body is dropped from every visible list. 0 = never despawn.
+float GetCorpseDespawnSeconds()
+{
+    return corpseLingerSeconds > 0.0 ? corpseLingerSeconds + max(corpseSinkSeconds, 0.0) : 0.0;
+}
+
+// A dead agent whose corpse age reached the despawn point. It stays in agentBuffer (its
+// slot is never recycled) but is submitted for nothing: no draw, no animation step, and
+// no combat/locomotion pass either - the classification and combat kernels both return
+// on this test before they touch the record. Because nothing writes a retired body again,
+// LOWERING corpseLingerSeconds at runtime no longer clamps an already-retired age back
+// down to the new ceiling; the comparison below still holds, so the body stays retired.
+bool IsCorpseDespawned(AgentData agent)
+{
+    return corpseLingerSeconds > 0.0
+        && agent.currentState == STATE_DEAD
+        && agent.currentAnimationTime >= GetCorpseDespawnSeconds();
+}
+
 // Advances the VAT time accumulator. Looping states wrap at their OWN clip duration so
-// the wrap point is phase-aligned with the clip (no visual pop); Dead clamps at the end
-// of the death clip and stays there.
+// the wrap point is phase-aligned with the clip (no visual pop); Dead keeps counting
+// past the end of the death clip because that accumulator doubles as the corpse age.
 void UpdateAnimationTime(uint index, inout AgentData agent, int interval)
 {
     interval = max(interval, 1);
@@ -485,7 +536,18 @@ void UpdateAnimationTime(uint index, inout AgentData agent, int interval)
     }
 
     float nextTime = agent.currentAnimationTime + deltaTime * interval * animationSpeed;
-    agent.currentAnimationTime = loop ? fmod(nextTime, duration) : min(nextTime, duration);
+    if (loop)
+    {
+        agent.currentAnimationTime = fmod(nextTime, duration);
+        return;
+    }
+
+    // Dead: run past the death clip so the linger/sink schedule has an age to read. The
+    // VAT sampler clamps the death clip to its last frame, so the pose still holds. The
+    // ceiling keeps the float bounded: the despawn point, or the clip end when corpses
+    // are configured to stay forever.
+    float ceiling = corpseLingerSeconds > 0.0 ? GetCorpseDespawnSeconds() : duration;
+    agent.currentAnimationTime = min(nextTime, ceiling);
 }
 
 void SetAgentState(inout AgentData agent, int state)
@@ -560,57 +622,37 @@ float2 FlowFieldCellCenter(int2 cell)
     return flowFieldOrigin + ((float2)cell + 0.5) * flowFieldCellSize;
 }
 
-int2 PositionXzToDefenderFlowFieldCell(float2 positionXZ)
+// Where a team's slice of the flow field starts. Teams share the grid, so this is just a
+// stride, but going through one helper keeps every kernel honest about the partitioning.
+uint FlowFieldTeamCellIndex(int teamId, uint cellIndex)
 {
-    float2 local = (positionXZ - defenderFlowFieldOrigin) / max(defenderFlowFieldCellSize, 0.0001);
-    int2 cell = (int2)floor(local);
-    cell.x = clamp(cell.x, 0, defenderFlowFieldResolution.x - 1);
-    cell.y = clamp(cell.y, 0, defenderFlowFieldResolution.y - 1);
-    return cell;
+    return (uint)max(0, teamId) * FlowFieldCellCount() + cellIndex;
 }
 
-int2 PositionToDefenderFlowFieldCell(float3 position)
+// A team with no allocated record navigates by nothing rather than by team 0's field: an
+// out-of-range teamId must never be clamped into another team's slice.
+TeamFlowParams GetTeamFlowParams(int teamId)
 {
-    return PositionXzToDefenderFlowFieldCell(position.xz);
+    if (teamId >= 0 && teamId < teamCount)
+        return teamFlowParamsReadBuffer[teamId];
+
+    TeamFlowParams disabled;
+    disabled.modes = int4(FLOW_TARGET_NONE, 0, 0, 0);
+    disabled.target = float4(0.0, 0.0, 0.0, 0.0);
+    disabled.area = float4(0.0, 0.0, 0.0, 0.0);
+    return disabled;
 }
 
-uint DefenderFlowFieldCellToIndex(int2 cell)
+float2 SampleFlowDirection(uint index, int teamId, float3 position)
 {
-    return (uint)(cell.y * defenderFlowFieldResolution.x + cell.x);
-}
-
-uint DefenderFlowFieldCellCount()
-{
-    return (uint)max(1, defenderFlowFieldResolution.x * defenderFlowFieldResolution.y);
-}
-
-float2 DefenderFlowFieldCellCenter(int2 cell)
-{
-    return defenderFlowFieldOrigin + ((float2)cell + 0.5) * defenderFlowFieldCellSize;
-}
-
-float2 SampleFlowDirection(uint index, float3 position)
-{
-    if (flowFieldEnabled == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
+    if (teamId < 0 || teamId >= teamCount)
         return 0.0;
 
-    float2 direction = flowFieldDirectionsReadBuffer[FlowFieldCellToIndex(PositionToFlowFieldCell(position))];
-    float lengthSqr = dot(direction, direction);
-    if (lengthSqr <= 0.0001)
+    if (teamFlowParamsReadBuffer[teamId].modes.y == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
         return 0.0;
 
-    if (lengthSqr > 1.0)
-        direction *= rsqrt(lengthSqr);
-
-    return direction;
-}
-
-float2 SampleDefenderFlowDirection(uint index, float3 position)
-{
-    if (defenderFlowFieldEnabled == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
-        return 0.0;
-
-    float2 direction = defenderFlowFieldDirectionsReadBuffer[DefenderFlowFieldCellToIndex(PositionToDefenderFlowFieldCell(position))];
+    uint cell = FlowFieldTeamCellIndex(teamId, FlowFieldCellToIndex(PositionToFlowFieldCell(position)));
+    float2 direction = flowFieldDirectionsReadBuffer[cell];
     float lengthSqr = dot(direction, direction);
     if (lengthSqr <= 0.0001)
         return 0.0;
@@ -1017,15 +1059,28 @@ bool IsAliveIndex(uint index)
 
 bool IsEnemy(uint selfIndex, uint otherIndex)
 {
-    if (enableTwoTeamCombat == 0)
+    if (combatEnabled == 0)
         return false;
 
     return teamIdReadBuffer[selfIndex] != teamIdReadBuffer[otherIndex];
 }
 
-bool IsDefenderTeam(uint index)
+int TeamStanceOf(uint index)
 {
-    return enableTwoTeamCombat != 0 && teamIdReadBuffer[index] == defenderTeamId;
+    int teamId = teamIdReadBuffer[index];
+    // A teamId outside the allocated range has no stance record. Advance matches what such
+    // an agent did before stances existed: it fell through to the attacker branch.
+    if (teamId < 0 || teamId >= teamCount)
+        return TEAM_STANCE_ADVANCE;
+
+    return teamStanceReadBuffer[teamId];
+}
+
+// Gated on combatEnabled so a crowd-only frame (combat disabled) leaves nobody
+// holding, exactly as the old defender predicate did.
+bool IsHoldStance(uint index)
+{
+    return combatEnabled != 0 && TeamStanceOf(index) == TEAM_STANCE_HOLD;
 }
 
 // retainExisting: true when validating an agent's CURRENT target (hysteresis applies),
@@ -1037,22 +1092,16 @@ bool TargetIsUsable(uint selfIndex, uint otherIndex, float distSqr, float3 selfP
     if (selfIndex == otherIndex || !IsAliveIndex(otherIndex) || !IsEnemy(selfIndex, otherIndex))
         return false;
 
-    if (IsDefenderTeam(selfIndex))
+    if (IsHoldStance(selfIndex))
     {
-        if (defenderMovementMode == DEFENDER_MODE_HOLD_POSITION)
-        {
-            float holdRange = retainExisting ? AttackExitRange(selfIndex) : GetAttackRange(selfIndex);
-            return distSqr <= holdRange * holdRange;
-        }
-
-        // FLOW_FIELD defenders: aggro-radius only. A spawn-anchored chase leash broke
-        // this doctrine outright (defenders relocated by their flow field could never
-        // acquire targets again); leashing belongs to a future explicit doctrine, not here.
-        float defenderAcquireRadius = GetTargetAcquireRadius(selfIndex);
-        float aggroSqr = defenderAcquireRadius * defenderAcquireRadius;
-        return distSqr <= aggroSqr;
+        float holdRange = retainExisting ? AttackExitRange(selfIndex) : GetAttackRange(selfIndex);
+        return distSqr <= holdRange * holdRange;
     }
 
+    // Everyone not holding acquires on aggro radius alone - advancing defenders used to
+    // take a separate branch with identical arithmetic. No spawn-anchored chase leash
+    // here: it broke the doctrine outright (defenders relocated by their flow field could
+    // never acquire targets again); leashing belongs to an explicit order, not to this.
     float acquireRadius = GetTargetAcquireRadius(selfIndex);
     float acquireSqr = acquireRadius * acquireRadius;
     return distSqr <= acquireSqr;
@@ -1147,11 +1196,14 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     result.bestEnemyIndex = -1;
     result.bestEnemyScore = 1e20;
     result.separation = 0.0;
-    // Team buckets are indexed by raw teamId, so the enemy bucket is the opposing team's id
-    // rather than a fixed 0/1 slot. A teamId outside [0, teamCount) disables the enemy sweep
-    // instead of reading past the end of the team grid.
-    uint enemyTeamSlot = IsDefenderTeam(selfIndex) ? (uint)attackerTeamId : (uint)defenderTeamId;
-    bool sweepEnemies = searchForEnemy && enemyTeamSlot < (uint)max(0, teamCount);
+    // Every team except the agent's own is hostile (no alliance concept yet), so the sweep
+    // walks all teamCount-1 opposing buckets instead of one fixed slot. This is the only
+    // place where widening the team dimension actually costs more work per agent. A teamId
+    // outside [0, teamCount) has no bucket of its own and disables the sweep rather than
+    // reading past the end of the team grid.
+    int selfTeamId = teamIdReadBuffer[selfIndex];
+    uint teamSlotCount = (uint)max(0, teamCount);
+    bool sweepEnemies = searchForEnemy && selfTeamId >= 0 && (uint)selfTeamId < teamSlotCount;
 
     [loop]
     for (int dz = -queryCellRadius; dz <= queryCellRadius; dz++)
@@ -1166,23 +1218,30 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
             uint cellIndex = CellToIndex(cell);
             if (sweepEnemies)
             {
-                uint enemyCellIndex = enemyTeamSlot * gridCellCount + cellIndex;
-                uint enemyCount = min(teamGridCountsReadBuffer[enemyCellIndex], maxAgentsPerCell);
-                for (uint i = 0; i < enemyCount; i++)
+                [loop]
+                for (uint enemyTeamSlot = 0; enemyTeamSlot < teamSlotCount; enemyTeamSlot++)
                 {
-                    uint otherIndex = teamGridAgentIndicesReadBuffer[enemyCellIndex * maxAgentsPerCell + i];
-                    if (!IsAliveIndex(otherIndex))
+                    if (enemyTeamSlot == (uint)selfTeamId)
                         continue;
 
-                    float2 toOther = agentPositionReadBuffer[otherIndex] - selfPosition;
-                    float distSqr = dot(toOther, toOther);
-                    if (TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
+                    uint enemyCellIndex = enemyTeamSlot * gridCellCount + cellIndex;
+                    uint enemyCount = min(teamGridCountsReadBuffer[enemyCellIndex], maxAgentsPerCell);
+                    for (uint i = 0; i < enemyCount; i++)
                     {
-                        float score = TargetSelectionScore(selfIndex, otherIndex, distSqr);
-                        if (score < result.bestEnemyScore)
+                        uint otherIndex = teamGridAgentIndicesReadBuffer[enemyCellIndex * maxAgentsPerCell + i];
+                        if (!IsAliveIndex(otherIndex))
+                            continue;
+
+                        float2 toOther = agentPositionReadBuffer[otherIndex] - selfPosition;
+                        float distSqr = dot(toOther, toOther);
+                        if (TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
                         {
-                            result.bestEnemyScore = score;
-                            result.bestEnemyIndex = (int)otherIndex;
+                            float score = TargetSelectionScore(selfIndex, otherIndex, distSqr);
+                            if (score < result.bestEnemyScore)
+                            {
+                                result.bestEnemyScore = score;
+                                result.bestEnemyIndex = (int)otherIndex;
+                            }
                         }
                     }
                 }
@@ -1238,6 +1297,12 @@ void AppendVisibleAgentForUnitType(uint index, inout AgentData agent)
     bool includeFar = farIncludeDead != 0 || IsAliveIndex(index);
 
     UpdateAnimationTime(index, agent, animationInterval);
+
+    // Despawned corpses leave the render path entirely: no draw, no shadow, no animation
+    // fetch. Reached only on the frame the age first reaches its ceiling - from the next
+    // frame the classification kernel returns before it even calls this.
+    if (IsCorpseDespawned(agent))
+        return;
 
     // The near ring is the only shadow-casting tier and the same visible list feeds
     // every camera and the ShadowCaster pass: culling it against the main camera's

@@ -27,5 +27,8 @@ namespace MassEngine
 
         [Tooltip("Maximum projectile lifetime before auto-destruction (seconds).")]
         [Min(0.5f)] public float projectileMaxLifetime = 5f;
+
+        [Tooltip("Base tracer length before the shared render scale is applied. 0 keeps the global minimum length.")]
+        [Min(0f)] public float projectileTrailLength = 1f;
     }
 }

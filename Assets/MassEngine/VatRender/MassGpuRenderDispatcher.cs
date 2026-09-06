@@ -18,6 +18,15 @@ namespace MassEngine
 
         public void Draw(UnitTypeRegistry registry, MassGpuBufferManager buffers, Bounds bounds)
         {
+            Draw(registry, buffers, bounds, Vector4.zero);
+        }
+
+        /// <param name="corpseSink">
+        /// xyz = (linger seconds, sink seconds, sink depth) for the corpse sink applied in
+        /// the agent vertex shaders. x &lt;= 0 keeps bodies at their death position.
+        /// </param>
+        public void Draw(UnitTypeRegistry registry, MassGpuBufferManager buffers, Bounds bounds, Vector4 corpseSink)
+        {
             if (registry == null || buffers == null || !buffers.IsAllocated)
                 return;
 
@@ -37,12 +46,13 @@ namespace MassEngine
                         buffers.agentBuffer,
                         buffers.GetVisibleIndexBuffer(unitType.UnitTypeIndex, lod),
                         buffers.GetDrawArgsBuffer(unitType.UnitTypeIndex, lod),
-                        bounds);
+                        bounds,
+                        corpseSink);
                 }
             }
         }
 
-        private void DrawLod(ResolvedUnitTypeRuntime runtime, int unitTypeIndex, int lodLevel, ComputeBuffer agentBuffer, ComputeBuffer visibleIndices, ComputeBuffer argsBuffer, Bounds bounds)
+        private void DrawLod(ResolvedUnitTypeRuntime runtime, int unitTypeIndex, int lodLevel, ComputeBuffer agentBuffer, ComputeBuffer visibleIndices, ComputeBuffer argsBuffer, Bounds bounds, Vector4 corpseSink)
         {
             Mesh mesh = runtime.GetMesh(lodLevel);
             Material material = runtime.GetMaterial(lodLevel);
@@ -69,6 +79,7 @@ namespace MassEngine
 
             block.SetBuffer(AgentBufferId, agentBuffer);
             block.SetBuffer(VisibleAgentIndicesId, visibleIndices);
+            block.SetVector(CorpseSinkId, corpseSink);
             Graphics.DrawMeshInstancedIndirect(
                 mesh,
                 0,

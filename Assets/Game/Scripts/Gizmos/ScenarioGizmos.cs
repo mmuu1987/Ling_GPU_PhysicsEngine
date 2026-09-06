@@ -23,9 +23,10 @@ namespace MassEngine.Game
         public bool drawSpawnAreas = true;
         [Range(0f, 1f)] public float spawnFillAlpha = 0.12f;
         [Range(0f, 1f)] public float spawnOutlineAlpha = 0.9f;
+        // Teams 2 and up are coloured by WarSandboxTeamPalette instead, which is what the runtime
+        // HUD uses - one army, one colour, whichever view you are looking at.
         public Color attackerColor = new Color(0.95f, 0.22f, 0.16f, 1f);
         public Color defenderColor = new Color(0.16f, 0.44f, 1f, 1f);
-        public Color neutralColor = new Color(0.7f, 0.7f, 0.7f, 1f);
 
         [Header("Flow Fields")]
         public bool drawFlowFieldBounds = true;
@@ -117,27 +118,23 @@ namespace MassEngine.Game
                 sourceManager,
                 scenarioOverride,
                 attackerColor,
-                defenderColor,
-                neutralColor);
+                defenderColor);
 
             // Mirror the runtime rules so the gizmo never promises an order the GPU
             // will not execute: a team's flow master switch must be ON, and only the
             // FIRST unit type per team with an active target wins (see
             // UnitTypeRegistry.TryGetConfiguredFlowTarget).
+            // Keyed by teamId rather than an attacker/defender pair: a scenario may field more
+            // armies than the two the doctrine names, and each of them shadows its own unit types.
             RuntimeFlowConfig flow = ResolveFlowConfig(sourceManager);
-            bool attackerFlowOn = flow == null || flow.flowFieldEnabled;
-            bool defenderFlowOn = flow != null && flow.defenderFlowFieldEnabled;
-            int attackerWinner = -1;
-            int defenderWinner = -1;
+            var winnerByTeam = new Dictionary<int, int>();
             for (int i = 0; i < units.Count; i++)
             {
                 ScenarioGizmoUnit unit = units[i];
                 if (unit.Movement == null || !unit.Movement.useConfiguredFlowTarget)
                     continue;
-                if (unit.TeamId == 0 && attackerWinner < 0)
-                    attackerWinner = i;
-                else if (unit.TeamId == 1 && defenderWinner < 0)
-                    defenderWinner = i;
+                if (!winnerByTeam.ContainsKey(unit.TeamId))
+                    winnerByTeam.Add(unit.TeamId, i);
             }
 
             for (int i = 0; i < units.Count; i++)
@@ -147,10 +144,18 @@ namespace MassEngine.Game
                     ScenarioGizmoDrawer.DrawSpawnArea(unit, spawnFillAlpha, spawnOutlineAlpha, drawLabels, labelYOffset);
                 if (drawConfiguredTargets)
                 {
-                    bool masterOn = unit.TeamId == 0 ? attackerFlowOn : (unit.TeamId == 1 && defenderFlowOn);
-                    bool isWinner = (unit.TeamId == 0 && i == attackerWinner) || (unit.TeamId == 1 && i == defenderWinner);
+                    // RuntimeFlowConfig answers this for the runtime too, so a third army is judged
+                    // by the doctrine it actually inherits. Deriving the rule here reported its
+                    // configured target as ignored while the GPU went on steering it. With no config
+                    // assigned, fall back to the same shape: everyone but the defender advances.
+                    bool masterOn = flow != null
+                        ? flow.ResolveTeamFlowEnabled(unit.TeamId)
+                        : unit.TeamId != MassEngineManager.DefenderTeamId;
+                    bool isWinner = winnerByTeam.TryGetValue(unit.TeamId, out int winner) && winner == i;
                     string ignoredReason = !masterOn
-                        ? (unit.TeamId == 0 ? "flowFieldEnabled is OFF" : "defenderFlowFieldEnabled is OFF")
+                        ? (unit.TeamId == MassEngineManager.DefenderTeamId
+                            ? "defenderFlowFieldEnabled is OFF"
+                            : "flowFieldEnabled is OFF")
                         : "shadowed by an earlier unit type on this team";
                     ScenarioGizmoDrawer.DrawConfiguredTarget(unit, labelYOffset + 1f, masterOn && isWinner, ignoredReason);
                 }
@@ -168,15 +173,22 @@ namespace MassEngine.Game
 
         private static Texture ResolveAttackerPreviewTexture(MassEngineManager sourceManager)
         {
-            return sourceManager != null && sourceManager.Buffers != null
-                ? sourceManager.Buffers.runtimeAttackerFlowPreviewTexture
-                : null;
+            return ResolvePreviewTexture(sourceManager, MassEngineManager.AttackerTeamId);
         }
 
         private static Texture ResolveDefenderPreviewTexture(MassEngineManager sourceManager)
         {
+            return ResolvePreviewTexture(sourceManager, MassEngineManager.DefenderTeamId);
+        }
+
+        /// <summary>
+        /// Preview textures are one per team now. This gizmo still draws only the two configured
+        /// armies - a further army is visible through FlowFieldPreviewHUD at runtime.
+        /// </summary>
+        private static Texture ResolvePreviewTexture(MassEngineManager sourceManager, int teamId)
+        {
             return sourceManager != null && sourceManager.Buffers != null
-                ? sourceManager.Buffers.runtimeDefenderFlowPreviewTexture
+                ? sourceManager.Buffers.GetFlowPreviewTexture(teamId)
                 : null;
         }
     }

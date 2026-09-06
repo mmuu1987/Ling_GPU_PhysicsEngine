@@ -19,7 +19,13 @@ namespace MassEngine.Game
         Paused = 2,
         AttackerVictory = 3,
         DefenderVictory = 4,
-        Draw = 5
+        Draw = 5,
+        /// <summary>
+        /// One army out of three or more is left standing; which one is in
+        /// WarSandboxBattleResult.winnerTeamId. Two-army battles keep reporting
+        /// AttackerVictory/DefenderVictory so existing HUD and saves read the same as before.
+        /// </summary>
+        ArmyVictory = 6
     }
 
     public enum WarSandboxGameMode
@@ -47,6 +53,8 @@ namespace MassEngine.Game
         public int defenderFlowRebuilds;
         public int peakGridOverflowPerFrame;
         public WarSandboxVictoryReason victoryReason;
+        /// <summary>Winning teamId, or -1 for a draw. The only way to name a winner past two armies.</summary>
+        public int winnerTeamId;
         public bool valid;
 
         public int AttackerCasualties
@@ -64,8 +72,19 @@ namespace MassEngine.Game
             int attackerInitial,
             int defenderInitial,
             BattleTelemetrySnapshot telemetry,
-            WarSandboxVictoryReason victoryReason = WarSandboxVictoryReason.Annihilation)
+            WarSandboxVictoryReason victoryReason = WarSandboxVictoryReason.Annihilation,
+            int winnerTeamId = -1)
         {
+            // Left at -1 by a two-army caller, the winner follows from the phase itself. Only an
+            // ArmyVictory has to name it, because there the phase alone does not.
+            if (winnerTeamId < 0)
+            {
+                if (phase == WarSandboxBattlePhase.AttackerVictory)
+                    winnerTeamId = 0;
+                else if (phase == WarSandboxBattlePhase.DefenderVictory)
+                    winnerTeamId = 1;
+            }
+
             return new WarSandboxBattleResult
             {
                 phase = phase,
@@ -78,6 +97,7 @@ namespace MassEngine.Game
                 defenderFlowRebuilds = Mathf.Max(0, telemetry.defenderFlowRebuilds),
                 peakGridOverflowPerFrame = Mathf.Max(0, telemetry.peakGridOverflowPerFrame),
                 victoryReason = victoryReason,
+                winnerTeamId = winnerTeamId,
                 valid = true
             };
         }
@@ -133,6 +153,67 @@ namespace MassEngine.Game
         }
     }
 
+    public static class WarSandboxVictory
+    {
+        /// <summary>
+        /// The annihilation rule, generalized past two armies: among the armies that actually
+        /// fielded units, count how many still have survivors. Two or more still standing means
+        /// the battle goes on (returns false). Exactly one means that one won. Zero means both
+        /// sides emptied inside the same sample, which is a draw.
+        ///
+        /// A slot that never fielded a unit is not a defeated army - an unused teamId in the
+        /// middle of the range must not hand anyone a victory.
+        /// </summary>
+        public static bool TryResolveAnnihilation(
+            int[] initialCounts,
+            int[] aliveCounts,
+            out WarSandboxBattlePhase phase,
+            out int winnerTeamId)
+        {
+            phase = WarSandboxBattlePhase.Running;
+            winnerTeamId = -1;
+
+            if (initialCounts == null)
+                return false;
+
+            int engaged = 0;
+            int standing = 0;
+            for (int teamId = 0; teamId < initialCounts.Length; teamId++)
+            {
+                if (initialCounts[teamId] <= 0)
+                    continue;
+
+                engaged++;
+                int alive = aliveCounts != null && teamId < aliveCounts.Length ? aliveCounts[teamId] : 0;
+                if (alive <= 0)
+                    continue;
+
+                standing++;
+                winnerTeamId = teamId;
+            }
+
+            // One army alone on the field has no battle to win, so its solitude never ends one.
+            if (engaged < 2 || standing >= 2)
+            {
+                winnerTeamId = -1;
+                return false;
+            }
+
+            if (standing == 0)
+                phase = WarSandboxBattlePhase.Draw;
+            else if (engaged <= 2 && winnerTeamId == 0)
+                phase = WarSandboxBattlePhase.AttackerVictory;
+            else if (engaged <= 2 && winnerTeamId == 1)
+                phase = WarSandboxBattlePhase.DefenderVictory;
+            else
+                // Past two armies - or when the survivor is neither team 0 nor team 1 - the old
+                // phases cannot name the winner, so winnerTeamId carries it instead.
+                phase = WarSandboxBattlePhase.ArmyVictory;
+
+            return true;
+        }
+    }
+
     public static class WarSandboxControlPoint
     {
         public static float ResolveProgress(
@@ -151,5 +232,84 @@ namespace MassEngine.Game
                 return Mathf.MoveTowards(current, 0f, step * 0.5f);
             return Mathf.Clamp(current, -1f, 1f);
         }
+
+        /// <summary>
+        /// Resolves a control point owned by any team. A contested point pauses capture;
+        /// an empty point slowly returns to neutral. Changing owners first removes the
+        /// current owner's progress, then the new owner captures from zero.
+        /// </summary>
+        public static WarSandboxControlPointState ResolveCapture(
+            int currentOwnerTeamId,
+            float currentProgress,
+            int[] teamsInZone,
+            float deltaTime,
+            float captureSeconds)
+        {
+            float step = Mathf.Max(0f, deltaTime) / Mathf.Max(1f, captureSeconds);
+            int occupyingTeamId = -1;
+            int occupyingTeamCount = 0;
+            if (teamsInZone != null)
+            {
+                for (int teamId = 0; teamId < teamsInZone.Length; teamId++)
+                {
+                    if (teamsInZone[teamId] <= 0)
+                        continue;
+
+                    occupyingTeamId = teamId;
+                    occupyingTeamCount++;
+                }
+            }
+
+            int ownerTeamId = currentOwnerTeamId;
+            float progress = ownerTeamId >= 0 ? Mathf.Clamp01(currentProgress) : 0f;
+
+            if (occupyingTeamCount == 0)
+            {
+                progress = Mathf.MoveTowards(progress, 0f, step * 0.5f);
+                if (Mathf.Approximately(progress, 0f))
+                    ownerTeamId = -1;
+            }
+            else if (occupyingTeamCount > 1)
+            {
+                // Multiple teams in the zone freeze the current owner and progress.
+            }
+            else if (ownerTeamId < 0)
+            {
+                ownerTeamId = occupyingTeamId;
+                progress = Mathf.Clamp01(progress + step);
+            }
+            else if (ownerTeamId == occupyingTeamId)
+            {
+                progress = Mathf.Clamp01(progress + step);
+            }
+            else
+            {
+                float remaining = progress - step;
+                if (remaining > 0f)
+                {
+                    progress = remaining;
+                }
+                else
+                {
+                    ownerTeamId = occupyingTeamId;
+                    progress = Mathf.Clamp01(-remaining);
+                }
+            }
+
+            return new WarSandboxControlPointState
+            {
+                ownerTeamId = ownerTeamId,
+                progress = progress,
+                captured = occupyingTeamCount == 1 && ownerTeamId == occupyingTeamId && progress >= 1f
+            };
+        }
+    }
+
+    [Serializable]
+    public struct WarSandboxControlPointState
+    {
+        public int ownerTeamId;
+        public float progress;
+        public bool captured;
     }
 }

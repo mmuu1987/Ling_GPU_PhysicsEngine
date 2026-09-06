@@ -32,6 +32,7 @@ namespace MassEngine
             settings.projectileGravity = Config.projectileGravity;
             settings.projectileHitRadius = Mathf.Max(0.1f, Config.projectileHitRadius);
             settings.projectileMaxLifetime = Mathf.Max(0.5f, Config.projectileMaxLifetime);
+            settings.projectileTrailLength = Mathf.Max(0f, Config.projectileTrailLength);
         }
     }
 }

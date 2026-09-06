@@ -150,6 +150,49 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void MultiArmyControlPointPausesContestedCaptureAndNamesTheWinner()
+        {
+            WarSandboxControlPointState state = WarSandboxControlPoint.ResolveCapture(
+                -1, 0f, new[] { 0, 5, 0 }, 10f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(1));
+            Assert.That(state.progress, Is.EqualTo(0.5f));
+            Assert.That(state.captured, Is.False);
+
+            state = WarSandboxControlPoint.ResolveCapture(
+                state.ownerTeamId, state.progress, new[] { 0, 5, 2 }, 20f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(1));
+            Assert.That(state.progress, Is.EqualTo(0.5f));
+            Assert.That(state.captured, Is.False);
+
+            state = WarSandboxControlPoint.ResolveCapture(
+                state.ownerTeamId, state.progress, new[] { 0, 0, 2 }, 10f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(2));
+            Assert.That(state.progress, Is.EqualTo(0f));
+            Assert.That(state.captured, Is.False);
+
+            state = WarSandboxControlPoint.ResolveCapture(
+                state.ownerTeamId, state.progress, new[] { 0, 0, 2 }, 20f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(2));
+            Assert.That(state.progress, Is.EqualTo(1f));
+            Assert.That(state.captured, Is.True);
+        }
+
+        [Test]
+        public void MultiArmyControlPointReturnsToNeutralWhenEmpty()
+        {
+            WarSandboxControlPointState state = WarSandboxControlPoint.ResolveCapture(
+                2, 0.4f, new[] { 0, 0, 0 }, 4f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(2));
+            Assert.That(state.progress, Is.EqualTo(0.3f));
+
+            state = WarSandboxControlPoint.ResolveCapture(
+                state.ownerTeamId, state.progress, new[] { 0, 0, 0 }, 60f, 20f);
+            Assert.That(state.ownerTeamId, Is.EqualTo(-1));
+            Assert.That(state.progress, Is.EqualTo(0f));
+            Assert.That(state.captured, Is.False);
+        }
+
+        [Test]
         public void GameModeCanOnlyChangeDuringDeployment()
         {
             Assert.That(controller.SetGameMode(WarSandboxGameMode.ControlPoint), Is.True);
@@ -216,6 +259,22 @@ namespace MassEngine.Game.Tests
             Assert.That(controller.GetArmy(1).currentOrder.target, Is.EqualTo(controller.controlPointCenter));
         }
 
+        [Test]
+        public void ControlPointBattleOrdersEveryFieldedArmyToTheObjective()
+        {
+            controller.controlPointCenter = new Vector3(15f, 0f, -12f);
+            AddThirdArmy(40, new Vector3(0f, 0f, 60f));
+            controller.RebuildArmyStates();
+            controller.SetGameMode(WarSandboxGameMode.ControlPoint);
+
+            Assert.That(controller.StartDefaultBattle(), Is.True);
+            for (int teamId = 0; teamId < 3; teamId++)
+            {
+                Assert.That(controller.GetArmy(teamId).currentOrder.type, Is.EqualTo(ArmyOrderType.Move));
+                Assert.That(controller.GetArmy(teamId).currentOrder.target, Is.EqualTo(controller.controlPointCenter));
+            }
+        }
+
         [TestCase(10000)]
         [TestCase(200000)]
         public void CenteredDeploymentKeepsRequestedEdgeGapAcrossArmySizes(int unitCount)
@@ -243,6 +302,80 @@ namespace MassEngine.Game.Tests
             {
                 Object.DestroyImmediate(attackers);
                 Object.DestroyImmediate(defenders);
+            }
+        }
+
+        [Test]
+        public void RankedDeploymentStacksATeamBackFromTheGapWithoutOverlap()
+        {
+            SpawnConfig melee = ScriptableObject.CreateInstance<SpawnConfig>();
+            SpawnConfig archers = ScriptableObject.CreateInstance<SpawnConfig>();
+            try
+            {
+                // The shipped attacker roster: a 30k melee screen with 20k archers behind it.
+                melee.unitCount = 30000;
+                melee.formationDensity = 0.5f;
+                melee.formationAspect = 3.3333333f;
+                archers.unitCount = 20000;
+                archers.formationDensity = 0.5f;
+                archers.formationAspect = 5f;
+
+                const float requestedGap = 50f;
+                float meleeDepth = melee.ResolveSpawnSize().x;
+                melee.spawnCenter = WarSandboxFormationLayout.ResolveRankedSpawnCenter(melee, 0, requestedGap, 0f);
+                archers.spawnCenter = WarSandboxFormationLayout.ResolveRankedSpawnCenter(archers, 0, requestedGap, meleeDepth);
+
+                // The front rank owns the gap, exactly as a single-block team would.
+                Assert.That(
+                    melee.spawnCenter.x + meleeDepth * 0.5f,
+                    Is.EqualTo(-requestedGap * 0.5f).Within(0.001f));
+                // The rear rank begins where the front one ends: no overlap, no wasted lane.
+                Assert.That(
+                    archers.spawnCenter.x + archers.ResolveSpawnSize().x * 0.5f,
+                    Is.EqualTo(melee.spawnCenter.x - meleeDepth * 0.5f).Within(0.001f));
+                // Equal front widths are what make the two ranks read as one formation.
+                Assert.That(
+                    archers.ResolveSpawnSize().z,
+                    Is.EqualTo(melee.ResolveSpawnSize().z).Within(0.01f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(melee);
+                Object.DestroyImmediate(archers);
+            }
+        }
+
+        [Test]
+        public void SplittingATeamIntoRanksKeepsItsTotalFootprint()
+        {
+            // Why the mixed-arms roster needed no world/grid/flow re-fit: 30k + 20k at the
+            // authored aspects occupy the same rectangle the old single 50k block did.
+            SpawnConfig single = ScriptableObject.CreateInstance<SpawnConfig>();
+            SpawnConfig melee = ScriptableObject.CreateInstance<SpawnConfig>();
+            SpawnConfig archers = ScriptableObject.CreateInstance<SpawnConfig>();
+            try
+            {
+                single.unitCount = 50000;
+                single.formationDensity = 0.5f;
+                single.formationAspect = 2f;
+                melee.unitCount = 30000;
+                melee.formationDensity = 0.5f;
+                melee.formationAspect = 3.3333333f;
+                archers.unitCount = 20000;
+                archers.formationDensity = 0.5f;
+                archers.formationAspect = 5f;
+
+                Assert.That(
+                    melee.ResolveSpawnSize().x + archers.ResolveSpawnSize().x,
+                    Is.EqualTo(single.ResolveSpawnSize().x).Within(0.01f));
+                Assert.That(melee.ResolveSpawnSize().z, Is.EqualTo(single.ResolveSpawnSize().z).Within(0.01f));
+                Assert.That(archers.ResolveSpawnSize().z, Is.EqualTo(single.ResolveSpawnSize().z).Within(0.01f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(single);
+                Object.DestroyImmediate(melee);
+                Object.DestroyImmediate(archers);
             }
         }
 
@@ -276,6 +409,33 @@ namespace MassEngine.Game.Tests
                 }
                 Object.DestroyImmediate(presetScenario);
             }
+        }
+
+        [Test]
+        public void TeamPaletteGivesEveryArmyItsOwnStableColour()
+        {
+            // The HUD colours the selector, force readout, minimap and world markers from this one
+            // table, so a repeat or a throw past its end would mislabel an army rather than fail loudly.
+            var seen = new System.Collections.Generic.List<Color>();
+            for (int teamId = 0; teamId < 24; teamId++)
+            {
+                Color colour = WarSandboxTeamPalette.Resolve(teamId);
+                Assert.That(WarSandboxTeamPalette.Resolve(teamId), Is.EqualTo(colour), "team " + teamId + " must be stable");
+
+                for (int i = 0; i < seen.Count; i++)
+                {
+                    float distance = Mathf.Abs(seen[i].r - colour.r) + Mathf.Abs(seen[i].g - colour.g) +
+                                     Mathf.Abs(seen[i].b - colour.b);
+                    Assert.That(distance, Is.GreaterThan(0.05f), "team " + teamId + " duplicates team " + i);
+                }
+
+                seen.Add(colour);
+            }
+
+            // Attacker red and defender blue are the colours the existing HUD screenshots use.
+            Assert.That(WarSandboxTeamPalette.Resolve(0).r, Is.GreaterThan(WarSandboxTeamPalette.Resolve(0).b));
+            Assert.That(WarSandboxTeamPalette.Resolve(1).b, Is.GreaterThan(WarSandboxTeamPalette.Resolve(1).r));
+            Assert.That(WarSandboxTeamPalette.Resolve(-1), Is.EqualTo(Color.white));
         }
 
         [Test]
@@ -406,11 +566,154 @@ namespace MassEngine.Game.Tests
             Assert.That(report.yMax, Is.LessThanOrEqualTo(screenHeight));
         }
 
+        [Test]
+        public void AnnihilationEndsOnlyWhenOneArmyIsLeftStanding()
+        {
+            // Three armies still fielding units: nobody has won anything yet.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80, 40 }, new[] { 3, 2, 1 },
+                out WarSandboxBattlePhase phase, out int winner), Is.False);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.Running));
+            Assert.That(winner, Is.EqualTo(-1));
+
+            // The third army outlasts both of the teams the old phases could name.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80, 40 }, new[] { 0, 0, 11 }, out phase, out winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.ArmyVictory));
+            Assert.That(winner, Is.EqualTo(2));
+
+            // Everyone emptied inside one sample.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80, 40 }, new[] { 0, 0, 0 }, out phase, out winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.Draw));
+            Assert.That(winner, Is.EqualTo(-1));
+        }
+
+        [Test]
+        public void TwoArmyBattlesKeepReportingTheAttackerAndDefenderPhases()
+        {
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80 }, new[] { 73, 0 },
+                out WarSandboxBattlePhase phase, out int winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.AttackerVictory));
+            Assert.That(winner, Is.EqualTo(0));
+
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 80 }, new[] { 0, 5 }, out phase, out winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.DefenderVictory));
+            Assert.That(winner, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AnArmyThatNeverTookTheFieldIsNotADefeatedOne()
+        {
+            // Team 1 is an empty slot between two real armies: it must not end the battle, and
+            // it must not be mistaken for the loser once one of the real armies is wiped out.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 0, 40 }, new[] { 120, 0, 40 },
+                out WarSandboxBattlePhase phase, out int winner), Is.False);
+            Assert.That(winner, Is.EqualTo(-1));
+
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 0, 40 }, new[] { 0, 0, 40 }, out phase, out winner), Is.True);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.ArmyVictory));
+            Assert.That(winner, Is.EqualTo(2));
+
+            // One army alone on the field has no battle to win.
+            Assert.That(ResolveAnnihilation(
+                new[] { 120, 0 }, new[] { 120, 0 }, out phase, out winner), Is.False);
+            Assert.That(phase, Is.EqualTo(WarSandboxBattlePhase.Running));
+        }
+
+        [Test]
+        public void CaptureNamesTheWinnerEvenWhenThePhaseCannot()
+        {
+            BattleTelemetrySnapshot telemetry = new BattleTelemetrySnapshot { valid = true };
+
+            Assert.That(WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.AttackerVictory, 120, 80, telemetry).winnerTeamId, Is.EqualTo(0));
+            Assert.That(WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.DefenderVictory, 120, 80, telemetry).winnerTeamId, Is.EqualTo(1));
+            Assert.That(WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.Draw, 120, 80, telemetry).winnerTeamId, Is.EqualTo(-1));
+            Assert.That(WarSandboxBattleResult.Capture(
+                WarSandboxBattlePhase.ArmyVictory, 120, 80, telemetry,
+                WarSandboxVictoryReason.Annihilation, 2).winnerTeamId, Is.EqualTo(2));
+        }
+
+        private static bool ResolveAnnihilation(
+            int[] initialCounts,
+            int[] aliveCounts,
+            out WarSandboxBattlePhase phase,
+            out int winnerTeamId)
+        {
+            return WarSandboxVictory.TryResolveAnnihilation(initialCounts, aliveCounts, out phase, out winnerTeamId);
+        }
+
+        [Test]
+        public void RebuildArmyStatesWidensToTheScenarioTeamCount()
+        {
+            Assert.That(controller.IssueOrder(ArmyOrder.Hold(1)), Is.True);
+            AddThirdArmy(40, new Vector3(0f, 0f, 60f));
+
+            controller.RebuildArmyStates();
+
+            ArmyRuntimeState third = controller.GetArmy(2);
+            Assert.That(controller.ArmyCount, Is.EqualTo(3));
+            Assert.That(third, Is.Not.Null);
+            Assert.That(third.teamId, Is.EqualTo(2));
+            Assert.That(third.initialUnitCount, Is.EqualTo(40));
+            Assert.That(third.spawnCenter, Is.EqualTo(new Vector3(0f, 0f, 60f)));
+            Assert.That(third.displayName, Is.Not.EqualTo(controller.GetArmy(0).displayName));
+            Assert.That(controller.SelectArmy(2), Is.True);
+            Assert.That(controller.GetArmy(3), Is.Null);
+
+            // Widening must not drop what the armies that already existed were doing.
+            Assert.That(controller.GetArmy(1).currentOrder.type, Is.EqualTo(ArmyOrderType.Hold));
+            Assert.That(controller.GetArmy(0).initialUnitCount, Is.EqualTo(120));
+        }
+
+        [Test]
+        public void ThirdArmyTakesOrdersEvenWithoutAFlowFieldOfItsOwn()
+        {
+            AddThirdArmy(40, new Vector3(0f, 0f, 60f));
+            controller.RebuildArmyStates();
+
+            // The engine sizes its per-team flow state in Initialize, which an unstarted manager
+            // has not run: orders must still be accepted for a team whose slice does not exist yet.
+            Assert.That(manager.NavigableTeamCount, Is.EqualTo(2));
+
+            Assert.That(controller.IssueOrder(ArmyOrder.Attack(2)), Is.True);
+            Assert.That(controller.GetArmy(2).currentOrder.type, Is.EqualTo(ArmyOrderType.Attack));
+
+            Assert.That(controller.IssueOrder(ArmyOrder.Retreat(2)), Is.True);
+            Assert.That(controller.GetArmy(2).currentOrder.target, Is.EqualTo(new Vector3(0f, 0f, 60f)));
+
+            Assert.That(controller.IssueMoveOrder(2, new Vector3(5f, 0f, 5f), false), Is.True);
+            Assert.That(controller.GetMoveRoutePointCount(2), Is.EqualTo(1));
+        }
+
+        private void AddThirdArmy(int count, Vector3 center)
+        {
+            // Reuses the SetUp unit types so TearDown still destroys every instance it created.
+            scenario.unitTypes = new[]
+            {
+                scenario.unitTypes[0],
+                scenario.unitTypes[1],
+                CreateUnitType("ThirdArmy", 2, count, center)
+            };
+        }
+
         private TeamFlowFrameSettings InvokeBuildTeamFlowSettings(int teamId)
         {
+            // Signature spelled out because there are two overloads now: the single-team
+            // builder this test drives, and the array builder that fans it out over every team.
             MethodInfo method = typeof(MassEngineManager).GetMethod(
                 "BuildTeamFlowSettings",
-                BindingFlags.Instance | BindingFlags.NonPublic);
+                BindingFlags.Instance | BindingFlags.NonPublic,
+                null,
+                new[] { typeof(int), typeof(int), typeof(int) },
+                null);
             Assert.That(method, Is.Not.Null);
             return (TeamFlowFrameSettings)method.Invoke(manager, new object[] { teamId, 1, 16 });
         }

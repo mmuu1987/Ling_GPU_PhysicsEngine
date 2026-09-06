@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
   m_Name: AttackerUnitConfig
   m_EditorClassIdentifier: 
-  unitTypeName: Attacker Sword
+  unitTypeName: Attacker Archer
   unitTypeClassName: MassEngine.DefaultSwordUnit
   teamId: 0
   spawnConfig: {fileID: 11400000, guid: 1c9fde17bda0dc04ab271abff8399af3, type: 2}

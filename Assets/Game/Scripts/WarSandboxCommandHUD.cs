@@ -21,13 +21,17 @@ namespace MassEngine.Game
         public bool showMinimap = true;
         [Min(96f)] public float minimapSize = 180f;
 
+        // Follow target: one army, or every army at once. The old Attackers/Defenders pair had
+        // no way to name a third army; the followed team travels in cameraFocusTeamId instead.
         private enum CameraFocusMode
         {
             None,
-            Attackers,
-            Defenders,
-            Both
+            Army,
+            All
         }
+
+        /// <summary>Armies per row in the selector and the force readout. Two keeps the old layout.</summary>
+        private const int ArmyColumns = 2;
 
         private bool awaitingMoveTarget;
         private ClickFlowTargetSetter legacyClickSetter;
@@ -36,6 +40,7 @@ namespace MassEngine.Game
         private string commandFeedback;
         private float feedbackUntil;
         private CameraFocusMode cameraFocusMode;
+        private int cameraFocusTeamId;
 
         private void Reset()
         {
@@ -76,10 +81,13 @@ namespace MassEngine.Game
             if (cameraNavigation)
                 cameraFocusMode = CameraFocusMode.None;
 
-            if (Input.GetKeyDown(KeyCode.Alpha1))
-                controller.SelectArmy(0);
-            if (Input.GetKeyDown(KeyCode.Alpha2))
-                controller.SelectArmy(1);
+            // 1..9 select by roster position, so a third army is reachable without inventing keys.
+            int hotkeyArmies = Mathf.Min(ResolveArmyCount(), 9);
+            for (int teamId = 0; teamId < hotkeyArmies; teamId++)
+            {
+                if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + teamId)))
+                    controller.SelectArmy(teamId);
+            }
             if (!cameraNavigation)
             {
                 if (Input.GetKeyDown(KeyCode.A))
@@ -141,7 +149,7 @@ namespace MassEngine.Game
 
             GUILayout.Label("战争沙盒", GUILayout.Height(compactLayout ? 17f : 20f));
             GUILayout.Label("阶段：" + FormatPhase(controller.Phase), GUILayout.Height(compactLayout ? 17f : 20f));
-            GUILayout.Label(FormatForceSummary(), GUILayout.Height(compactLayout ? 17f : 20f));
+            DrawForceSummary(compactLayout);
 
             if (controller.Phase == WarSandboxBattlePhase.Setup && !compactLayout)
             {
@@ -164,12 +172,7 @@ namespace MassEngine.Game
                     controller.SetStaticObstaclesEnabled(requestedObstacleState);
             }
 
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(controller.selectedTeam == 0, "攻方 [1]", GUI.skin.button, GUILayout.Height(controlHeight)))
-                controller.SelectArmy(0);
-            if (GUILayout.Toggle(controller.selectedTeam == 1, "守方 [2]", GUI.skin.button, GUILayout.Height(controlHeight)))
-                controller.SelectArmy(1);
-            GUILayout.EndHorizontal();
+            DrawArmySelector(controlHeight);
 
             ArmyRuntimeState selected = controller.SelectedArmy;
             if (selected != null)
@@ -231,10 +234,8 @@ namespace MassEngine.Game
             if (!compactLayout)
             {
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button("攻方镜头 [F1]", GUILayout.Height(controlHeight)))
-                    FocusArmy(0);
-                if (GUILayout.Button("守方镜头 [F2]", GUILayout.Height(controlHeight)))
-                    FocusArmy(1);
+                if (GUILayout.Button("跟随选中 [F]", GUILayout.Height(controlHeight)))
+                    FocusArmy(controller.selectedTeam);
                 if (GUILayout.Button("全景 [F3]", GUILayout.Height(controlHeight)))
                     FocusBattlefield();
                 GUILayout.EndHorizontal();
@@ -247,7 +248,7 @@ namespace MassEngine.Game
             else if (Time.unscaledTime < feedbackUntil)
                 GUILayout.Label(commandFeedback, GUILayout.Height(compactLayout ? 17f : 20f));
             else if (showHotkeys && !compactLayout)
-                GUILayout.Label("F当前/F1攻/F2守/F3双方跟随 · Enter开战 · A/M/H/R下令");
+                GUILayout.Label("数字键选军团 · F跟随 · F3全景 · Enter开战 · A/M/H/R下令");
 
             GUILayout.EndArea();
             DrawControlPointStatus();
@@ -338,7 +339,11 @@ namespace MassEngine.Game
         private Rect ResolvePanelRect()
         {
             float width = Mathf.Min(Mathf.Max(240f, panelWidth), Mathf.Max(240f, Screen.width - 16f));
-            float preferredHeight = Screen.height < 380f ? 296f : 380f;
+            bool compactPanel = Screen.height < 380f;
+            // Selector and force readout both lay out ArmyColumns per row, so every extra pair of
+            // armies costs two rows. Two armies keep the historical height to the pixel.
+            int rosterRows = Mathf.Max(1, (ResolveArmyCount() + ArmyColumns - 1) / ArmyColumns);
+            float preferredHeight = (compactPanel ? 296f : 380f) + (rosterRows - 1) * 2f * (compactPanel ? 18f : 24f);
             float height = Mathf.Min(preferredHeight, Mathf.Max(200f, Screen.height - 16f));
             return new Rect(Mathf.Max(8f, Screen.width - width - 8f), 8f, width, height);
         }
@@ -365,7 +370,7 @@ namespace MassEngine.Game
                 fontStyle = FontStyle.Bold,
                 fontSize = 18
             };
-            GUILayout.Label(FormatResultTitle(result.phase), titleStyle, GUILayout.Height(26f));
+            GUILayout.Label(FormatResultTitle(result), titleStyle, GUILayout.Height(26f));
             GUILayout.Label(
                 "胜因  " + FormatVictoryReason(result.victoryReason) +
                 "    战斗时长  " + FormatBattleTime(result.battleSeconds));
@@ -401,12 +406,15 @@ namespace MassEngine.Game
             GUILayout.EndArea();
         }
 
-        private static string FormatResultTitle(WarSandboxBattlePhase value)
+        // Not static any more: past two armies only winnerTeamId knows who won, and turning
+        // that into a name needs the controller's roster.
+        private string FormatResultTitle(WarSandboxBattleResult result)
         {
-            switch (value)
+            switch (result.phase)
             {
                 case WarSandboxBattlePhase.AttackerVictory: return "\u653b\u65b9\u80dc\u5229";
                 case WarSandboxBattlePhase.DefenderVictory: return "\u5b88\u65b9\u80dc\u5229";
+                case WarSandboxBattlePhase.ArmyVictory: return FormatTeamName(result.winnerTeamId) + "\u80dc\u5229";
                 default: return "\u540c\u5f52\u4e8e\u5c3d";
             }
         }
@@ -428,22 +436,54 @@ namespace MassEngine.Game
                 return;
 
             Rect commandPanel = ResolvePanelRect();
-            float width = Mathf.Min(360f, Mathf.Max(180f, commandPanel.x - 16f));
-            Rect panel = new Rect(8f, 92f, width, 58f);
+            float width = Mathf.Min(420f, Mathf.Max(220f, commandPanel.x - 16f));
+            Rect panel = new Rect(8f, 92f, width, 78f);
             GUI.Box(panel, GUIContent.none);
-            GUI.Label(
-                new Rect(panel.x + 8f, panel.y + 4f, panel.width - 16f, 20f),
-                "中央据点  攻 " + controller.AttackersInControlPoint + "  |  守 " + controller.DefendersInControlPoint);
 
-            Rect bar = new Rect(panel.x + 8f, panel.y + 30f, panel.width - 16f, 16f);
+            GUIStyle summaryStyle = new GUIStyle(GUI.skin.label)
+            {
+                wordWrap = true,
+                fontSize = 11
+            };
+            GUI.Label(
+                new Rect(panel.x + 8f, panel.y + 4f, panel.width - 16f, 28f),
+                FormatControlPointCounts(),
+                summaryStyle);
+
+            string status = controller.IsControlPointContested
+                ? "争夺中"
+                : controller.ControlPointOwnerTeamId >= 0
+                    ? FormatTeamName(controller.ControlPointOwnerTeamId) + "占领 " +
+                      Mathf.RoundToInt(controller.ControlPointCaptureProgress * 100f) + "%"
+                    : "未占领";
+            GUI.Label(new Rect(panel.x + 8f, panel.y + 32f, panel.width - 16f, 18f), "中央据点  " + status);
+
+            Rect bar = new Rect(panel.x + 8f, panel.y + 56f, panel.width - 16f, 14f);
             DrawSolidRect(bar, new Color(0.1f, 0.12f, 0.14f, 0.9f));
-            float half = bar.width * 0.5f;
-            float progress = Mathf.Clamp(controller.ControlPointProgress, -1f, 1f);
-            if (progress > 0f)
-                DrawSolidRect(new Rect(bar.center.x, bar.y, half * progress, bar.height), new Color(1f, 0.32f, 0.2f));
-            else if (progress < 0f)
-                DrawSolidRect(new Rect(bar.center.x + half * progress, bar.y, -half * progress, bar.height), new Color(0.25f, 0.55f, 1f));
-            DrawSolidRect(new Rect(bar.center.x - 1f, bar.y, 2f, bar.height), Color.white);
+            float progress = Mathf.Clamp01(controller.ControlPointCaptureProgress);
+            if (progress > 0f && controller.ControlPointOwnerTeamId >= 0)
+                DrawSolidRect(
+                    new Rect(bar.x, bar.y, bar.width * progress, bar.height),
+                    WarSandboxTeamPalette.Resolve(controller.ControlPointOwnerTeamId));
+        }
+
+        private string FormatControlPointCounts()
+        {
+            string result = "据点兵力  ";
+            bool hasArmy = false;
+            for (int teamId = 0; teamId < ResolveArmyCount(); teamId++)
+            {
+                ArmyRuntimeState army = controller.GetArmy(teamId);
+                if (army == null || army.initialUnitCount <= 0)
+                    continue;
+
+                if (hasArmy)
+                    result += "  |  ";
+                result += FormatTeamName(teamId) + " " + controller.GetControlPointUnitCount(teamId);
+                hasArmy = true;
+            }
+
+            return hasArmy ? result : "据点兵力  无可用军团";
         }
 
         private void ResolveReferences()
@@ -464,7 +504,8 @@ namespace MassEngine.Game
                 return;
 
             controller.SelectArmy(teamId);
-            cameraFocusMode = teamId == 0 ? CameraFocusMode.Attackers : CameraFocusMode.Defenders;
+            cameraFocusMode = CameraFocusMode.Army;
+            cameraFocusTeamId = teamId;
             cameraManager.FocusTacticalBounds(ExpandLiveBounds(bounds));
             SetFeedback("镜头跟随：" + FormatTeamName(teamId));
         }
@@ -487,9 +528,9 @@ namespace MassEngine.Game
                 bounds = new Bounds(Vector3.zero, new Vector3(size.x, 40f, size.y));
             }
 
-            cameraFocusMode = CameraFocusMode.Both;
+            cameraFocusMode = CameraFocusMode.All;
             cameraManager.FocusTacticalBounds(ExpandLiveBounds(bounds));
-            SetFeedback("镜头跟随：双方战场");
+            SetFeedback("镜头跟随：全体战场");
         }
 
         private void UpdateCameraFollow()
@@ -499,10 +540,10 @@ namespace MassEngine.Game
 
             bool resolved;
             Bounds bounds;
-            if (cameraFocusMode == CameraFocusMode.Both)
+            if (cameraFocusMode == CameraFocusMode.All)
                 resolved = TryResolveLiveCombinedArmyBounds(out bounds);
             else
-                resolved = TryResolveLiveArmyBounds(cameraFocusMode == CameraFocusMode.Attackers ? 0 : 1, out bounds);
+                resolved = TryResolveLiveArmyBounds(cameraFocusTeamId, out bounds);
 
             if (resolved)
                 cameraManager.FollowTacticalBounds(ExpandLiveBounds(bounds), cameraFollowSharpness);
@@ -515,7 +556,9 @@ namespace MassEngine.Game
                 return false;
 
             BattleTelemetrySnapshot snapshot = controller.TelemetrySnapshot;
-            TeamSpatialTelemetry team = teamId == 0 ? snapshot.attackers : snapshot.defenders;
+            // GetTeam covers every teamId in the sample; the attackers/defenders fields it mirrors
+            // would report team 1's bounds for a third army.
+            TeamSpatialTelemetry team = snapshot.GetTeam(teamId);
             if (!snapshot.valid || !team.valid)
                 return false;
 
@@ -523,14 +566,28 @@ namespace MassEngine.Game
             return true;
         }
 
+        /// <summary>
+        /// Union of every army's live bounds. Iterating the roster is what pulls the panorama
+        /// camera out far enough to hold a third army; merging teams 0 and 1 left it off frame.
+        /// </summary>
         private bool TryResolveLiveCombinedArmyBounds(out Bounds bounds)
         {
-            bool hasAttackers = TryResolveLiveArmyBounds(0, out Bounds attackers);
-            bool hasDefenders = TryResolveLiveArmyBounds(1, out Bounds defenders);
-            bounds = hasAttackers ? attackers : defenders;
-            if (hasAttackers && hasDefenders)
-                bounds.Encapsulate(defenders);
-            return hasAttackers || hasDefenders;
+            bounds = default;
+            bool found = false;
+            int armyCount = ResolveArmyCount();
+            for (int teamId = 0; teamId < armyCount; teamId++)
+            {
+                if (!TryResolveLiveArmyBounds(teamId, out Bounds army))
+                    continue;
+
+                if (found)
+                    bounds.Encapsulate(army);
+                else
+                    bounds = army;
+                found = true;
+            }
+
+            return found;
         }
 
         private Bounds ExpandLiveBounds(Bounds bounds)
@@ -558,8 +615,9 @@ namespace MassEngine.Game
 
             DrawStaticObstaclesMinimap(map, worldSize);
             DrawControlPointMinimap(map, worldSize);
-            DrawMinimapTeam(map, worldSize, 0, new Color(1f, 0.3f, 0.2f));
-            DrawMinimapTeam(map, worldSize, 1, new Color(0.25f, 0.55f, 1f));
+            int minimapArmyCount = ResolveArmyCount();
+            for (int teamId = 0; teamId < minimapArmyCount; teamId++)
+                DrawMinimapTeam(map, worldSize, teamId, WarSandboxTeamPalette.Resolve(teamId));
 
             Camera targetCamera = commandCamera != null ? commandCamera : Camera.main;
             if (targetCamera != null)
@@ -777,14 +835,25 @@ namespace MassEngine.Game
             return found;
         }
 
+        /// <summary>Union of every army's configured deployment, for the pre-battle camera.</summary>
         private bool TryResolveCombinedArmyBounds(out Bounds bounds)
         {
-            bool hasAttackers = TryResolveArmyBounds(0, out Bounds attackers);
-            bool hasDefenders = TryResolveArmyBounds(1, out Bounds defenders);
-            bounds = hasAttackers ? attackers : defenders;
-            if (hasAttackers && hasDefenders)
-                bounds.Encapsulate(defenders);
-            return hasAttackers || hasDefenders;
+            bounds = default;
+            bool found = false;
+            int armyCount = ResolveArmyCount();
+            for (int teamId = 0; teamId < armyCount; teamId++)
+            {
+                if (!TryResolveArmyBounds(teamId, out Bounds army))
+                    continue;
+
+                if (found)
+                    bounds.Encapsulate(army);
+                else
+                    bounds = army;
+                found = true;
+            }
+
+            return found;
         }
 
         private void DrawWorldOrderMarkers()
@@ -793,8 +862,9 @@ namespace MassEngine.Game
             if (targetCamera == null)
                 return;
 
-            DrawArmyMarker(targetCamera, controller.GetArmy(0), new Color(1f, 0.35f, 0.25f));
-            DrawArmyMarker(targetCamera, controller.GetArmy(1), new Color(0.3f, 0.6f, 1f));
+            int armyCount = ResolveArmyCount();
+            for (int teamId = 0; teamId < armyCount; teamId++)
+                DrawArmyMarker(targetCamera, controller.GetArmy(teamId), WarSandboxTeamPalette.Resolve(teamId));
             DrawControlPointWorldMarker(targetCamera);
         }
 
@@ -852,9 +922,17 @@ namespace MassEngine.Game
             feedbackUntil = Time.unscaledTime + 2f;
         }
 
-        private static string FormatTeamName(int teamId)
+        // Reads the roster instead of assuming two armies, so a third army is named rather than
+        // labelled "守方". Falls back to the old pair only when the controller has no such army.
+        private string FormatTeamName(int teamId)
         {
-            return teamId == 0 ? "攻方" : "守方";
+            ArmyRuntimeState army = controller != null ? controller.GetArmy(teamId) : null;
+            if (army != null && !string.IsNullOrEmpty(army.displayName))
+                return army.displayName;
+
+            // Same table the controller names armies from, so an out-of-range selection reads as
+            // its own army instead of borrowing the defender's name.
+            return WarSandboxBattleController.DefaultArmyName(teamId);
         }
 
         private static string FormatOrder(ArmyOrderType type)
@@ -869,14 +947,62 @@ namespace MassEngine.Game
             }
         }
 
-        private string FormatForceSummary()
+        /// <summary>
+        /// One "name alive/initial" entry per army, ArmyColumns per row, tinted with the army's
+        /// minimap colour so map and readout agree on who is who. The single line it replaces
+        /// spelled out 攻/守 and simply had nowhere to put a third army.
+        /// </summary>
+        private void DrawForceSummary(bool compactLayout)
         {
-            ArmyRuntimeState attackers = controller.GetArmy(0);
-            ArmyRuntimeState defenders = controller.GetArmy(1);
-            int attackerInitial = attackers != null ? attackers.initialUnitCount : 0;
-            int defenderInitial = defenders != null ? defenders.initialUnitCount : 0;
-            return "兵力  攻 " + controller.GetAliveUnitCount(0) + "/" + attackerInitial +
-                   "  |  守 " + controller.GetAliveUnitCount(1) + "/" + defenderInitial;
+            int armyCount = ResolveArmyCount();
+            float lineHeight = compactLayout ? 17f : 20f;
+            Color previousColor = GUI.contentColor;
+            for (int teamId = 0; teamId < armyCount; teamId++)
+            {
+                if (teamId % ArmyColumns == 0)
+                    GUILayout.BeginHorizontal();
+
+                ArmyRuntimeState army = controller.GetArmy(teamId);
+                GUI.contentColor = WarSandboxTeamPalette.Resolve(teamId);
+                GUILayout.Label(
+                    FormatTeamName(teamId) + " " + controller.GetAliveUnitCount(teamId) + "/" +
+                    (army != null ? army.initialUnitCount : 0),
+                    GUILayout.Height(lineHeight));
+
+                if (teamId % ArmyColumns == ArmyColumns - 1 || teamId == armyCount - 1)
+                    GUILayout.EndHorizontal();
+            }
+
+            GUI.contentColor = previousColor;
+        }
+
+        /// <summary>
+        /// One toggle per army in the roster, ArmyColumns per row. Armies 1..9 advertise their
+        /// digit hotkey in the label; past that the name stands alone.
+        /// </summary>
+        private void DrawArmySelector(float controlHeight)
+        {
+            int armyCount = ResolveArmyCount();
+            for (int teamId = 0; teamId < armyCount; teamId++)
+            {
+                if (teamId % ArmyColumns == 0)
+                    GUILayout.BeginHorizontal();
+
+                string label = teamId < 9
+                    ? FormatTeamName(teamId) + " [" + (teamId + 1) + "]"
+                    : FormatTeamName(teamId);
+                if (GUILayout.Toggle(controller.selectedTeam == teamId, label, GUI.skin.button, GUILayout.Height(controlHeight)))
+                    controller.SelectArmy(teamId);
+
+                if (teamId % ArmyColumns == ArmyColumns - 1 || teamId == armyCount - 1)
+                    GUILayout.EndHorizontal();
+            }
+        }
+
+        /// <summary>Roster length, or zero before the controller resolves — every per-army loop goes through here.</summary>
+        private int ResolveArmyCount()
+        {
+            return controller != null ? controller.ArmyCount : 0;
         }
 
         private static bool IsPreOrPostBattle(WarSandboxBattlePhase value)
@@ -888,6 +1014,7 @@ namespace MassEngine.Game
         {
             return value == WarSandboxBattlePhase.AttackerVictory ||
                    value == WarSandboxBattlePhase.DefenderVictory ||
+                   value == WarSandboxBattlePhase.ArmyVictory ||
                    value == WarSandboxBattlePhase.Draw;
         }
 
@@ -899,9 +1026,41 @@ namespace MassEngine.Game
                 case WarSandboxBattlePhase.Paused: return "已暂停";
                 case WarSandboxBattlePhase.AttackerVictory: return "攻方胜利";
                 case WarSandboxBattlePhase.DefenderVictory: return "守方胜利";
+                case WarSandboxBattlePhase.ArmyVictory: return "战斗结束";
                 case WarSandboxBattlePhase.Draw: return "同归于尽";
                 default: return "部署";
             }
+        }
+    }
+
+    /// <summary>
+    /// Per-army colours for the minimap, world markers and force readout. Teams 0 and 1 keep the
+    /// red / blue the two-army HUD drew, so an ordinary battle looks unchanged; further armies get
+    /// distinct hues, and past the table the hue is generated so the HUD never runs out.
+    /// </summary>
+    public static class WarSandboxTeamPalette
+    {
+        private static readonly Color[] Colors =
+        {
+            new Color(1f, 0.33f, 0.22f),
+            new Color(0.27f, 0.57f, 1f),
+            new Color(0.35f, 0.85f, 0.4f),
+            new Color(0.95f, 0.8f, 0.2f),
+            new Color(0.75f, 0.4f, 0.95f),
+            new Color(0.2f, 0.85f, 0.85f),
+            new Color(0.95f, 0.55f, 0.2f),
+            new Color(0.72f, 0.72f, 0.74f)
+        };
+
+        public static Color Resolve(int teamId)
+        {
+            if (teamId < 0)
+                return Color.white;
+            if (teamId < Colors.Length)
+                return Colors[teamId];
+
+            // Golden-ratio hue walk: neighbours stay distinct for any army count, no bigger table.
+            return Color.HSVToRGB(Mathf.Repeat(teamId * 0.618034f, 1f), 0.7f, 0.95f);
         }
     }
 

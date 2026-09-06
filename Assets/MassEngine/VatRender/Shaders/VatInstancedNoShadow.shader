@@ -64,6 +64,21 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 float _DeathClipFrameRate;
             CBUFFER_END
 
+            // 尸体下沉参数，每帧由 MassGpuRenderDispatcher 通过 MaterialPropertyBlock 写入。
+            // xyz = (停留秒数, 下沉秒数, 下沉深度)；x <= 0 表示不下沉（尸体永久保留）。
+            // 由 MPB 提供，所以必须放在 UnityPerMaterial 之外。
+            float4 _MassCorpseSink;
+
+            // 与 LitInstancedAgentShader / AgentDataCommon.hlsl / CorpseLifetime.cs 同一套算法。
+            float ResolveCorpseSink(int state, float age)
+            {
+                if (state != 4 || _MassCorpseSink.x <= 0.0)
+                    return 0.0;
+
+                float t = saturate((age - _MassCorpseSink.x) / max(_MassCorpseSink.y, 0.0001));
+                return t * _MassCorpseSink.z;
+            }
+
             struct AgentData
             {
                 float3 position;
@@ -142,18 +157,21 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                     );
 
                     float4x4 rotMatrix = CreateEulerRotationMatrix(radians(data.rotation));
+                    // 尸体下沉只改渲染位置，agentBuffer 里仍是它倒下的坐标。
+                    float3 renderPosition = data.position;
+                    renderPosition.y -= ResolveCorpseSink(data.currentState, data.currentAnimationTime);
                     float4x4 transMatrix = float4x4(
-                        1, 0, 0, data.position.x,
-                        0, 1, 0, data.position.y,
-                        0, 0, 1, data.position.z,
+                        1, 0, 0, renderPosition.x,
+                        0, 1, 0, renderPosition.y,
+                        0, 0, 1, renderPosition.z,
                         0, 0, 0, 1
                     );
                     unity_ObjectToWorld = mul(transMatrix, mul(rotMatrix, scaleMatrix));
 
                     float4x4 invTransMatrix = float4x4(
-                        1, 0, 0, -data.position.x,
-                        0, 1, 0, -data.position.y,
-                        0, 0, 1, -data.position.z,
+                        1, 0, 0, -renderPosition.x,
+                        0, 1, 0, -renderPosition.y,
+                        0, 0, 1, -renderPosition.z,
                         0, 0, 0, 1
                     );
                     float4x4 invRotMatrix = transpose(rotMatrix);

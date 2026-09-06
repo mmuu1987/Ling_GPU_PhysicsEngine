@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: ThirdArmyMeleeUnitConfig
+  m_EditorClassIdentifier: 
+  unitTypeName: Third Army Swordsman
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 2
+  spawnConfig: {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e32, type: 2}
+  movementConfig: {fileID: 11400000, guid: ff63a3290df25cbcba15414191831f94, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 1babb8cd41225f5bb18d318456bd8fa6, type: 2}
+  animationConfig: {fileID: 11400000, guid: 913e9557b7135a658ee60622c94b0045, type: 2}
+  combatConfig: {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e33, type: 2}
+  renderConfig: {fileID: 11400000, guid: 7e10201949bd5871942b218498f0032f, type: 2}

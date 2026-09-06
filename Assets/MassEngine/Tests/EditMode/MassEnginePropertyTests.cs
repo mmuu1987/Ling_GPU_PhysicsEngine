@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using MassEngine.Projectiles;
 
 namespace MassEngine.Tests
 {
@@ -110,9 +111,9 @@ namespace MassEngine.Tests
         /// because it is forced by the GPU contract rather than by design weight:
         /// UnitTypeGpuSettings has to stay 144 bytes and 16-byte aligned - see
         /// UnitTypeGpuSettingsStrideMatchesHlslStruct above, and MassGpuBufferManager,
-        /// which refuses to allocate at all when the stride drifts - which costs it seven
+        /// which refuses to allocate at all when the stride drifts - which costs it six
         /// padding ints that no line of C# or HLSL ever reads. Counting those made the
-        /// budget rule contradict the alignment rule; the 29 fields that do carry data
+        /// budget rule contradict the alignment rule; the 30 fields that do carry data
         /// were always inside the budget. A real god-object still cannot hide: field
         /// number 31 fails the test whatever it is named.
         /// </summary>
@@ -275,6 +276,7 @@ namespace MassEngine.Tests
             invalidFlocking.laneBiasStrength = -1f;
             CombatConfig invalidCombat = ScriptableObject.CreateInstance<CombatConfig>();
             invalidCombat.targetAcquireRadius = -1f;
+            invalidCombat.projectileTrailLength = -1f;
             UnitTypeConfig unit = ScriptableObject.CreateInstance<UnitTypeConfig>();
             unit.flockingConfig = invalidFlocking;
             unit.combatConfig = invalidCombat;
@@ -288,10 +290,50 @@ namespace MassEngine.Tests
             Assert.AreEqual(0.5f, settings.speedVariation);
             Assert.AreEqual(0f, settings.laneBiasStrength);
             Assert.AreEqual(0.1f, settings.targetAcquireRadius);
+            Assert.AreEqual(0f, settings.projectileTrailLength);
 
             UnityEngine.Object.DestroyImmediate(unit);
             UnityEngine.Object.DestroyImmediate(invalidCombat);
             UnityEngine.Object.DestroyImmediate(invalidFlocking);
+        }
+
+        [Test]
+        public void ProjectileTrailLengthFlowsThroughCombatConfig()
+        {
+            CombatConfig combat = ScriptableObject.CreateInstance<CombatConfig>();
+            combat.projectileTrailLength = 1.75f;
+            UnitTypeConfig unit = ScriptableObject.CreateInstance<UnitTypeConfig>();
+            unit.combatConfig = combat;
+
+            UnitTypeGpuSettings settings = UnitTypeGpuSettings.FromConfig(unit);
+
+            Assert.AreEqual(1.75f, settings.projectileTrailLength);
+
+            UnityEngine.Object.DestroyImmediate(unit);
+            UnityEngine.Object.DestroyImmediate(combat);
+        }
+
+        [Test]
+        public void TracerPaletteResolvesPerTeamAndClampsPastItsEnd()
+        {
+            ProjectileRenderConfig config = ScriptableObject.CreateInstance<ProjectileRenderConfig>();
+            config.teamColors = new[] { Color.red, Color.green, Color.blue };
+
+            Assert.AreEqual(Color.red, config.ResolveTeamColor(0), "team 0 must use its own entry");
+            Assert.AreEqual(Color.green, config.ResolveTeamColor(1), "team 1 must use its own entry");
+            Assert.AreEqual(Color.blue, config.ResolveTeamColor(2), "team 2 must use its own entry");
+            // Clamped, not wrapped: an unpainted army must not impersonate team 0's tracer.
+            Assert.AreEqual(Color.blue, config.ResolveTeamColor(7), "a team past the palette reuses the last entry");
+            Assert.AreEqual(Color.red, config.ResolveTeamColor(-1), "a negative team id cannot index out of range");
+
+            // An empty palette is authoring in progress, not a reason to draw black tracers
+            // on a black-blended pass - invisible projectiles read as a broken simulation.
+            config.teamColors = new Color[0];
+            Assert.AreEqual(Color.white, config.ResolveTeamColor(0), "an empty palette must fall back to white");
+            config.teamColors = null;
+            Assert.AreEqual(Color.white, config.ResolveTeamColor(0), "a null palette must fall back to white");
+
+            UnityEngine.Object.DestroyImmediate(config);
         }
 
         [Test]
@@ -300,6 +342,7 @@ namespace MassEngine.Tests
             UnitTypeGpuSettings settings = UnitTypeGpuSettings.FromConfig(null);
             Assert.AreEqual(8f, settings.targetAcquireRadius);
             Assert.AreEqual(6f, settings.maxSpeed);
+            Assert.AreEqual(1f, settings.projectileTrailLength);
             Assert.Greater(settings.deathClipDuration, 0f);
         }
 
@@ -332,19 +375,41 @@ namespace MassEngine.Tests
         }
 
         [Test]
-        public void UnsupportedTeamIdIsRejectedLoudlyNotSilently()
+        public void ExtraArmyTeamIdRegistersWhileOutOfRangeIdsAreRejectedLoudly()
         {
-            var unit = MakeUnitTypeConfig(teamId: 2, unitCount: 5, maxSpeed: 6f, attackDamage: 10, agentRadius: 0.45f);
+            // teamId 2 is a third army, not a typo: every team owns a flow field slice and a grid
+            // partition indexed by its id, so the registry must let one through.
+            var third = MakeUnitTypeConfig(teamId: 2, unitCount: 5, maxSpeed: 6f, attackDamage: 10, agentRadius: 0.45f);
             ScenarioConfig scenario = ScriptableObject.CreateInstance<ScenarioConfig>();
-            scenario.unitTypes = new[] { unit.config };
+            scenario.unitTypes = new[] { third.config };
             UnitTypeRegistry registry = new UnitTypeRegistry();
 
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("teamId must be 0"));
+            registry.RegisterFromScenario(scenario);
+            Assert.AreEqual(1, registry.UnitTypeCount, "A third army must simulate, not be skipped.");
+            Assert.AreEqual(2, registry.RegisteredTypes[0].TeamId);
+            registry.ReleaseAll();
+
+            // Past the ceiling it is a typo again: those buffers are sized from the widest teamId.
+            var beyond = MakeUnitTypeConfig(
+                teamId: ConfigValidator.MaxTeamId + 1, unitCount: 5, maxSpeed: 6f, attackDamage: 10, agentRadius: 0.45f);
+            scenario.unitTypes = new[] { beyond.config };
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("teamId must be in"));
             registry.RegisterFromScenario(scenario);
 
-            Assert.AreEqual(0, registry.UnitTypeCount, "Unsupported team ids must be rejected, not silently mis-simulated.");
+            Assert.AreEqual(0, registry.UnitTypeCount, "Out-of-range team ids must be rejected, not silently mis-simulated.");
 
-            unit.Destroy();
+            var negative = MakeUnitTypeConfig(teamId: -1, unitCount: 5, maxSpeed: 6f, attackDamage: 10, agentRadius: 0.45f);
+            scenario.unitTypes = new[] { negative.config };
+
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("teamId must be in"));
+            registry.RegisterFromScenario(scenario);
+
+            Assert.AreEqual(0, registry.UnitTypeCount);
+
+            negative.Destroy();
+            beyond.Destroy();
+            third.Destroy();
             UnityEngine.Object.DestroyImmediate(scenario);
         }
 
@@ -410,6 +475,88 @@ namespace MassEngine.Tests
         }
 
         // ------------------------------------------------------------------
+        // Corpse lifetime mirror: the rule the classify kernel and both agent
+        // vertex shaders implement (AgentDataCommon.hlsl / ResolveCorpseSink).
+        // ------------------------------------------------------------------
+
+        [Test]
+        public void CorpseDespawnPointIsLingerPlusSink()
+        {
+            Assert.IsTrue(CorpseLifetime.DespawnEnabled(15f));
+            Assert.AreEqual(16.5f, CorpseLifetime.DespawnSeconds(15f, 1.5f), 0.0001f);
+            Assert.AreEqual(15f, CorpseLifetime.DespawnSeconds(15f, 0f), 0.0001f);
+        }
+
+        [Test]
+        public void ZeroLingerKeepsCorpsesForever()
+        {
+            Assert.IsFalse(CorpseLifetime.DespawnEnabled(0f));
+            Assert.AreEqual(0f, CorpseLifetime.DespawnSeconds(0f, 1.5f), 0.0001f);
+            Assert.IsFalse(CorpseLifetime.IsDespawned(100000f, 0f, 1.5f), "0 linger must preserve the pre-despawn behaviour");
+            Assert.AreEqual(0f, CorpseLifetime.SinkOffset(100000f, 0f, 1.5f, 2.2f), 0.0001f, "a corpse that never despawns must never sink");
+        }
+
+        [Test]
+        public void CorpseSinksOnlyAfterTheLingerWindow()
+        {
+            Assert.AreEqual(0f, CorpseLifetime.SinkOffset(0f, 15f, 1.5f, 2.2f), 0.0001f);
+            Assert.AreEqual(0f, CorpseLifetime.SinkOffset(14.9f, 15f, 1.5f, 2.2f), 0.0001f);
+            Assert.AreEqual(1.1f, CorpseLifetime.SinkOffset(15.75f, 15f, 1.5f, 2.2f), 0.0001f, "halfway through the sink window");
+            Assert.AreEqual(2.2f, CorpseLifetime.SinkOffset(16.5f, 15f, 1.5f, 2.2f), 0.0001f);
+            Assert.AreEqual(2.2f, CorpseLifetime.SinkOffset(90f, 15f, 1.5f, 2.2f), 0.0001f, "the offset must clamp, not keep growing");
+        }
+
+        [Test]
+        public void CorpseIsDespawnedExactlyAtTheSinkEnd()
+        {
+            Assert.IsFalse(CorpseLifetime.IsDespawned(16.49f, 15f, 1.5f));
+            Assert.IsTrue(CorpseLifetime.IsDespawned(16.5f, 15f, 1.5f));
+            Assert.IsTrue(CorpseLifetime.IsDespawned(20f, 15f, 1.5f));
+        }
+
+        [Test]
+        public void CorpseAgeRunsPastTheDeathClipAndStopsAtDespawn()
+        {
+            const float deathClip = 1.5f;
+            float age = 0f;
+            for (int i = 0; i < 2000; i++)
+                age = CorpseLifetime.Advance(age, 1f / 60f, 15f, 1.5f, deathClip);
+
+            Assert.Greater(age, deathClip, "the accumulator doubles as corpse age, so it must outlive the death clip");
+            Assert.AreEqual(CorpseLifetime.DespawnSeconds(15f, 1.5f), age, 0.0001f, "and must stop at the despawn point rather than grow without bound");
+            Assert.IsTrue(CorpseLifetime.IsDespawned(age, 15f, 1.5f));
+        }
+
+        [Test]
+        public void CorpseAgeStopsAtTheDeathClipWhenDespawnIsOff()
+        {
+            const float deathClip = 1.5f;
+            float age = 0f;
+            for (int i = 0; i < 600; i++)
+                age = CorpseLifetime.Advance(age, 1f / 60f, 0f, 1.5f, deathClip);
+
+            Assert.AreEqual(deathClip, age, 0.0001f, "with despawn off the death pose must hold at the last frame, as before");
+        }
+
+        [Test]
+        public void LodConfigDefaultsRemoveCorpsesInUnderTwentySeconds()
+        {
+            LodConfig lod = ScriptableObject.CreateInstance<LodConfig>();
+            try
+            {
+                Assert.IsTrue(CorpseLifetime.DespawnEnabled(lod.corpseLingerSeconds), "corpse despawn must be on by default");
+                float despawn = CorpseLifetime.DespawnSeconds(lod.corpseLingerSeconds, lod.corpseSinkSeconds);
+                Assert.GreaterOrEqual(despawn, 10f);
+                Assert.LessOrEqual(despawn, 20f);
+                Assert.Greater(lod.corpseSinkDepth, 0f, "the sink has to actually move the body below the ground plane");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(lod);
+            }
+        }
+
+        // ------------------------------------------------------------------
         // Pipeline dispatch order (Requirement 9.1) via the dispatch hook.
         // ------------------------------------------------------------------
 
@@ -448,8 +595,11 @@ namespace MassEngine.Tests
                 rebuildDensityMap = true,
                 densityMapThreadGroupsX = 1,
                 densityMapThreadGroupsY = 1,
-                attackerFlow = new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 },
-                defenderFlow = new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 }
+                teamFlows = new[]
+                {
+                    new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 },
+                    new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 }
+                }
             };
 
             orchestrator.DispatchFrame(context);
@@ -460,14 +610,16 @@ namespace MassEngine.Tests
             {
                 "ClearGrid",
                 "BuildSpatialHash",
-                "ClearRuntimeAttackerFlowResources",
-                "BuildRuntimeAttackerTargetDensity",
-                "SelectRuntimeAttackerFlowTargets",
-                "GenerateRuntimeAttackerFlowField",
-                "ClearRuntimeDefenderFlowResources",
-                "BuildRuntimeDefenderTargetDensity",
-                "SelectRuntimeDefenderFlowTargets",
-                "GenerateRuntimeDefenderFlowField",
+                // Teams share the four kernels and are told apart by the label suffix, which is
+                // also how the flowTeamId uniform is set - one team per dispatch group.
+                "ClearRuntimeFlowResources[team0]",
+                "BuildRuntimeFlowTargetDensity[team0]",
+                "SelectRuntimeFlowTargets[team0]",
+                "GenerateRuntimeFlowField[team0]",
+                "ClearRuntimeFlowResources[team1]",
+                "BuildRuntimeFlowTargetDensity[team1]",
+                "SelectRuntimeFlowTargets[team1]",
+                "GenerateRuntimeFlowField[team1]",
                 "ClearDensityMap",
                 "BuildDensityMap",
                 "BuildEngagementSlotOccupancy",
@@ -484,8 +636,11 @@ namespace MassEngine.Tests
             // skip those stages (a regression to per-frame rebuild is a real perf cliff).
             recorder.Labels.Clear();
             context.rebuildDensityMap = false;
-            context.attackerFlow = new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 };
-            context.defenderFlow = new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 };
+            context.teamFlows = new[]
+            {
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 },
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 16, resolutionZ = 16 }
+            };
             orchestrator.DispatchFrame(context);
             string[] gatedExpected =
             {
@@ -498,6 +653,77 @@ namespace MassEngine.Tests
                 "ClassifyVisibleAgentsForUnitType[1]"
             };
             CollectionAssert.AreEqual(gatedExpected, recorder.Labels, "gated-off frame must skip flow and density stages");
+
+            buffers.ReleaseAll();
+        }
+
+        /// <summary>
+        /// Three armies, each with its own flow field slice: the teams that asked for a rebuild
+        /// get their own dispatch group, and the one that did not is skipped entirely. This is
+        /// what a third army following its own orders looks like at the dispatch layer - before
+        /// the fields were per team, team 2 had no field of its own to rebuild.
+        /// </summary>
+        [Test]
+        public void EveryTeamThatRebuildsGetsItsOwnFlowDispatch()
+        {
+            MassGpuBufferManager buffers = new MassGpuBufferManager();
+            buffers.Allocate(agentCount: 8, gridCellCount: 16, maxAgentsPerCell: 4, flowFieldResolutionX: 8, flowFieldResolutionZ: 8, unitTypeCount: 1, teamCount: 3);
+
+            DispatchRecorder recorder = new DispatchRecorder();
+            ComputePipelineOrchestrator orchestrator = new ComputePipelineOrchestrator(
+                MassGpuShaderSet.Find(null, null, null, null, null), buffers, recorder);
+
+            // 2 grid + 4 flow x 2 rebuilding teams + 3 combat + 1 LOD label, each reported once.
+            for (int i = 0; i < 14; i++)
+                LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex("MassEngine skipped GPU dispatch"));
+
+            PipelineFrameContext context = new PipelineFrameContext
+            {
+                totalAgentCount = 8,
+                unitTypeCount = 1,
+                agentThreadGroupsX = 1,
+                gridThreadGroupsX = 1,
+                rebuildDensityMap = false,
+                teamFlows = new[]
+                {
+                    new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                    new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                    new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 }
+                }
+            };
+
+            orchestrator.DispatchFrame(context);
+
+            string[] expectedFlow =
+            {
+                "ClearRuntimeFlowResources[team0]",
+                "BuildRuntimeFlowTargetDensity[team0]",
+                "SelectRuntimeFlowTargets[team0]",
+                "GenerateRuntimeFlowField[team0]",
+                "ClearRuntimeFlowResources[team2]",
+                "BuildRuntimeFlowTargetDensity[team2]",
+                "SelectRuntimeFlowTargets[team2]",
+                "GenerateRuntimeFlowField[team2]"
+            };
+            CollectionAssert.AreEqual(
+                expectedFlow,
+                recorder.Labels.Where(label => label.Contains("RuntimeFlow")).ToArray(),
+                "each rebuilding team needs its own dispatch group, and team 1 asked for none");
+
+            // A frame context carrying more teams than the buffers were sized for must not
+            // dispatch the extra team: its slice does not exist, so it would corrupt another's.
+            recorder.Labels.Clear();
+            context.teamFlows = new[]
+            {
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                new TeamFlowFrameSettings { rebuildThisFrame = false, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 },
+                new TeamFlowFrameSettings { rebuildThisFrame = true, threadGroupsX = 1, resolutionX = 8, resolutionZ = 8, cellSize = 1f, sectorCount = 4 }
+            };
+            orchestrator.DispatchFrame(context);
+            CollectionAssert.IsEmpty(
+                recorder.Labels.Where(label => label.Contains("RuntimeFlow")).ToArray(),
+                "a team beyond the allocated team count must never be dispatched");
 
             buffers.ReleaseAll();
         }
@@ -807,6 +1033,84 @@ namespace MassEngine.Tests
 
             Assert.IsFalse(report.HasIssues,
                 "the shipped scenario must stay physically consistent:\n" + string.Join("\n", report.Issues));
+        }
+
+        [Test]
+        public void ShippedScenarioFieldsMeleeAndRangedInEveryArmy()
+        {
+            ScenarioConfig scenario = UnityEditor.AssetDatabase.LoadAssetAtPath<ScenarioConfig>("Assets/Game/Settings/ScenarioConfig.asset");
+            Assert.NotNull(scenario, "shipped ScenarioConfig missing");
+
+            // Mixed arms is the scenario's payload, not an engine feature that can be inferred:
+            // one unit type per team silently reverts the battle to an all-ranged skirmish.
+            var meleePerTeam = new System.Collections.Generic.Dictionary<int, int>();
+            var rangedPerTeam = new System.Collections.Generic.Dictionary<int, int>();
+            for (int i = 0; i < scenario.unitTypes.Length; i++)
+            {
+                UnitTypeConfig unitType = scenario.unitTypes[i];
+                Assert.NotNull(unitType, "scenario unit type " + i + " is missing");
+                Assert.NotNull(unitType.spawnConfig, "scenario unit type " + i + " has no SpawnConfig");
+                Assert.NotNull(unitType.combatConfig, "scenario unit type " + i + " has no CombatConfig");
+
+                var bucket = unitType.combatConfig.projectileRange > 0.01f ? rangedPerTeam : meleePerTeam;
+                int count;
+                bucket.TryGetValue(unitType.teamId, out count);
+                bucket[unitType.teamId] = count + Mathf.Max(0, unitType.spawnConfig.unitCount);
+            }
+
+            foreach (int teamId in rangedPerTeam.Keys)
+            {
+                Assert.IsTrue(meleePerTeam.ContainsKey(teamId) && meleePerTeam[teamId] > 0,
+                    "team " + teamId + " fields ranged units but no melee ones");
+                // A token melee escort would not change how the battle reads from the camera.
+                Assert.That(meleePerTeam[teamId], Is.GreaterThan(rangedPerTeam[teamId] / 4),
+                    "team " + teamId + " melee head count is too small to screen its ranged line");
+            }
+
+            Assert.That(meleePerTeam.Count, Is.GreaterThan(0), "no army fields melee units");
+        }
+
+        [Test]
+        public void ShippedTracerPaletteGivesEveryRangedArmyItsOwnBrightColor()
+        {
+            ScenarioConfig scenario = UnityEditor.AssetDatabase.LoadAssetAtPath<ScenarioConfig>("Assets/Game/Settings/ScenarioConfig.asset");
+            ProjectileRenderConfig render = UnityEditor.AssetDatabase.LoadAssetAtPath<ProjectileRenderConfig>("Assets/Game/Settings/ProjectileRenderConfig.asset");
+            Assert.NotNull(scenario, "shipped ScenarioConfig missing");
+            Assert.NotNull(render, "shipped ProjectileRenderConfig missing");
+
+            var rangedTeams = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < scenario.unitTypes.Length; i++)
+            {
+                UnitTypeConfig unitType = scenario.unitTypes[i];
+                if (unitType == null || unitType.combatConfig == null)
+                    continue;
+                if (unitType.combatConfig.projectileRange > 0.01f && !rangedTeams.Contains(unitType.teamId))
+                    rangedTeams.Add(unitType.teamId);
+            }
+
+            Assert.That(rangedTeams.Count, Is.GreaterThan(1), "the palette guard needs at least two shooting armies");
+
+            for (int i = 0; i < rangedTeams.Count; i++)
+            {
+                Color color = render.ResolveTeamColor(rangedTeams[i]);
+                // The clamp fallback silently repaints every extra army with the last slot's
+                // color, which is exactly the "whose shot was that?" bug this palette fixes.
+                Assert.That(rangedTeams[i], Is.LessThan(render.teamColors.Length),
+                    "team " + rangedTeams[i] + " shoots but has no palette entry of its own");
+                // Tracers are thin alpha-blended lines over lit terrain and fog: a color whose
+                // brightest channel is low reads as "nothing happened" from the battle camera.
+                Assert.That(Mathf.Max(color.r, Mathf.Max(color.g, color.b)), Is.GreaterThanOrEqualTo(0.9f),
+                    "team " + rangedTeams[i] + "'s tracer color is too dim to see");
+
+                for (int j = i + 1; j < rangedTeams.Count; j++)
+                {
+                    Color other = render.ResolveTeamColor(rangedTeams[j]);
+                    float spread = Mathf.Max(Mathf.Abs(color.r - other.r),
+                        Mathf.Max(Mathf.Abs(color.g - other.g), Mathf.Abs(color.b - other.b)));
+                    Assert.That(spread, Is.GreaterThan(0.2f),
+                        "teams " + rangedTeams[i] + " and " + rangedTeams[j] + " fire near-identical tracers");
+                }
+            }
         }
 
         private static UnitTypeFixture MakeSpawnScenarioType(int teamId, int unitCount, Vector3 center, Vector3 manualSize)

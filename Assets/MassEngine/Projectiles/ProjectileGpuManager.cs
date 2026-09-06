@@ -373,7 +373,7 @@ namespace MassEngine.Projectiles
                             gravity: settings.projectileGravity,
                             hitRadius: settings.projectileHitRadius,
                             maxLifetime: settings.projectileMaxLifetime,
-                            trailLength: 1f,
+                            trailLength: settings.projectileTrailLength,
                             launchTime: simulationTime
                         );
 

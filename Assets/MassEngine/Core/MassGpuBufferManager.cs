@@ -16,6 +16,10 @@ namespace MassEngine
         public const int EngagementSlotsPerTarget = 8;
         /// <summary>Per-team slot count inside teamSpatialStats: [count, minX, minZ, maxX, maxZ, reserved x3].</summary>
         public const int TeamStatsSlotsPerTeam = 8;
+        /// <summary>Per-team int slots in runtimeFlowStats. Mirrors FLOW_STATS_PER_TEAM in AgentDataCommon.hlsl.</summary>
+        public const int FlowStatsSlotsPerTeam = 4;
+        /// <summary>Per-team float4 slots in runtimeFlowTargets, which also caps a team's sector count. Mirrors FLOW_TARGETS_PER_TEAM.</summary>
+        public const int FlowTargetSlotsPerTeam = 8;
         /// <summary>Default team count; two-team combat (attacker vs defender) is the historical layout.</summary>
         public const int DefaultTeamCount = 2;
 
@@ -26,20 +30,24 @@ namespace MassEngine
         public ComputeBuffer gridAgentIndicesBuffer;
         public ComputeBuffer teamGridCountsBuffer;
         public ComputeBuffer teamGridAgentIndicesBuffer;
+        /// <summary>Team-partitioned flow field: teamId * FlowCellCount + cellIndex.</summary>
         public ComputeBuffer flowFieldDirectionsBuffer;
-        public ComputeBuffer defenderFlowFieldDirectionsBuffer;
-        public ComputeBuffer runtimeAttackerTargetDensityBuffer;
-        public ComputeBuffer runtimeAttackerFlowStatsBuffer;
-        public ComputeBuffer runtimeAttackerFlowTargetsBuffer;
-        public ComputeBuffer runtimeDefenderTargetDensityBuffer;
-        public ComputeBuffer runtimeDefenderFlowStatsBuffer;
-        public ComputeBuffer runtimeDefenderFlowTargetsBuffer;
+        /// <summary>Team-partitioned enemy density scratch: teamId * FlowCellCount + cellIndex.</summary>
+        public ComputeBuffer runtimeFlowTargetDensityBuffer;
+        /// <summary>Team-partitioned flow stats: teamId * FlowStatsSlotsPerTeam + slot.</summary>
+        public ComputeBuffer runtimeFlowStatsBuffer;
+        /// <summary>Team-partitioned sector targets: teamId * FlowTargetSlotsPerTeam + sector.</summary>
+        public ComputeBuffer runtimeFlowTargetsBuffer;
+        /// <summary>One TeamFlowParams record per team, indexed by raw teamId.</summary>
+        public ComputeBuffer teamFlowParamsBuffer;
         public ComputeBuffer unitTypeIndexBuffer;
         public ComputeBuffer unitTypeSettingsBuffer;
         public ComputeBuffer spatialHashStatsBuffer;
         public ComputeBuffer teamSpatialStatsBuffer;
-        public RenderTexture runtimeAttackerFlowPreviewTexture;
-        public RenderTexture runtimeDefenderFlowPreviewTexture;
+        /// <summary>One stance per team (TeamStance values), indexed by raw teamId.</summary>
+        public ComputeBuffer teamStanceBuffer;
+        /// <summary>One preview texture per team, indexed by raw teamId. Read through GetFlowPreviewTexture.</summary>
+        private RenderTexture[] runtimeFlowPreviewTextures = System.Array.Empty<RenderTexture>();
         public RenderTexture densityMapTexture;
         public RenderTexture attackerDensityMapTexture;
         public RenderTexture defenderDensityMapTexture;
@@ -63,6 +71,17 @@ namespace MassEngine
         public int TeamCount { get; private set; }
         /// <summary>Total int slots in teamSpatialStatsBuffer.</summary>
         public int TeamStatsSlotCount { get { return TeamCount * TeamStatsSlotsPerTeam; } }
+        /// <summary>Cells in one team's slice of the flow field. Every team shares this grid.</summary>
+        public int FlowCellCount { get; private set; }
+
+        /// <summary>
+        /// A team's preview texture, or null when the team has no slice. Callers must handle
+        /// null rather than falling back to team 0's texture, which would mislabel the overlay.
+        /// </summary>
+        public RenderTexture GetFlowPreviewTexture(int teamId)
+        {
+            return teamId >= 0 && teamId < runtimeFlowPreviewTextures.Length ? runtimeFlowPreviewTextures[teamId] : null;
+        }
 
         public bool IsAllocated { get { return agentBuffer != null && AgentCount > 0; } }
 
@@ -94,6 +113,7 @@ namespace MassEngine
             int safeFlowResolutionX = Mathf.Max(1, flowFieldResolutionX);
             int safeFlowResolutionZ = Mathf.Max(1, flowFieldResolutionZ);
             int safeFlowCellCount = safeFlowResolutionX * safeFlowResolutionZ;
+            FlowCellCount = safeFlowCellCount;
 
             if (AgentCount <= 0 || UnitTypeCount <= 0)
                 return;
@@ -139,33 +159,53 @@ namespace MassEngine
 
             teamGridCountsBuffer = new ComputeBuffer(GridCellCount * TeamCount, sizeof(int));
             teamGridAgentIndicesBuffer = new ComputeBuffer((int)teamGridIndexCapacity, sizeof(int));
-            flowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
-            defenderFlowFieldDirectionsBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(float) * 2);
-            runtimeAttackerTargetDensityBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(uint));
-            runtimeAttackerFlowStatsBuffer = new ComputeBuffer(4, sizeof(int));
-            runtimeAttackerFlowTargetsBuffer = new ComputeBuffer(8, sizeof(float) * 4);
-            runtimeDefenderTargetDensityBuffer = new ComputeBuffer(safeFlowCellCount, sizeof(uint));
-            runtimeDefenderFlowStatsBuffer = new ComputeBuffer(4, sizeof(int));
-            runtimeDefenderFlowTargetsBuffer = new ComputeBuffer(8, sizeof(float) * 4);
+
+            long flowSliceCapacity = (long)safeFlowCellCount * TeamCount;
+            if (flowSliceCapacity > int.MaxValue / (sizeof(float) * 2))
+            {
+                // Same reasoning as the grid guard above: a per-team flow field multiplies the
+                // cell count by the team count, so an over-scaled grid must fail here.
+                Debug.LogError("MassEngine: per-team flow field would need " + flowSliceCapacity + " cells (cells " + safeFlowCellCount + " x teams " + TeamCount + "); refusing to allocate. Lower flowFieldResolution or the team count.");
+                ReleaseAll();
+                return;
+            }
+
+            int flowSliceCount = (int)flowSliceCapacity;
+            flowFieldDirectionsBuffer = new ComputeBuffer(flowSliceCount, sizeof(float) * 2);
+            runtimeFlowTargetDensityBuffer = new ComputeBuffer(flowSliceCount, sizeof(uint));
+            runtimeFlowStatsBuffer = new ComputeBuffer(FlowStatsSlotsPerTeam * TeamCount, sizeof(int));
+            runtimeFlowTargetsBuffer = new ComputeBuffer(FlowTargetSlotsPerTeam * TeamCount, sizeof(float) * 4);
+            teamFlowParamsBuffer = new ComputeBuffer(TeamCount, TeamFlowParams.StrideBytes);
             unitTypeIndexBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             unitTypeSettingsBuffer = new ComputeBuffer(UnitTypeCount, UnitTypeGpuSettings.StrideBytes);
             spatialHashStatsBuffer = new ComputeBuffer(4, sizeof(int));
             teamSpatialStatsBuffer = new ComputeBuffer(TeamStatsSlotCount, sizeof(int));
+            teamStanceBuffer = new ComputeBuffer(TeamCount, sizeof(int));
             // stats[3] carries a sentinel no kernel ever writes: if a telemetry readback
             // sees it gone, GPU memory was wiped (device reset/TDR) and the manager
             // reinitializes. Slots 1-2 stay reserved; slot 0 is the overflow counter.
             spatialHashStatsBuffer.SetData(new[] { 0, 0, 0, DeviceResetSentinel });
             teamSpatialStatsBuffer.SetData(new int[TeamStatsSlotCount]);
-            runtimeAttackerFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
-            runtimeDefenderFlowPreviewTexture = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
+            // Hold is 0, so a stance buffer nobody uploaded freezes every team. That is a
+            // failure anyone spots in one frame, unlike defaulting to Advance, which would
+            // silently march the teams that were meant to hold their ground.
+            teamStanceBuffer.SetData(new int[TeamCount]);
+            // Flow parameters default to "no target, field off": until the manager uploads a
+            // frame's records, no team is steered by a field it has not configured yet.
+            teamFlowParamsBuffer.SetData(new TeamFlowParams[TeamCount]);
+            runtimeFlowPreviewTextures = new RenderTexture[TeamCount];
+            for (int team = 0; team < TeamCount; team++)
+                runtimeFlowPreviewTextures[team] = CreateFlowPreviewTexture(safeFlowResolutionX, safeFlowResolutionZ);
             densityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
             attackerDensityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
             defenderDensityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
 
             // GPU buffer contents are undefined after allocation; zero-fill everything a
             // kernel may read before its first producer runs.
-            flowFieldDirectionsBuffer.SetData(new Vector2[safeFlowCellCount]);
-            defenderFlowFieldDirectionsBuffer.SetData(new Vector2[safeFlowCellCount]);
+            flowFieldDirectionsBuffer.SetData(new Vector2[flowSliceCount]);
+            runtimeFlowTargetDensityBuffer.SetData(new uint[flowSliceCount]);
+            runtimeFlowStatsBuffer.SetData(new int[FlowStatsSlotsPerTeam * TeamCount]);
+            runtimeFlowTargetsBuffer.SetData(new Vector4[FlowTargetSlotsPerTeam * TeamCount]);
             gridCountsBuffer.SetData(new int[GridCellCount]);
             teamGridCountsBuffer.SetData(new int[GridCellCount * TeamCount]);
 
@@ -253,6 +293,20 @@ namespace MassEngine
             unitTypeSettingsBuffer.SetData(settings);
         }
 
+        /// <summary>
+        /// Uploads one stance per team, indexed by raw teamId. Entries past TeamCount are
+        /// ignored; an array shorter than TeamCount is rejected outright rather than
+        /// partially applied, which would leave some teams on a stale stance. The caller
+        /// owns the teamId-to-stance mapping, this only moves it to the GPU.
+        /// </summary>
+        public void UploadTeamStances(int[] stances)
+        {
+            if (teamStanceBuffer == null || stances == null || stances.Length < TeamCount)
+                return;
+
+            teamStanceBuffer.SetData(stances, 0, 0, TeamCount);
+        }
+
         public void ResetAppendCounters(int unitTypeIndex)
         {
             for (int lod = 0; lod < LodLevels; lod++)
@@ -321,17 +375,15 @@ namespace MassEngine
             ReleaseBuffer(ref teamGridCountsBuffer);
             ReleaseBuffer(ref teamGridAgentIndicesBuffer);
             ReleaseBuffer(ref flowFieldDirectionsBuffer);
-            ReleaseBuffer(ref defenderFlowFieldDirectionsBuffer);
-            ReleaseBuffer(ref runtimeAttackerTargetDensityBuffer);
-            ReleaseBuffer(ref runtimeAttackerFlowStatsBuffer);
-            ReleaseBuffer(ref runtimeAttackerFlowTargetsBuffer);
-            ReleaseBuffer(ref runtimeDefenderTargetDensityBuffer);
-            ReleaseBuffer(ref runtimeDefenderFlowStatsBuffer);
-            ReleaseBuffer(ref runtimeDefenderFlowTargetsBuffer);
+            ReleaseBuffer(ref runtimeFlowTargetDensityBuffer);
+            ReleaseBuffer(ref runtimeFlowStatsBuffer);
+            ReleaseBuffer(ref runtimeFlowTargetsBuffer);
+            ReleaseBuffer(ref teamFlowParamsBuffer);
             ReleaseBuffer(ref unitTypeIndexBuffer);
             ReleaseBuffer(ref unitTypeSettingsBuffer);
             ReleaseBuffer(ref spatialHashStatsBuffer);
             ReleaseBuffer(ref teamSpatialStatsBuffer);
+            ReleaseBuffer(ref teamStanceBuffer);
             ReleaseBuffer(ref projectileBuffer);
             ReleaseBuffer(ref activeProjectileIndexBuffer);
             ReleaseBuffer(ref projectileDrawArgsBuffer);
@@ -343,8 +395,9 @@ namespace MassEngine
             visibleIndexBuffers = System.Array.Empty<ComputeBuffer>();
             drawArgsBuffers = System.Array.Empty<ComputeBuffer>();
 
-            ReleaseRenderTexture(ref runtimeAttackerFlowPreviewTexture);
-            ReleaseRenderTexture(ref runtimeDefenderFlowPreviewTexture);
+            for (int i = 0; i < runtimeFlowPreviewTextures.Length; i++)
+                ReleaseRenderTexture(ref runtimeFlowPreviewTextures[i]);
+            runtimeFlowPreviewTextures = System.Array.Empty<RenderTexture>();
             ReleaseRenderTexture(ref densityMapTexture);
             ReleaseRenderTexture(ref attackerDensityMapTexture);
             ReleaseRenderTexture(ref defenderDensityMapTexture);
@@ -355,6 +408,7 @@ namespace MassEngine
             UnitTypeCount = 0;
             MaxProjectiles = 0;
             TeamCount = 0;
+            FlowCellCount = 0;
         }
 
         public static void ReleaseBuffer(ref ComputeBuffer buffer)

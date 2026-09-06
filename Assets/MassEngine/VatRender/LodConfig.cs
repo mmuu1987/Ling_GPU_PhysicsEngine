@@ -24,5 +24,13 @@ namespace MassEngine
         [Min(0f)] public float maxRenderDistance = 0f;
         [Tooltip("Render corpses in the far LOD tier too. Off = bodies vanish beyond midLodRadius, forming a visible pop line as the camera moves.")]
         public bool farIncludeDead = true;
+
+        [Header("Corpses")]
+        [Tooltip("Seconds a body lies where it fell before it starts sinking. 0 = corpses never despawn (they pile up for the whole battle). After this the body sinks for corpseSinkSeconds and is then dropped from every visible list AND out of the simulation, so it costs no draw, no animation work and no combat pass.")]
+        [Min(0f)] public float corpseLingerSeconds = 15f;
+        [Tooltip("Seconds spent sinking into the ground. The opaque terrain does the hiding, so this only has to be long enough not to read as a pop.")]
+        [Min(0f)] public float corpseSinkSeconds = 1.5f;
+        [Tooltip("How far a body sinks. Must clear the tallest agent's death pose, otherwise a sliver stays above ground when the corpse is dropped.")]
+        [Min(0f)] public float corpseSinkDepth = 2.2f;
     }
 }

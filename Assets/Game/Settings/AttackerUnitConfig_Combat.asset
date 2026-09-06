@@ -22,3 +22,4 @@ MonoBehaviour:
   projectileGravity: -9.8
   projectileHitRadius: 0.8
   projectileMaxLifetime: 3
+  projectileTrailLength: 1.15

@@ -2,9 +2,9 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
 {
     Properties
     {
-        _ProjectileAttackerColor ("Attacker Color", Color) = (1, 0.82, 0.35, 0.9)
-        _ProjectileDefenderColor ("Defender Color", Color) = (0.45, 0.78, 1, 0.9)
-        _ProjectileAttackerTeamId ("Attacker Team Id", Float) = 0
+        // Tracer colors live in _ProjectileTeamColors, a per-team array the dispatcher
+        // uploads through the MaterialPropertyBlock. Arrays cannot be material properties,
+        // so there is nothing to expose here.
         _ProjectileTrailWidth ("Trail Width", Float) = 0.15
         _ProjectileTrailLengthScale ("Trail Length Scale", Float) = 2
         _ProjectileTrailMinLength ("Trail Min Length", Float) = 0.8
@@ -38,13 +38,19 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                half4 _ProjectileAttackerColor;
-                half4 _ProjectileDefenderColor;
-                float _ProjectileAttackerTeamId;
                 float _ProjectileTrailWidth;
                 float _ProjectileTrailLengthScale;
                 float _ProjectileTrailMinLength;
             CBUFFER_END
+
+            // Keep in sync with ProjectileRenderConfig.MaxTeamColors: the dispatcher always
+            // uploads exactly this many entries, so a shorter authored palette is already
+            // padded on the C# side.
+            #define PROJECTILE_TEAM_COLOR_COUNT 8
+
+            // Outside UnityPerMaterial on purpose: set per draw from a MaterialPropertyBlock,
+            // and an array in the per-material cbuffer would break batching declarations.
+            float4 _ProjectileTeamColors[PROJECTILE_TEAM_COLOR_COUNT];
 
             // Mirrors ProjectileGpuData / ProjectileData exactly: 64 bytes, same field
             // order. Changing either side without the other silently misreads every field.
@@ -127,9 +133,10 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                         r2.x, r2.y, r2.z, -dot(r2, centre),
                         0, 0, 0, 1);
 
-                    _TracerColor = data.sourceTeamId == (int)_ProjectileAttackerTeamId
-                        ? _ProjectileAttackerColor
-                        : _ProjectileDefenderColor;
+                    // Indexed by raw team id, clamped rather than wrapped: a team past the
+                    // palette reuses the last slot instead of impersonating team 0.
+                    int teamSlot = clamp(data.sourceTeamId, 0, PROJECTILE_TEAM_COLOR_COUNT - 1);
+                    _TracerColor = (half4)_ProjectileTeamColors[teamSlot];
                 #endif
             }
 
@@ -160,7 +167,8 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                     output.color = _TracerColor;
                 #else
-                    output.color = _ProjectileAttackerColor;
+                    // No procedural instancing means no projectile data to read a team from.
+                    output.color = (half4)_ProjectileTeamColors[0];
                 #endif
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 return output;

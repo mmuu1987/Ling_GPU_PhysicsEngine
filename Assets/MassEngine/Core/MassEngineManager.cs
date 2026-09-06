@@ -79,11 +79,17 @@ namespace MassEngine
         private MassGpuShaderSet shaders;
         private float projectileSimulationTime;
         private AllocationSignature allocationSignature;
-        private readonly FlowTargetOverride[] flowTargetOverrides = new FlowTargetOverride[2];
-        private readonly TeamNavigationOverride[] teamNavigationOverrides = new TeamNavigationOverride[2];
-        private readonly bool[] flowFieldDirty = { true, true };
-        private readonly int[] lastFlowTargetHash = new int[2];
-        private readonly float[] nextDynamicFlowRebuildTime = new float[2];
+        // Per-team flow state, grown to the scenario's team count by EnsureTeamFlowState.
+        // They start at the historical two so an order arriving before Initialize still lands.
+        private FlowTargetOverride[] flowTargetOverrides = new FlowTargetOverride[2];
+        private TeamNavigationOverride[] teamNavigationOverrides = new TeamNavigationOverride[2];
+        // Reused per frame so the stance upload does not allocate; resized when TeamCount changes.
+        private int[] teamStanceCache;
+        private bool[] flowFieldDirty = { true, true };
+        private int[] lastFlowTargetHash = new int[2];
+        private float[] nextDynamicFlowRebuildTime = new float[2];
+        // Reused per frame so building the frame context does not allocate.
+        private TeamFlowFrameSettings[] teamFlowCache = new TeamFlowFrameSettings[2];
         private readonly StaticObstacleRect[] activeStaticObstacles = new StaticObstacleRect[StaticObstacleMath.MaxObstacleCount];
         private readonly Vector4[] staticObstacleShaderRects = new Vector4[StaticObstacleMath.MaxObstacleCount];
         private int activeStaticObstacleCount;
@@ -167,15 +173,20 @@ namespace MassEngine
                 return;
 
             RefreshAndUploadUnitTypeSettings();
+            RefreshAndUploadTeamStances();
 
             if (battleStarted)
                 projectileSimulationTime += Mathf.Max(0f, Time.deltaTime);
 
             PipelineFrameContext context = CreateFrameContext();
-            if (context.attackerFlow.rebuildThisFrame && telemetry != null)
-                telemetry.NotifyFlowRebuild(AttackerTeamId);
-            if (context.defenderFlow.rebuildThisFrame && telemetry != null)
-                telemetry.NotifyFlowRebuild(DefenderTeamId);
+            if (telemetry != null && context.teamFlows != null)
+            {
+                for (int teamId = 0; teamId < context.teamFlows.Length; teamId++)
+                {
+                    if (context.teamFlows[teamId].rebuildThisFrame)
+                        telemetry.NotifyFlowRebuild(teamId);
+                }
+            }
 
             pipelineOrchestrator.DispatchFrame(context);
 
@@ -194,10 +205,17 @@ namespace MassEngine
             }
 
             Bounds renderBounds = ResolveRenderBounds();
-            renderDispatcher.Draw(unitTypeRegistry, bufferManager, renderBounds);
+            // Corpse sink is a render-only offset: the agent keeps its death position in
+            // agentBuffer, the vertex shader lowers it. Same numbers the classify kernel
+            // uses to decide when the body is gone for good.
+            renderDispatcher.Draw(unitTypeRegistry, bufferManager, renderBounds, new Vector4(
+                Mathf.Max(0f, Lod.corpseLingerSeconds),
+                Mathf.Max(0f, Lod.corpseSinkSeconds),
+                Mathf.Max(0f, Lod.corpseSinkDepth),
+                0f));
             // Tracers draw straight from projectileBuffer via the GPU active list, so a
             // paused battle keeps showing frozen shots and a cleared pool shows none.
-            projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds, AttackerTeamId);
+            projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds);
 
             if (telemetry != null)
             {
@@ -288,7 +306,7 @@ namespace MassEngine
             // retry the whole Release+Allocate cycle until the configs actually change.
             allocationSignature = CurrentAllocationSignature();
 
-            bufferManager.Allocate(totalAgents, gridCellCount, Simulation.maxAgentsPerCell, Flow.flowFieldResolution, Flow.flowFieldResolution, unitTypeCount);
+            bufferManager.Allocate(totalAgents, gridCellCount, Simulation.maxAgentsPerCell, Flow.flowFieldResolution, Flow.flowFieldResolution, unitTypeCount, ResolveScenarioTeamCount());
             if (!bufferManager.IsAllocated)
             {
                 Debug.LogError("MassEngine: GPU buffer allocation failed; scenario initialization was aborted.", this);
@@ -307,10 +325,14 @@ namespace MassEngine
             gpuSettingsCache = new UnitTypeGpuSettings[unitTypeCount];
             RefreshAndUploadUnitTypeSettings();
 
-            flowFieldDirty[0] = true;
-            flowFieldDirty[1] = true;
-            nextDynamicFlowRebuildTime[0] = 0f;
-            nextDynamicFlowRebuildTime[1] = 0f;
+            EnsureTeamFlowState(bufferManager != null ? bufferManager.TeamCount : 0);
+            for (int teamId = 0; teamId < flowFieldDirty.Length; teamId++)
+            {
+                flowFieldDirty[teamId] = true;
+                // Zero means "never scheduled", which is what earns a team its stagger offset
+                // the first time its dynamic throttle arms.
+                nextDynamicFlowRebuildTime[teamId] = 0f;
+            }
             initialized = true;
 
             battleStateApplied = battleStarted;
@@ -327,8 +349,7 @@ namespace MassEngine
             battleStateApplied = true;
             // Dynamic flow only generates while the battle runs; rebuild immediately
             // instead of waiting out the throttle interval.
-            flowFieldDirty[AttackerTeamId] = true;
-            flowFieldDirty[DefenderTeamId] = true;
+            MarkAllFlowFieldsDirty();
             if (telemetry != null)
                 telemetry.NotifyBattleStarted(Time.time);
         }
@@ -356,10 +377,11 @@ namespace MassEngine
 
         public void ResetScenario()
         {
-            ClearFlowTargetOverride(AttackerTeamId);
-            ClearFlowTargetOverride(DefenderTeamId);
-            ClearTeamNavigationOverride(AttackerTeamId);
-            ClearTeamNavigationOverride(DefenderTeamId);
+            for (int teamId = 0; teamId < NavigableTeamCount; teamId++)
+            {
+                ClearFlowTargetOverride(teamId);
+                ClearTeamNavigationOverride(teamId);
+            }
             if (telemetry != null)
                 telemetry.NotifyReset();
             Initialize();
@@ -369,11 +391,51 @@ namespace MassEngine
         /// Runtime flow target override for a team (e.g. from a mouse click). Stored on
         /// the manager — configuration assets are never written.
         /// </summary>
+        /// <summary>
+        /// How many teams can receive navigation orders. Every team in the scenario owns a slice
+        /// of the flow field now, so this is simply how many teams the buffers were sized for.
+        /// </summary>
+        public int NavigableTeamCount
+        {
+            get { return teamNavigationOverrides.Length; }
+        }
+
+        /// <summary>
+        /// Grows the per-team flow state to cover every team in the scenario. Existing entries
+        /// survive the resize because Initialize also runs on reset, and an operator's standing
+        /// navigation order must not vanish with a reallocation. Teams that appear start dirty so
+        /// their field is generated on their first frame instead of staying blank.
+        /// </summary>
+        private void EnsureTeamFlowState(int teamCount)
+        {
+            int safeCount = Mathf.Max(1, teamCount);
+            if (flowTargetOverrides.Length == safeCount)
+                return;
+
+            int previousCount = flowFieldDirty.Length;
+            System.Array.Resize(ref flowTargetOverrides, safeCount);
+            System.Array.Resize(ref teamNavigationOverrides, safeCount);
+            System.Array.Resize(ref lastFlowTargetHash, safeCount);
+            System.Array.Resize(ref nextDynamicFlowRebuildTime, safeCount);
+            System.Array.Resize(ref flowFieldDirty, safeCount);
+            for (int teamId = previousCount; teamId < safeCount; teamId++)
+                flowFieldDirty[teamId] = true;
+
+            teamFlowCache = new TeamFlowFrameSettings[safeCount];
+        }
+
+        /// <summary>Queues a rebuild of every team's flow field on the next frame.</summary>
+        private void MarkAllFlowFieldsDirty()
+        {
+            for (int teamId = 0; teamId < flowFieldDirty.Length; teamId++)
+                flowFieldDirty[teamId] = true;
+        }
+
         public void SetFlowTargetOverride(int teamId, Vector3 point)
         {
             if (teamId < 0 || teamId >= flowTargetOverrides.Length)
             {
-                Debug.LogWarning("MassEngine: SetFlowTargetOverride teamId " + teamId + " is invalid - the engine maintains flow fields for teams 0 and 1 only.", this);
+                Debug.LogWarning("MassEngine: SetFlowTargetOverride teamId " + teamId + " is invalid - this scenario has flow fields for teams 0.." + (flowTargetOverrides.Length - 1) + ".", this);
                 return;
             }
 
@@ -400,7 +462,7 @@ namespace MassEngine
         {
             if (teamId < 0 || teamId >= teamNavigationOverrides.Length)
             {
-                Debug.LogWarning("MassEngine: SetTeamNavigationOverride teamId " + teamId + " is invalid - the engine maintains teams 0 and 1 only.", this);
+                Debug.LogWarning("MassEngine: SetTeamNavigationOverride teamId " + teamId + " is invalid - this scenario has teams 0.." + (teamNavigationOverrides.Length - 1) + ".", this);
                 return;
             }
 
@@ -473,8 +535,7 @@ namespace MassEngine
                 }
             }
 
-            flowFieldDirty[AttackerTeamId] = true;
-            flowFieldDirty[DefenderTeamId] = true;
+            MarkAllFlowFieldsDirty();
         }
 
         public bool TryGetStaticObstacle(int obstacleIndex, out StaticObstacleRect obstacle)
@@ -546,6 +607,40 @@ namespace MassEngine
             }
         }
 
+        /// <summary>
+        /// Rebuilds the per-team stance table and pushes it to the GPU. Reproduces exactly what
+        /// the old defenderMovementMode uniform expressed, only per team instead of only for
+        /// the defender, so a two-team frame behaves bit-for-bit as before.
+        /// </summary>
+        private void RefreshAndUploadTeamStances()
+        {
+            if (bufferManager == null || !bufferManager.IsAllocated)
+                return;
+
+            int teamCount = bufferManager.TeamCount;
+            if (teamStanceCache == null || teamStanceCache.Length != teamCount)
+                teamStanceCache = new int[teamCount];
+
+            for (int teamId = 0; teamId < teamCount; teamId++)
+                teamStanceCache[teamId] = (int)ResolveTeamStance(teamId);
+
+            bufferManager.UploadTeamStances(teamStanceCache);
+        }
+
+        /// <summary>
+        /// Only the defender ever stood its ground: its flow toggle doubled as "advance or hold".
+        /// Every other team advanced regardless of any toggle, because the attacker locomotion
+        /// branch sampled its flow field unconditionally. That asymmetry stays until explicit
+        /// orders own the stance instead of the navigation config.
+        /// </summary>
+        private TeamStance ResolveTeamStance(int teamId)
+        {
+            if (teamId == DefenderTeamId)
+                return ResolveTeamFlowEnabled(teamId) ? TeamStance.Advance : TeamStance.Hold;
+
+            return TeamStance.Advance;
+        }
+
         private void UploadInitialAgents()
         {
             if (unitTypeRegistry == null || bufferManager == null || !bufferManager.IsAllocated)
@@ -592,7 +687,6 @@ namespace MassEngine
                 rebuildDensityMap = total > 0,
                 densityMapThreadGroupsX = densityMapThreadGroups,
                 densityMapThreadGroupsY = densityMapThreadGroups,
-                defenderMovementMode = ResolveTeamFlowEnabled(DefenderTeamId) ? 1 : 0,
                 defenderGuardRadius = RuntimeCombat.defenderGuardRadius,
                 localTargetSearchCellRadius = ComputeLocalTargetSearchCellRadius(),
                 flowPreviewEnabled = Flow.runtimeFlowPreviewEnabled,
@@ -610,8 +704,7 @@ namespace MassEngine
                     maxAgentsPerCell = Simulation.maxAgentsPerCell,
                     boundaryPadding = Simulation.boundaryPadding
                 },
-                attackerFlow = BuildTeamFlowSettings(AttackerTeamId, flowThreadGroups, flowResolution),
-                defenderFlow = BuildTeamFlowSettings(DefenderTeamId, flowThreadGroups, flowResolution),
+                teamFlows = BuildTeamFlowSettings(flowThreadGroups, flowResolution),
                 lod = new LodFrameSettings
                 {
                     lodCenterPosition = ResolveLodCenter(),
@@ -620,6 +713,9 @@ namespace MassEngine
                     cullingRadius = Lod.cullingRadius,
                     maxRenderDistance = Lod.maxRenderDistance,
                     farIncludeDead = Lod.farIncludeDead,
+                    corpseLingerSeconds = Lod.corpseLingerSeconds,
+                    corpseSinkSeconds = Lod.corpseSinkSeconds,
+                    corpseSinkDepth = Lod.corpseSinkDepth,
                     frustumPlanes = BuildFrustumPlanes(),
                     nearAnimationInterval = Lod.nearAnimationInterval,
                     midAnimationInterval = Lod.midAnimationInterval,
@@ -640,12 +736,21 @@ namespace MassEngine
         ///               rebuildRuntimeFlowEveryFrame forces every frame.
         /// A purely static target rebuilds only when dirty — its field does not change.
         /// </summary>
+        private TeamFlowFrameSettings[] BuildTeamFlowSettings(int flowThreadGroups, int flowResolution)
+        {
+            for (int teamId = 0; teamId < teamFlowCache.Length; teamId++)
+                teamFlowCache[teamId] = BuildTeamFlowSettings(teamId, flowThreadGroups, flowResolution);
+
+            return teamFlowCache;
+        }
+
         private TeamFlowFrameSettings BuildTeamFlowSettings(int teamId, int flowThreadGroups, int flowResolution)
         {
-            bool isAttacker = teamId == AttackerTeamId;
+            // Team 1 is the only team with its own set of config fields; see ResolveTeamFlowEnabled.
+            bool usesDefenderConfig = teamId == DefenderTeamId;
             bool enabled = ResolveTeamFlowEnabled(teamId);
             bool dynamicEnabled = ResolveTeamDynamicTargeting(teamId);
-            float dynamicInterval = isAttacker ? Flow.dynamicFlowUpdateInterval : Flow.dynamicDefenderFlowUpdateInterval;
+            float dynamicInterval = usesDefenderConfig ? Flow.dynamicDefenderFlowUpdateInterval : Flow.dynamicFlowUpdateInterval;
 
             TeamFlowFrameSettings settings = new TeamFlowFrameSettings
             {
@@ -656,9 +761,9 @@ namespace MassEngine
                 resolutionZ = flowResolution,
                 origin = Flow.flowFieldOrigin,
                 cellSize = Flow.flowFieldCellSize,
-                sectorCount = isAttacker ? Flow.dynamicFlowSectorCount : Flow.dynamicDefenderFlowSectorCount,
-                targetStopRadius = isAttacker ? Flow.dynamicFlowTargetStopRadius : Flow.dynamicDefenderFlowTargetStopRadius,
-                minAgentsPerTarget = isAttacker ? Flow.dynamicFlowMinDefendersPerTarget : Flow.dynamicDefenderFlowMinAttackersPerTarget,
+                sectorCount = usesDefenderConfig ? Flow.dynamicDefenderFlowSectorCount : Flow.dynamicFlowSectorCount,
+                targetStopRadius = usesDefenderConfig ? Flow.dynamicDefenderFlowTargetStopRadius : Flow.dynamicFlowTargetStopRadius,
+                minAgentsPerTarget = usesDefenderConfig ? Flow.dynamicDefenderFlowMinAttackersPerTarget : Flow.dynamicFlowMinDefendersPerTarget,
                 targetMode = 0
             };
 
@@ -722,7 +827,16 @@ namespace MassEngine
             if (rebuild)
             {
                 flowFieldDirty[teamId] = false;
-                nextDynamicFlowRebuildTime[teamId] = Time.time + Mathf.Max(0f, dynamicInterval);
+                float interval = Mathf.Max(0f, dynamicInterval);
+                // Stagger the first deadline across teams so N armies do not all rebuild on the
+                // same frame: each team re-arms from its own deadline afterwards, so one offset
+                // holds its phase for good. Without it the flow stage spikes once per interval
+                // instead of spreading its cost across one. Team 0 gets no offset, which keeps a
+                // two-army battle scheduling exactly as it did before.
+                float phase = nextDynamicFlowRebuildTime[teamId] <= 0f && teamFlowCache.Length > 1
+                    ? interval * teamId / teamFlowCache.Length
+                    : 0f;
+                nextDynamicFlowRebuildTime[teamId] = Time.time + interval + phase;
             }
 
             settings.rebuildThisFrame = rebuild;
@@ -735,7 +849,8 @@ namespace MassEngine
             if (runtime.active)
                 return runtime.enabled;
 
-            return teamId == AttackerTeamId ? Flow.flowFieldEnabled : Flow.defenderFlowFieldEnabled;
+            // The config owns the doctrine itself, so the scene gizmos can read the same rule.
+            return Flow.ResolveTeamFlowEnabled(teamId);
         }
 
         private bool ResolveTeamDynamicTargeting(int teamId)
@@ -744,9 +859,7 @@ namespace MassEngine
             if (runtime.active)
                 return runtime.dynamicTargeting;
 
-            return teamId == AttackerTeamId
-                ? Flow.runtimeDynamicAttackerFlowEnabled
-                : Flow.runtimeDynamicDefenderFlowEnabled;
+            return Flow.ResolveTeamDynamicTargeting(teamId);
         }
 
         /// <summary>
@@ -867,7 +980,7 @@ namespace MassEngine
                     UnitTypeConfig config = scenarioConfig.unitTypes[i];
                     if (config == null || config.spawnConfig == null || config.spawnConfig.unitCount <= 0)
                         continue;
-                    if (config.teamId != 0 && config.teamId != 1)
+                    if (config.teamId < 0)
                         continue;
                     agentCount += config.spawnConfig.unitCount;
                     unitTypeCount++;
@@ -885,6 +998,30 @@ namespace MassEngine
                 scenarioConfigId = scenarioConfig != null ? scenarioConfig.GetInstanceID() : 0,
                 teamLayoutHash = teamLayoutHash
             };
+        }
+
+        /// <summary>
+        /// How many teams the GPU layout has to partition for: the highest teamId that actually
+        /// spawns units, plus one. Never fewer than two, because the flow fields, the telemetry
+        /// HUD and the war-sandbox controller all still assume an attacker and a defender slot
+        /// exist even when a scenario fields only one of them.
+        /// </summary>
+        private int ResolveScenarioTeamCount()
+        {
+            int teamCount = MassGpuBufferManager.DefaultTeamCount;
+            if (scenarioConfig == null || scenarioConfig.unitTypes == null)
+                return teamCount;
+
+            for (int i = 0; i < scenarioConfig.unitTypes.Length; i++)
+            {
+                UnitTypeConfig config = scenarioConfig.unitTypes[i];
+                if (config == null || config.spawnConfig == null || config.spawnConfig.unitCount <= 0 || config.teamId < 0)
+                    continue;
+
+                teamCount = Mathf.Max(teamCount, config.teamId + 1);
+            }
+
+            return teamCount;
         }
 
         private int ComputeGridCellCount()

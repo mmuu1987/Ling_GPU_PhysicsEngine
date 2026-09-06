@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: DefenderMeleeUnitConfig
+  m_EditorClassIdentifier: 
+  unitTypeName: Defender Swordsman
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 1
+  spawnConfig: {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e22, type: 2}
+  movementConfig: {fileID: 11400000, guid: 87a41fc5a6c94fc48a1b08773ea56aa8, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 570e9606e073c9f41942d52abfdac833, type: 2}
+  animationConfig: {fileID: 11400000, guid: 82163d545445fc0499ae1ed0219b39c5, type: 2}
+  combatConfig: {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e23, type: 2}
+  renderConfig: {fileID: 11400000, guid: 1da254fce50406346884b03754f2a19e, type: 2}
