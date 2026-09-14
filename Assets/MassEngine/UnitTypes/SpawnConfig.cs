@@ -41,7 +41,12 @@ namespace MassEngine
         /// </summary>
         public Vector3 ResolveSpawnSize()
         {
-            if (HasManualFootprint)
+            return ResolveSpawnSize(unitCount, formationDensity, formationAspect, spawnSize);
+        }
+
+        public static Vector3 ResolveSpawnSize(int unitCount, float formationDensity, float formationAspect, Vector3 spawnSize)
+        {
+            if (spawnSize.x > 0f && spawnSize.z > 0f)
                 return spawnSize;
 
             float density = Mathf.Clamp(formationDensity, 0.05f, PackingLimitPerSquareMeter);

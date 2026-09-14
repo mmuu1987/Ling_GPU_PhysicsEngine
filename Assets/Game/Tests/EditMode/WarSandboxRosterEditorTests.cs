@@ -182,6 +182,28 @@ namespace MassEngine.Game.Tests
             Assert.That(scenario.unitTypes, Is.EqualTo(new[] { template }));
         }
 
+        [Test]
+        public void AddRejectsTeamIdAboveEngineLimitBeforeCreatingAssets()
+        {
+            CreatePersistentFolder();
+            ScenarioConfig scenario = CreatePersistent<ScenarioConfig>("Scenario.asset");
+            SpawnConfig spawn = CreatePersistent<SpawnConfig>("Template_Spawn.asset");
+            UnitTypeConfig template = CreatePersistent<UnitTypeConfig>("Template.asset");
+            template.spawnConfig = spawn;
+            scenario.unitTypes = new[] { template };
+            AssetDatabase.SaveAssets();
+            int assetCountBefore = AssetDatabase.FindAssets("t:Object", new[] { assetFolder }).Length;
+
+            Assert.That(
+                WarSandboxRosterEditor.TryAddUnitType(
+                    scenario, template, ConfigValidator.MaxTeamId + 1, "Invalid", out UnitTypeConfig added, out string error),
+                Is.False);
+            Assert.That(error, Does.Contain(ConfigValidator.MaxTeamId.ToString()));
+            Assert.That(added, Is.Null);
+            Assert.That(AssetDatabase.FindAssets("t:Object", new[] { assetFolder }).Length, Is.EqualTo(assetCountBefore));
+            Assert.That(scenario.unitTypes, Is.EqualTo(new[] { template }));
+        }
+
         private T CreateTransient<T>() where T : ScriptableObject
         {
             T value = ScriptableObject.CreateInstance<T>();

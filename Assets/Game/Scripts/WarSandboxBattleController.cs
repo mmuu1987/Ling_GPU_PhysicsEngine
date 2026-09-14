@@ -27,6 +27,7 @@ namespace MassEngine.Game
         [Range(2, 16)] public int maxMoveRoutePoints = 8;
 
         [Header("Battle Rules")]
+        public WarSandboxBattlefieldConfig battlefieldConfig;
         public WarSandboxGameMode gameMode = WarSandboxGameMode.Annihilation;
         public Vector3 controlPointCenter = Vector3.zero;
         [Min(2f)] public float controlPointRadius = 30f;
@@ -68,6 +69,10 @@ namespace MassEngine.Game
         private int[] controlPointZoneCounts;
         private bool initialized;
         private WarSandboxStaticObstaclePresenter obstaclePresenter;
+        private WarSandboxBattlefieldConfig appliedBattlefieldConfig;
+        private WarSandboxBattlefieldRules? initialBattlefieldRules;
+
+        public string BattlefieldRuleError { get; private set; }
 
         public WarSandboxBattlePhase Phase { get { return phase; } }
         public WarSandboxBattleResult BattleResult { get { return battleResult; } }
@@ -131,14 +136,17 @@ namespace MassEngine.Game
 
         private void Awake()
         {
+            appliedBattlefieldConfig = null;
+            initialBattlefieldRules = null;
             ResolveManager();
+            EnsureBattlefieldRules();
             RebuildArmyStates();
             ApplyStaticObstacleSettings();
         }
 
         private void Start()
         {
-            if (manager == null)
+            if (manager == null || !EnsureBattlefieldRules())
                 return;
 
             if (pauseOnStart)
@@ -256,6 +264,8 @@ namespace MassEngine.Game
 
         public bool IssueMoveOrder(int teamId, Vector3 target, bool append)
         {
+            if (IsTerminalPhase(phase) || !WarSandboxSceneSession.AllowsBattleCommands(this)) return false;
+            if (!EnsureBattlefieldRules()) return false;
             ArmyRuntimeState army = GetArmy(teamId);
             if (army == null)
                 return false;
@@ -278,6 +288,7 @@ namespace MassEngine.Game
 
         public bool SetGameMode(WarSandboxGameMode value)
         {
+            if (!WarSandboxSceneSession.AllowsBattleCommands(this)) return false;
             if (phase != WarSandboxBattlePhase.Setup)
                 return false;
 
@@ -287,8 +298,82 @@ namespace MassEngine.Game
             return true;
         }
 
+        public WarSandboxBattlefieldRules CaptureBattlefieldRules()
+        {
+            return new WarSandboxBattlefieldRules
+            {
+                gameMode = gameMode,
+                controlPointCenter = controlPointCenter,
+                controlPointRadius = controlPointRadius,
+                controlPointCaptureSeconds = controlPointCaptureSeconds,
+                staticObstaclesEnabled = staticObstaclesEnabled,
+                staticObstacleClearance = staticObstacleClearance,
+                staticObstacles = ResolveStaticObstacles()
+            }.Copy();
+        }
+
+        public bool TryApplyBattlefieldConfig(WarSandboxBattlefieldConfig config, out string error)
+        {
+            error = null;
+            if (phase != WarSandboxBattlePhase.Setup)
+            {
+                error = "Battlefield rules can only be applied during Setup.";
+                return false;
+            }
+            if (config == null)
+            {
+                error = "Choose a battlefield rules asset.";
+                return false;
+            }
+            if (!config.TryCreateSnapshot(out WarSandboxBattlefieldRules snapshot, out error)) return false;
+
+            ApplyBattlefieldRules(snapshot);
+            battlefieldConfig = config;
+            appliedBattlefieldConfig = config;
+            initialBattlefieldRules = snapshot.Copy();
+            BattlefieldRuleError = null;
+            return true;
+        }
+
+        private bool EnsureBattlefieldRules()
+        {
+            if (battlefieldConfig == null)
+            {
+                appliedBattlefieldConfig = null;
+                initialBattlefieldRules = null;
+                BattlefieldRuleError = null;
+                return true;
+            }
+            if (appliedBattlefieldConfig == battlefieldConfig && initialBattlefieldRules.HasValue)
+            {
+                BattlefieldRuleError = null;
+                return true;
+            }
+            if (TryApplyBattlefieldConfig(battlefieldConfig, out string error)) return true;
+            BattlefieldRuleError = error;
+            ResolveManager();
+            if (manager != null) manager.PauseBattle();
+            return false;
+        }
+
+        private void ApplyBattlefieldRules(WarSandboxBattlefieldRules rules)
+        {
+            gameMode = rules.gameMode;
+            controlPointCenter = rules.controlPointCenter;
+            controlPointRadius = rules.controlPointRadius;
+            controlPointCaptureSeconds = rules.controlPointCaptureSeconds;
+            staticObstaclesEnabled = rules.staticObstaclesEnabled;
+            staticObstacleClearance = rules.staticObstacleClearance;
+            useCustomStaticObstacleLayout = true;
+            staticObstacles = rules.Copy().staticObstacles;
+            ResetControlPointState();
+            ConfigureControlPointTelemetry();
+            ApplyStaticObstacleSettings();
+        }
+
         public bool SetStaticObstaclesEnabled(bool value)
         {
+            if (!WarSandboxSceneSession.AllowsBattleCommands(this)) return false;
             if (phase != WarSandboxBattlePhase.Setup)
                 return false;
 
@@ -332,6 +417,8 @@ namespace MassEngine.Game
 
         private bool IssueOrderInternal(ArmyOrder order, bool replaceRoute)
         {
+            if (IsTerminalPhase(phase) || !WarSandboxSceneSession.AllowsBattleCommands(this)) return false;
+            if (!EnsureBattlefieldRules()) return false;
             ResolveManager();
             ArmyRuntimeState army = GetArmy(order.teamId);
             if (manager == null || army == null)
@@ -386,6 +473,8 @@ namespace MassEngine.Game
 
         public bool StartDefaultBattle()
         {
+            if (IsTerminalPhase(phase) || !WarSandboxSceneSession.AllowsBattleCommands(this)) return false;
+            if (!EnsureBattlefieldRules()) return false;
             if (!initialized)
                 RebuildArmyStates();
 
@@ -426,6 +515,8 @@ namespace MassEngine.Game
 
         public void StartOrResumeBattle()
         {
+            if (IsTerminalPhase(phase) || !WarSandboxSceneSession.AllowsBattleCommands(this)) return;
+            if (!EnsureBattlefieldRules()) return;
             ResolveManager();
             if (manager == null)
                 return;
@@ -455,11 +546,26 @@ namespace MassEngine.Game
 
         public void ResetBattle()
         {
+            ResetBattleState(true);
+        }
+
+        internal void ResetForDeployment() => ResetBattleState(false);
+        internal void ResetForDeployment(WarSandboxBattlefieldRules rules)
+        {
+            ApplyBattlefieldRules(rules);
+            ResetBattleState(false);
+        }
+        internal void CommitDeploymentRules() => initialBattlefieldRules = CaptureBattlefieldRules().Copy();
+
+        private void ResetBattleState(bool restoreRules)
+        {
+            if (!WarSandboxSceneSession.AllowsBattleCommands(this)) return;
             ResolveManager();
-            if (manager == null)
+            if (manager == null || !EnsureBattlefieldRules())
                 return;
 
             manager.PauseBattle();
+            if (restoreRules && initialBattlefieldRules.HasValue) ApplyBattlefieldRules(initialBattlefieldRules.Value);
             manager.ResetScenario();
             manager.PauseBattle();
 
@@ -483,6 +589,7 @@ namespace MassEngine.Game
 
         public void SetSimulationSpeed(float speed)
         {
+            if (!WarSandboxSceneSession.AllowsBattleCommands(this)) return;
             simulationSpeed = Mathf.Clamp(speed, 0.25f, 4f);
             Time.timeScale = simulationSpeed;
         }

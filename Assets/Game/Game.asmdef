@@ -2,7 +2,8 @@
     "name": "Game",
     "rootNamespace": "MassEngine.Game",
     "references": [
-        "MassEngine"
+        "MassEngine",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

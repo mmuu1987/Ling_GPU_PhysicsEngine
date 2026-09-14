@@ -236,6 +236,49 @@ namespace MassEngine.Game.Tests
             Assert.That(controller.SimulationSpeed, Is.EqualTo(0.25f));
         }
 
+        [TestCase(WarSandboxBattlePhase.AttackerVictory)]
+        [TestCase(WarSandboxBattlePhase.DefenderVictory)]
+        [TestCase(WarSandboxBattlePhase.ArmyVictory)]
+        [TestCase(WarSandboxBattlePhase.Draw)]
+        public void TerminalBattleRejectsOrdersUntilAnExplicitReset(WarSandboxBattlePhase terminal)
+        {
+            if (terminal == WarSandboxBattlePhase.ArmyVictory)
+            {
+                AddThirdArmy(40, new Vector3(0, 0, 60));
+                controller.RebuildArmyStates();
+            }
+            Assert.That(controller.IssueMoveOrder(0, new Vector3(10, 0, 0), false), Is.True);
+            var snapshot = new BattleTelemetrySnapshot
+            {
+                valid = true, totalAgents = 200, battleSeconds = 30,
+                aliveAttackers = terminal == WarSandboxBattlePhase.AttackerVictory ? 100 : 0,
+                aliveDefenders = terminal == WarSandboxBattlePhase.DefenderVictory ? 60 : 0
+            };
+            int winner = terminal == WarSandboxBattlePhase.AttackerVictory ? 0 :
+                terminal == WarSandboxBattlePhase.DefenderVictory ? 1 :
+                terminal == WarSandboxBattlePhase.ArmyVictory ? 2 : -1;
+            typeof(WarSandboxBattleController).GetMethod("CompleteBattle", BindingFlags.Instance | BindingFlags.NonPublic)
+                .Invoke(controller, new object[] { terminal, snapshot, WarSandboxVictoryReason.Annihilation, winner });
+            string report = JsonUtility.ToJson(controller.BattleResult);
+            Assert.That(controller.IssueOrder(ArmyOrder.Attack(0)), Is.False);
+            Assert.That(controller.IssueOrder(ArmyOrder.Hold(0)), Is.False);
+            Assert.That(controller.IssueOrder(ArmyOrder.Retreat(0)), Is.False);
+            Assert.That(controller.IssueMoveOrder(0, Vector3.zero, false), Is.False);
+            Assert.That(controller.IssueMoveOrder(0, Vector3.one, true), Is.False);
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.EqualTo(1));
+            Assert.That(controller.StartDefaultBattle(), Is.False);
+            controller.StartOrResumeBattle(); controller.TogglePause();
+            Assert.That(controller.Phase, Is.EqualTo(terminal));
+            Assert.That(manager.IsBattleRunning, Is.False);
+            Assert.That(JsonUtility.ToJson(controller.BattleResult), Is.EqualTo(report));
+
+            controller.ResetBattle();
+            Assert.That(controller.Phase, Is.EqualTo(WarSandboxBattlePhase.Setup));
+            Assert.That(controller.BattleResult.valid, Is.False);
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.Zero);
+            Assert.That(controller.StartDefaultBattle(), Is.True);
+        }
+
         [Test]
         public void DefaultBattleOrdersBothArmiesToAttack()
         {

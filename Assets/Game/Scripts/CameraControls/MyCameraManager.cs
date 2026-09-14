@@ -147,7 +147,7 @@ public class MyCameraManager : MonoBehaviour
         if (ControlledCamera == null || _lockInput)
             return;
 
-        bool canUseInput = IsMouseInsideInputArea();
+        bool canUseInput = IsMouseInsideInputArea() && !MassEngine.Game.WarSandboxUGUI.PointerOverUI() && !MassEngine.Game.WarSandboxUGUI.IsTyping;
 
         if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1) || Input.GetMouseButtonUp(2))
         {

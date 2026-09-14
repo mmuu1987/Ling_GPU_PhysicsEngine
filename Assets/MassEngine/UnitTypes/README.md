@@ -34,6 +34,8 @@ VAT 片段时长合并（来自 RenderRuntime）。**每帧调用**，所以运�
 `formationDensity`（默认 0.5 人/m²，行军密度）+ `formationAspect`（阵面宽:纵深，默认 2）。
 实际脚印由 `SpawnConfig.ResolveSpawnSize()` 推导——面积恒等于 人数÷密度，
 物理上永远自洽；Gizmo 画的就是推导后的真实脚印。
+参数版静态重载 `ResolveSpawnSize(unitCount, density, aspect, spawnSize)` 供游戏层纯值布阵草稿复用；
+实例方法委托给同一计算，未改变配置字段、现有出生行为或 GPU 数据布局。
 `spawnSize` 保留为手动覆盖（两分量都 >0 才生效），用于卡口、楔形阵等故意的形状；
 覆盖密度超过堆积极限（1.5/m²）时物理账本会点名警告。
 

@@ -37,6 +37,11 @@ namespace MassEngine.Game.Editor
                 error = "Team ID must be zero or greater.";
                 return false;
             }
+            if (teamId > ConfigValidator.MaxTeamId)
+            {
+                error = "Team ID must not exceed " + ConfigValidator.MaxTeamId + ".";
+                return false;
+            }
             if (!AssetDatabase.Contains(template) || !AssetDatabase.Contains(template.spawnConfig))
             {
                 error = "Save the unit type template and its SpawnConfig before copying it.";

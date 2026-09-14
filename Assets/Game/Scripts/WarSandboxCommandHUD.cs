@@ -8,7 +8,7 @@ namespace MassEngine.Game
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("MassEngine/War Sandbox Command HUD")]
-    public sealed class WarSandboxCommandHUD : MonoBehaviour
+    public sealed partial class WarSandboxCommandHUD : MonoBehaviour
     {
         public WarSandboxBattleController controller;
         public Camera commandCamera;
@@ -41,6 +41,9 @@ namespace MassEngine.Game
         private float feedbackUntil;
         private CameraFocusMode cameraFocusMode;
         private int cameraFocusTeamId;
+        // Bottom of the panel content measured at the last repaint. The panel box grows to
+        // fit this instead of clipping whenever new controls push past the preferred height.
+        private float panelContentHeight;
 
         private void Reset()
         {
@@ -61,12 +64,17 @@ namespace MassEngine.Game
 
         private void OnDisable()
         {
+            runtimeUi?.SetVisible(false);
             if (legacyClickSetter != null)
                 legacyClickSetter.enabled = legacyClickSetterWasEnabled;
         }
 
         private void Update()
         {
+            RefreshRuntimeUI();
+            if (WarSandboxUGUI.IsTyping) return;
+            if (WarSandboxSceneSession.Instance != null && WarSandboxSceneSession.Instance.InputBlocked) return;
+            if (WarSandboxDeploymentHUD.BlocksInput(controller)) return;
             ResolveReferences();
             if (controller == null)
                 return;
@@ -134,13 +142,19 @@ namespace MassEngine.Game
 
         private void OnGUI()
         {
+            if (WarSandboxSceneSession.Instance != null && WarSandboxSceneSession.Instance.InputBlocked) return;
+            if (WarSandboxDeploymentHUD.BlocksInput(controller)) return;
             ResolveReferences();
             if (controller == null)
                 return;
 
             DrawWorldOrderMarkers();
-            DrawTacticalMinimap();
+        }
 
+        // Kept temporarily as reference while the uGUI presentation is validated.
+        // Runtime controls are rendered exclusively by RefreshRuntimeUI.
+        private void DrawLegacyControls()
+        {
             bool compactLayout = Screen.height < 340f;
             float controlHeight = compactLayout ? 20f : 24f;
             Rect panel = ResolvePanelRect();
@@ -149,6 +163,19 @@ namespace MassEngine.Game
 
             GUILayout.Label("战争沙盒", GUILayout.Height(compactLayout ? 17f : 20f));
             GUILayout.Label("阶段：" + FormatPhase(controller.Phase), GUILayout.Height(compactLayout ? 17f : 20f));
+            var deploymentHud = controller.GetComponent<WarSandboxDeploymentHUD>();
+            if (deploymentHud != null && GUILayout.Button(controller.Phase == WarSandboxBattlePhase.Setup ? "配兵布阵" : "返回布阵", GUILayout.Height(controlHeight)))
+            {
+                awaitingMoveTarget = false;
+                deploymentHud.RequestEdit();
+            }
+            if (!string.IsNullOrEmpty(controller.BattlefieldRuleError))
+            {
+                GUILayout.Label("战场规则无效：\n" + controller.BattlefieldRuleError,
+                    new GUIStyle(GUI.skin.label) { wordWrap = true });
+                GUILayout.EndArea();
+                return;
+            }
             DrawForceSummary(compactLayout);
 
             if (controller.Phase == WarSandboxBattlePhase.Setup && !compactLayout)
@@ -250,6 +277,15 @@ namespace MassEngine.Game
             else if (showHotkeys && !compactLayout)
                 GUILayout.Label("数字键选军团 · F跟随 · F3全景 · Enter开战 · A/M/H/R下令");
 
+            // Measure what the layout actually used this repaint (area-local coordinates).
+            // BeginArea silently clips everything below its fixed height, so the box must be
+            // sized from real content, not from the drifting preferredHeight constant.
+            if (Event.current.type == EventType.Repaint)
+            {
+                Rect content = GUILayoutUtility.GetLastRect();
+                if (content.yMax > 100f)
+                    panelContentHeight = content.yMax;
+            }
             GUILayout.EndArea();
             DrawControlPointStatus();
             DrawBattleResultReport();
@@ -330,10 +366,7 @@ namespace MassEngine.Game
         private bool IsMouseOverInterface()
         {
             Vector2 guiMouse = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
-            return ResolvePanelRect().Contains(guiMouse) ||
-                   (controller.BattleResult.valid && ResolveBattleResultRect().Contains(guiMouse)) ||
-                   (showMinimap && WarSandboxMinimapProjection.ResolveOuterRect(
-                       Screen.width, Screen.height, minimapSize, 8f).Contains(guiMouse));
+            return WarSandboxFrontEnd.IsOverNavigation(guiMouse) || WarSandboxUGUI.PointerOverUI();
         }
 
         private Rect ResolvePanelRect()
@@ -343,8 +376,13 @@ namespace MassEngine.Game
             // Selector and force readout both lay out ArmyColumns per row, so every extra pair of
             // armies costs two rows. Two armies keep the historical height to the pixel.
             int rosterRows = Mathf.Max(1, (ResolveArmyCount() + ArmyColumns - 1) / ArmyColumns);
-            float preferredHeight = (compactPanel ? 296f : 380f) + (rosterRows - 1) * 2f * (compactPanel ? 18f : 24f);
-            float height = Mathf.Min(preferredHeight, Mathf.Max(200f, Screen.height - 16f));
+            float preferredHeight = (compactPanel ? 322f : 410f) + (rosterRows - 1) * 2f * (compactPanel ? 18f : 24f);
+            // Grow to the measured content (6px area top margin + content + 8px bottom padding);
+            // still capped by the screen so very short windows fall back to the compact layout
+            // instead of drawing off-screen.
+            float height = Mathf.Min(
+                Mathf.Max(preferredHeight, panelContentHeight + 14f),
+                Mathf.Max(200f, Screen.height - 16f));
             return new Rect(Mathf.Max(8f, Screen.width - width - 8f), 8f, width, height);
         }
 
