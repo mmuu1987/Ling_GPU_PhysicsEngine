@@ -274,11 +274,18 @@ namespace MassEngine.Editor
                     ApplyProfile(render, request.profile, data);
                 }
 
-                AssetDatabase.CreateAsset(unit, UniquePath(directory, baseName + ".asset"));
+                // 落盘顺序有讲究：被引用的子配置必须先于主资产创建。
+                // CreateAsset 是按调用当时的引用状态序列化的，主资产若先落盘，它的
+                // spawnConfig/combatConfig/renderConfig 会被写成 fileID: 0；
+                // 而此后没有任何地方再标脏主资产，SaveAssets 也不会补写。
+                // 结果磁盘上是"引用全空"的兵种 + 几个孤儿子配置 —— 内存与 Inspector 都正常，
+                // 下次域重载后才暴露成 "SpawnConfig is null; the unit type will be skipped"。
+                // 与 WarSandboxRosterEditor / WarSandboxSampleCreator 的顺序一致。
                 AssetDatabase.CreateAsset(spawn, UniquePath(directory, baseName + "_Spawn.asset"));
                 AssetDatabase.CreateAsset(combat, UniquePath(directory, baseName + "_Combat.asset"));
                 if (render != null)
                     AssetDatabase.CreateAsset(render, UniquePath(directory, baseName + "_Render.asset"));
+                AssetDatabase.CreateAsset(unit, UniquePath(directory, baseName + ".asset"));
 
                 // 登记进战役清单：不登记的话运行时根本看不到这个兵种（不扫文件夹）。
                 AppendToScenario(request.scenario, unit);

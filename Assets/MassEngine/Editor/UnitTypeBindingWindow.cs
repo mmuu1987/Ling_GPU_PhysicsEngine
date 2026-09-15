@@ -286,14 +286,15 @@ namespace MassEngine.Editor
 
             newUnitName = EditorGUILayout.TextField("兵种名", newUnitName);
             newTeamId = EditorGUILayout.IntSlider("军团编号", newTeamId, 0, ConfigValidator.MaxTeamId);
-            if (scenario != null)
+            using (new EditorGUILayout.HorizontalScope())
             {
-                using (new EditorGUILayout.HorizontalScope())
-                {
-                    if (GUILayout.Button("用下一个空军团编号", GUILayout.Width(160)))
-                        newTeamId = ResolveNextTeamId();
-                }
+                if (GUILayout.Button("用下一个空军团编号", GUILayout.Width(160)))
+                    newTeamId = ResolveNextTeamId();
             }
+            if (IsTeamIdTaken(newTeamId))
+                EditorGUILayout.HelpBox(
+                    "军团编号 " + newTeamId + " 已被清单里的兵种占用。同编号会与既有军团混在一起" +
+                    "（共用流场与据点判定），确认是有意混编再继续。", MessageType.Warning);
 
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -343,9 +344,22 @@ namespace MassEngine.Editor
 
                 AssetDatabase.Refresh();
                 selectedIndex = IndexOf(created);
-                Report(UnitTypeBinder.ValidateBinding(created));
-                SetFeedback("已新建兵种：" + created.unitTypeName + "（军团 " + created.teamId + "）\n" +
-                    "资产：" + AssetDatabase.GetAssetPath(created), false);
+
+                if (request.profile == null)
+                {
+                    // "只建兵种不绑模型"是支持的路径：此时没有 profile 是预期状态，不是错误，
+                    // 所以不跑绑定校验（那会报"没有绑定 VAT profile"吓人一跳），只提示下一步。
+                    bindingReport.Clear();
+                    SetFeedback("已新建兵种：" + created.unitTypeName + "（军团 " + created.teamId + "）\n" +
+                        "尚未绑定 VAT profile —— 选中它并在上面绑定模型后即可上战场。\n" +
+                        "资产：" + AssetDatabase.GetAssetPath(created), false);
+                }
+                else
+                {
+                    Report(UnitTypeBinder.ValidateBinding(created));
+                    SetFeedback("已新建兵种：" + created.unitTypeName + "（军团 " + created.teamId + "）\n" +
+                        "资产：" + AssetDatabase.GetAssetPath(created), false);
+                }
                 EditorGUIUtility.PingObject(created);
             }
             catch (Exception exception)
@@ -383,6 +397,20 @@ namespace MassEngine.Editor
                 if (unit != null)
                     highest = Mathf.Max(highest, unit.teamId);
             return Mathf.Min(highest + 1, ConfigValidator.MaxTeamId);
+        }
+
+        /// <summary>
+        /// 该军团编号是否已被占用。注意这不是错误而是需要确认的选择：
+        /// 多军团混编是支持的（同编号 = 同一军团），但"顺手点下一个"点到重复编号多半是误操作。
+        /// </summary>
+        private bool IsTeamIdTaken(int teamId)
+        {
+            if (scenario == null || scenario.unitTypes == null)
+                return false;
+            foreach (UnitTypeConfig unit in scenario.unitTypes)
+                if (unit != null && unit.teamId == teamId)
+                    return true;
+            return false;
         }
 
         /// <summary>找一个现役 ScenarioConfig 作为默认值，省得每次手拖。</summary>

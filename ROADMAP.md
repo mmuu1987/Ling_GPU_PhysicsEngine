@@ -38,7 +38,7 @@
 - **执行顺序**：M5 兵种模型绑定 -> M6 复杂地形 -> M7 内容收口与交付。已完成里程碑不重验。
 
 M3.1～M3.3、M4.1～M4.3 已在独立工作树实现并经用户人工验收；
-M5.1 VAT 烘焙工具与 M5.2 兵种绑定向导已完成（284/284 EditMode 全绿 + 重烘对拍通过），M5.3～M5.4 待实现。
+M5.1 VAT 烘焙工具与 M5.2 兵种绑定向导已完成（287/287 EditMode 全绿 + 重烘对拍通过），M5.3～M5.4 待实现。
 2026-09-08 已完成 Windows 运行时布阵对局验证；当前步骤与测试证据见阶段 5 和交接，原 M2 验收不重开。
 
 ## 阶段 1：口径与视觉完成度（已完成）
@@ -187,7 +187,7 @@ Humanoid prefab；手工两骨骼 `SkinnedMeshRenderer` —— 此前蒙皮分�
   的第 117-120 行逐字对应。另含 `CreateUnitType`：从模板复制整套子配置、落盘、登记进 `ScenarioConfig.unitTypes`，
   失败整体回滚。
 - `Assets/MassEngine/Editor/UnitTypeBindingWindow.cs`：IMGUI 表单外壳，逻辑全走核心。
-- `Assets/MassEngine/Tests/EditMode/UnitTypeBinderTests.cs`：21 项。
+- `Assets/MassEngine/Tests/EditMode/UnitTypeBinderTests.cs`：24 项。
 
 放在 `MassEngine.Editor` 而非 `Game.Editor`：`UnitTypeConfig` / `ScenarioConfig` / `ConfigValidator` /
 `RenderConfig` 都在 `MassEngine` 程序集里，这样零 asmdef 改动即可全用到（`Game.Editor` 看不见
@@ -198,11 +198,23 @@ Humanoid prefab；手工两骨骼 `SkinnedMeshRenderer` —— 此前蒙皮分�
 与仓库里 6 个内置兵种的实际结构一致。勾选"独占 RenderConfig"是绑新模型的前提：共享的渲染配置属于模板兵种，
 往里写 profile 会连带把模板兵种也换掉模型，因此该组合被显式拒绝。
 
-证据：EditMode **284/284 全绿**（M5.1 基线 261 + M5.1 审计补 2 + M5.2 新增 21）。其中两条是反查而非自证：
+证据：EditMode **287/287 全绿**（M5.1 基线 261 + M5.1 审计补 2 + M5.2 新增 24）。其中两条是反查而非自证：
 `BinderSlotsMatchWhatTheRuntimeActuallyResolves` 遍历 mid/low 四种组合，断言向导算出的 near/mid/far
 与运行时实际采用的网格逐一相同（两边任何一处漂移都会红）；
-`ValidateBindingReportsNoErrorsForEveryShippedUnitType` 断言现役 6 个内置兵种全部通过校验，防的是
-"校验器误报到用户学会忽略它"。
+`ValidateBindingReportsNoErrorsForEveryShippedUnitType` 断言现役 6 个内置兵种全部通过校验，防的是"校验器误报到用户学会忽略它"。
+
+**M5.2 独立审计修正（2026-09-16）**：审计报 2 个真实缺陷，均经我实测确认后修掉。
+**缺陷 #1（高）**：`CreateUnitType` 把主资产先于它引用的子配置创建 —— `CreateAsset` 按调用当时的
+引用状态序列化，于是磁盘上写的是 `spawnConfig: {fileID: 0}` + 几个孤儿子配置，而内存与 Inspector 全正常，
+**只有下次域重载后才暴露**成"SpawnConfig is null; the unit type will be skipped"（兵种既不生成也不渲染）。
+仓库另外三处（`WarSandboxRosterEditor`、`WarSandboxSampleCreator`、测试的 `NewTemplate`）都是子配置先落盘，
+只有本类是反的。已改为子配置先创建。
+这里有个值得记住的教训：**第一版回归测试用 `LoadAssetAtPath` 读回来断言，绿着放过了缺陷** ——
+它可能返回内存里的同一个对象，磁盘上写着空引用也照样"通过"；必须直接读磁盘 YAML 原文才测得出来。
+**缺陷 #2（中）**：一条测试是因为错误的原因通过的（模板从未落盘，被更早的守卫拒掉，
+根本没走到它声称覆盖的分支），且它的预期与代码行为相反（模板无 RenderConfig 时会回退造一份独占的并成功）。
+已拆成两条如实的测试。另修两个 nit：向导"只建兵种不绑模型"这一支持路径不再报吓人的错误；
+选中已被占用的军团编号时给出警告而非静默重复。Ctrl+Z 删不掉新建资产一条按继承行为记录不改。
 
 M5 剩余工作：
 

@@ -397,32 +397,136 @@ namespace MassEngine.Tests
         }
 
         [Test]
-        public void CreateUnitTypeLeavesRosterUntouchedWhenTheTemplateHasNoRenderConfig()
+        public void CreateUnitTypeFallsBackToAFreshExclusiveRenderConfigWhenTemplateHasNone()
         {
-            // 模板没有 RenderConfig 却要绑 profile：必须拒绝，且清单与磁盘都不留痕迹。
+            // 模板没有 RenderConfig、但要求独占并绑 profile 时，应当造一份全新的独占 RenderConfig，
+            // 把 profile 接进去，而不是失败 —— 也不该去碰模板（模板根本没有可碰的渲染配置）。
+            //
+            // 注意模板必须已落盘：未落盘的模板会被 AssetDatabase.Contains 那道守卫提前拒掉，
+            // 那样这条测试就测不到 RenderConfig 回退分支了（早先正是踩了这个坑）。
+            string folder = NewTempFolder();
             var bare = ScriptableObject.CreateInstance<UnitTypeConfig>();
             bare.unitTypeName = "NoRender";
             bare.teamId = 0;
+            AssetDatabase.CreateAsset(bare, folder + "/Bare.asset");
             created.Add(bare);
-
-            int rosterBefore = scenario.unitTypes.Length;
-            string folder = NewTempFolder();
-            int assetsBefore = CountAssets(folder);
+            Assert.IsTrue(AssetDatabase.Contains(bare), "测试前提：模板必须已落盘。");
 
             UnitTypeConfig result = UnitTypeBinder.CreateUnitType(new UnitTypeCreationRequest
             {
                 scenario = scenario,
                 template = bare,
-                unitTypeName = "NoRenderChild",
+                unitTypeName = "FreshRender",
+                teamId = 1,
+                directory = folder,
+                profile = Profile("C", null, null).Asset
+            }, out string error);
+
+            Assert.IsNotNull(result, "模板没有 RenderConfig 时应回退造一份独占的，而不是失败：" + error);
+            Assert.IsNotNull(result.renderConfig, "应当回退生成 RenderConfig。");
+            Assert.AreNotSame(bare.renderConfig, result.renderConfig, "回退生成的必须是新对象。");
+            Assert.IsNotNull(result.renderConfig.vatProfile, "profile 应当已接进回退生成的 RenderConfig。");
+            Assert.IsTrue(AssetDatabase.Contains(result.renderConfig), "回退生成的 RenderConfig 必须落盘。");
+            Assert.Contains(result, scenario.unitTypes, "新建的兵种必须登记进清单。");
+        }
+
+        [Test]
+        public void CreateUnitTypeRejectsUnpersistedTemplateInsteadOfCreatingOrphans()
+        {
+            // 模板未落盘时必须拒绝：创建流程要从模板复制子配置，
+            // 未落盘的模板复制出来的东西也落不了盘，只会留下一堆孤儿资产。
+            string folder = NewTempFolder();
+            var transient = ScriptableObject.CreateInstance<UnitTypeConfig>();
+            transient.unitTypeName = "Transient";
+            transient.teamId = 0;
+            created.Add(transient);
+
+            int rosterBefore = scenario.unitTypes.Length;
+            int assetsBefore = CountAssets(folder);
+
+            UnitTypeConfig result = UnitTypeBinder.CreateUnitType(new UnitTypeCreationRequest
+            {
+                scenario = scenario,
+                template = transient,
+                unitTypeName = "Orphan",
                 teamId = 0,
                 directory = folder,
                 profile = Profile("C", null, null).Asset
             }, out string error);
 
-            Assert.IsNull(result, "模板没有 RenderConfig 时绑 profile 必须失败。");
+            Assert.IsNull(result, "未落盘的模板必须被拒绝。");
             Assert.IsNotNull(error);
             Assert.AreEqual(rosterBefore, scenario.unitTypes.Length, "失败时不应改动战役清单。");
             Assert.AreEqual(assetsBefore, CountAssets(folder), "失败后不应留下任何新资产。");
+        }
+
+        [Test]
+        public void CreatedUnitTypeWritesSubConfigReferencesToDiskNotFileIdZero()
+        {
+            // 直接读磁盘上的 YAML 原文，而不是 LoadAssetAtPath —— 后者可能返回内存里的同一个对象，
+            // 那样即使磁盘上写的是 fileID: 0 也照样"通过"，测不出真正的问题。
+            //
+            // 这条针对的失效模式：CreateAsset 按调用当时的引用状态序列化。若主资产先于被引用的
+            // 子配置落盘，子配置引用会被写成 fileID: 0；此后没人再标脏主资产，SaveAssets 也不会补写。
+            // 结果磁盘上是"引用全空"的兵种 + 几个孤儿子配置，而内存与 Inspector 看起来都正常，
+            // 下次域重载后才暴露：ConfigValidator 报 SpawnConfig is null，兵种既不生成也不渲染。
+            UnitTypeConfig created = CreateIntoTempFolder("OnDisk", 3, out _, out string folder);
+            Assert.IsNotNull(created);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            string path = AssetDatabase.GetAssetPath(created);
+            string yaml = System.IO.File.ReadAllText(path);
+
+            AssertReferenceWritten(yaml, "spawnConfig");
+            AssertReferenceWritten(yaml, "combatConfig");
+            AssertReferenceWritten(yaml, "renderConfig");
+
+            // 子配置本身也要真的落在同一个目录里，而不是只写了个引用。
+            string spawnPath = AssetDatabase.GetAssetPath(created.spawnConfig);
+            Assert.IsTrue(spawnPath.StartsWith(folder), "spawnConfig 应当落在同一个输出目录里：" + spawnPath);
+        }
+
+        /// <summary>断言 YAML 里某个字段写的是真实引用（fileID 非 0），而不是空引用。</summary>
+        private static void AssertReferenceWritten(string yaml, string fieldName)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(
+                yaml, "^\\s*" + fieldName + ":\\s*(\\{.*?\\})\\s*$",
+                System.Text.RegularExpressions.RegexOptions.Multiline);
+            Assert.IsTrue(match.Success, "磁盘上的兵种资产里找不到字段 " + fieldName + "。");
+
+            string value = match.Groups[1].Value;
+            Assert.IsFalse(value.Contains("fileID: 0"),
+                fieldName + " 在磁盘上被写成了空引用（" + value + "）——" +
+                "子配置引用没有落盘，兵种重新载入后会既不生成也不渲染。");
+        }
+
+        [Test]
+        public void CreatedUnitTypeReloadsFromDiskWithAllSubConfigReferencesIntact()
+        {
+            UnitTypeConfig created = CreateIntoTempFolder("Reloaded", 3, out _, out string folder);
+            Assert.IsNotNull(created);
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            string path = AssetDatabase.GetAssetPath(created);
+            var reloaded = AssetDatabase.LoadAssetAtPath<UnitTypeConfig>(path);
+            Assert.IsNotNull(reloaded, "兵种资产应当能从磁盘读回。");
+
+            Assert.IsNotNull(reloaded.spawnConfig, "重新载入后 spawnConfig 为空。");
+            Assert.IsNotNull(reloaded.combatConfig, "重新载入后 combatConfig 为空。");
+            Assert.IsNotNull(reloaded.renderConfig, "重新载入后 renderConfig 为空。");
+
+            Assert.IsTrue(AssetDatabase.Contains(reloaded.spawnConfig), "spawnConfig 必须指向已落盘资产。");
+            Assert.IsTrue(AssetDatabase.Contains(reloaded.combatConfig), "combatConfig 必须指向已落盘资产。");
+            Assert.IsTrue(AssetDatabase.Contains(reloaded.renderConfig), "renderConfig 必须指向已落盘资产。");
+            Assert.IsTrue(AssetDatabase.GetAssetPath(reloaded.spawnConfig).StartsWith(folder),
+                "spawnConfig 应当落在同一个输出目录里。");
+
+            ValidationResult result = UnitTypeBinder.ValidateBinding(reloaded);
+            Assert.IsTrue(result.IsValid, "重新载入的兵种应当通过校验：" + string.Join(" / ", result.Errors));
         }
 
         [Test]
