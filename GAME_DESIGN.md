@@ -267,7 +267,7 @@ M6 = 复杂地形（原 M5 回位），M7 = 内容收口（原 M6 顺延）；Mo
 | M2 开发者编排与快照 | 阶段 3 | 2026-09-07 用户验收通过，细节延后；本地改动待提交/PR 整理 |
 | M3 规则归档与场景入口 | 阶段 4 | M3.1～M3.3 已实现并经 Windows 完整对局自动验证；人工视觉验收随 M4 一并通过 |
 | M4 玩家布阵与方案闭环 | 阶段 5 | 2026-09-14 用户人工验收通过（含 uGUI 界面与 M4.3 双方案跨重启循环） |
-| M5 兵种与模型绑定 | 阶段 6 | V1 必做，待实现；内部制作管线：VAT 烘焙工具 + 兵种绑定向导 + 文档 |
+| M5 兵种与模型绑定 | 阶段 6 | V1 必做；**M5.1 VAT 烘焙工具已完成**（移植进 `Assets/MassEngine/Editor/`，261/261 EditMode 全绿 + 重烘对拍通过），M5.2～M5.4 待实现 |
 | M6 复杂地形与战斗适配 | 阶段 7 | V1 必做，待实现；地形必须实际影响部署、通行与交战 |
 | M7 内容收口与 V1 交付 | 阶段 8 | 待实现，须完成 M5、M6 后通过实际构建与试玩放行 |
 
@@ -301,17 +301,29 @@ M6 = 复杂地形（原 M5 回位），M7 = 内容收口（原 M6 顺延）；Mo
 ### M5 的四步（兵种与模型绑定，内部制作管线）
 
 现状缺口：引擎已是 VAT 动画管线（VatRender：位置/法线纹理 + idle/move/attack/death 四段 + 间接实例绘制），
-六个内置兵种的 VAT 资产由外部工具烘焙——**烘焙工具不在仓库**，新增/更换模型没有可复用路径，全靠手工接资产 GUID。
-M5 把这条链做成内部工具（输入为 Unity 编辑器导入的可信资产，不做 mod 级的运行时校验加固）：
+六个内置兵种的 VAT 资产就是这条管线烘出来的。**烘焙工具并未丢失**——四版在
+`ArchivedStages/MassGPUPhysics_Stage{2,3,5,6}/Editor/VATBakerWindow_Stage*.cs`（Stage6 最完整），
+但该目录在项目根而非 `Assets/` 下、不在 Unity 编译范围（两份 csproj 亦不含它），
+且工具写死的 `VATProfile_Stage5` 类型已随归档移除，故**当前不可用**。M5 把这条链做回内部工具
+（输入为 Unity 编辑器导入的可信资产，不做 mod 级的运行时校验加固）：
 
-1. M5.1 **VAT 烘焙工具（Editor）**：输入模型（FBX/glTF 编辑器导入）+ 四段 AnimationClip；
-   逐帧采样（AnimationMode/SkinnedMeshRenderer.BakeMesh，UEBS CharacterRenderer3.BakeAnimations 同款模式）
+1. M5.1 **VAT 烘焙工具（Editor）—— 已完成（2026-09-15）**：把 Stage6 窗口移植进 `Assets/MassEngine/Editor/`、
+   产物类型对齐现役 `VATProfile`（**移植复活，不是从零实现**）；输入模型（FBX/glTF 编辑器导入）+ 四段 AnimationClip；
+   逐帧采样（`clip.SampleAnimation` + `SkinnedMeshRenderer.BakeMesh`，UEBS CharacterRenderer3.BakeAnimations 同款模式）
    -> 写位置/法线纹理 + clip 窗口 -> 生成 VATProfile 资产。支持可选 LOD 网格，缺失时单 LOD。
+   交付证据：261/261 EditMode 全绿（基线 241，新增 20 项）；重烘对拍 `VatRebakeComparison` 与既有 Male profile
+   布局/四段窗口逐字段一致（详见 ROADMAP 阶段 6）。
 2. M5.2 **兵种绑定向导（Editor 窗口，扩展 M2 五页窗口经验）**：选模型 + 四段动画 + 数值 ->
    生成/更新整套兵种子配置（Render/Animation/Spawn/Combat/Movement/Flocking）并自动接 GUID；
    配对校验（mesh 与 VAT 纹理、clip 窗口合法、动画速率区间）。
 3. M5.3 **内置兵种重烘验证**：用新工具重烘至少一个内置兵种，产物与现有资产等价或差异可接受；
    渲染外观与性能回归（对比 11 万样例帧时间）。可选全量迁移六个兵种。
+   **源资产已确认在仓库**：模型 `Assets/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab`
+   （网格 `Mesh/ModularCharacterPBR.fbx`）、四段 clip 取自 `Animation/SwordAndShield/`（38 个 FBX），
+   与现有 `Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Profile.asset` 对拍即可闭环。
+   六个内置兵种 = 3 个军团（Attacker / Defender / ThirdArmy）× 每个军团近战 + 远程两个兵种。
+   **人形 profile 并非三个军团共用**：Attacker 用 `MaleCharacter_Stage5_MultiClip_Profile.asset`，
+   Defender 与 ThirdArmy 用 `FemaleCharacterPBR_Stage5_MultiClip_Profile.asset`（2026-09-15 核实）。
 4. M5.4 **文档与验收**：《兵种模型制作管线》内部文档；用一个试验模型从导入到上战场完整走一遍；用户人工验收。
 
 技术背景与 UEBS 烘焙机制对照见 [Mod系统方案](Assets/方案设计/Mod系统方案.md) §1-§2（已搁置留档，

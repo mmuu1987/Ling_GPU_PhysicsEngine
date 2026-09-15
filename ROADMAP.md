@@ -29,13 +29,15 @@
 
 - **M4 关闭**：用户人工验收通过 M4.3 双方案跨重启循环与 uGUI 运行时界面，M3 视觉验收随之一并关闭。
 - **M5 = 兵种与模型绑定（内部制作管线）**：在地形之前先把"模型如何变成可上战场的兵种"做成内部工具链
-  （VAT 烘焙工具 + 兵种绑定向导），补上"六个内置兵种的 VAT 资产由外部工具烘焙、工具不在仓库"的缺口。
+  （VAT 烘焙工具 + 兵种绑定向导）。烘焙工具原在 `ArchivedStages/`（Stage2/3/5/6 四版，不在编译范围内），
+  M5.1 已把它移植回 `Assets/MassEngine/Editor/` 并对齐现役 `VATProfile`（详见阶段 6）。
 - **Mod 系统无限搁置**：排到复杂地形（M6）之后，非 V1 承诺；当晚完成的 UEBS2 调研与 glTF 技术链分析
   全部留档于 [Mod系统方案](Assets/方案设计/Mod系统方案.md)，随时可重启，不推倒重来。
 - **M6 = 复杂地形（回位），M7 = 内容收口**；美术作为独立方向另行启动，先不定档（M5 绑定管线是其前置）。
 - **执行顺序**：M5 兵种模型绑定 -> M6 复杂地形 -> M7 内容收口与交付。已完成里程碑不重验。
 
-M3.1～M3.3、M4.1～M4.3 已在独立工作树实现并经用户人工验收；M5 兵种模型绑定尚未开始。
+M3.1～M3.3、M4.1～M4.3 已在独立工作树实现并经用户人工验收；
+M5.1 VAT 烘焙工具已完成（261/261 EditMode 全绿 + 重烘对拍通过），M5.2～M5.4 待实现。
 2026-09-08 已完成 Windows 运行时布阵对局验证；当前步骤与测试证据见阶段 5 和交接，原 M2 验收不重开。
 
 ## 阶段 1：口径与视觉完成度（已完成）
@@ -140,22 +142,47 @@ A/B 各自 UI 载入/应用/开战并自然结算（45.8s / 40.0s 模拟秒，�
 同日完成对抗性代码复审（修复 3 项防御性问题后全量复验仍全绿），用户人工验收通过，**M4 关闭**（M3 视觉验收一并关闭）。
 JSON 解析器忽略首个完整对象后的附加内容，跨战场载入暂要求先切换到对应战场；二者记录为非阻塞后续项。
 
-## 阶段 6：兵种与模型绑定（M5，V1 必做，待实现）
+## 阶段 6：兵种与模型绑定（M5，V1 必做，M5.1 已完成）
 
 **内部制作管线**：把"模型 -> 可上战场的兵种"做成可复用工具。现状：引擎已是 VAT 动画管线
-（VatRender：位置/法线纹理 + idle/move/attack/death 四段 + 间接实例绘制），但六个内置兵种的 VAT 资产
-由外部工具烘焙且**工具不在仓库**——新增/更换模型没有路径，全靠手工接资产 GUID。输入为 Unity 编辑器导入的
-可信资产（FBX 原生 / glTF 走包导入），不做 mod 级的运行时校验加固（那部分已随 Mod 系统搁置）。
+（VatRender：位置/法线纹理 + idle/move/attack/death 四段 + 间接实例绘制），六个内置兵种的 VAT 资产
+就是这条管线烘出来的。
 
-1. **M5.1 VAT 烘焙工具（Editor）**：输入模型 + 四段 AnimationClip（idle/move/attack/death）；
-   逐帧采样（AnimationMode / SkinnedMeshRenderer.BakeMesh——UEBS CharacterRenderer3.BakeAnimations 同款模式，
-   概念一致但输入可信、只在编辑器跑）-> 写位置/法线纹理 + clip 窗口 + 帧率 -> 生成 VATProfile 资产；
-   支持可选 LOD 网格，缺失时单 LOD。EditMode 测试覆盖纹理尺寸/行数/clip 窗口推导。
+**M5.1 已完成（2026-09-15）**：工具曾处于"在仓库但不可用"状态 —— 四版窗口在项目根
+`ArchivedStages/MassGPUPhysics_Stage{2,3,5,6}/Editor/VATBakerWindow_Stage*.cs`（不在 `Assets/` 编译范围内，
+且写死已随归档移除的 `VATProfile_Stage5`）。现已移植到 `Assets/MassEngine/Editor/` 并对齐现役 `VATProfile`，
+菜单 `MassEngine/VAT Baker` 可用。实现取移植而非复刻：采样与布局抽成 `VatBaker` 核心，窗口只是表单外壳；
+产出改为事务化（`VatBakeResult` 统一持有，失败整体回滚，只新建不覆盖）。输入为 Unity 编辑器导入的可信
+资产（FBX 原生 / glTF 走包导入），不做 mod 级的运行时校验加固（那部分已随 Mod 系统搁置）。
+
+证据：EditMode **261/261 全绿**（基线 241，本次新增 20）；重烘对拍
+`-executeMethod MassEngine.Editor.VatRebakeComparison.Run` 对 `MaleCharacterPBR.prefab` 重烘并与
+`MaleCharacter_Stage5_MultiClip_Profile.asset` 逐字段比对，**布局与四段窗口全部一致**（4112 顶点 /
+4096×376 / 每帧 2 行 / 188 帧 @30fps；idle 0+141、move 141+16、attack 157+16、death 173+15），报告见
+`Logs/M51Baseline/rebake/rebake-comparison.md`。三处刻意约定：Mid LOD 有意留空（运行时对 mid/low 缺失
+有回退，既有 Male profile 同为 full+low）；cleanMesh 存绑定姿态而非 Idle 首帧（Low LOD 聚类以 cleanMesh
+几何范围归一化，基准只能取决于模型本身）；帧数用 float 运算（既有资产按 float 口径烘，double 会把
+0.5333s 的 16 帧算成 17 帧，四段累积后整份窗口错位）。
+
+已知差异（非阻塞，已记入 `Assets/MassEngine/VatRender/README.md`）：重烘 Low LOD 顶点数 1004 vs 既有
+994。根因是附件网格（Hair01/Head01_Male/Shield08/Eye01/Mouth01）在参考烘焙里被冻结在死亡动画末帧姿态、
+在本工具里取绑定姿态，聚类归一化基准因此略不同；蒙皮部分 2041 顶点逐顶点一致，聚类算法本身相同。
+
+M5 剩余工作：
+
 2. **M5.2 兵种绑定向导（Editor 窗口）**：扩展 M2 五页窗口经验——选模型 + 四段动画 + 数值模板 ->
    生成/更新整套兵种子配置（Render/Animation/Spawn/Combat/Movement/Flocking）并自动接 GUID；
    配对校验：mesh 与 VAT 纹理配对（VatProfileReader 的配错采样必防逻辑复用）、clip 窗口合法、速率区间。
 3. **M5.3 内置兵种重烘验证**：用新工具重烘至少一个内置兵种，产物与现有资产等价或差异可接受；
    渲染外观与性能回归（对比 11 万样例帧时间）；可选全量迁移。
+   **源资产已确认在仓库**：模型 `Assets/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab`
+   （网格 `Mesh/ModularCharacterPBR.fbx`）、四段 clip 取自 `Animation/SwordAndShield/`（38 个 FBX），
+   与现有 `Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Profile.asset` 对拍即可闭环；
+   六个内置兵种 = 3 个军团（Attacker / Defender / ThirdArmy）× 每个军团近战 + 远程两个兵种，
+   各自独立 teamId 与名称。**注意人形 profile 并非三个军团共用**：Attacker 用
+   `MaleCharacter_Stage5_MultiClip_Profile.asset`，Defender 与 ThirdArmy 用
+   `FemaleCharacterPBR_Stage5_MultiClip_Profile.asset`（2026-09-15 核实）。
+   M5.1 已交付对拍工具与通过报告，本阶段只需补外观与性能回归。
 4. **M5.4 文档与验收**：《兵种模型制作管线》内部文档（建模/绑骨/四段动画规格、比例朝向、烘焙与绑定步骤）；
    用一个试验模型从导入到上战场完整走一遍（含布阵/开战/结算）；用户人工验收。
 

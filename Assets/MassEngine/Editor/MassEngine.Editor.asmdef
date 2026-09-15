@@ -1,0 +1,14 @@
+{
+    "name": "MassEngine.Editor",
+    "rootNamespace": "MassEngine.Editor",
+    "references": ["MassEngine"],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

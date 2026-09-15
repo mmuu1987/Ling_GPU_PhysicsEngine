@@ -2,7 +2,8 @@
     "name": "MassEngine.Tests",
     "rootNamespace": "MassEngine.Tests",
     "references": [
-        "MassEngine"
+        "MassEngine",
+        "MassEngine.Editor"
     ],
     "includePlatforms": [
         "Editor"

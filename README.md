@@ -24,7 +24,9 @@ GPU PlayMode 测试需要支持 Compute Shader 的图形设备。
 - `Assets/MassEngine/`：引擎实现与模块文档
 - `Assets/Game/`：战争沙盒玩法层
 - `Assets/方案设计/流场三维扩展方案.md`：仍未实施的三维导航方向
-- `ArchivedStages/`：旧阶段完整快照，仅供历史追溯
+- `ArchivedStages/`：旧阶段完整快照，不在 Unity 编译范围内，仅供历史追溯。
+  注意：其中的 VAT 烘焙工具（Stage2/3/5/6 四版 `VATBakerWindow_Stage*.cs`）是 M5.1 移植的源材料，
+  现役版本已移到 `Assets/MassEngine/Editor/`；归档版不要当作废弃代码清理。
 
 ## 文档入口
 

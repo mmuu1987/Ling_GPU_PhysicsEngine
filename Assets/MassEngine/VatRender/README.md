@@ -7,7 +7,7 @@ VAT（顶点动画纹理）播放 + 三级 LOD + DrawMeshInstancedIndirect。
 
 | 文件 | 职责 |
 |---|---|
-| `VATProfile.cs` | VAT 烘焙产物资产：三级 LOD 的 mesh/位置纹理/法线纹理 + 四个片段（idle/move/attack/death）的帧数据。由 VAT 烘焙工具生成 |
+| `VATProfile.cs` | VAT 烘焙产物资产：三级 LOD 的 mesh/位置纹理/法线纹理 + 四个片段（idle/move/attack/death）的帧数据。烘焙工具见下 |
 | `VatProfileReader.cs` | 初始化时一次性（反射，兼容任意烘焙器的 profile 形状）读入纯数据结构 |
 | `ResolvedUnitTypeRuntime.cs` | 解析结果：每 LOD mesh/材质/阴影 + 各片段时长 + **预填 MaterialPropertyBlock**。强制 mesh 与其 VAT 纹理配对（配错采样必花），冲突时警告并以 profile 为准——**绝不写回配置资产** |
 | `MassGpuRenderDispatcher.cs` | 每兵种 × LOD 一次间接绘制；MPB 预填后每帧只 SetBuffer 两次，渲染路径零反射 |
@@ -36,3 +36,34 @@ VAT（顶点动画纹理）播放 + 三级 LOD + DrawMeshInstancedIndirect。
 
 EditMode：可见索引/args 随兵种数扩展的测试。
 运行时：mesh-纹理配对冲突会打警告并指名 RenderConfig 槽位。
+
+## VAT 烘焙工具（M5.1，已移植复活）
+
+烘焙工具在 `Assets/MassEngine/Editor/`，菜单 `MassEngine/VAT Baker`：
+
+| 文件 | 职责 |
+|---|---|
+| `VatBaker.cs` | 核心：四段 clip 逐帧采样（`SampleAnimation` + `BakeMesh`）→ 位置/法线纹理 + clip 窗口 + cleanMesh |
+| `VatLodReducer.cs` | Low LOD 自动减面：顶点聚类得低模，再按簇把逐帧纹理取平均 |
+| `VatBakerWindow.cs` | 编辑器窗口外壳，采样与布局全部走 `VatBaker`，不另写一份 |
+| `VatBakeResult.cs` | 事务化产出：所有新建对象归它持有，失败整体回滚；只新建资产，不覆盖 |
+| `VatBakeUtility.cs` | 布局推导、内存预算、半精度范围校验、纹理创建 |
+| `VatProfileValidation.cs` | profile 契约校验（配对、窗口重叠、纹理容量） |
+| `VatRebakeComparison.cs` | 批处理对拍：重烘内置兵种并与既有资产逐字段比对（M5.3 的门） |
+
+历史版本在项目根 `ArchivedStages/MassGPUPhysics_Stage{2,3,5,6}/Editor/VATBakerWindow_Stage*.cs`
+（Stage6 = 现役 Male/Female profile 的产出者），仅作参考，不在编译范围内。
+
+**纹理布局约定**（烘焙与 shader 必须一致）：`x = vertexID % textureWidth`、
+`y = frame * rowsPerFrame + vertexID / textureWidth`；格式 `RGBAHalf` + `Clamp` + `Point`。
+
+**三处刻意约定**：
+- **Mid LOD 有意留空**：运行时对 mid/low 缺失有回退，现有 Male profile 同为 full + low 两级。
+- **cleanMesh 存绑定姿态**（不是 Idle 首帧）：Low LOD 的顶点聚类以 cleanMesh 几何范围做归一化，
+  基准只能取决于模型本身；若取首帧，改一段 Idle 动画就会连带改掉所有远处 LOD 的网格拓扑。
+- **帧数用 float 运算**：`clip.length` 是 float，转 double 会放大表示误差（0.5333s × 30 在 float 下
+  恰好是 16，double 下是 16.0000008 → 取上整变 17），既有资产是按 float 口径烘的。
+
+已知差异（非阻塞）：重烘内置兵种的 Low LOD 顶点数为 1004，既有资产为 994。根因是附件网格
+（Hair01/Head01_Male/Shield08/Eye01/Mouth01）在参考烘焙里被冻结在死亡动画末帧姿态、在本工具里
+取绑定姿态，聚类归一化基准因此略不同；蒙皮部分 2041 顶点逐顶点一致。
