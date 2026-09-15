@@ -170,7 +170,9 @@ namespace MassEngine.Editor
                 return null;
             }
             string trimmed = folder.TrimEnd('/');
-            if (!trimmed.StartsWith("Assets", StringComparison.Ordinal))
+            // 必须是真正的 Assets 目录，不能是 "AssetsFoo" 这种同前缀目录
+            // （否则会被 SaveNew 的 "Assets/" 校验挡回来，用户只看到一句泛泛的报错）。
+            if (trimmed != "Assets" && !trimmed.StartsWith("Assets/", StringComparison.Ordinal))
             {
                 error = "输出目录必须在 Assets 下。";
                 return null;

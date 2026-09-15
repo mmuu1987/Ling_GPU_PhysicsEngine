@@ -44,6 +44,12 @@ namespace MassEngine.Editor
             if (clean == null || clean.vertexCount == 0)
                 throw new ArgumentException("Low LOD 需要已生成的全分辨率 cleanMesh。", nameof(result));
 
+            // 整除才成立：layout.y / layout.z 不整除时会静默截断，
+            // 而 frameCount 决定 AverageFrames 的循环长度与 Low LOD 的布局，
+            // 截断会烘出一份"少了若干帧"的纹理而不是报错。CalculateLayout 正常不会产出这种布局，
+            // 但 Bake 是 public，这里按契约查死。
+            if (layout.z <= 0 || layout.y % layout.z != 0)
+                throw new ArgumentException("全分辨率布局推不出整数帧数（高度须为每帧行数的整数倍）。", nameof(layout));
             int frameCount = layout.y / layout.z;
             if (frameCount <= 0)
                 throw new ArgumentException("全分辨率布局推不出帧数。", nameof(layout));
@@ -182,6 +188,13 @@ namespace MassEngine.Editor
             return ((long)a << 40) | ((long)b << 20) | (uint)c;
         }
 
+        /// <summary>
+        /// 找出"簇数不超过目标"里最细的那一档分辨率。
+        ///
+        /// 刻意不提前 break：簇数对分辨率并非单调（量化边界移动会让两个簇偶尔并回一个），
+        /// 一旦在首次超目标处停下，就可能错过后面更细、簇数又回落到预算内的分辨率，
+        /// 烘出的远处 LOD 会明显比要求的更粗。256 档 × 数千顶点的哈希开销可以忽略。
+        /// </summary>
         private static int FindClusterResolution(Vector3[] vertices, Bounds bounds, int targetVertexCount)
         {
             int bestResolution = 1;
@@ -194,8 +207,6 @@ namespace MassEngine.Editor
                     bestCount = count;
                     bestResolution = resolution;
                 }
-                if (count > targetVertexCount)
-                    break;
             }
             return bestResolution;
         }

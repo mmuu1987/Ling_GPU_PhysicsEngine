@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MassEngine.Editor;
 using NUnit.Framework;
@@ -354,6 +354,195 @@ namespace MassEngine.Tests
                 Assert.Greater(result.Profile.cleanMesh.vertexCount, 0, "应当能从 prefab 资产采出顶点。");
                 Assert.AreEqual(expectedFrames, result.Profile.totalFrameCount);
             }
+        }
+
+        [Test]
+        public void BakedTextureActuallyContainsPerFrameMotionForRealHumanoidModel()
+        {
+            // 这是 M5.1 最要紧的一条：整条验收链（布局、窗口、profile 校验、重烘对拍）
+            // 读的都是"尺寸类"字段，它们全部来自 CalculateLayout / BuildWindows，
+            // 与采样结果无关。若 SampleAnimation 静默失效（Humanoid clip + 未激活实例是已知坑），
+            // 烘出来的会是一份"每一帧都等于绑定姿态"的纹理 —— 尺寸全对、校验全过、画面完全不动。
+            // 所以必须真的解码纹素，确认帧与帧之间顶点位置确实变了。
+            const string prefabPath = "Assets/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab";
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
+            Assert.IsNotNull(prefab, "测试前提：源模型 prefab 必须存在。");
+
+            var idle = AssetDatabase.LoadAssetAtPath<AnimationClip>(
+                "Assets/RPG Tiny Hero Duo/Animation/SwordAndShield/Idle_Normal_SwordAndShield.fbx");
+            var death = AssetDatabase.LoadAssetAtPath<AnimationClip>(
+                "Assets/RPG Tiny Hero Duo/Animation/SwordAndShield/Die01_SwordAndShield.fbx");
+            Assert.IsNotNull(idle, "测试前提：Idle clip 必须存在。");
+            Assert.IsNotNull(death, "测试前提：Death clip 必须存在。");
+
+            VatBakeRequest request = NewRequest(prefab, idle, idle, idle, death);
+            request.bakeLowLod = false;
+            request.frameRate = 30;
+
+            using (VatBakeResult result = VatBaker.Bake(request))
+            {
+                VATProfile profile = result.Profile;
+                Color[] pixels = ReadPixels(profile.positionTexture, out int width);
+
+                // 取前若干个顶点的整条时间轴，逐帧比较是否真的在动。
+                int movingVertices = 0;
+                int sampled = Mathf.Min(64, profile.cleanMesh.vertexCount);
+                for (int vertex = 0; vertex < sampled; vertex++)
+                {
+                    if (FrameSpan(pixels, width, profile, vertex) > 1e-4f)
+                        movingVertices++;
+                }
+
+                Assert.Greater(movingVertices, 0,
+                    "烘焙出的位置纹理里没有任何顶点在帧间移动 —— 采样没生效，" +
+                    "产出的是一份每帧都等于绑定姿态的纹理。");
+
+                // 更强的断言：真实角色动画里，多数顶点都会动。
+                Assert.Greater(movingVertices, sampled / 2,
+                    "只有 " + movingVertices + "/" + sampled + " 个顶点在动，采样很可能只对少数骨骼生效。");
+
+                // Death 段必须与 Idle 段明显不同（不同 clip 不能烘成同一份数据）。
+                Assert.Greater(Difference(pixels, width, profile, 0, profile.idle.startFrame, profile.death.startFrame), 1e-3f,
+                    "Idle 首帧与 Death 首帧完全相同，说明四段 clip 可能被烘成了同一段动画。");
+            }
+        }
+
+        [Test]
+        public void SkinnedMeshRendererPathBakesMovingVertices()
+        {
+            // 蒙皮分支（BakeMesh）此前零直接覆盖：所有烘焙测试用的都是 MeshFilter 四边形。
+            // 这里手工搭一个两骨骼的 SkinnedMeshRenderer，用一段真的转骨骼的 clip 驱动它，
+            // 断言采样出的顶点位置在帧间确实变化。
+            GameObject root = NewSkinnedModel(out SkinnedMeshRenderer skinned);
+            AnimationClip spin = NewBoneSpinClip();
+
+            VatBakeRequest request = new VatBakeRequest
+            {
+                model = root,
+                idle = spin,
+                move = spin,
+                attack = spin,
+                death = spin,
+                frameRate = 30,
+                bakeLowLod = false
+            };
+
+            using (VatBakeResult result = VatBaker.Bake(request))
+            {
+                VATProfile profile = result.Profile;
+                Assert.Greater(profile.cleanMesh.vertexCount, 0, "蒙皮网格应当采出顶点。");
+
+                Color[] pixels = ReadPixels(profile.positionTexture, out int width);
+
+                // 下半顶点绑在静止的 boneA 上、上半顶点绑在旋转的 boneB 上，
+                // 所以要看"有没有顶点在动"，不能只看 0 号顶点。
+                float widestSpan = 0f;
+                for (int vertex = 0; vertex < profile.cleanMesh.vertexCount; vertex++)
+                    widestSpan = Mathf.Max(widestSpan, FrameSpan(pixels, width, profile, vertex));
+
+                Assert.Greater(widestSpan, 1e-4f,
+                    "蒙皮顶点在帧间没有移动：BakeMesh 分支没有采到骨骼驱动的形变。");
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // 纹素解码：验证烘出来的确实是"动画"而不只是"尺寸正确"
+        // ------------------------------------------------------------------
+
+        /// <summary>把可读纹理读成像素数组（烘焙产物 <c>Apply(false, false)</c>，保持可读）。</summary>
+        private static Color[] ReadPixels(Texture texture, out int width)
+        {
+            var readable = texture as Texture2D;
+            Assert.IsNotNull(readable, "烘焙产物必须是可读 Texture2D 才能校验纹素。");
+            width = readable.width;
+            return readable.GetPixels();
+        }
+
+        /// <summary>按 shader 契约取某个顶点在指定帧的位置：x = id % width，y = frame * rowsPerFrame + id / width。</summary>
+        private static Vector3 VertexAt(Color[] pixels, int width, VATProfile profile, int vertex, int frame)
+        {
+            int x = vertex % width;
+            int y = frame * profile.rowsPerFrame + vertex / width;
+            Color c = pixels[y * width + x];
+            return new Vector3(c.r, c.g, c.b);
+        }
+
+        /// <summary>某个顶点在整段 idle 时间轴上的最大位移 —— 为 0 就说明这一帧序列根本没动。</summary>
+        private static float FrameSpan(Color[] pixels, int width, VATProfile profile, int vertex)
+        {
+            Vector3 first = VertexAt(pixels, width, profile, vertex, profile.idle.startFrame);
+            float span = 0f;
+            for (int frame = 1; frame < profile.idle.frameCount; frame++)
+            {
+                Vector3 current = VertexAt(pixels, width, profile, vertex, profile.idle.startFrame + frame);
+                span = Mathf.Max(span, (current - first).magnitude);
+            }
+            return span;
+        }
+
+        private static float Difference(Color[] pixels, int width, VATProfile profile, int vertex, int frameA, int frameB)
+        {
+            return (VertexAt(pixels, width, profile, vertex, frameA) - VertexAt(pixels, width, profile, vertex, frameB)).magnitude;
+        }
+
+        // ------------------------------------------------------------------
+        // 蒙皮夹具：两骨骼 + 顶点权重
+        // ------------------------------------------------------------------
+
+        /// <summary>两骨骼的蒙皮模型：下半顶点绑 boneA，上半顶点绑 boneB。</summary>
+        private GameObject NewSkinnedModel(out SkinnedMeshRenderer skinned)
+        {
+            var root = new GameObject("SkinnedVatTestModel");
+            spawned.Add(root);
+
+            var boneA = new GameObject("BoneA");
+            boneA.transform.SetParent(root.transform, false);
+            var boneB = new GameObject("BoneB");
+            boneB.transform.SetParent(root.transform, false);
+            boneB.transform.localPosition = new Vector3(0f, 1f, 0f);
+
+            var mesh = new Mesh { name = "SkinnedVatTestMesh" };
+            mesh.vertices = new[]
+            {
+                new Vector3(0f, 0f, 0f), new Vector3(1f, 0f, 0f),
+                new Vector3(0f, 1f, 0f), new Vector3(1f, 1f, 0f)
+            };
+            mesh.normals = new[] { Vector3.forward, Vector3.forward, Vector3.forward, Vector3.forward };
+            mesh.uv = new[] { Vector2.zero, Vector2.right, Vector2.one, Vector2.up };
+            mesh.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            mesh.boneWeights = new[]
+            {
+                new BoneWeight { boneIndex0 = 0, weight0 = 1f },
+                new BoneWeight { boneIndex0 = 0, weight0 = 1f },
+                new BoneWeight { boneIndex0 = 1, weight0 = 1f },
+                new BoneWeight { boneIndex0 = 1, weight0 = 1f }
+            };
+            mesh.bindposes = new[]
+            {
+                boneA.transform.worldToLocalMatrix,
+                boneB.transform.worldToLocalMatrix
+            };
+            mesh.RecalculateBounds();
+            created.Add(mesh);
+
+            var filter = root.AddComponent<MeshFilter>();
+            filter.sharedMesh = mesh;
+            skinned = root.AddComponent<SkinnedMeshRenderer>();
+            skinned.sharedMesh = mesh;
+            skinned.bones = new[] { boneA.transform, boneB.transform };
+            skinned.rootBone = root.transform;
+            return root;
+        }
+
+        /// <summary>一段真的转骨骼的 clip：boneB 绕 Z 轴从 0 转到 90 度。</summary>
+        private AnimationClip NewBoneSpinClip()
+        {
+            var clip = new AnimationClip { name = "BoneSpin", legacy = false };
+            var curve = new AnimationCurve(new Keyframe(0f, 0f), new Keyframe(1f, 90f));
+            clip.SetCurve("BoneB", typeof(Transform), "localEulerAngles.z", curve);
+            Assert.Greater(clip.length, 0f, "测试前提：转骨骼的 clip 必须有时长。");
+            created.Add(clip);
+            return clip;
         }
 
         // ------------------------------------------------------------------
