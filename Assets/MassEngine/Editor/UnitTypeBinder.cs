@@ -216,6 +216,8 @@ namespace MassEngine.Editor
             }
 
             var created = new List<UnityEngine.Object>();
+            // 在任何改动之前先记住原清单：失败时无条件还原，避免留下指向已删资产的空引用。
+            UnitTypeConfig[] previousRoster = request.scenario.unitTypes;
             try
             {
                 UnitTypeConfig unit = UnityEngine.Object.Instantiate(request.template);
@@ -279,26 +281,20 @@ namespace MassEngine.Editor
                     AssetDatabase.CreateAsset(render, UniquePath(directory, baseName + "_Render.asset"));
 
                 // 登记进战役清单：不登记的话运行时根本看不到这个兵种（不扫文件夹）。
-                // 这是最后一步，且登记前先把之前的清单存下来，失败时连清单一起还原，
-                // 免得留下指向已删资产的空引用。
-                UnitTypeConfig[] previousRoster = request.scenario.unitTypes;
                 AppendToScenario(request.scenario, unit);
-
-                try
-                {
-                    AssetDatabase.SaveAssets();
-                }
-                catch
-                {
-                    request.scenario.unitTypes = previousRoster;
-                    EditorUtility.SetDirty(request.scenario);
-                    throw;
-                }
+                AssetDatabase.SaveAssets();
                 return unit;
             }
             catch (Exception exception)
             {
                 error = exception.Message;
+                // 清单可能已经改过（登记成功但保存失败），先还原再删资产，
+                // 顺序反了会短暂留下指向已删资产的引用。
+                if (request.scenario.unitTypes != previousRoster)
+                {
+                    request.scenario.unitTypes = previousRoster;
+                    EditorUtility.SetDirty(request.scenario);
+                }
                 Rollback(created);
                 return null;
             }

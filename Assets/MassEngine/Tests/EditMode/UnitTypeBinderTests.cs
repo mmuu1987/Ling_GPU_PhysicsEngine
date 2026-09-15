@@ -249,6 +249,36 @@ namespace MassEngine.Tests
             Assert.Greater(checkedProfiles, 0, "测试前提：至少要检查到一个绑定了 profile 的现役兵种。");
         }
 
+        [Test]
+        public void ShippedRosterSharesOneRenderConfigPerArmyWhichIsWhyBindingAffectsBothUnitTypes()
+        {
+            // 这条记录的是现役结构事实：同一军团的近战+远程共用一份 RenderConfig（共用一个模型）。
+            // 所以"给某个兵种绑 profile"实际会改到共享资产、同时影响另一个兵种 ——
+            // 向导据此显示影响面警告。若哪天结构变了，这条会红，提示去改向导的提示文案。
+            const string scenarioPath = "Assets/Game/Settings/ScenarioConfig.asset";
+            var scenario = AssetDatabase.LoadAssetAtPath<ScenarioConfig>(scenarioPath);
+            Assert.IsNotNull(scenario, "测试前提：现役 ScenarioConfig 必须存在。");
+
+            var byRender = new Dictionary<RenderConfig, int>();
+            foreach (UnitTypeConfig unit in scenario.unitTypes)
+            {
+                if (unit == null || unit.renderConfig == null)
+                    continue;
+                byRender.TryGetValue(unit.renderConfig, out int count);
+                byRender[unit.renderConfig] = count + 1;
+            }
+
+            Assert.Greater(byRender.Count, 0, "测试前提：现役兵种应当都配了 RenderConfig。");
+            bool anyShared = false;
+            foreach (KeyValuePair<RenderConfig, int> pair in byRender)
+                if (pair.Value > 1)
+                    anyShared = true;
+
+            Assert.IsTrue(anyShared,
+                "现役结构里应当存在被多个兵种共用的 RenderConfig；若已改成每个兵种独占，" +
+                "请同步移除向导里的共用警告。");
+        }
+
         // ------------------------------------------------------------------
         // 反查：向导的落位规则 == 运行时的落位规则
         // ------------------------------------------------------------------
@@ -364,6 +394,35 @@ namespace MassEngine.Tests
             StringAssert.Contains("独占", error);
             Assert.AreEqual(rosterBefore, scenario.unitTypes.Length, "失败时不应改动战役清单。");
             Assert.AreSame(before, scenario.unitTypes.Length > 0 ? scenario.unitTypes[0] : null);
+        }
+
+        [Test]
+        public void CreateUnitTypeLeavesRosterUntouchedWhenTheTemplateHasNoRenderConfig()
+        {
+            // 模板没有 RenderConfig 却要绑 profile：必须拒绝，且清单与磁盘都不留痕迹。
+            var bare = ScriptableObject.CreateInstance<UnitTypeConfig>();
+            bare.unitTypeName = "NoRender";
+            bare.teamId = 0;
+            created.Add(bare);
+
+            int rosterBefore = scenario.unitTypes.Length;
+            string folder = NewTempFolder();
+            int assetsBefore = CountAssets(folder);
+
+            UnitTypeConfig result = UnitTypeBinder.CreateUnitType(new UnitTypeCreationRequest
+            {
+                scenario = scenario,
+                template = bare,
+                unitTypeName = "NoRenderChild",
+                teamId = 0,
+                directory = folder,
+                profile = Profile("C", null, null).Asset
+            }, out string error);
+
+            Assert.IsNull(result, "模板没有 RenderConfig 时绑 profile 必须失败。");
+            Assert.IsNotNull(error);
+            Assert.AreEqual(rosterBefore, scenario.unitTypes.Length, "失败时不应改动战役清单。");
+            Assert.AreEqual(assetsBefore, CountAssets(folder), "失败后不应留下任何新资产。");
         }
 
         [Test]

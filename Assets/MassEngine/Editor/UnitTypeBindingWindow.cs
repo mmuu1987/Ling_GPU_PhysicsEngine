@@ -125,6 +125,26 @@ namespace MassEngine.Editor
             }
 
             EditorGUILayout.LabelField("当前绑定", UnitTypeBinder.Describe(current.renderConfig));
+
+            // 现役结构里同一军团的近战+远程共用一份 RenderConfig（即共用一个模型）。
+            // 绑 profile 就是改这份共享资产，会同时影响另一个兵种 —— 必须说清楚影响面，
+            // 否则用户以为只改了选中的那个。
+            int shared = CountSharingRenderConfig(units, current.renderConfig);
+            if (shared > 1)
+                EditorGUILayout.HelpBox(
+                    "注意：这份 RenderConfig 被 " + shared + " 个兵种共用，绑定会同时改变它们全部。",
+                    MessageType.Warning);
+        }
+
+        private static int CountSharingRenderConfig(UnitTypeConfig[] units, RenderConfig render)
+        {
+            if (render == null)
+                return 0;
+            int count = 0;
+            foreach (UnitTypeConfig unit in units)
+                if (unit != null && unit.renderConfig == render)
+                    count++;
+            return count;
         }
 
         // ------------------------------------------------------------------
