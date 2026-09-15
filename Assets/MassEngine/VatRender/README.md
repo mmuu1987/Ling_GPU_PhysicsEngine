@@ -50,6 +50,8 @@ EditMode：可见索引/args 随兵种数扩展的测试。
 | `VatBakeUtility.cs` | 布局推导、内存预算、半精度范围校验、纹理创建 |
 | `VatProfileValidation.cs` | profile 契约校验（配对、窗口重叠、纹理容量） |
 | `VatRebakeComparison.cs` | 批处理对拍：重烘内置兵种并与既有资产逐字段比对（M5.3 的门） |
+| `UnitTypeBinder.cs` | M5.2 兵种绑定核心：LOD 落位、绑定校验、从模板新建整套兵种 |
+| `UnitTypeBindingWindow.cs` | M5.2 绑定向导窗口，逻辑全走 `UnitTypeBinder` |
 
 历史版本在项目根 `ArchivedStages/MassGPUPhysics_Stage{2,3,5,6}/Editor/VATBakerWindow_Stage*.cs`
 （Stage6 = 现役 Male/Female profile 的产出者），仅作参考，不在编译范围内。
@@ -67,3 +69,28 @@ EditMode：可见索引/args 随兵种数扩展的测试。
 已知差异（非阻塞）：重烘内置兵种的 Low LOD 顶点数为 1004，既有资产为 994。根因是附件网格
 （Hair01/Head01_Male/Shield08/Eye01/Mouth01）在参考烘焙里被冻结在死亡动画末帧姿态、在本工具里
 取绑定姿态，聚类归一化基准因此略不同；蒙皮部分 2041 顶点逐顶点一致。
+
+**验收盲区（2026-09-16 审计后已补）**：布局、窗口、profile 校验、重烘对拍读的都是尺寸类字段，
+它们来自 `CalculateLayout` / `BuildWindows`，与采样结果无关；`cleanMesh` 更是在任何 `SampleAnimation`
+之前就捕获好的。所以"逐帧采样整体失效、每帧都等于绑定姿态"能产出尺寸全对、校验全过的纹理。
+现在 `VatBakerTests` 有两条解码纹素的测试（真实 Humanoid prefab + 手工两骨骼 `SkinnedMeshRenderer`），
+`VatRebakeComparison` 也加了纹素抽检：在 idle 窗口内取样若干顶点，帧间无位移即判失败。
+
+## 兵种绑定向导（M5.2）
+
+`Assets/MassEngine/Editor/UnitTypeBinder.cs`（核心）+ `UnitTypeBindingWindow.cs`（窗口），
+菜单 `MassEngine/兵种绑定向导`。把 VAT profile 接到兵种的 `RenderConfig`，或从数值模板新建整套兵种。
+
+**LOD 落位规则只表达一次**（`UnitTypeBinder.ResolveLodMeshes`），与 `ResolvedUnitTypeRuntime.Resolve`
+的配对逐字一致：near ↔ `cleanMesh`；mid ↔ `hasMidLod ? midLodMesh : (hasLowLod ? lowLodMesh : cleanMesh)`；
+far ↔ `hasLowLod ? lowLodMesh : (hasMidLod ? midLodMesh : cleanMesh)`。
+测试 `BinderSlotsMatchWhatTheRuntimeActuallyResolves` 遍历 mid/low 四种组合做反查，
+两边任何一处漂移都会红 —— 防的是"向导接一套、运行时用另一套"。
+
+**子配置独占/共享**沿用现役约定：`spawnConfig` / `combatConfig` 每兵种独占，
+`movementConfig` / `flockingConfig` / `animationConfig` 按模板共享。绑新模型必须勾选"独占 RenderConfig"：
+共享的渲染配置属于模板兵种，往里写 profile 会连带把模板兵种也换掉模型，故该组合被显式拒绝。
+
+**为什么放在 `MassEngine.Editor` 而不是 `Game.Editor`**：`UnitTypeConfig` / `ScenarioConfig` /
+`ConfigValidator` / `RenderConfig` 都在 `MassEngine` 程序集里，这样零 asmdef 改动就能全用到
+（`Game.Editor` 看不见 `MassEngine.Editor`，反向则畅通）。

@@ -30,14 +30,15 @@
 - **M4 关闭**：用户人工验收通过 M4.3 双方案跨重启循环与 uGUI 运行时界面，M3 视觉验收随之一并关闭。
 - **M5 = 兵种与模型绑定（内部制作管线）**：在地形之前先把"模型如何变成可上战场的兵种"做成内部工具链
   （VAT 烘焙工具 + 兵种绑定向导）。烘焙工具原在 `ArchivedStages/`（Stage2/3/5/6 四版，不在编译范围内），
-  M5.1 已把它移植回 `Assets/MassEngine/Editor/` 并对齐现役 `VATProfile`（详见阶段 6）。
+  M5.1 已把它移植回 `Assets/MassEngine/Editor/` 并对齐现役 `VATProfile`，M5.2 已在同一目录补上绑定向导
+  （详见阶段 6）。
 - **Mod 系统无限搁置**：排到复杂地形（M6）之后，非 V1 承诺；当晚完成的 UEBS2 调研与 glTF 技术链分析
   全部留档于 [Mod系统方案](Assets/方案设计/Mod系统方案.md)，随时可重启，不推倒重来。
 - **M6 = 复杂地形（回位），M7 = 内容收口**；美术作为独立方向另行启动，先不定档（M5 绑定管线是其前置）。
 - **执行顺序**：M5 兵种模型绑定 -> M6 复杂地形 -> M7 内容收口与交付。已完成里程碑不重验。
 
 M3.1～M3.3、M4.1～M4.3 已在独立工作树实现并经用户人工验收；
-M5.1 VAT 烘焙工具已完成（261/261 EditMode 全绿 + 重烘对拍通过），M5.2～M5.4 待实现。
+M5.1 VAT 烘焙工具与 M5.2 兵种绑定向导已完成（282/282 EditMode 全绿 + 重烘对拍通过），M5.3～M5.4 待实现。
 2026-09-08 已完成 Windows 运行时布阵对局验证；当前步骤与测试证据见阶段 5 和交接，原 M2 验收不重开。
 
 ## 阶段 1：口径与视觉完成度（已完成）
@@ -142,7 +143,7 @@ A/B 各自 UI 载入/应用/开战并自然结算（45.8s / 40.0s 模拟秒，�
 同日完成对抗性代码复审（修复 3 项防御性问题后全量复验仍全绿），用户人工验收通过，**M4 关闭**（M3 视觉验收一并关闭）。
 JSON 解析器忽略首个完整对象后的附加内容，跨战场载入暂要求先切换到对应战场；二者记录为非阻塞后续项。
 
-## 阶段 6：兵种与模型绑定（M5，V1 必做，M5.1 已完成）
+## 阶段 6：兵种与模型绑定（M5，V1 必做，M5.1/M5.2 已完成）
 
 **内部制作管线**：把"模型 -> 可上战场的兵种"做成可复用工具。现状：引擎已是 VAT 动画管线
 （VatRender：位置/法线纹理 + idle/move/attack/death 四段 + 间接实例绘制），六个内置兵种的 VAT 资产
@@ -168,11 +169,46 @@ JSON 解析器忽略首个完整对象后的附加内容，跨战场载入暂要
 994。根因是附件网格（Hair01/Head01_Male/Shield08/Eye01/Mouth01）在参考烘焙里被冻结在死亡动画末帧姿态、
 在本工具里取绑定姿态，聚类归一化基准因此略不同；蒙皮部分 2041 顶点逐顶点一致，聚类算法本身相同。
 
+**M5.1 独立审计修正（2026-09-16）**：对抗审计指出整条验收链只读尺寸类字段（顶点数、布局整数、窗口整数），
+它们全部来自 `CalculateLayout` / `BuildWindows`，与采样结果无关；`cleanMesh` 更是在任何 `SampleAnimation`
+之前就捕获好的。于是"逐帧采样整体失效、每帧都等于绑定姿态"会产出尺寸全对、校验全过、与既有资产逐字段
+一致的纹理，**没有任何一道门能发现**。已补纹素级验证：`VatBakerTests` 新增两条解码纹素的测试（真实
+Humanoid prefab；手工两骨骼 `SkinnedMeshRenderer` —— 此前蒙皮分支零直接覆盖），`VatRebakeComparison`
+新增纹素抽检作为 M5.3 门的常驻检查项。审计同时怀疑"未激活实例上 `SampleAnimation` 对 Humanoid clip
+是 no-op"，**实测证伪**：重烘纹理抽检 64/64 顶点在 idle 窗口内有位移（最大 0.069）。同轮修正
+`FindClusterResolution` 的提前 break（簇数对分辨率非单调，会烘出比预算更粗的 LOD）、`VatLodReducer`
+帧数守卫改为查整除（原先静默截断会烘出少帧纹理）、以及写死"994/1004"的对拍结论正文。
+
+**M5.2 已完成（2026-09-16）**：兵种绑定向导，菜单 `MassEngine/兵种绑定向导`。
+
+- `Assets/MassEngine/Editor/UnitTypeBinder.cs`：核心。LOD 落位规则只在这里表达一次
+  （near ↔ `cleanMesh`；mid ↔ `hasMidLod ? midLod : (hasLowLod ? lowLod : clean)`；
+  far ↔ `hasLowLod ? lowLod : (hasMidLod ? midLod : clean)`），与 `ResolvedUnitTypeRuntime.Resolve`
+  的第 117-120 行逐字对应。另含 `CreateUnitType`：从模板复制整套子配置、落盘、登记进 `ScenarioConfig.unitTypes`，
+  失败整体回滚。
+- `Assets/MassEngine/Editor/UnitTypeBindingWindow.cs`：IMGUI 表单外壳，逻辑全走核心。
+- `Assets/MassEngine/Tests/EditMode/UnitTypeBinderTests.cs`：19 项。
+
+放在 `MassEngine.Editor` 而非 `Game.Editor`：`UnitTypeConfig` / `ScenarioConfig` / `ConfigValidator` /
+`RenderConfig` 都在 `MassEngine` 程序集里，这样零 asmdef 改动即可全用到（`Game.Editor` 看不见
+`MassEngine.Editor`，反过来则畅通）。
+
+子配置的独占/共享策略沿用现役约定：`spawnConfig` / `combatConfig` 每个兵种独占
+（人数与伤害是"这个兵种自己的"），`movementConfig` / `flockingConfig` / `animationConfig` 按模板共享 ——
+与仓库里 6 个内置兵种的实际结构一致。勾选"独占 RenderConfig"是绑新模型的前提：共享的渲染配置属于模板兵种，
+往里写 profile 会连带把模板兵种也换掉模型，因此该组合被显式拒绝。
+
+证据：EditMode **282/282 全绿**（M5.1 基线 261 + M5.2 新增 21）。其中两条是反查而非自证：
+`BinderSlotsMatchWhatTheRuntimeActuallyResolves` 遍历 mid/low 四种组合，断言向导算出的 near/mid/far
+与运行时实际采用的网格逐一相同（两边任何一处漂移都会红）；
+`ValidateBindingReportsNoErrorsForEveryShippedUnitType` 断言现役 6 个内置兵种全部通过校验，防的是
+"校验器误报到用户学会忽略它"。
+
 M5 剩余工作：
 
-2. **M5.2 兵种绑定向导（Editor 窗口）**：扩展 M2 五页窗口经验——选模型 + 四段动画 + 数值模板 ->
-   生成/更新整套兵种子配置（Render/Animation/Spawn/Combat/Movement/Flocking）并自动接 GUID；
-   配对校验：mesh 与 VAT 纹理配对（VatProfileReader 的配错采样必防逻辑复用）、clip 窗口合法、速率区间。
+2. ~~**M5.2 兵种绑定向导（Editor 窗口）**~~ **已完成（2026-09-16）**，见上。
+   原始目标（选模型 + 四段动画 + 数值模板 -> 生成/更新整套兵种子配置并自动接 GUID；配对校验复用
+   `VatProfileReader` 的配错采样必防逻辑、clip 窗口合法、速率区间）已全部落地。
 3. **M5.3 内置兵种重烘验证**：用新工具重烘至少一个内置兵种，产物与现有资产等价或差异可接受；
    渲染外观与性能回归（对比 11 万样例帧时间）；可选全量迁移。
    **源资产已确认在仓库**：模型 `Assets/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab`
