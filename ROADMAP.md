@@ -38,7 +38,7 @@
 - **执行顺序**：M5 兵种模型绑定 -> M6 复杂地形 -> M7 内容收口与交付。已完成里程碑不重验。
 
 M3.1～M3.3、M4.1～M4.3 已在独立工作树实现并经用户人工验收；
-M5.1 VAT 烘焙工具与 M5.2 兵种绑定向导已完成（282/282 EditMode 全绿 + 重烘对拍通过），M5.3～M5.4 待实现。
+M5.1 VAT 烘焙工具与 M5.2 兵种绑定向导已完成（284/284 EditMode 全绿 + 重烘对拍通过），M5.3～M5.4 待实现。
 2026-09-08 已完成 Windows 运行时布阵对局验证；当前步骤与测试证据见阶段 5 和交接，原 M2 验收不重开。
 
 ## 阶段 1：口径与视觉完成度（已完成）
@@ -187,7 +187,7 @@ Humanoid prefab；手工两骨骼 `SkinnedMeshRenderer` —— 此前蒙皮分�
   的第 117-120 行逐字对应。另含 `CreateUnitType`：从模板复制整套子配置、落盘、登记进 `ScenarioConfig.unitTypes`，
   失败整体回滚。
 - `Assets/MassEngine/Editor/UnitTypeBindingWindow.cs`：IMGUI 表单外壳，逻辑全走核心。
-- `Assets/MassEngine/Tests/EditMode/UnitTypeBinderTests.cs`：19 项。
+- `Assets/MassEngine/Tests/EditMode/UnitTypeBinderTests.cs`：21 项。
 
 放在 `MassEngine.Editor` 而非 `Game.Editor`：`UnitTypeConfig` / `ScenarioConfig` / `ConfigValidator` /
 `RenderConfig` 都在 `MassEngine` 程序集里，这样零 asmdef 改动即可全用到（`Game.Editor` 看不见
@@ -198,7 +198,7 @@ Humanoid prefab；手工两骨骼 `SkinnedMeshRenderer` —— 此前蒙皮分�
 与仓库里 6 个内置兵种的实际结构一致。勾选"独占 RenderConfig"是绑新模型的前提：共享的渲染配置属于模板兵种，
 往里写 profile 会连带把模板兵种也换掉模型，因此该组合被显式拒绝。
 
-证据：EditMode **282/282 全绿**（M5.1 基线 261 + M5.2 新增 21）。其中两条是反查而非自证：
+证据：EditMode **284/284 全绿**（M5.1 基线 261 + M5.1 审计补 2 + M5.2 新增 21）。其中两条是反查而非自证：
 `BinderSlotsMatchWhatTheRuntimeActuallyResolves` 遍历 mid/low 四种组合，断言向导算出的 near/mid/far
 与运行时实际采用的网格逐一相同（两边任何一处漂移都会红）；
 `ValidateBindingReportsNoErrorsForEveryShippedUnitType` 断言现役 6 个内置兵种全部通过校验，防的是
