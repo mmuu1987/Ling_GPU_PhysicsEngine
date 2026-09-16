@@ -38,7 +38,7 @@
 - **执行顺序**：M5 兵种模型绑定 -> M6 复杂地形 -> M7 内容收口与交付。已完成里程碑不重验。
 
 M3.1～M3.3、M4.1～M4.3 已在独立工作树实现并经用户人工验收；
-M5.1 VAT 烘焙工具与 M5.2 兵种绑定向导已完成（287/287 EditMode 全绿 + 重烘对拍通过），M5.3～M5.4 待实现。
+M5.1 VAT 烘焙工具与 M5.2 兵种绑定向导已完成（292/292 EditMode 全绿 + 重烘对拍通过），M5.3～M5.4 待实现。
 2026-09-08 已完成 Windows 运行时布阵对局验证；当前步骤与测试证据见阶段 5 和交接，原 M2 验收不重开。
 
 ## 阶段 1：口径与视觉完成度（已完成）
@@ -198,7 +198,7 @@ Humanoid prefab；手工两骨骼 `SkinnedMeshRenderer` —— 此前蒙皮分�
 与仓库里 6 个内置兵种的实际结构一致。勾选"独占 RenderConfig"是绑新模型的前提：共享的渲染配置属于模板兵种，
 往里写 profile 会连带把模板兵种也换掉模型，因此该组合被显式拒绝。
 
-证据：EditMode **287/287 全绿**（M5.1 基线 261 + M5.1 审计补 2 + M5.2 新增 24）。其中两条是反查而非自证：
+证据：EditMode **287/287 全绿**（M5.1 基线 261 + M5.1 审计补 2 + M5.2 新增 24；两轮复审后 **292/292**）。其中两条是反查而非自证：
 `BinderSlotsMatchWhatTheRuntimeActuallyResolves` 遍历 mid/low 四种组合，断言向导算出的 near/mid/far
 与运行时实际采用的网格逐一相同（两边任何一处漂移都会红）；
 `ValidateBindingReportsNoErrorsForEveryShippedUnitType` 断言现役 6 个内置兵种全部通过校验，防的是"校验器误报到用户学会忽略它"。
@@ -215,6 +215,27 @@ Humanoid prefab；手工两骨骼 `SkinnedMeshRenderer` —— 此前蒙皮分�
 根本没走到它声称覆盖的分支），且它的预期与代码行为相反（模板无 RenderConfig 时会回退造一份独占的并成功）。
 已拆成两条如实的测试。另修两个 nit：向导"只建兵种不绑模型"这一支持路径不再报吓人的错误；
 选中已被占用的军团编号时给出警告而非静默重复。Ctrl+Z 删不掉新建资产一条按继承行为记录不改。
+
+**M5.2 复审（2026-09-16，第二轮）**：按"重点看代码细节、结合 Unity 实际环境"的要求再走一遍。
+这一轮**不靠读代码推理**，每个结论都写探针在真工程里跑出来，三个缺陷全部先复现后修：
+
+- **材质为空从不被校验（高）**：`ValidateBinding` 只查三个网格槽位。而 `MassGpuRenderDispatcher.DrawLod`
+  遇空材质直接 `return`（只警告一次），画面上是"某个距离上的单位凭空消失"。实测三个材质全空的兵种被判为
+  `valid=True errors=[] warnings=[]`，同时 `runtime.GetMaterial(0/1/2)` 全为 `null` ——
+  **一份完全画不出来的配置被报成完全干净**。全工程没有任何代码给这三个字段赋值，只存在于手写 YAML 里，
+  所以新建的 RenderConfig 必然是空的，这条校验是唯一防线。已按错误处理。
+- **profile 未落盘会写成空引用（高）**：与上面缺陷 #1 完全同类。实测磁盘上是 `vatProfile: {fileID: 0}`，
+  且三个网格槽位**一并变空**；而 `LoadAssetAtPath` 读回来一切正常，域重载后才变成"兵种没有动画"。
+  `CreateUnitType` 与 `Bind` 两条路径都会写坏既有资产，两处都加了守卫。
+  **测试夹具原先用的就是未落盘 profile**（非法输入），正是它掩盖了这个缺陷，现已改为落盘。
+- **向导文案与磁盘状态相反（中）**：不传 profile 时固定显示"尚未绑定"，但独占 RenderConfig 是模板的
+  `Instantiate` 副本，模板已绑模型时 **profile、网格、材质会一起继承过来**（实测
+  `inherited vatProfile = Profile` / `disk vatProfile = {fileID: 11400000, guid: ...}`）。
+  另：绑定路径的反馈不带错误标记，校验没过也报成一句平静的"已新建兵种"。
+
+同样靠执行**排除**了两个假警报：现役 FBX 全部 `isReadable: 0` 但 `mesh.vertices` 在 Editor 侧照常可读
+（探针实测 `vertices.Length == vertexCount`），不是缺陷；重烘产物落盘完整性直接查磁盘确认正常，
+**M5.1 没有重蹈缺陷 #1 的覆辙**。详见 `NEXT_TASK.md`。
 
 M5 剩余工作：
 
