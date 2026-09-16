@@ -71,6 +71,11 @@ namespace MassEngine.Editor
                 throw new ArgumentException("请指定兵种配置。", nameof(config));
             if (config.renderConfig == null)
                 throw new ArgumentException("该兵种没有 RenderConfig，无法绑定 VAT profile。", nameof(config));
+            if (profileAsset != null && !AssetDatabase.Contains(profileAsset))
+                throw new ArgumentException(
+                    "VAT profile 必须是已保存的资产：未落盘的 profile 写进 RenderConfig 后，" +
+                    "磁盘上会变成空引用（三个网格槽位也会一起变空），重开工程后兵种就没有动画了。",
+                    nameof(profileAsset));
             if (!TryReadProfile(profileAsset, out VatProfileData data, out string error))
                 throw new ArgumentException("VAT profile 不可读：" + error, nameof(profileAsset));
 
@@ -127,8 +132,29 @@ namespace MassEngine.Editor
             CheckSlot(result, "midMesh", render.midMesh, mid);
             CheckSlot(result, "farMesh", render.farMesh, far);
 
+            CheckMaterial(result, "nearMaterial", render.nearMaterial);
+            CheckMaterial(result, "midMaterial", render.midMaterial);
+            CheckMaterial(result, "farMaterial", render.farMaterial);
+
             CheckAnimationRates(result, config.animationConfig);
             return result;
+        }
+
+        /// <summary>
+        /// 三个 LOD 档位的材质都必须有。运行时按档位取材质，任一档为空就整档不画
+        /// （<c>MassGpuRenderDispatcher.DrawLod</c> 只警告一次然后 return），
+        /// 画面上是"单位在某个距离上凭空消失"，而不是报错 —— 与网格错配同类，按错误处理。
+        ///
+        /// 注意这与"没有 RenderConfig"不同：后者是"只模拟不渲染"的有意配置，仍按提示处理；
+        /// 已经建了 RenderConfig 却漏填材质属于半成品，必须让向导拦住。
+        /// </summary>
+        private static void CheckMaterial(ValidationResult result, string slotName, Material material)
+        {
+            if (material != null)
+                return;
+
+            result.AddError("RenderConfig." + slotName + " 为空：该 LOD 档位整档不会绘制，" +
+                "对应距离上的单位会凭空消失。请给三个材质槽位都指定材质。");
         }
 
         /// <summary>
@@ -350,6 +376,15 @@ namespace MassEngine.Editor
             if (!AssetDatabase.Contains(request.template))
             {
                 error = "模板必须是已保存的资产（需要从它复制子配置）。";
+                return false;
+            }
+            // profile 同样必须已落盘：CreateAsset 按调用当时的引用状态序列化，
+            // 未落盘的 profile 会在磁盘上被写成 vatProfile: {fileID: 0}，
+            // 连它带的三个网格槽位也一起变空 —— 内存与 Inspector 都正常，
+            // 域重载后才暴露成"兵种没有动画"，与主资产先于子配置落盘是同一类失效。
+            if (request.profile != null && !AssetDatabase.Contains(request.profile))
+            {
+                error = "VAT profile 必须是已保存的资产（未落盘的 profile 无法被引用，磁盘上会写成空引用）。";
                 return false;
             }
             return true;

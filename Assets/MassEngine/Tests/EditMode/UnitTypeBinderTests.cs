@@ -1,8 +1,10 @@
+using System;
 using System.Collections.Generic;
 using MassEngine.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace MassEngine.Tests
 {
@@ -121,6 +123,24 @@ namespace MassEngine.Tests
             Assert.AreEqual("LowB", render.farMesh.name, "far 必须被改写，不能留着上一份的 LowA。");
         }
 
+        [Test]
+        public void BindRejectsUnpersistedProfileBeforeItCanBlankOutTheRenderConfig()
+        {
+            // Bind 是向导「绑定选中兵种」走的路径。它直接改既有资产，
+            // 未落盘的 profile 写进去之后，磁盘上是空引用 —— 而且会连带把
+            // 三个网格槽位一起清空，把一份本来完好的兵种改坏。
+            UnitTypeConfig config = BoundUnitType(out RenderConfig render, out _);
+            Mesh meshBefore = render.nearMesh;
+
+            var loose = ScriptableObject.CreateInstance<VATProfile>();
+            created.Add(loose);
+            Assert.IsFalse(AssetDatabase.Contains(loose), "测试前提：这个 profile 未落盘。");
+
+            Assert.Throws<ArgumentException>(() => UnitTypeBinder.Bind(config, loose),
+                "未落盘的 profile 必须在写坏 RenderConfig 之前就被拒绝。");
+            Assert.AreSame(meshBefore, render.nearMesh, "被拒绝时不应改动任何槽位。");
+        }
+
         // ------------------------------------------------------------------
         // 校验：错配必须报错，正确绑定必须通过
         // ------------------------------------------------------------------
@@ -172,6 +192,47 @@ namespace MassEngine.Tests
 
             Assert.IsFalse(result.IsValid);
             StringAssert.Contains("profile", string.Join(" / ", result.Errors));
+        }
+
+        [Test]
+        public void ValidateBindingRejectsEmptyMaterialSoTheWholeLodTierCannotSilentlyVanish()
+        {
+            // 运行时 MassGpuRenderDispatcher.DrawLod 按 LOD 档位取材质，任一档为空就整档 return，
+            // 只警告一次 —— 画面上是"某个距离上的单位凭空消失"，不是报错。
+            // 早先校验只查网格槽位，材质全空的兵种会被判为完全合法。
+            UnitTypeConfig config = BoundUnitType(out RenderConfig render, out _);
+            render.midMaterial = null;
+
+            ValidationResult result = UnitTypeBinder.ValidateBinding(config);
+
+            Assert.IsFalse(result.IsValid, "材质为空必须报错。");
+            StringAssert.Contains("midMaterial", string.Join(" / ", result.Errors));
+        }
+
+        [Test]
+        public void EmptyMaterialsReachTheRuntimeAsTiersThatDrawNothing()
+        {
+            // 反查：校验放行 == 运行时真的画不出来。把"校验漏判"与"画面后果"钉在一起，
+            // 免得以后有人删掉材质检查而测试仍然全绿。
+            UnitTypeConfig config = BoundUnitType(out RenderConfig render, out _);
+            render.nearMaterial = null;
+            render.midMaterial = null;
+            render.farMaterial = null;
+
+            ResolvedUnitTypeRuntime runtime = ResolvedUnitTypeRuntime.Resolve(config, 1.5f);
+            Assert.IsNull(runtime.GetMaterial(0), "运行时近景材质应为空。");
+            Assert.IsNull(runtime.GetMaterial(1), "运行时中景材质应为空。");
+            Assert.IsNull(runtime.GetMaterial(2), "运行时远景材质应为空。");
+
+            // 网格仍由 profile 兜底，所以"消失"不会伴随任何网格相关的报错 —— 这正是它难查的原因。
+            Assert.IsNotNull(runtime.GetMesh(0), "网格仍由 profile 兜底，问题只表现为不绘制。");
+
+            ValidationResult result = UnitTypeBinder.ValidateBinding(config);
+            Assert.IsFalse(result.IsValid, "运行时画不出来的配置必须被校验拦下。");
+            string errors = string.Join(" / ", result.Errors);
+            StringAssert.Contains("nearMaterial", errors);
+            StringAssert.Contains("midMaterial", errors);
+            StringAssert.Contains("farMaterial", errors);
         }
 
         [Test]
@@ -350,8 +411,15 @@ namespace MassEngine.Tests
         public void CreateUnitTypeRollsBackEveryAssetWhenProfileCannotBeRead()
         {
             // 失败必须整体回滚：磁盘上留半成品比直接报错更难查。
+            //
+            // profile 必须是已落盘资产才会走到"读不出来"这一步 ——
+            // 未落盘的对象会被 TryValidateRequest 的 Contains 守卫提前拒掉，
+            // 那样这条测试就测不到回滚了（夹具必须走在真实路径上）。
+            string profileFolder = NewTempFolder();
             var unreadable = ScriptableObject.CreateInstance<ScriptableObject>();
             created.Add(unreadable);
+            AssetDatabase.CreateAsset(unreadable, profileFolder + "/Unreadable.asset");
+            Assert.IsTrue(AssetDatabase.Contains(unreadable), "测试前提：不可读的 profile 也必须已落盘。");
 
             string folder = NewTempFolder();
             int before = CountAssets(folder);
@@ -369,6 +437,43 @@ namespace MassEngine.Tests
             Assert.IsNull(result, "profile 不可读时必须失败。");
             Assert.IsNotNull(error);
             Assert.AreEqual(before, CountAssets(folder), "失败后不应留下任何新资产。");
+        }
+
+        [Test]
+        public void CreateUnitTypeRejectsUnpersistedProfileInsteadOfWritingAnEmptyReference()
+        {
+            // 与"模板必须已落盘"同源：AssetDatabase.CreateAsset 按调用当时的引用状态序列化，
+            // 未落盘的 profile 在磁盘上会被写成 vatProfile: {fileID: 0}，
+            // 并且它带过去的三个网格槽位也一起变空 —— 内存与 Inspector 都正常，
+            // 域重载后才暴露成"兵种没有动画"。
+            UnitTypeConfig config = BoundUnitType(out _, out _);
+            ScriptableObject transientProfile = config.renderConfig.vatProfile;
+
+            // 夹具里的 profile 是落盘的；这里另造一个确定未落盘的。
+            var loose = ScriptableObject.CreateInstance<VATProfile>();
+            created.Add(loose);
+            Assert.IsFalse(AssetDatabase.Contains(loose), "测试前提：这个 profile 未落盘。");
+            Assert.IsTrue(AssetDatabase.Contains(transientProfile), "测试前提：夹具的 profile 已落盘。");
+
+            string folder = NewTempFolder();
+            int assetsBefore = CountAssets(folder);
+            ScenarioConfig freshScenario = NewScenario();
+            int rosterBefore = freshScenario.unitTypes.Length;
+
+            UnitTypeConfig result = UnitTypeBinder.CreateUnitType(new UnitTypeCreationRequest
+            {
+                scenario = freshScenario,
+                template = template,
+                unitTypeName = "EmptyRef",
+                teamId = 1,
+                directory = folder,
+                profile = loose
+            }, out string error);
+
+            Assert.IsNull(result, "未落盘的 profile 必须被拒绝。");
+            StringAssert.Contains("已保存", error);
+            Assert.AreEqual(assetsBefore, CountAssets(folder), "失败后不应留下任何新资产。");
+            Assert.AreEqual(rosterBefore, freshScenario.unitTypes.Length, "失败时不应改动战役清单。");
         }
 
         [Test]
@@ -428,6 +533,14 @@ namespace MassEngine.Tests
             Assert.IsNotNull(result.renderConfig.vatProfile, "profile 应当已接进回退生成的 RenderConfig。");
             Assert.IsTrue(AssetDatabase.Contains(result.renderConfig), "回退生成的 RenderConfig 必须落盘。");
             Assert.Contains(result, scenario.unitTypes, "新建的兵种必须登记进清单。");
+
+            // 回退路径没有可继承的材质来源，所以三个材质槽位必然是空的 —— 这份兵种此刻画不出来。
+            // 记录这个事实，并确认校验会如实报出来（向导会把它显示给用户），
+            // 而不是让用户以为"建好了就能上战场"。
+            Assert.IsNull(result.renderConfig.nearMaterial, "测试前提：回退生成的 RenderConfig 没有材质来源。");
+            ValidationResult validation = UnitTypeBinder.ValidateBinding(result);
+            Assert.IsFalse(validation.IsValid, "材质未填的兵种必须被判为不合法。");
+            StringAssert.Contains("Material", string.Join(" / ", validation.Errors));
         }
 
         [Test]
@@ -486,6 +599,16 @@ namespace MassEngine.Tests
             // 子配置本身也要真的落在同一个目录里，而不是只写了个引用。
             string spawnPath = AssetDatabase.GetAssetPath(created.spawnConfig);
             Assert.IsTrue(spawnPath.StartsWith(folder), "spawnConfig 应当落在同一个输出目录里：" + spawnPath);
+
+            // 光看主资产不够：RenderConfig 自己那份 profile 引用同样必须落盘。
+            // 未落盘的 profile 会写成 fileID: 0，并连带把三个网格槽位一起清空 ——
+            // 内存与 Inspector 都正常，域重载后才变成"兵种没有动画"。
+            string renderPath = AssetDatabase.GetAssetPath(created.renderConfig);
+            string renderYaml = System.IO.File.ReadAllText(renderPath);
+            AssertReferenceWritten(renderYaml, "vatProfile");
+            AssertReferenceWritten(renderYaml, "nearMesh");
+            AssertReferenceWritten(renderYaml, "midMesh");
+            AssertReferenceWritten(renderYaml, "farMesh");
         }
 
         /// <summary>断言 YAML 里某个字段写的是真实引用（fileID 非 0），而不是空引用。</summary>
@@ -619,7 +742,38 @@ namespace MassEngine.Tests
             }
 
             Assert.IsTrue(VatProfileReader.TryRead(profile, out VatProfileData data, out string error), error);
+            Persist(profile, cleanMesh, midMesh, lowMesh);
             return new ProfileFixture { Data = data, Asset = profile };
+        }
+
+        /// <summary>
+        /// 把 profile 连同它的网格/纹理落盘成"主资产 + 子资产"，与 <c>VatBakeResult.SaveNew</c> 的产物同构。
+        ///
+        /// 必须落盘：创建流程会把 profile 引用写进新的 RenderConfig，
+        /// 而 <c>AssetDatabase.CreateAsset</c> 按调用当时的引用状态序列化 ——
+        /// 未落盘的 profile 在磁盘上会被写成 <c>vatProfile: {fileID: 0}</c>，
+        /// 连三个网格槽位一起变空。所以"未落盘 profile"不是合法输入，夹具也不能用它。
+        /// </summary>
+        private void Persist(VATProfile profile, Mesh clean, Mesh mid, Mesh low)
+        {
+            string folder = NewTempFolder();
+            AssetDatabase.CreateAsset(profile, folder + "/Profile.asset");
+            AddSubAsset(profile, clean);
+            AddSubAsset(profile, profile.positionTexture);
+            AddSubAsset(profile, profile.normalTexture);
+            AddSubAsset(profile, mid);
+            AddSubAsset(profile, profile.midLodPositionTexture);
+            AddSubAsset(profile, profile.midLodNormalTexture);
+            AddSubAsset(profile, low);
+            AddSubAsset(profile, profile.lowLodPositionTexture);
+            AddSubAsset(profile, profile.lowLodNormalTexture);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void AddSubAsset(VATProfile owner, Object part)
+        {
+            if (part != null && !EditorUtility.IsPersistent(part))
+                AssetDatabase.AddObjectToAsset(part, owner);
         }
 
         private VATProfile NewProfileAsset(string name)
@@ -656,11 +810,35 @@ namespace MassEngine.Tests
             return config;
         }
 
+        /// <summary>
+        /// 一份"结构完整"的渲染配置：三个材质槽位都填上现役材质。
+        ///
+        /// 材质必须给：运行时 <c>MassGpuRenderDispatcher.DrawLod</c> 遇到空材质会整档跳过绘制，
+        /// 所以空材质是"某个距离上的单位凭空消失"的真缺陷，不是可选字段。
+        /// 用现役材质而不是临时 new Material，是为了让夹具与仓库里 3 份 RenderConfig 的真实形状一致。
+        /// </summary>
         private RenderConfig NewRenderConfig()
         {
             var render = ScriptableObject.CreateInstance<RenderConfig>();
             created.Add(render);
+            ApplyShippedMaterials(render);
             return render;
+        }
+
+        /// <summary>按现役约定填满三个材质槽位（近景用受光材质，中/远景用无阴影材质）。</summary>
+        private static void ApplyShippedMaterials(RenderConfig render)
+        {
+            render.nearMaterial = ShippedMaterial("LitInstancedAgent.mat");
+            render.midMaterial = ShippedMaterial("FarInstancedAgent.mat");
+            render.farMaterial = ShippedMaterial("FarInstancedAgent.mat");
+        }
+
+        private static Material ShippedMaterial(string fileName)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/MassEngine/VatRender/Materials/" + fileName);
+            Assert.IsNotNull(material, "测试前提：现役材质必须存在 —— " + fileName);
+            return material;
         }
 
         // ------------------------------------------------------------------
@@ -701,6 +879,7 @@ namespace MassEngine.Tests
             created.Add(animation);
 
             var render = ScriptableObject.CreateInstance<RenderConfig>();
+            ApplyShippedMaterials(render);
             AssetDatabase.CreateAsset(render, folder + "/TemplateRender.asset");
             created.Add(render);
 
