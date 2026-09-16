@@ -653,6 +653,35 @@ namespace MassEngine.Tests
         }
 
         [Test]
+        public void CreateWithoutProfileStillInheritsTheTemplatesProfileThroughTheRenderConfigCopy()
+        {
+            // 记录一个容易被说反的事实：不传 profile 不等于"新兵种没有模型"。
+            // 独占 RenderConfig 是模板那份的 Instantiate 副本，模板已绑模型时，
+            // 副本会连同 profile、三个网格槽位与三个材质一起继承过来。
+            // 向导文案曾按入参推断，写着"尚未绑定 VAT profile"，与磁盘上的实际内容相反。
+            RenderConfig templateRender = template.renderConfig;
+            ProfileFixture fixture = Profile("Inherited", null, null);
+            UnitTypeBinder.ApplyProfile(templateRender, fixture.Asset, fixture.Data);
+            Assert.IsNotNull(templateRender.nearMaterial, "测试前提：模板的 RenderConfig 应当有材质。");
+
+            UnitTypeConfig created = UnitTypeBinder.CreateUnitType(new UnitTypeCreationRequest
+            {
+                scenario = scenario,
+                template = template,
+                unitTypeName = "Inherit",
+                teamId = 2,
+                directory = NewTempFolder(),
+                profile = null
+            }, out string error);
+            Assert.IsNotNull(created, "不绑 profile 创建应当成功：" + error);
+            Assert.AreNotSame(templateRender, created.renderConfig, "独占渲染配置必须是副本，不能是同一个对象。");
+            Assert.IsNotNull(created.renderConfig.vatProfile, "副本应当继承模板的 profile。");
+            Assert.AreEqual("Inherited", created.renderConfig.nearMesh.name, "副本应当继承模板的网格槽位。");
+            Assert.IsNotNull(created.renderConfig.nearMaterial, "副本应当继承模板的材质。");
+            Assert.IsTrue(UnitTypeBinder.ValidateBinding(created).IsValid, "继承来的绑定应当是通过校验的。");
+        }
+
+        [Test]
         public void CreateUnitTypeRejectsNameThatSanitizesToNothing()
         {
             int rosterBefore = scenario.unitTypes.Length;

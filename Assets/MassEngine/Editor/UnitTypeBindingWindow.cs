@@ -347,18 +347,29 @@ namespace MassEngine.Editor
 
                 if (request.profile == null)
                 {
-                    // "只建兵种不绑模型"是支持的路径：此时没有 profile 是预期状态，不是错误，
-                    // 所以不跑绑定校验（那会报"没有绑定 VAT profile"吓人一跳），只提示下一步。
+                    // "只建兵种不绑模型"是支持的路径，此时不跑绑定校验（那会报"没有绑定 VAT profile"）。
+                    //
+                    // 但不能就此断言"尚未绑定"：独占 RenderConfig 是模板那份的副本（Instantiate），
+                    // 模板若已绑好模型，副本会连同 profile 与三个网格槽位一起继承过来。
+                    // 所以这里按实际状态说话，而不是按"没传 profile"这个入参推断。
                     bindingReport.Clear();
+                    ScriptableObject inherited = created.renderConfig != null ? created.renderConfig.vatProfile : null;
                     SetFeedback("已新建兵种：" + created.unitTypeName + "（军团 " + created.teamId + "）\n" +
-                        "尚未绑定 VAT profile —— 选中它并在上面绑定模型后即可上战场。\n" +
+                        (inherited != null
+                            ? "已从模板继承 VAT profile：" + inherited.name + "。若要换模型，选中它并在上面重新绑定。\n"
+                            : "尚未绑定 VAT profile —— 选中它并在上面绑定模型后即可上战场。\n") +
                         "资产：" + AssetDatabase.GetAssetPath(created), false);
                 }
                 else
                 {
-                    Report(UnitTypeBinder.ValidateBinding(created));
+                    // 与「绑定到选中兵种」保持同一口径：校验没过就不能用"成功"的语气报。
+                    // 建出来的兵种缺材质/缺网格时，这里必须显示成错误，
+                    // 否则用户看到的是一句平静的"已新建兵种"，而下面的错误列表容易被忽略。
+                    ValidationResult validation = UnitTypeBinder.ValidateBinding(created);
+                    Report(validation);
                     SetFeedback("已新建兵种：" + created.unitTypeName + "（军团 " + created.teamId + "）\n" +
-                        "资产：" + AssetDatabase.GetAssetPath(created), false);
+                        "资产：" + AssetDatabase.GetAssetPath(created) +
+                        (validation.IsValid ? "" : "\n但校验未通过，请按下面的错误修掉。"), !validation.IsValid);
                 }
                 EditorGUIUtility.PingObject(created);
             }
