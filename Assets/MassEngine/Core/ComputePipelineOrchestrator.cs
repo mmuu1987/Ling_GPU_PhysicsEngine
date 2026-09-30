@@ -29,6 +29,14 @@ namespace MassEngine
         /// <summary>Reused upload staging for the per-team flow records; resized only when the team count changes.</summary>
         private TeamFlowParams[] teamFlowParamsScratch = System.Array.Empty<TeamFlowParams>();
 
+        /// <summary>
+        /// Optional splash impact effect ring. Null (default) keeps the legacy projectile kernel variant.
+        /// Re-applied before every projectile dispatch because the compute shader asset is shared.
+        /// </summary>
+        public MassEngine.Projectiles.ProjectileImpactFx ImpactFx { get; set; }
+        // Opt-in melee charge table; null keeps SimulateCombatAndAccumulateDamage on its legacy variant.
+        public MeleeChargeParams MeleeCharge { get; set; }
+
         public ComputePipelineOrchestrator(MassGpuShaderSet shaders, MassGpuBufferManager buffers, IDispatchListener dispatchListener = null)
         {
             this.shaders = shaders;
@@ -41,8 +49,14 @@ namespace MassEngine
             if (buffers == null || !buffers.IsAllocated)
                 return;
 
+            TerrainNavigationRuntime.SetVariant(shaders, frameContext.terrain != null);
             UploadFrameConstants(frameContext);
             BindComputeBuffers();
+            if (frameContext.terrain != null)
+            {
+                frameContext.terrain.Bind(shaders);
+                frameContext.terrain.Tick(buffers, frameContext);
+            }
 
             DispatchSpatialHash(frameContext);
 
@@ -112,7 +126,8 @@ namespace MassEngine
             Dispatch(shader, shaders.BuildRuntimeFlowTargetDensity, Mathf.Max(1, context.agentThreadGroupsX), FlowDispatchLabel("BuildRuntimeFlowTargetDensity", teamId));
             // One 64-thread group per sector (the kernel reduces its sector in groupshared memory).
             Dispatch(shader, shaders.SelectRuntimeFlowTargets, Mathf.Clamp(flow.sectorCount, 1, MassGpuBufferManager.FlowTargetSlotsPerTeam), FlowDispatchLabel("SelectRuntimeFlowTargets", teamId));
-            Dispatch(shader, shaders.GenerateRuntimeFlowField, flowGroups, FlowDispatchLabel("GenerateRuntimeFlowField", teamId));
+            if (context.terrain != null) context.terrain.Rebuild(buffers, context, teamId);
+            else Dispatch(shader, shaders.GenerateRuntimeFlowField, flowGroups, FlowDispatchLabel("GenerateRuntimeFlowField", teamId));
         }
 
         private void DispatchDensityMap(PipelineFrameContext context)
@@ -130,7 +145,15 @@ namespace MassEngine
         {
             Dispatch(shaders.CombatSimulationShader, shaders.BuildEngagementSlotOccupancy, Mathf.Max(1, context.agentThreadGroupsX), "BuildEngagementSlotOccupancy");
             Dispatch(shaders.CombatSimulationShader, shaders.ClearPendingDamage, Mathf.Max(1, context.agentThreadGroupsX), "ClearPendingDamage");
+            bool charge = MeleeCharge != null && MeleeCharge.IsValid && shaders.CombatSimulationShader != null;
+            if (charge)
+                MeleeCharge.Bind(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage);
+            else if (shaders.CombatSimulationShader != null)
+                MeleeChargeParams.Unbind(shaders.CombatSimulationShader);
             Dispatch(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage, Mathf.Max(1, context.agentThreadGroupsX), "SimulateCombatAndAccumulateDamage");
+            // The compute asset is shared (kernel tests dispatch it directly): never leave the keyword on.
+            if (charge)
+                MeleeChargeParams.Unbind(shaders.CombatSimulationShader);
         }
 
         private void DispatchProjectileSimulation(PipelineFrameContext context)
@@ -139,6 +162,14 @@ namespace MassEngine
             // Their buffers are bound once by BindProjectileBuffers above.
             if (!context.battleStarted || context.projectileThreadGroupsX <= 0)
                 return;
+
+            if (shaders.ProjectileShader != null && shaders.SimulateProjectiles >= 0)
+            {
+                if (ImpactFx != null && ImpactFx.IsValid)
+                    ImpactFx.Bind(shaders.ProjectileShader, shaders.SimulateProjectiles);
+                else
+                    MassEngine.Projectiles.ProjectileImpactFx.Unbind(shaders.ProjectileShader);
+            }
 
             Dispatch(
                 shaders.ProjectileShader,
@@ -386,6 +417,9 @@ namespace MassEngine
             SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, EngagementSlotAssignmentBufferId, buffers.combatBuffers.engagementSlotAssignmentBuffer);
             SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, EngagementSlotOccupancyBufferId, buffers.combatBuffers.engagementSlotOccupancyBuffer);
 
+            // Null-tolerant like SetBuffer/SetTexture: dispatch-order tests run with null shaders.
+            if (combat != null)
+                combat.SetFloat("projectileQueryRadius", buffers.ProjectileQueryRadius);
             int simulate = shaders.SimulateCombatAndAccumulateDamage;
             SetBuffer(combat, simulate, AgentBufferId, buffers.agentBuffer);
             SetBuffer(combat, simulate, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
@@ -402,6 +436,7 @@ namespace MassEngine
             SetBuffer(combat, simulate, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             SetBuffer(combat, simulate, TargetAgentIndexBufferId, buffers.combatBuffers.targetAgentIndexBuffer);
             SetBuffer(combat, simulate, EngagementSlotAssignmentBufferId, buffers.combatBuffers.engagementSlotAssignmentBuffer);
+            SetBuffer(combat, simulate, MovementCommandRevisionBufferId, buffers.combatBuffers.movementCommandRevisionBuffer);
             SetBuffer(combat, simulate, EngagementSlotOccupancyReadBufferId, buffers.combatBuffers.engagementSlotOccupancyBuffer);
             SetBuffer(combat, simulate, AttackCooldownBufferId, buffers.combatBuffers.attackCooldownBuffer);
             SetBuffer(combat, simulate, HomePositionReadBufferId, buffers.combatBuffers.homePositionBuffer);
@@ -423,6 +458,16 @@ namespace MassEngine
         {
             ComputeShader projectile = shaders.ProjectileShader;
             int simulate = shaders.SimulateProjectiles;
+            if (projectile != null)
+            {
+                projectile.EnableKeyword("MASS_PROJECTILE_UNITS");
+                projectile.SetFloat("projectileQueryRadius", buffers.ProjectileQueryRadius);
+            }
+            SetBuffer(projectile, simulate, AgentBufferId, buffers.agentBuffer);
+            SetBuffer(projectile, simulate, UnitTypeSettingsId, buffers.unitTypeSettingsBuffer);
+            SetBuffer(projectile, simulate, UnitTypeIndexReadBufferId, buffers.unitTypeIndexBuffer);
+            SetBuffer(projectile, simulate, GridCountsReadBufferId, buffers.gridCountsBuffer);
+            SetBuffer(projectile, simulate, GridAgentIndicesReadBufferId, buffers.gridAgentIndicesBuffer);
 
             SetBuffer(projectile, simulate, ProjectileBufferId, buffers.projectileBuffer);
             SetBuffer(projectile, simulate, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);

@@ -18,7 +18,7 @@ namespace MassEngine.Tests
     /// Requires a GPU with compute support; the fixture is skipped when compute shaders
     /// are unavailable (e.g. headless CI).
     /// </summary>
-    public sealed class MassEngineGpuKernelTests
+    public sealed partial class MassEngineGpuKernelTests
     {
         private const string ShaderRoot = "Assets/MassEngine/";
 
@@ -86,6 +86,12 @@ namespace MassEngine.Tests
                 Assert.Ignore("Compute shaders unavailable on this device; GPU kernel tests skipped.");
 
             gridMaxAgentsPerCell = 16;
+            // LOD/cadence/flow overrides back to their declared defaults (full rate, flow off). Several tests set
+            // them without restoring, which made later tests order-dependent (e.g. an Advance agent following a
+            // leftover flow target 10 m away in UnclearableBodyWaitsWithinBudget...).
+            lodNearRadius = 100f; lodMidRadius = 200f; simFarInterval = 1; maxRenderDistance = 0f;
+            attackerFlowEnabled = false; attackerFlowRebuild = false; attackerFlowDynamic = false;
+            attackerFlowTargetMode = 0; attackerFlowTargetPoint = Vector3.zero; attackerFlowMinPerTarget = 8;
             corpseLingerSeconds = 0f;
             corpseSinkSeconds = 0f;
             fixtureTeamStances = null;
@@ -148,6 +154,8 @@ namespace MassEngine.Tests
         [TearDown]
         public void TearDown()
         {
+            fixtureTerrain?.Dispose();
+            fixtureTerrain = null;
             if (projectileManager != null)
                 projectileManager.Dispose();
             projectileManager = null;
@@ -1773,18 +1781,19 @@ namespace MassEngine.Tests
             }
         }
 
-        private void DispatchOneFrame(bool battleStarted)
+        private void DispatchOneFrame(bool battleStarted, float stepDt = FrameDt)
         {
             registry.FillGpuSettings(settingsCache);
             buffers.UploadUnitTypeSettings(settingsCache);
             UploadFixtureTeamStances();
 
             if (battleStarted)
-                projectileSimulationTime += FrameDt;
+                projectileSimulationTime += stepDt;
 
             PipelineFrameContext context = new PipelineFrameContext
             {
-                deltaTime = FrameDt,
+                terrain = fixtureTerrain,
+                deltaTime = stepDt,
                 // Deterministic frame counter: Time.frameCount does not advance between
                 // dispatches issued inside a single editor frame, which would freeze the
                 // staggered target-search phase.
@@ -1944,7 +1953,8 @@ namespace MassEngine.Tests
             projectileProcessingEnabled = false;
 
             ProjectileGpuData projectile = ProjectileGpuData.CreateEmpty();
-            projectile.position = new Vector3(-50f, 0f, 0f);
+            // Isolate timeout: y=0 is an immediate floor impact, not a lifetime test.
+            projectile.position = new Vector3(0f, 4f, 0f);
             projectile.velocity = Vector3.zero;
             projectile.targetAgentIndex = AttackerCount;
             projectile.sourceTeamId = 0;
@@ -2179,7 +2189,8 @@ namespace MassEngine.Tests
             projectileProcessingEnabled = false;
 
             ProjectileGpuData projectile = ProjectileGpuData.CreateEmpty();
-            projectile.position = new Vector3(-50f, 0f, 0f);
+            // Isolate timeout: y=0 is an immediate floor impact, not a lifetime test.
+            projectile.position = new Vector3(0f, 4f, 0f);
             projectile.velocity = Vector3.zero;
             projectile.targetAgentIndex = AttackerCount;
             projectile.sourceTeamId = 0;

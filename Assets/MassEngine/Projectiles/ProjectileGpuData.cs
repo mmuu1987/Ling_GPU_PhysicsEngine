@@ -23,7 +23,8 @@ namespace MassEngine.Projectiles
 
         public float maxLifetime;       // 最大飞行时间（秒）(4 bytes)
         public float trailLength;       // 曳光长度（渲染用）(4 bytes)
-        public Vector2 padding;         // 对齐填充 (8 bytes)
+        public int sourceAgentIndexPlusOne; // 0 = unknown; positive = owner index + 1 (self exclusion)
+        public float splashRadius;         // former padding slot; 0 = single target (default). Still 64 bytes.
 
         // 总计：64 字节
         public const int Stride = 64;
@@ -45,7 +46,8 @@ namespace MassEngine.Projectiles
                 gravity = 0f,
                 maxLifetime = 5f,
                 trailLength = 1f,
-                padding = Vector2.zero
+                sourceAgentIndexPlusOne = 0,
+                splashRadius = 0f
             };
         }
     }

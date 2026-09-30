@@ -136,6 +136,51 @@ namespace MassEngine
             return true;
         }
 
+        /// <summary>
+        /// CPU-only projectile impact splash radius per unit type (0 = single target).
+        /// Only DefaultCombatModule configs declare it; custom combat modules stay single-target.
+        /// </summary>
+        public bool FillProjectileSplashRadii(float[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                float radius = config != null ? config.projectileSplashRadius : 0f;
+                target[i] = float.IsNaN(radius) || float.IsInfinity(radius) ? 0f : Mathf.Max(0f, radius);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Melee charge parameters per unit type: x = damage multiplier (1 = off), y = minimum speed fraction.
+        /// Returns true only when at least one unit type charges, so callers can keep the legacy kernel otherwise.
+        /// </summary>
+        public bool FillMeleeCharge(Vector2[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            bool any = false;
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                float multiplier = config != null ? config.chargeDamageMultiplier : 1f;
+                float fraction = config != null ? config.chargeMinSpeedFraction : 0.6f;
+                if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier < 1f) multiplier = 1f;
+                if (float.IsNaN(fraction) || float.IsInfinity(fraction)) fraction = 0.6f;
+                bool melee = config == null || config.projectileRange <= 0.01f;
+                if (!melee) multiplier = 1f;
+                target[i] = new Vector2(multiplier, Mathf.Clamp(fraction, 0f, 2f));
+                any |= multiplier > 1f;
+            }
+
+            return any;
+        }
+
         public int CountAgentsForTeam(int teamId)
         {
             int count = 0;

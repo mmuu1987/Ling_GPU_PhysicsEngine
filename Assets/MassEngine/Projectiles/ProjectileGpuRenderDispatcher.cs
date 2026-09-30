@@ -14,6 +14,7 @@ namespace MassEngine.Projectiles
     public sealed class ProjectileGpuRenderDispatcher
     {
         private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
+        private readonly MaterialPropertyBlock impactBlock = new MaterialPropertyBlock();
         // One warning per distinct reason: a projectile system that silently draws
         // nothing is otherwise indistinguishable from one that never fires.
         private readonly HashSet<string> reportedSkips = new HashSet<string>();
@@ -86,6 +87,24 @@ namespace MassEngine.Projectiles
         }
 
         /// <summary>
+        /// Opt-in splash impact rings/flashes (ProjectileImpactFx). One procedural instance per ring slot;
+        /// the shader collapses empty and expired slots, so no readback or CPU count is needed.
+        /// </summary>
+        public void DrawImpacts(ProjectileRenderConfig config, ProjectileImpactFx fx, Bounds bounds, float simulationTime)
+        {
+            if (config == null || !config.renderProjectiles || config.impactMaterial == null || fx == null || !fx.IsValid)
+                return;
+            Mesh mesh = GetFallbackMesh();
+            if (mesh == null)
+                return;
+            impactBlock.SetBuffer(ProjectileImpactFx.RingId, fx.Ring);
+            impactBlock.SetFloat(ProjectileImpactFx.NowId, simulationTime);
+            impactBlock.SetFloat(ProjectileImpactFx.DurationId, Mathf.Max(0.05f, config.impactDuration));
+            Graphics.DrawMeshInstancedProcedural(mesh, 0, config.impactMaterial, bounds, fx.Capacity, impactBlock,
+                UnityEngine.Rendering.ShadowCastingMode.Off, false);
+        }
+
+        /// <summary>
         /// The mesh the tracers will actually be drawn with: the config override when set,
         /// otherwise the built-in unit quad. A null mesh in the config is a supported
         /// default, not an error.
@@ -114,6 +133,7 @@ namespace MassEngine.Projectiles
             configuredArgs = null;
             blockConfig = null;
             block.Clear();
+            impactBlock.Clear();
             reportedSkips.Clear();
         }
 

@@ -9,7 +9,7 @@ namespace MassEngine
     /// inputs: runtime state (click targets, resolved VAT data, per-frame settings) lives
     /// on this component and its runtime objects, never in the assets.
     /// </summary>
-    public sealed class MassEngineManager : MonoBehaviour
+    public sealed partial class MassEngineManager : MonoBehaviour
     {
         private struct FlowTargetOverride
         {
@@ -36,6 +36,7 @@ namespace MassEngine
             // change the signature or they silently never reach the GPU.
             public int scenarioConfigId;
             public int teamLayoutHash;
+            public int terrainConfigurationHash;
 
             public bool Equals(in AllocationSignature other)
             {
@@ -45,7 +46,7 @@ namespace MassEngine
                        flowFieldResolution == other.flowFieldResolution &&
                        unitTypeCount == other.unitTypeCount &&
                        scenarioConfigId == other.scenarioConfigId &&
-                       teamLayoutHash == other.teamLayoutHash;
+                       teamLayoutHash == other.teamLayoutHash && terrainConfigurationHash == other.terrainConfigurationHash;
             }
         }
 
@@ -71,11 +72,20 @@ namespace MassEngine
         private MassGpuBufferManager bufferManager;
         private MassGpuRenderDispatcher renderDispatcher;
         private ProjectileGpuRenderDispatcher projectileRenderDispatcher;
+        // Opt-in splash impact effect (null unless impactMaterial is set and a unit type splashes).
+        private ProjectileImpactFx projectileImpactFx;
         private BattleTelemetry telemetry;
         private ProjectileGpuManager projectileManager;
+        public int TotalLaunchedProjectiles => projectileManager?.TotalLaunched ?? 0;
 
         private UnitTypeGpuSettings[] gpuSettingsCache;
+        private float[] projectileSplashCache;
+        // Opt-in melee charge (null unless a unit type has chargeDamageMultiplier > 1).
+        private Vector2[] meleeChargeCache;
+        private MeleeChargeParams meleeCharge;
         private int[] agentUnitTypeIndices;
+        private Vector3[] agentSpawnScales;
+        private float[] agentFlatGroundHeights;
         private MassGpuShaderSet shaders;
         private float projectileSimulationTime;
         private AllocationSignature allocationSignature;
@@ -172,6 +182,7 @@ namespace MassEngine
             if (!bufferManager.IsAllocated)
                 return;
 
+            if (!EnsureTerrainResources()) return;
             RefreshAndUploadUnitTypeSettings();
             RefreshAndUploadTeamStances();
 
@@ -199,7 +210,9 @@ namespace MassEngine
                     unitTypeIndices: agentUnitTypeIndices,
                     unitTypeSettings: gpuSettingsCache,
                     agentCount: unitTypeRegistry.TotalAgentCount,
-                    simulationTime: projectileSimulationTime
+                    simulationTime: projectileSimulationTime,
+                    agentScales: agentSpawnScales,
+                    flatGroundHeights: agentFlatGroundHeights
                 );
                 projectileManager.ClearExpiredProjectiles(Time.time);
             }
@@ -216,6 +229,8 @@ namespace MassEngine
             // Tracers draw straight from projectileBuffer via the GPU active list, so a
             // paused battle keeps showing frozen shots and a cleared pool shows none.
             projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds);
+            if (projectileImpactFx != null)
+                projectileRenderDispatcher.DrawImpacts(ProjectileRender, projectileImpactFx, renderBounds, projectileSimulationTime);
 
             if (telemetry != null)
             {
@@ -288,6 +303,13 @@ namespace MassEngine
                 return;
             }
 
+            if (!ValidateTerrainSpawns())
+            {
+                Debug.LogWarning("MassEngine terrain initialization rejected: " + terrainError, this);
+                allocationSignature = CurrentAllocationSignature(); initialized = true; battleStateApplied = battleStarted;
+                return;
+            }
+
             // Physics ledger: an out-of-envelope scenario must announce itself with
             // concrete numbers instead of failing as an unexplained frame-rate collapse.
             ScenarioPhysicsReport physicsReport = ScenarioPhysics.Evaluate(
@@ -306,7 +328,8 @@ namespace MassEngine
             // retry the whole Release+Allocate cycle until the configs actually change.
             allocationSignature = CurrentAllocationSignature();
 
-            bufferManager.Allocate(totalAgents, gridCellCount, Simulation.maxAgentsPerCell, Flow.flowFieldResolution, Flow.flowFieldResolution, unitTypeCount, ResolveScenarioTeamCount());
+            bufferManager.Allocate(totalAgents, gridCellCount, Simulation.maxAgentsPerCell, Flow.flowFieldResolution, Flow.flowFieldResolution, unitTypeCount, ResolveScenarioTeamCount(),
+                ProjectilePoolBudget.Calculate(scenarioConfig, totalAgents));
             if (!bufferManager.IsAllocated)
             {
                 Debug.LogError("MassEngine: GPU buffer allocation failed; scenario initialization was aborted.", this);
@@ -314,11 +337,18 @@ namespace MassEngine
             }
             unitTypeRegistry.InitializeAll(bufferManager, pipelineOrchestrator);
             UploadInitialAgents();
+            if (!EnsureTerrainResources())
+            {
+                bufferManager.ReleaseAll();
+                Debug.LogWarning("MassEngine terrain GPU initialization rejected: " + terrainError, this);
+                initialized = true; return;
+            }
             bufferManager.ConfigureDrawArgs(unitTypeRegistry.RegisteredTypes);
 
             if (bufferManager.projectileBuffer != null && bufferManager.MaxProjectiles > 0)
             {
                 projectileManager.Initialize(shaders.ProjectileShader, shaders.CombatSimulationShader, bufferManager.projectileBuffer, bufferManager.MaxProjectiles, bufferManager.combatBuffers.launchRequestBuffer, unitTypeRegistry.TotalAgentCount);
+                projectileManager.Surface = terrainSurface;
                 projectileManager.ClearAllProjectiles();
             }
 
@@ -367,6 +397,9 @@ namespace MassEngine
         /// Pauses simulation and telemetry without discarding runtime army orders.
         /// Use StopBattle when orders should be cleared as well.
         /// </summary>
+        /// <summary>Accepted new order/route leg: wake only that team's congestion waits.</summary>
+        public void NotifyMovementCommand(int teamId) => bufferManager?.combatBuffers.NotifyMovementCommand(teamId);
+
         public void PauseBattle()
         {
             battleStarted = false;
@@ -439,8 +472,8 @@ namespace MassEngine
                 return;
             }
 
-            flowTargetOverrides[teamId] = new FlowTargetOverride { active = true, point = ResolvePointOutsideStaticObstacles(point) };
-            flowFieldDirty[teamId] = true;
+            if (!TrySetFlowTargetOverride(teamId, point, out string error))
+                Debug.LogWarning("MassEngine: flow target rejected: " + error, this);
         }
 
         public void ClearFlowTargetOverride(int teamId)
@@ -560,6 +593,7 @@ namespace MassEngine
 
         public void Release()
         {
+            ReleaseTerrain();
             if (unitTypeRegistry != null)
                 unitTypeRegistry.ReleaseAll();
             unitTypeRegistry = null;
@@ -574,10 +608,19 @@ namespace MassEngine
             if (projectileRenderDispatcher != null)
                 projectileRenderDispatcher.Release();
             projectileRenderDispatcher = null;
+            if (projectileImpactFx != null)
+                projectileImpactFx.Dispose();
+            projectileImpactFx = null;
+            if (meleeCharge != null)
+                meleeCharge.Dispose();
+            meleeCharge = null;
+            meleeChargeCache = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
             gpuSettingsCache = null;
             agentUnitTypeIndices = null;
+            agentSpawnScales = null;
+            agentFlatGroundHeights = null;
             initialized = false;
         }
 
@@ -591,6 +634,54 @@ namespace MassEngine
             }
         }
 
+        /// <summary>
+        /// Allocates the impact effect ring only while it can be seen: a render config with an impactMaterial
+        /// and at least one splash unit type. Otherwise releases it so the kernel stays on its legacy variant.
+        /// </summary>
+        private void SyncProjectileImpactFx()
+        {
+            bool wanted = false;
+            ProjectileRenderConfig render = ProjectileRender;
+            float[] splash = projectileManager != null ? projectileManager.UnitTypeSplashRadii : null;
+            if (render != null && render.renderProjectiles && render.impactMaterial != null && splash != null)
+                for (int i = 0; i < splash.Length && !wanted; i++)
+                    wanted = splash[i] > 0f;
+
+            if (wanted && projectileImpactFx == null)
+                projectileImpactFx = new ProjectileImpactFx();
+            else if (!wanted && projectileImpactFx != null)
+            {
+                projectileImpactFx.Dispose();
+                projectileImpactFx = null;
+            }
+            if (pipelineOrchestrator != null)
+                pipelineOrchestrator.ImpactFx = projectileImpactFx;
+        }
+
+        /// <summary>
+        /// Uploads the melee charge table only while some unit type charges; otherwise releases it so the
+        /// combat kernel stays on its legacy variant.
+        /// </summary>
+        private void SyncMeleeCharge()
+        {
+            if (meleeChargeCache == null || meleeChargeCache.Length != gpuSettingsCache.Length)
+                meleeChargeCache = new Vector2[gpuSettingsCache.Length];
+            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache);
+            if (wanted)
+            {
+                if (meleeCharge == null)
+                    meleeCharge = new MeleeChargeParams();
+                meleeCharge.Upload(meleeChargeCache);
+            }
+            else if (meleeCharge != null)
+            {
+                meleeCharge.Dispose();
+                meleeCharge = null;
+            }
+            if (pipelineOrchestrator != null)
+                pipelineOrchestrator.MeleeCharge = meleeCharge;
+        }
+
         private void RefreshAndUploadUnitTypeSettings()
         {
             if (unitTypeRegistry == null || bufferManager == null || gpuSettingsCache == null)
@@ -599,6 +690,14 @@ namespace MassEngine
             if (unitTypeRegistry.FillGpuSettings(gpuSettingsCache))
             {
                 bufferManager.UploadUnitTypeSettings(gpuSettingsCache);
+                if (projectileManager != null)
+                {
+                    if (projectileSplashCache == null || projectileSplashCache.Length != gpuSettingsCache.Length)
+                        projectileSplashCache = new float[gpuSettingsCache.Length];
+                    projectileManager.UnitTypeSplashRadii = unitTypeRegistry.FillProjectileSplashRadii(projectileSplashCache) ? projectileSplashCache : null;
+                }
+                SyncProjectileImpactFx();
+                SyncMeleeCharge();
             }
             else if (!loggedSettingsCacheMismatch)
             {
@@ -653,8 +752,16 @@ namespace MassEngine
             int[] unitTypeIndices = new int[total];
 
             unitTypeRegistry.GenerateAgents(agents);
+            GroundInitialAgents(agents);
             unitTypeRegistry.FillCombatArrays(teamIds, hpValues, unitTypeIndices);
             agentUnitTypeIndices = unitTypeIndices;
+            agentSpawnScales = new Vector3[total];
+            agentFlatGroundHeights = new float[total];
+            for (int i = 0; i < total; i++)
+            {
+                agentSpawnScales[i] = agents[i].scale;
+                agentFlatGroundHeights[i] = agents[i].position.y;
+            }
             bufferManager.UploadInitialData(agents, teamIds, hpValues, unitTypeIndices);
         }
 
@@ -694,6 +801,7 @@ namespace MassEngine
                 staticObstacleCount = activeStaticObstacleCount,
                 staticObstaclePadding = activeStaticObstaclePadding,
                 staticObstacleRects = staticObstacleShaderRects,
+                terrain = terrainRuntime,
                 grid = new GridFrameSettings
                 {
                     resolutionX = ComputeGridResolutionX(),
@@ -996,7 +1104,8 @@ namespace MassEngine
                 flowFieldResolution = Flow.flowFieldResolution,
                 unitTypeCount = unitTypeCount,
                 scenarioConfigId = scenarioConfig != null ? scenarioConfig.GetInstanceID() : 0,
-                teamLayoutHash = teamLayoutHash
+                teamLayoutHash = teamLayoutHash,
+                terrainConfigurationHash = TerrainConfigurationHash()
             };
         }
 
@@ -1046,6 +1155,7 @@ namespace MassEngine
 
         private Bounds ResolveRenderBounds()
         {
+            if (terrainSurface != null) return terrainRenderBounds;
             Vector2 worldSize = Simulation.simulationWorldSize;
             return new Bounds(Vector3.zero, new Vector3(worldSize.x + 40f, 120f, worldSize.y + 40f));
         }
