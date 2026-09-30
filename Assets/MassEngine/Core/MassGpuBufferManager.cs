@@ -11,7 +11,7 @@ namespace MassEngine
     /// </summary>
     public sealed class MassGpuBufferManager
     {
-        public const int AgentStrideBytes = 56;
+        public const int AgentStrideBytes = AgentData.StrideBytes;
         public const int LodLevels = 3;
         public const int EngagementSlotsPerTarget = 8;
         /// <summary>Per-team slot count inside teamSpatialStats: [count, minX, minZ, maxX, maxZ, reserved x3].</summary>
@@ -64,6 +64,9 @@ namespace MassEngine
 
         public int AgentCount { get; private set; }
         public int GridCellCount { get; private set; }
+        private float maxAgentScaleXZ = 1f;
+        private float maxUnitRadius = 0.45f;
+        public float ProjectileQueryRadius => maxAgentScaleXZ * maxUnitRadius;
         public int MaxAgentsPerCell { get; private set; }
         public int UnitTypeCount { get; private set; }
         public int MaxProjectiles { get; private set; }
@@ -100,7 +103,7 @@ namespace MassEngine
             return index >= 0 && index < drawArgsBuffers.Length ? drawArgsBuffers[index] : null;
         }
 
-        public void Allocate(int agentCount, int gridCellCount, int maxAgentsPerCell, int flowFieldResolutionX, int flowFieldResolutionZ, int unitTypeCount, int teamCount = DefaultTeamCount)
+        public void Allocate(int agentCount, int gridCellCount, int maxAgentsPerCell, int flowFieldResolutionX, int flowFieldResolutionZ, int unitTypeCount, int teamCount = DefaultTeamCount, int projectileCapacity = -1)
         {
             ReleaseAll();
 
@@ -108,7 +111,8 @@ namespace MassEngine
             GridCellCount = Mathf.Max(1, gridCellCount);
             MaxAgentsPerCell = Mathf.Max(1, maxAgentsPerCell);
             UnitTypeCount = Mathf.Max(0, unitTypeCount);
-            MaxProjectiles = agentCount > 0 ? Mathf.Max(1, agentCount / 4) : 0;
+            MaxProjectiles = agentCount > 0 ? Mathf.Clamp(projectileCapacity >= 0 ? projectileCapacity : agentCount / 4,
+                1, Projectiles.ProjectilePoolBudget.MaxProjectiles) : 0;
             TeamCount = Mathf.Max(1, teamCount);
             int safeFlowResolutionX = Mathf.Max(1, flowFieldResolutionX);
             int safeFlowResolutionZ = Mathf.Max(1, flowFieldResolutionZ);
@@ -121,7 +125,7 @@ namespace MassEngine
             int agentStride = Marshal.SizeOf(typeof(AgentData));
             if (agentStride != AgentStrideBytes)
             {
-                Debug.LogError("MassEngine AgentData stride must remain 56 bytes. Actual: " + agentStride + " - refusing to allocate.");
+                Debug.LogError("MassEngine AgentData stride must remain 64 bytes. Actual: " + agentStride + " - refusing to allocate.");
                 ReleaseAll();
                 return;
             }
@@ -213,7 +217,8 @@ namespace MassEngine
             combatBuffers.hpReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.hpWriteBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.targetAgentIndexBuffer = new ComputeBuffer(AgentCount, sizeof(int));
-            combatBuffers.engagementSlotAssignmentBuffer = new ComputeBuffer(AgentCount, sizeof(int));
+            combatBuffers.engagementSlotAssignmentBuffer = new ComputeBuffer(checked(AgentCount * (1 + CombatBufferSet.CongestionWordsPerAgent)), sizeof(int));
+            combatBuffers.InitializeMovementCommands(TeamCount);
             combatBuffers.engagementSlotOccupancyBuffer = new ComputeBuffer(AgentCount * EngagementSlotsPerTarget, sizeof(uint));
             combatBuffers.attackCooldownBuffer = new ComputeBuffer(AgentCount, sizeof(float));
             combatBuffers.homePositionBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 3);
@@ -247,12 +252,15 @@ namespace MassEngine
             if (!IsAllocated || agents == null)
                 return;
 
+            maxAgentScaleXZ = 0.01f;
+            foreach (var agent in agents)
+                maxAgentScaleXZ = Mathf.Max(maxAgentScaleXZ, Mathf.Max(Mathf.Abs(agent.scale.x), Mathf.Abs(agent.scale.z)));
             agentBuffer.SetData(agents);
 
             Vector2[] positions = new Vector2[agents.Length];
             Vector3[] homePositions = new Vector3[agents.Length];
             int[] targetIndices = new int[agents.Length];
-            int[] engagementAssignments = new int[agents.Length];
+            int[] engagementAssignments = new int[checked(agents.Length * (1 + CombatBufferSet.CongestionWordsPerAgent))];
             float[] cooldowns = new float[agents.Length];
             int[] pendingDamage = new int[agents.Length];
 
@@ -290,6 +298,8 @@ namespace MassEngine
             if (unitTypeSettingsBuffer == null || settings == null || settings.Length != UnitTypeCount)
                 return;
 
+            maxUnitRadius = 0.05f;
+            foreach (var unit in settings) maxUnitRadius = Mathf.Max(maxUnitRadius, unit.agentRadius);
             unitTypeSettingsBuffer.SetData(settings);
         }
 

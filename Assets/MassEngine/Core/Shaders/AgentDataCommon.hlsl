@@ -46,6 +46,8 @@ struct AgentData
     float3 velocity;
     int currentState;
     float currentAnimationTime;
+    int presentationState;
+    float locomotionSpeed;
 };
 
 // Mirror of MassEngine.UnitTypeGpuSettings (144 bytes, sequential layout).
@@ -82,13 +84,13 @@ struct UnitTypeSettings
     // Consumed by the CPU projectile launcher; kept here to mirror the 144-byte stride.
     float projectileTrailLength;
     int teamId;
-    int padding0;
-    int padding1;
-    int padding2;
-    // 补齐到 36×4 = 144 字节（16字节对齐）
-    int padding4;
-    int padding5;
-    int padding6;
+    float moveReferenceSpeed;
+    float moveStopSpeed;
+    float moveStartSpeed;
+    // Former reserved slots; C# / HLSL layout remains 36 x 4 = 144 bytes.
+    float attackReleasePhase;
+    float projectileOriginHeight;
+    float projectileTargetHeight;
 };
 
 // One team's flow configuration, uploaded once per frame for every team.
@@ -252,6 +254,10 @@ int teamCount;
 StructuredBuffer<int> teamStanceReadBuffer;
 int localTargetSearchCellRadius;
 float defenderGuardRadius;
+
+#if defined(MASS_TERRAIN_ENABLED)
+#include "../../Terrain/Shaders/TerrainNavigation.hlsl"
+#endif
 
 UnitTypeSettings GetUnitSettings(uint agentIndex)
 {
@@ -514,25 +520,55 @@ bool IsCorpseDespawned(AgentData agent)
         && agent.currentAnimationTime >= GetCorpseDespawnSeconds();
 }
 
+// Called once for each simulated agent AFTER all position constraints. Tactical
+// state is deliberately not changed when pursuit is blocked.
+void UpdateLocomotionPresentation(inout AgentData agent, float3 previousPosition, UnitTypeSettings settings)
+{
+    if (deltaTime <= 0.0) return;
+    float bodyScale = max(0.01, abs(agent.scale.y));
+    float stopSpeed = max(0.0, settings.moveStopSpeed) * bodyScale;
+    float startSpeed = max(settings.moveStartSpeed, settings.moveStopSpeed + 0.01) * bodyScale;
+    float actualSpeed = length(agent.position - previousPosition) / deltaTime;
+    // Stop promptly; otherwise smooth the crowd's small positional corrections.
+    agent.locomotionSpeed = actualSpeed <= stopSpeed ? 0.0 :
+        lerp(agent.locomotionSpeed, actualSpeed, saturate(deltaTime * 12.0));
+    int visual = agent.currentState;
+    if (visual != STATE_ATTACK && visual != STATE_DEAD)
+        visual = agent.locomotionSpeed > (agent.presentationState == STATE_MOVE ? stopSpeed : startSpeed)
+            ? STATE_MOVE : STATE_IDLE;
+    if (visual != agent.presentationState)
+    {
+        // Death time is corpse age; SetAgentState owns its reset, not this selector.
+        if (visual != STATE_DEAD) agent.currentAnimationTime = 0.0;
+        agent.presentationState = visual;
+    }
+}
+
 // Advances the VAT time accumulator. Looping states wrap at their OWN clip duration so
 // the wrap point is phase-aligned with the clip (no visual pop); Dead keeps counting
 // past the end of the death clip because that accumulator doubles as the corpse age.
 void UpdateAnimationTime(uint index, inout AgentData agent, int interval)
 {
+    if (battleStarted == 0) return;
     interval = max(interval, 1);
     if ((frameIndex % (uint)interval) != 0)
         return;
 
     UnitTypeSettings settings = GetUnitSettings(index);
-    float duration = GetClipDurationForState(settings, agent.currentState);
+    // Ranged phase is written by the per-frame combat clock, including skipped
+    // decision frames. Never advance it again here or let render LOD change its rate.
+    if (agent.currentState == STATE_ATTACK && settings.projectileRange > 0.01) return;
+    int visual = agent.currentState >= STATE_ATTACK ? agent.currentState : agent.presentationState;
+    float duration = GetClipDurationForState(settings, visual);
     bool loop = agent.currentState != STATE_DEAD;
 
     float animationSpeed = 1.0;
-    if (agent.currentState == STATE_MOVE || agent.currentState == STATE_ENGAGE)
+    if (visual == STATE_MOVE)
     {
-        float maxMoveSpeed = max(0.01, settings.maxSpeed);
-        float speed01 = saturate(length(agent.velocity.xz) / maxMoveSpeed);
-        animationSpeed = lerp(settings.moveAnimationSpeedMin, settings.moveAnimationSpeedMax, speed01);
+        float reference = settings.moveReferenceSpeed > 0.0 ? settings.moveReferenceSpeed : settings.maxSpeed;
+        reference = max(0.01, reference * max(0.01, abs(agent.scale.y)));
+        animationSpeed = clamp(agent.locomotionSpeed / reference,
+            settings.moveAnimationSpeedMin, settings.moveAnimationSpeedMax);
     }
 
     float nextTime = agent.currentAnimationTime + deltaTime * interval * animationSpeed;
@@ -654,6 +690,27 @@ float2 SampleFlowDirection(uint index, int teamId, float3 position)
     uint cell = FlowFieldTeamCellIndex(teamId, FlowFieldCellToIndex(PositionToFlowFieldCell(position)));
     float2 direction = flowFieldDirectionsReadBuffer[cell];
     float lengthSqr = dot(direction, direction);
+#if defined(MASS_TERRAIN_ENABLED)
+    int2 here = TerrainNavCell(position.xz);
+    if (!TerrainNavCellOpen(here)) return 0;
+    if (lengthSqr <= 0.0001)
+    {
+        // Only an explicitly reachable SAME cell can finish at its exact target;
+        // zero elsewhere means unreachable/awaiting a field, never straight-line fallback.
+        TeamFlowParams p = GetTeamFlowParams(teamId);
+        if (p.modes.x == FLOW_TARGET_POINT && all(here == TerrainNavCell(p.target.xy)))
+        {
+            float2 offset = p.target.xy - position.xz;
+            return dot(offset, offset) > max(p.target.z * p.target.z, 0.0001) ? normalize(offset) : 0;
+        }
+        return 0;
+    }
+    int2 next = here + (int2)sign(direction);
+    float2 nextCenter = flowFieldOrigin + (next + .5) * flowFieldCellSize;
+    if (!TerrainSegmentClear(position.xz, nextCenter)) return 0;
+    float2 offset = nextCenter - position.xz;
+    return dot(offset, offset) > 0.000001 ? normalize(offset) : 0;
+#else
     if (lengthSqr <= 0.0001)
         return 0.0;
 
@@ -661,6 +718,7 @@ float2 SampleFlowDirection(uint index, int teamId, float3 position)
         direction *= rsqrt(lengthSqr);
 
     return direction;
+#endif
 }
 
 float2 FallbackDirection(uint id)
@@ -1115,7 +1173,11 @@ bool CurrentTargetIsValid(uint selfIndex, AgentData self, int targetIndex)
     uint otherIndex = (uint)targetIndex;
     float2 delta = agentPositionReadBuffer[otherIndex] - self.position.xz;
     bool retainExisting = self.currentState == STATE_ATTACK;
+#if defined(MASS_TERRAIN_ENABLED)
+    return TargetIsUsable(selfIndex, otherIndex, TerrainDistanceSquared(self.position, agentPositionReadBuffer[otherIndex]), self.position, retainExisting);
+#else
     return TargetIsUsable(selfIndex, otherIndex, dot(delta, delta), self.position, retainExisting);
+#endif
 }
 
 float2 ConfiguredFlowTargetOffset(float2 position, int targetMode, float4 targetPoint, float4 targetArea)
@@ -1138,6 +1200,8 @@ struct NeighborhoodQueryResult
     int bestEnemyIndex;
     float bestEnemyScore;
     float2 separation;
+    float2 contactSeparation;
+    bool friendlyAhead;
 };
 
 uint CurrentEngagementOccupancy(uint targetIndex, uint slot)
@@ -1185,7 +1249,7 @@ float TargetSelectionScore(uint selfIndex, uint targetIndex, float distSqr)
     return distanceScore + loadPenalty + affinity;
 }
 
-NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent, float maxTargetRadius, bool searchForEnemy)
+NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent, float maxTargetRadius, bool searchForEnemy, float2 travelForward)
 {
     float2 selfPosition = agent.position.xz;
     int2 homeCell = PositionXzToCell(selfPosition);
@@ -1196,6 +1260,9 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     result.bestEnemyIndex = -1;
     result.bestEnemyScore = 1e20;
     result.separation = 0.0;
+    result.contactSeparation = 0.0;
+    result.friendlyAhead = false;
+    float bodyRadius = selfRadius * max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
     // Every team except the agent's own is hostile (no alliance concept yet), so the sweep
     // walks all teamCount-1 opposing buckets instead of one fixed slot. This is the only
     // place where widening the team dimension actually costs more work per agent. A teamId
@@ -1233,7 +1300,11 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                             continue;
 
                         float2 toOther = agentPositionReadBuffer[otherIndex] - selfPosition;
+#if defined(MASS_TERRAIN_ENABLED)
+                        float distSqr = TerrainDistanceSquared(agent.position, agentPositionReadBuffer[otherIndex]);
+#else
                         float distSqr = dot(toOther, toOther);
+#endif
                         if (TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
                         {
                             float score = TargetSelectionScore(selfIndex, otherIndex, distSqr);
@@ -1260,6 +1331,20 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                 float2 otherPosition = agentPositionReadBuffer[otherIndex];
                 float2 toOther = otherPosition - selfPosition;
                 float distSqr = dot(toOther, toOther);
+                // Positions use the frame snapshot. Scale is immutable spawn data;
+                // no neighbor velocity/state is sampled while that neighbor is writing.
+                float3 otherScale = agentBuffer[otherIndex].scale;
+                float bodyDistance = bodyRadius + GetAgentRadius(otherIndex) * max(0.01, max(abs(otherScale.x), abs(otherScale.z)));
+                float forwardDistance = dot(toOther, travelForward);
+                float sideDistance = abs(toOther.x * travelForward.y - toOther.y * travelForward.x);
+                if (teamIdReadBuffer[otherIndex] == selfTeamId && forwardDistance > 0.001 &&
+                    forwardDistance < bodyDistance + max(0.15, bodyRadius * 0.5) && sideDistance < bodyDistance * 0.85)
+                    result.friendlyAhead = true;
+                if (distSqr < bodyDistance * bodyDistance * 0.81)
+                {
+                    float2 away = distSqr > 0.000001 ? -toOther * rsqrt(distSqr) : FallbackDirection(selfIndex);
+                    result.contactSeparation += away * (bodyDistance * 0.9 - sqrt(max(0.0, distSqr)));
+                }
                 float minDistance = selfRadius + GetAgentRadius(otherIndex);
                 float minDistanceSqr = minDistance * minDistance;
                 if (distSqr >= minDistanceSqr)

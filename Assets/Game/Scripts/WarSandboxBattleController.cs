@@ -73,6 +73,80 @@ namespace MassEngine.Game
         private WarSandboxBattlefieldRules? initialBattlefieldRules;
 
         public string BattlefieldRuleError { get; private set; }
+        public string CommandError { get; private set; }
+        public event System.Action<WarSandboxSoundCue> FeedbackRequested;
+        private readonly WarSandboxTerrainValidation terrainValidation = new WarSandboxTerrainValidation();
+
+        public bool TryResolveGroundPoint(Vector3 point, out Vector3 grounded, out string error)
+        {
+            grounded = point; error = null;
+            ResolveManager();
+            if (manager == null) { error = "战场尚未就绪。"; return false; }
+            if (!manager.TryGetTerrainContext(out var surface, out _, out error)) return false;
+            if (surface == null) return true;
+            if (!surface.TrySample(new Vector2(point.x, point.z), out var sample))
+            { error = "目标超出地表边界。"; return false; }
+            grounded = sample.Position;
+            return true;
+        }
+
+        public bool TryRaycastGround(Ray ray, float distance, LayerMask mask, out Vector3 point, out string error)
+        {
+            point = default; error = null;
+            ResolveManager();
+            if (manager == null) { error = "战场尚未就绪。"; return false; }
+            if (!manager.TryGetTerrainContext(out var surface, out _, out error)) return false;
+            if (surface != null)
+            {
+                if (TerrainSurfaceQueries.Raycast(surface, ray, distance, out point)) return true;
+                error = "未点击到当前地表。"; return false;
+            }
+            if (Physics.Raycast(ray, out var hit, distance, mask, QueryTriggerInteraction.Ignore))
+            { point = hit.point; return true; }
+            error = "未点击到地面。"; return false;
+        }
+
+        private bool RejectCommand(string error)
+        { CommandError = error; FeedbackRequested?.Invoke(WarSandboxSoundCue.Rejected); return false; }
+
+        public bool TryValidateTerrainDeployment(WarSandboxBattlefieldRules rules, out string error)
+        {
+            error = null;
+            ResolveManager();
+            if (manager == null) { error = "战场尚未就绪。"; return false; }
+            if (!manager.TryGetTerrainContext(out var surface, out _, out error)) return false;
+            if (surface == null) return true;
+            if (!WarSandboxDeploymentDraft.TryCapture(manager.scenarioConfig, out var draft, out error)) return false;
+            return terrainValidation.TryValidate(manager, new WarSandboxDeploymentDraft(draft.Snapshot(), rules), out _, out error);
+        }
+
+        // Queued waypoints are checked without replacing the current manager target. An army
+        // cannot cross components, so all initial compositions must reach the requested cell.
+        private bool TryResolveMoveTarget(int teamId, Vector3 point, out Vector3 target, out string error)
+        {
+            target = point; error = null;
+            ResolveManager();
+            if (manager == null) { error = "战场尚未就绪。"; return false; }
+            if (!manager.TryGetTerrainContext(out var surface, out var navigation, out error)) return false;
+            if (surface == null) { target = manager.ResolvePointOutsideStaticObstacles(point); return true; }
+            var xz = new Vector2(point.x, point.z);
+            if (navigation == null || !navigation.IsWalkable(xz) || !surface.TrySample(xz, out var sample))
+            { error = "命令被拒绝：目标位于禁行地形、障碍或地表边界外。"; return false; }
+            if (manager.scenarioConfig == null || manager.scenarioConfig.unitTypes == null)
+            { error = "军团部署缺失。"; return false; }
+            bool hasFormation = false;
+            foreach (var unit in manager.scenarioConfig.unitTypes)
+            {
+                if (unit == null || unit.teamId != teamId || unit.spawnConfig == null || unit.spawnConfig.unitCount <= 0) continue;
+                hasFormation = true;
+                var start = unit.spawnConfig.spawnCenter;
+                if (!navigation.AreConnected(new Vector2(start.x, start.z), xz))
+                { error = "命令被拒绝：该军团有编成无法到达目标连通区。"; return false; }
+            }
+            if (!hasFormation) { error = "此军团没有已部署编成。"; return false; }
+            target = sample.Position;
+            return true;
+        }
 
         public WarSandboxBattlePhase Phase { get { return phase; } }
         public WarSandboxBattleResult BattleResult { get { return battleResult; } }
@@ -270,9 +344,7 @@ namespace MassEngine.Game
             if (army == null)
                 return false;
 
-            ResolveManager();
-            if (manager != null)
-                target = manager.ResolvePointOutsideStaticObstacles(target);
+            if (!TryResolveMoveTarget(teamId, target, out target, out string error)) return RejectCommand(error);
 
             List<Vector3> route = moveRoutes[teamId];
             bool hasActiveMoveRoute = army.hasOrder && army.currentOrder.type == ArmyOrderType.Move && route.Count > 0;
@@ -280,9 +352,11 @@ namespace MassEngine.Game
                 return IssueOrder(ArmyOrder.Move(teamId, target));
 
             if (route.Count >= Mathf.Clamp(maxMoveRoutePoints, 2, 16))
-                return false;
+                return RejectCommand("路线已达到航点上限。");
 
+            CommandError = null;
             route.Add(target);
+            FeedbackRequested?.Invoke(WarSandboxSoundCue.Command);
             return true;
         }
 
@@ -326,6 +400,7 @@ namespace MassEngine.Game
                 return false;
             }
             if (!config.TryCreateSnapshot(out WarSandboxBattlefieldRules snapshot, out error)) return false;
+            if (!TryValidateTerrainDeployment(snapshot, out error)) return false;
 
             ApplyBattlefieldRules(snapshot);
             battlefieldConfig = config;
@@ -377,6 +452,9 @@ namespace MassEngine.Game
             if (phase != WarSandboxBattlePhase.Setup)
                 return false;
 
+            var candidate = CaptureBattlefieldRules(); candidate.staticObstaclesEnabled = value;
+            if (!TryValidateTerrainDeployment(candidate, out string error)) return RejectCommand(error);
+            CommandError = null;
             staticObstaclesEnabled = value;
             ApplyStaticObstacleSettings();
             return true;
@@ -424,8 +502,21 @@ namespace MassEngine.Game
             if (manager == null || army == null)
                 return false;
 
-            if (order.type == ArmyOrderType.Move && order.hasTarget)
-                order.target = manager.ResolvePointOutsideStaticObstacles(order.target);
+            if (phase == WarSandboxBattlePhase.Setup &&
+                !TryValidateTerrainDeployment(CaptureBattlefieldRules(), out string deploymentError)) return RejectCommand(deploymentError);
+            if (order.type != ArmyOrderType.Attack && order.type != ArmyOrderType.Move &&
+                order.type != ArmyOrderType.Hold && order.type != ArmyOrderType.Retreat) return false;
+            if (order.type == ArmyOrderType.Retreat)
+            { order.target = army.spawnCenter; order.hasTarget = true; }
+            if (order.type == ArmyOrderType.Move || order.type == ArmyOrderType.Retreat)
+            {
+                if (!order.hasTarget) return RejectCommand("命令缺少目标。");
+                if (!TryResolveMoveTarget(order.teamId, order.target, out order.target, out string error)) return RejectCommand(error);
+                // Commit the authoritative target before changing navigation, route or order state.
+                // A rejected target must leave every part of the previous command untouched.
+                if (IsNavigableTeam(order.teamId) && !manager.TrySetFlowTargetOverride(order.teamId, order.target, out error))
+                    return RejectCommand(error);
+            }
 
             if (replaceRoute)
             {
@@ -445,7 +536,6 @@ namespace MassEngine.Game
                     if (!order.hasTarget)
                         return false;
                     ApplyTeamNavigation(order.teamId, true, false);
-                    ApplyFlowTarget(order.teamId, order.target);
                     break;
 
                 case ArmyOrderType.Hold:
@@ -455,19 +545,20 @@ namespace MassEngine.Game
 
                 case ArmyOrderType.Retreat:
                     ApplyTeamNavigation(order.teamId, true, false);
-                    ApplyFlowTarget(order.teamId, army.spawnCenter);
-                    order.target = army.spawnCenter;
-                    order.hasTarget = true;
                     break;
 
                 default:
                     return false;
             }
 
+            manager.NotifyMovementCommand(order.teamId);
+            CommandError = null;
             army.currentOrder = order;
             army.hasOrder = true;
+            bool firstOrder = phase == WarSandboxBattlePhase.Setup;
             manager.StartBattle();
             phase = WarSandboxBattlePhase.Running;
+            FeedbackRequested?.Invoke(firstOrder ? WarSandboxSoundCue.Start : WarSandboxSoundCue.Command);
             return true;
         }
 
@@ -478,6 +569,12 @@ namespace MassEngine.Game
             if (!initialized)
                 RebuildArmyStates();
 
+            // A terrain control-point start is all-or-nothing; do not start one army and
+            // report success while another army's unreachable default order was rejected.
+            if (gameMode == WarSandboxGameMode.ControlPoint)
+                for (int teamId = 0; teamId < armies.Length; teamId++)
+                    if (armies[teamId].initialUnitCount > 0 &&
+                        !TryResolveMoveTarget(teamId, controlPointCenter, out _, out string error)) return RejectCommand(error);
             bool issuedAnyOrder = false;
             for (int teamId = 0; teamId < armies.Length; teamId++)
             {
@@ -500,6 +597,7 @@ namespace MassEngine.Game
 
         public int GetAliveUnitCount(int teamId)
         {
+            if (battleResult.valid && battleResult.TryGetArmy(teamId, out var settled)) return settled.survivors;
             ArmyRuntimeState army = GetArmy(teamId);
             if (army == null)
                 return 0;
@@ -521,8 +619,21 @@ namespace MassEngine.Game
             if (manager == null)
                 return;
 
+            if (phase == WarSandboxBattlePhase.Setup &&
+                !TryValidateTerrainDeployment(CaptureBattlefieldRules(), out string error)) { RejectCommand(error); return; }
+            CommandError = null;
+            bool firstStart = phase == WarSandboxBattlePhase.Setup;
             manager.StartBattle();
             phase = WarSandboxBattlePhase.Running;
+            if (firstStart) FeedbackRequested?.Invoke(WarSandboxSoundCue.Start);
+        }
+
+        public bool EndBattle()
+        {
+            if ((phase != WarSandboxBattlePhase.Running && phase != WarSandboxBattlePhase.Paused) ||
+                !WarSandboxSceneSession.AllowsBattleCommands(this) || manager == null) return false;
+            CompleteBattle(WarSandboxBattlePhase.Ended, TelemetrySnapshot, WarSandboxVictoryReason.ManualEnd);
+            return true;
         }
 
         public void PauseBattle()
@@ -580,6 +691,7 @@ namespace MassEngine.Game
             Time.timeScale = 1f;
             phase = WarSandboxBattlePhase.Setup;
             battleResult = default;
+            CommandError = null;
             ResetControlPointState();
             initialized = false;
             RebuildArmyStates();
@@ -636,6 +748,8 @@ namespace MassEngine.Game
                 armies[teamId].spawnCenter = counts[teamId] > 0
                     ? weightedCenters[teamId] / counts[teamId]
                     : Vector3.zero;
+                if (counts[teamId] > 0 && TryResolveGroundPoint(armies[teamId].spawnCenter, out var grounded, out _))
+                    armies[teamId].spawnCenter = grounded;
             }
 
             initialized = false;
@@ -683,6 +797,8 @@ namespace MassEngine.Game
             if (!snapshot.valid || snapshot.teams == null)
                 return;
 
+            int previousOwner = controlPointOwnerTeamId;
+            bool wasContested = IsControlPointContested;
             EnsureControlPointZoneCounts();
             int fieldedTeamCount = 0;
             for (int teamId = 0; teamId < armies.Length; teamId++)
@@ -704,6 +820,8 @@ namespace MassEngine.Game
                 controlPointCaptureSeconds);
             controlPointOwnerTeamId = state.ownerTeamId;
             controlPointCaptureProgress = state.progress;
+            if (previousOwner != controlPointOwnerTeamId || wasContested != IsControlPointContested)
+                FeedbackRequested?.Invoke(WarSandboxSoundCue.ControlPoint);
 
             if (!state.captured)
                 return;
@@ -722,17 +840,11 @@ namespace MassEngine.Game
             WarSandboxVictoryReason victoryReason,
             int winnerTeamId = -1)
         {
+            if (battleResult.valid) return;
             phase = resultPhase;
-            // The attacker/defender totals stay in the result because every reader of it is still
-            // written around those two; a many-army battle names its winner in winnerTeamId.
-            battleResult = WarSandboxBattleResult.Capture(
-                phase,
-                armies[0].initialUnitCount,
-                armies[1].initialUnitCount,
-                snapshot,
-                victoryReason,
-                winnerTeamId);
+            battleResult = WarSandboxBattleResult.Capture(phase, armies, snapshot, victoryReason, winnerTeamId);
             manager.PauseBattle();
+            FeedbackRequested?.Invoke(WarSandboxSoundCue.Finish);
         }
 
         private void ResetControlPointState()
@@ -759,8 +871,9 @@ namespace MassEngine.Game
             if (manager == null || manager.Telemetry == null)
                 return;
 
+            if (!TryResolveGroundPoint(controlPointCenter, out var center, out _)) return;
             manager.Telemetry.ConfigureObservationZone(
-                controlPointCenter,
+                center,
                 controlPointRadius,
                 gameMode == WarSandboxGameMode.ControlPoint);
         }
@@ -784,8 +897,8 @@ namespace MassEngine.Game
                 if (!team.valid || !WarSandboxMoveRoute.HasReached(team.centroid, route[0], moveWaypointArrivalRadius))
                     continue;
 
-                route.RemoveAt(0);
-                IssueOrderInternal(ArmyOrder.Move(teamId, route[0]), false);
+                if (IssueOrderInternal(ArmyOrder.Move(teamId, route[1]), false))
+                    route.RemoveAt(0);
             }
         }
 
@@ -803,12 +916,6 @@ namespace MassEngine.Game
         {
             if (IsNavigableTeam(teamId))
                 manager.SetTeamNavigationOverride(teamId, enabled, dynamicTargeting);
-        }
-
-        private void ApplyFlowTarget(int teamId, Vector3 point)
-        {
-            if (IsNavigableTeam(teamId))
-                manager.SetFlowTargetOverride(teamId, point);
         }
 
         private void ClearFlowTarget(int teamId)
@@ -836,7 +943,8 @@ namespace MassEngine.Game
                 obstaclePresenter = GetComponent<WarSandboxStaticObstaclePresenter>();
             if (obstaclePresenter == null)
                 obstaclePresenter = gameObject.AddComponent<WarSandboxStaticObstaclePresenter>();
-            obstaclePresenter.Sync(active);
+            if (manager != null && manager.TryGetTerrainContext(out var surface, out _, out _))
+                obstaclePresenter.Sync(active, surface);
         }
 
         private StaticObstacleRect[] ResolveStaticObstacles()
@@ -849,7 +957,7 @@ namespace MassEngine.Game
             return value == WarSandboxBattlePhase.AttackerVictory ||
                    value == WarSandboxBattlePhase.DefenderVictory ||
                    value == WarSandboxBattlePhase.ArmyVictory ||
-                   value == WarSandboxBattlePhase.Draw;
+                   value == WarSandboxBattlePhase.Draw || value == WarSandboxBattlePhase.Ended;
         }
     }
 }

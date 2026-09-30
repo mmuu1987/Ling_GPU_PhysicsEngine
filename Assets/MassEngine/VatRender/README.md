@@ -19,11 +19,11 @@ VAT（顶点动画纹理）播放 + 三级 LOD + DrawMeshInstancedIndirect。
 
 ## 动画语义
 
-- shader 按 `currentState` 选片段：`frame = fmod(animTime × clipRate, clipCount)`，
+- shader 在 Attack/Death 时优先按战术状态选片段，其余按 `presentationState` 选 Idle/Move：`frame = fmod(animTime × clipRate, clipCount)`，
   Death 钳在末帧。
 - 时间累加器按**当前片段自身时长**回绕（相位对齐，循环无跳变）；
   各片段时长按兵种经 settings 通道上传。
-- 移动动画速度随速度在 `moveAnimationSpeedMin/Max` 间插值（AnimationConfig）。
+- 移动倍率为实际速度 /（兵种参考速度 × scale.y），再由 `moveAnimationSpeedMin/Max` 钳制；参考速度为0时回退到 maxSpeed。停止后选Idle，而非继续最低倍率Move。
 - LOD 动画降频：near/mid/far interval（LodConfig，全局）。
 
 ## LOD 与剔除
@@ -59,6 +59,8 @@ EditMode：可见索引/args 随兵种数扩展的测试。
 **纹理布局约定**（烘焙与 shader 必须一致）：`x = vertexID % textureWidth`、
 `y = frame * rowsPerFrame + vertexID / textureWidth`；格式 `RGBAHalf` + `Clamp` + `Point`。
 
+M7.3 的 `VatLodReducer.CreateFarVariant` 可从既有采样创建新远景变体：共享近/中景资源，原Low作为Mid回退保留，只新建Far网格及配套VAT；拒绝覆盖目标路径。首发Male已用此路径从994降到98顶点，旧profile保持原样；详见 [GPU拆分与远景预算](../../方案设计/M7.3GPU拆分与远景预算.md)。
+
 **三处刻意约定**：
 - **Mid LOD 有意留空**：运行时对 mid/low 缺失有回退，现有 Male profile 同为 full + low 两级。
 - **cleanMesh 存绑定姿态**（不是 Idle 首帧）：Low LOD 的顶点聚类以 cleanMesh 几何范围做归一化，
@@ -90,7 +92,30 @@ far ↔ `hasLowLod ? lowLodMesh : (hasMidLod ? midLodMesh : cleanMesh)`。
 **子配置独占/共享**沿用现役约定：`spawnConfig` / `combatConfig` 每兵种独占，
 `movementConfig` / `flockingConfig` / `animationConfig` 按模板共享。绑新模型必须勾选"独占 RenderConfig"：
 共享的渲染配置属于模板兵种，往里写 profile 会连带把模板兵种也换掉模型，故该组合被显式拒绝。
+创建完成后只保存本次新建资产与目标持久 Scenario，不调用全局 `SaveAssets`；调用者其他未保存改动仍保持 dirty，磁盘不被顺带写回。该边界由真实磁盘回归锁定。
 
-**为什么放在 `MassEngine.Editor` 而不是 `Game.Editor`**：`UnitTypeConfig` / `ScenarioConfig` /
-`ConfigValidator` / `RenderConfig` 都在 `MassEngine` 程序集里，这样零 asmdef 改动就能全用到
-（`Game.Editor` 看不见 `MassEngine.Editor`，反向则畅通）。
+**为什么放在 `MassEngine.Editor` 而不是 `Game.Editor`**：烘焙/绑定核心只依赖 `MassEngine` 的
+`UnitTypeConfig`、`ScenarioConfig`、`ConfigValidator` 和 `RenderConfig`，不耦合具体游戏。
+M5.4 的试验编排器由 `Game.Editor` 单向引用 `MassEngine.Editor`，复用核心来制作兵种和场景；
+这些 Editor 程序集都不进入独立玩家构建。
+
+## M5.3 GPU 外观与性能回归（2026-09-24）
+
+菜单 `MassEngine/Regression/M5.3 GPU VAT Appearance`，实现为 `Editor/VatAppearanceRegression.cs` 和
+`VatAppearanceRegressionCapture.cs`。在唯一临时目录新建 Male 重烘产物，实际绘制 Male 原/新及 Female 原版
+三档 LOD、四段动作，导出 PNG、动画变化/死亡钳制检查和源文件哈希；不是只比较纹理尺寸。
+Female 的现役三级路径为 4066/2018/39 顶点，本轮未重烘 Female，也未迁移默认兵种资产。
+
+36 组 GPU 路径通过，EditMode 319/319（新增 27 项，含 6 项真实 GPU 测试）、PlayMode 55/55 全绿。
+游戏层隔离开发构建的 110k ABBA 采样约 +3.2% 平均帧时，按非阻塞回退记录，不启动引擎优化。
+强制 LOD 的离屏截图不代替场景光影/分类或用户签收；M5.4 试验模型完整人工流程仍未验收。
+
+完整证据与复现：[M5.3 回归记录](../../方案设计/M5.3重烘回归记录.md)。
+制作步骤与独占/共享边界：[兵种模型制作管线](../../方案设计/兵种模型制作管线.md)。
+
+## 2026-09-29 现有素材下的表现修正
+
+不新增Walk/Run，不重烘VAT。约束后的三维位移负责表现，战术Move/Engage不再强迫播放Move。
+默认停下/启动阈值为0.05/0.12m/s（随scale.y缩放），非静止速度做轻量平滑；Idle使用自己的片段周期。
+大型模型可在独立AnimationConfig中调 moveReferenceSpeed，不能直接改共享模板而误影响其他兵种；这只是步频近似，不是真正Walk素材。
+远程Attack的进度由战斗周期写入，分类kernel不再重复推进，LOD不改变出手节奏；暂停冻结所有片段时间，Death年龄不被表现切换重置。

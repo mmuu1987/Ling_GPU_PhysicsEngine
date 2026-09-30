@@ -112,7 +112,7 @@ namespace MassEngine.Game
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
                 StartOrRestartDefaultBattle();
             if (Input.GetKeyDown(KeyCode.Escape))
-                awaitingMoveTarget = false;
+                CancelMoveTarget();
             if (Input.GetKeyDown(KeyCode.F1))
                 FocusArmy(0);
             if (Input.GetKeyDown(KeyCode.F2))
@@ -134,10 +134,10 @@ namespace MassEngine.Game
                 return;
 
             Ray ray = targetCamera.ScreenPointToRay(Input.mousePosition);
-            if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Max(1f, maxRayDistance), groundMask, QueryTriggerInteraction.Ignore))
-                return;
+            if (!controller.TryRaycastGround(ray, Mathf.Max(1f, maxRayDistance), groundMask, out var point, out string error))
+            { SetFeedback(error); return; }
 
-            IssueMoveTo(hit.point, Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
+            IssueMoveTo(point, Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
         }
 
         private void OnGUI()
@@ -296,11 +296,14 @@ namespace MassEngine.Game
             awaitingMoveTarget = false;
             if (controller.IssueOrder(ArmyOrder.Attack(controller.selectedTeam)))
                 SetFeedback(FormatTeamName(controller.selectedTeam) + "：进攻");
+            else SetFeedback(controller.CommandError ?? "当前无法进攻。");
         }
 
         private void BeginMoveOrder()
         {
+            if (controller == null || controller.SelectedArmy == null || IsTerminalPhase(controller.Phase)) return;
             awaitingMoveTarget = true;
+            nextUiRefresh = 0;
             SetFeedback(FormatTeamName(controller.selectedTeam) + "：请选择移动目标");
         }
 
@@ -313,8 +316,7 @@ namespace MassEngine.Game
                                      selectedArmy.currentOrder.type == ArmyOrderType.Move;
             if (!controller.IssueMoveOrder(controller.selectedTeam, target, append))
             {
-                if (actuallyAppending)
-                    SetFeedback("路线已达到航点上限");
+                SetFeedback(controller.CommandError ?? "当前无法下达移动命令。");
                 return false;
             }
 
@@ -328,6 +330,7 @@ namespace MassEngine.Game
             awaitingMoveTarget = false;
             if (controller.IssueOrder(ArmyOrder.Hold(controller.selectedTeam)))
                 SetFeedback(FormatTeamName(controller.selectedTeam) + "：原地防守");
+            else SetFeedback(controller.CommandError ?? "当前无法防守。");
         }
 
         private void IssueRetreat()
@@ -335,6 +338,7 @@ namespace MassEngine.Game
             awaitingMoveTarget = false;
             if (controller.IssueOrder(ArmyOrder.Retreat(controller.selectedTeam)))
                 SetFeedback(FormatTeamName(controller.selectedTeam) + "：撤回出生地");
+            else SetFeedback(controller.CommandError ?? "当前无法撤退。");
         }
 
         private void ToggleStaticObstacles()
@@ -342,6 +346,7 @@ namespace MassEngine.Game
             bool enabled = !controller.staticObstaclesEnabled;
             if (controller.SetStaticObstaclesEnabled(enabled))
                 SetFeedback(enabled ? "\u9759\u6001\u969c\u788d\u5df2\u5f00\u542f" : "\u9759\u6001\u969c\u788d\u5df2\u5173\u95ed");
+            else SetFeedback(controller.CommandError ?? "当前无法修改障碍。");
         }
 
         private void StartOrRestartDefaultBattle()
@@ -353,7 +358,8 @@ namespace MassEngine.Game
             else if (controller.Phase == WarSandboxBattlePhase.Setup)
                 started = controller.StartDefaultBattle();
             if (started)
-                SetFeedback("双方已下达进攻命令");
+                SetFeedback("各军团已下达默认命令");
+            else SetFeedback(controller.CommandError ?? controller.BattlefieldRuleError ?? "当前无法开始战斗。");
         }
 
         private void DrawSpeedButton(string label, float speed, float height)
@@ -448,6 +454,9 @@ namespace MassEngine.Game
         // that into a name needs the controller's roster.
         private string FormatResultTitle(WarSandboxBattleResult result)
         {
+            if (result.phase == WarSandboxBattlePhase.Ended) return "手动结束";
+            if (result.winnerTeamId >= 0 && result.TryGetArmy(result.winnerTeamId, out var winner))
+                return winner.displayName + "胜利";
             switch (result.phase)
             {
                 case WarSandboxBattlePhase.AttackerVictory: return "\u653b\u65b9\u80dc\u5229";
@@ -465,6 +474,7 @@ namespace MassEngine.Game
 
         private static string FormatVictoryReason(WarSandboxVictoryReason reason)
         {
+            if (reason == WarSandboxVictoryReason.ManualEnd) return "主动结束 · 不判定胜负";
             return reason == WarSandboxVictoryReason.ControlPoint ? "占领据点" : "歼灭敌军";
         }
 
@@ -532,6 +542,7 @@ namespace MassEngine.Game
                 commandCamera = controller.manager.cullingCamera;
             if (cameraManager == null)
                 cameraManager = FindFirstObjectByType<MyCameraManager>();
+            if (cameraManager != null && controller != null) cameraManager.TerrainManager = controller.manager;
         }
 
         private void FocusArmy(int teamId)
@@ -679,6 +690,7 @@ namespace MassEngine.Game
                 }
                 else if (action == WarSandboxMinimapAction.FocusCamera)
                 {
+                    if (!controller.TryResolveGroundPoint(point, out point, out string error)) { SetFeedback(error); current.Use(); return; }
                     cameraFocusMode = CameraFocusMode.None;
                     cameraManager.CenterTacticalPoint(point);
                     SetFeedback("镜头定位：" + point.x.ToString("F0") + ", " + point.z.ToString("F0"));
@@ -856,8 +868,9 @@ namespace MassEngine.Game
                     continue;
 
                 Vector3 size = spawn.ResolveSpawnSize();
+                if (!controller.TryResolveGroundPoint(spawn.spawnCenter, out var center, out _)) continue;
                 Bounds spawnBounds = new Bounds(
-                    spawn.spawnCenter,
+                    center,
                     new Vector3(Mathf.Max(1f, size.x), 30f, Mathf.Max(1f, size.z)));
                 if (!found)
                 {
@@ -911,9 +924,11 @@ namespace MassEngine.Game
             if (controller.gameMode != WarSandboxGameMode.ControlPoint)
                 return;
 
-            Vector3 centerScreen = targetCamera.WorldToScreenPoint(controller.controlPointCenter);
-            Vector3 edgeScreen = targetCamera.WorldToScreenPoint(
-                controller.controlPointCenter + Vector3.right * Mathf.Max(2f, controller.controlPointRadius));
+            if (!controller.TryResolveGroundPoint(controller.controlPointCenter, out var centerWorld, out _) ||
+                !controller.TryResolveGroundPoint(controller.controlPointCenter + Vector3.right * Mathf.Max(2f, controller.controlPointRadius),
+                    out var edgeWorld, out _)) return;
+            Vector3 centerScreen = targetCamera.WorldToScreenPoint(centerWorld);
+            Vector3 edgeScreen = targetCamera.WorldToScreenPoint(edgeWorld);
             if (centerScreen.z <= 0f || edgeScreen.z <= 0f)
                 return;
 
@@ -922,23 +937,35 @@ namespace MassEngine.Game
             Color color = new Color(1f, 0.85f, 0.2f, 0.8f);
             const int segments = 24;
             Vector2 previous = center + Vector2.right * radius;
+            bool terrain = controller.manager.terrainSurfaceAsset != null, previousVisible = true;
+            if (terrain) previous = new Vector2(edgeScreen.x, Screen.height - edgeScreen.y);
             for (int i = 1; i <= segments; i++)
             {
                 float angle = i * Mathf.PI * 2f / segments;
                 Vector2 next = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
-                DrawLine(previous, next, color, 1f);
-                previous = next;
+                bool visible = true;
+                if (terrain)
+                {
+                    var ringPoint = centerWorld + new Vector3(Mathf.Cos(angle), 0, Mathf.Sin(angle)) * controller.controlPointRadius;
+                    visible = controller.TryResolveGroundPoint(ringPoint, out ringPoint, out _);
+                    Vector3 projected = targetCamera.WorldToScreenPoint(ringPoint);
+                    visible &= projected.z > 0;
+                    next = new Vector2(projected.x, Screen.height - projected.y);
+                }
+                if (visible && previousVisible) DrawLine(previous, next, color, 1f);
+                previous = next; previousVisible = visible;
             }
 
             GUI.Label(new Rect(center.x + 8f, center.y - 12f, 100f, 22f), "中央据点");
         }
 
-        private static void DrawArmyMarker(Camera targetCamera, ArmyRuntimeState army, Color color)
+        private void DrawArmyMarker(Camera targetCamera, ArmyRuntimeState army, Color color)
         {
             if (army == null || !army.hasOrder || !army.currentOrder.hasTarget)
                 return;
 
-            Vector3 screen = targetCamera.WorldToScreenPoint(army.currentOrder.target);
+            if (!controller.TryResolveGroundPoint(army.currentOrder.target, out var target, out _)) return;
+            Vector3 screen = targetCamera.WorldToScreenPoint(target);
             if (screen.z <= 0f)
                 return;
 
@@ -1053,7 +1080,7 @@ namespace MassEngine.Game
             return value == WarSandboxBattlePhase.AttackerVictory ||
                    value == WarSandboxBattlePhase.DefenderVictory ||
                    value == WarSandboxBattlePhase.ArmyVictory ||
-                   value == WarSandboxBattlePhase.Draw;
+                   value == WarSandboxBattlePhase.Draw || value == WarSandboxBattlePhase.Ended;
         }
 
         private static string FormatPhase(WarSandboxBattlePhase value)
@@ -1066,6 +1093,7 @@ namespace MassEngine.Game
                 case WarSandboxBattlePhase.DefenderVictory: return "守方胜利";
                 case WarSandboxBattlePhase.ArmyVictory: return "战斗结束";
                 case WarSandboxBattlePhase.Draw: return "同归于尽";
+                case WarSandboxBattlePhase.Ended: return "手动结束";
                 default: return "部署";
             }
         }

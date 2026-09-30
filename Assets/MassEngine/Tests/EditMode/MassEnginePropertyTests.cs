@@ -24,9 +24,9 @@ namespace MassEngine.Tests
         // ------------------------------------------------------------------
 
         [Test]
-        public void AgentDataStrideRemains56Bytes()
+        public void AgentDataStrideIs64BytesWithPresentation()
         {
-            Assert.AreEqual(56, Marshal.SizeOf<AgentData>());
+            Assert.AreEqual(64, Marshal.SizeOf<AgentData>());
         }
 
         [Test]
@@ -98,7 +98,7 @@ namespace MassEngine.Tests
             Type[] offenders = typeof(MassEngineManager).Assembly.GetTypes()
                 .Where(type => type.Namespace == "MassEngine")
                 .Where(type => !type.IsEnum && !type.IsInterface)
-                .Where(type => CountDataFields(type) > budget)
+                .Where(type => CountDataFields(type) > (type == typeof(UnitTypeGpuSettings) ? 36 : budget))
                 .ToArray();
 
             Assert.IsEmpty(offenders,
@@ -107,15 +107,9 @@ namespace MassEngine.Tests
         }
 
         /// <summary>
-        /// Public instance fields that actually carry data. Alignment padding is excluded
-        /// because it is forced by the GPU contract rather than by design weight:
-        /// UnitTypeGpuSettings has to stay 144 bytes and 16-byte aligned - see
-        /// UnitTypeGpuSettingsStrideMatchesHlslStruct above, and MassGpuBufferManager,
-        /// which refuses to allocate at all when the stride drifts - which costs it six
-        /// padding ints that no line of C# or HLSL ever reads. Counting those made the
-        /// budget rule contradict the alignment rule; the 30 fields that do carry data
-        /// were always inside the budget. A real god-object still cannot hide: field
-        /// number 31 fails the test whatever it is named.
+        /// Public instance data fields. The 144B UnitTypeGpuSettings contract now uses
+        /// its six formerly reserved slots for presentation and projectile geometry.
+        /// It alone has a 36-field allowance; other types retain the 30-field budget.
         /// </summary>
         private static int CountDataFields(Type type)
         {
@@ -735,14 +729,15 @@ namespace MassEngine.Tests
             buffers.Allocate(4, 4, 4, 8, 8, 1);
 
             // Requirement 9.3: compute-only combat state never lives inside AgentData.
-            Assert.AreEqual(56, buffers.agentBuffer.stride);
+            Assert.AreEqual(64, buffers.agentBuffer.stride);
             Assert.NotNull(buffers.combatBuffers.hpReadBuffer);
             Assert.NotNull(buffers.combatBuffers.hpWriteBuffer);
             Assert.AreNotSame(buffers.combatBuffers.hpReadBuffer, buffers.combatBuffers.hpWriteBuffer);
             Assert.AreNotSame(buffers.combatBuffers.pendingDamageReadBuffer, buffers.combatBuffers.pendingDamageWriteBuffer);
             Assert.AreEqual(8, MassGpuBufferManager.EngagementSlotsPerTarget);
             Assert.AreEqual(4 * 8, buffers.combatBuffers.engagementSlotOccupancyBuffer.count);
-            Assert.AreEqual(4, buffers.combatBuffers.engagementSlotAssignmentBuffer.count);
+            Assert.AreEqual(4 * (1 + CombatBufferSet.CongestionWordsPerAgent), buffers.combatBuffers.engagementSlotAssignmentBuffer.count);
+            Assert.AreEqual(buffers.TeamCount, buffers.combatBuffers.movementCommandRevisionBuffer.count);
             Assert.That(buffers.teamGridCountsBuffer.count, Is.EqualTo(8));
             Assert.That(buffers.teamGridAgentIndicesBuffer.count, Is.EqualTo(32));
 

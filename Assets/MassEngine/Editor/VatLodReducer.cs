@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 namespace MassEngine.Editor
@@ -13,6 +14,56 @@ namespace MassEngine.Editor
     public static class VatLodReducer
     {
         private const int MaxClusterResolution = 256;
+
+        /// <summary>Create a new far-LOD variant, sharing the source near/mid resources.
+        /// An existing low mesh remains the mid fallback; only far mesh/VAT are reduced.</summary>
+        public static VATProfile CreateFarVariant(VATProfile source, string assetPath, int maxVertices)
+        {
+            VatBakeResult.ValidateNewPath(assetPath);
+            if (!VatProfileValidation.TryValidate(source, out string error))
+                throw new ArgumentException(error, nameof(source));
+            if (maxVertices < 8 || maxVertices >= source.cleanMesh.vertexCount)
+                throw new ArgumentOutOfRangeException(nameof(maxVertices));
+            using (var result = new VatBakeResult())
+            {
+                VATProfile profile = result.Profile;
+                EditorUtility.CopySerialized(source, profile);
+                profile.name = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+                if (!source.HasMidLod && source.HasLowLod)
+                {
+                    profile.midLodMesh = source.lowLodMesh;
+                    profile.midLodPositionTexture = source.lowLodPositionTexture;
+                    profile.midLodNormalTexture = source.lowLodNormalTexture;
+                    profile.midLodTextureWidth = source.lowLodTextureWidth;
+                    profile.midLodTextureHeight = source.lowLodTextureHeight;
+                    profile.midLodRowsPerFrame = source.lowLodRowsPerFrame;
+                }
+                // Preserve the original sampled animation, including attachment poses.
+                Bake(result, source.positionTexture.GetPixels(), source.normalTexture.GetPixels(),
+                    new Vector3Int(source.textureWidth, source.textureHeight, source.rowsPerFrame),
+                    1f, maxVertices, (int)source.cleanMesh.GetIndexCount(0));
+                if (!VatProfileValidation.TryValidate(profile, out error))
+                    throw new InvalidOperationException(error);
+                try
+                {
+                    // SaveNew owns a whole bake and refuses external resources. This
+                    // variant instead shares source resources and attaches ONLY new far data.
+                    AssetDatabase.CreateAsset(profile, assetPath);
+                    AssetDatabase.AddObjectToAsset(profile.lowLodMesh, profile);
+                    AssetDatabase.AddObjectToAsset(profile.lowLodPositionTexture, profile);
+                    AssetDatabase.AddObjectToAsset(profile.lowLodNormalTexture, profile);
+                    EditorUtility.SetDirty(profile);
+                    AssetDatabase.SaveAssetIfDirty(profile);
+                    return profile;
+                }
+                catch
+                {
+                    if (AssetDatabase.LoadMainAssetAtPath(assetPath) == profile)
+                        AssetDatabase.DeleteAsset(assetPath);
+                    throw;
+                }
+            }
+        }
 
         /// <summary>
         /// 生成 Low LOD 并写回 <see cref="VatBakeResult.Profile"/> 的 lowLod* 槽位。

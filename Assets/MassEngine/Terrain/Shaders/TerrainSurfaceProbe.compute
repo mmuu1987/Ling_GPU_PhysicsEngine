@@ -1,0 +1,27 @@
+#pragma kernel SampleSurface
+#pragma kernel FlatBaseline
+#include "TerrainSurface.hlsl"
+
+StructuredBuffer<float4> _Queries; // XZ position, XZ velocity
+RWStructuredBuffer<float4> _Samples; // height, gradient XZ, walkable; -1 outside
+RWStructuredBuffer<float4> _Velocities; // tangent velocity, valid
+int _QueryCount;
+
+[numthreads(64, 1, 1)]
+void SampleSurface(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_QueryCount) return;
+    float4 query = _Queries[id.x];
+    float4 sample = SampleTerrainSurface(query.xy);
+    _Samples[id.x] = sample;
+    _Velocities[id.x] = float4(sample.w >= 0 ? TerrainSurfaceVelocity(query.zw, sample.yz) : 0, sample.w >= 0 ? 1 : 0);
+}
+
+[numthreads(64, 1, 1)]
+void FlatBaseline(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)_QueryCount) return;
+    float4 query = _Queries[id.x];
+    _Samples[id.x] = float4(0, 0, 0, 1);
+    _Velocities[id.x] = float4(query.z, 0, query.w, 1);
+}

@@ -47,13 +47,13 @@ namespace MassEngine
         // the uploaded struct remains 144 bytes and the simulation kernels do not read it.
         public float projectileTrailLength;
         public int teamId;
-        public int padding0;
-        public int padding1;
-        public int padding2;
-        // 补齐到 36×4 = 144 字节（16字节对齐）
-        public int padding4;
-        public int padding5;
-        public int padding6;
+        public float moveReferenceSpeed;
+        public float moveStopSpeed;
+        public float moveStartSpeed;
+        // Former reserved slots; C# / HLSL layout remains 36 x 4 = 144 bytes.
+        public float attackReleasePhase;
+        public float projectileOriginHeight;
+        public float projectileTargetHeight;
 
         public static UnitTypeGpuSettings CreateDefaults(int teamId)
         {
@@ -79,7 +79,13 @@ namespace MassEngine
                 moveClipDuration = 1f,
                 attackClipDuration = 1f,
                 deathClipDuration = 1.5f,
-                moveAnimationSpeedMin = 0.85f,
+                moveReferenceSpeed = 0f, // 0 = use the type's maxSpeed
+                moveStopSpeed = 0.05f,
+                moveStartSpeed = 0.12f,
+                attackReleasePhase = 0.55f,
+                projectileOriginHeight = 1.3f,
+                projectileTargetHeight = 1f,
+                moveAnimationSpeedMin = 0.2f,
                 moveAnimationSpeedMax = 1.15f,
                 densityComfortPerSqm = 0.6f,
                 projectileTrailLength = 1f,

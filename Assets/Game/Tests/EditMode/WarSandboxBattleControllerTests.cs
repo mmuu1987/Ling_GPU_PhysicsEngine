@@ -64,6 +64,26 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void ManualEndFreezesStatsOnceAndResetAllowsAnotherBattle()
+        {
+            int finished = 0; controller.FeedbackRequested += cue => { if (cue == WarSandboxSoundCue.Finish) finished++; };
+            Assert.That(controller.EndBattle(), Is.False, "Setup has no battle to end.");
+            Assert.That(controller.StartDefaultBattle(), Is.True);
+            controller.PauseBattle(); Assert.That(controller.EndBattle(), Is.True);
+            var result = controller.BattleResult;
+            Assert.That(result.phase, Is.EqualTo(WarSandboxBattlePhase.Ended));
+            Assert.That(result.victoryReason, Is.EqualTo(WarSandboxVictoryReason.ManualEnd));
+            Assert.That(result.winnerTeamId, Is.EqualTo(-1)); Assert.That(result.ArmyCount, Is.EqualTo(2));
+            Assert.That(controller.EndBattle(), Is.False); Assert.That(finished, Is.EqualTo(1));
+            Assert.That(controller.IssueOrder(ArmyOrder.Attack(0)), Is.False);
+            controller.GetArmy(0).initialUnitCount = 1;
+            Assert.That(controller.GetAliveUnitCount(0), Is.EqualTo(120));
+            controller.ResetBattle(); Assert.That(controller.BattleResult.valid, Is.False);
+            Assert.That(result.GetArmy(0).initial, Is.EqualTo(120));
+            Assert.That(controller.StartDefaultBattle(), Is.True);
+        }
+
+        [Test]
         public void RebuildArmyStatesAggregatesIntentByTeam()
         {
             ArmyRuntimeState attackers = controller.GetArmy(0);
@@ -108,6 +128,115 @@ namespace MassEngine.Game.Tests
 
             controller.IssueOrder(ArmyOrder.Attack(0));
             Assert.That(controller.GetMoveRoutePointCount(0), Is.Zero);
+        }
+
+        [Test]
+        public void AppendingWaypointWhilePausedKeepsCurrentLegAndPauseUntilResume()
+        {
+            Vector3 first = new Vector3(-5, 0, 10), next = new Vector3(-20, 0, 25);
+            Assert.That(controller.IssueMoveOrder(0, first, false), Is.True);
+            controller.PauseBattle();
+            Assert.That(controller.IssueMoveOrder(0, next, true), Is.True);
+            Assert.That(manager.IsBattleRunning, Is.False);
+            Assert.That(controller.Phase, Is.EqualTo(WarSandboxBattlePhase.Paused));
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.EqualTo(2));
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(first));
+            controller.StartOrResumeBattle();
+            Assert.That(manager.IsBattleRunning, Is.True);
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.EqualTo(2));
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(first));
+        }
+
+        [Test]
+        public void FullWaypointQueueRejectsAppendWithoutReplacingActiveOrder()
+        {
+            controller.maxMoveRoutePoints = 2;
+            Vector3 first = new Vector3(-5, 0, 10), next = new Vector3(-20, 0, 25);
+            Assert.That(controller.IssueMoveOrder(0, first, false), Is.True);
+            Assert.That(controller.IssueMoveOrder(0, next, true), Is.True);
+            Assert.That(controller.IssueMoveOrder(0, new Vector3(30, 0, 40), true), Is.False);
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.EqualTo(2));
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(first));
+            Assert.That(controller.TryGetMoveRoutePoint(0, 1, out var queued), Is.True);
+            Assert.That(queued, Is.EqualTo(next));
+            Assert.That(controller.CommandError, Is.Not.Null.And.Not.Empty);
+        }
+
+        [Test]
+        public void HoldAndRetreatReplaceMoveRoutesWithoutChangingOtherArmy()
+        {
+            Assert.That(controller.IssueMoveOrder(1, new Vector3(45, 0, 20), false), Is.True);
+            var other = controller.GetArmy(1).currentOrder;
+            Assert.That(controller.IssueMoveOrder(0, new Vector3(-5, 0, 10), false), Is.True);
+            Assert.That(controller.IssueMoveOrder(0, new Vector3(-20, 0, 25), true), Is.True);
+            Assert.That(controller.IssueOrder(ArmyOrder.Hold(0)), Is.True);
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.Zero);
+            Assert.That(controller.IssueOrder(ArmyOrder.Retreat(0)), Is.True);
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.Zero);
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(controller.GetArmy(0).spawnCenter));
+            Assert.That(controller.GetArmy(1).currentOrder.target, Is.EqualTo(other.target));
+            Assert.That(controller.GetMoveRoutePointCount(1), Is.EqualTo(1));
+        }
+
+        private WarSandboxCommandHUD CreateReadabilityHud()
+        {
+            var hud = root.AddComponent<WarSandboxCommandHUD>(); hud.controller = controller; return hud;
+        }
+        private static object HudCall(WarSandboxCommandHUD hud, string method) =>
+            typeof(WarSandboxCommandHUD).GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(hud, null);
+        private static bool IsPicking(WarSandboxCommandHUD hud) =>
+            (bool)typeof(WarSandboxCommandHUD).GetField("awaitingMoveTarget", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(hud);
+
+        [Test]
+        public void HudOrderCardReflectsSelectedQueueWithoutMutatingIt()
+        {
+            var hud = CreateReadabilityHud();
+            Assert.That(controller.IssueMoveOrder(0, new Vector3(-100, 0, 20), false), Is.True);
+            Assert.That(controller.IssueMoveOrder(0, new Vector3(-110, 0, 30), true), Is.True);
+            string detail = (string)HudCall(hud, "SelectedOrderDetail");
+            Assert.That(detail, Does.Contain("X -100").And.Contain("Z 20").And.Contain("后续航点 1 个"));
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.EqualTo(2));
+            Assert.That(controller.SelectArmy(1), Is.True);
+            Assert.That((string)HudCall(hud, "SelectedArmyTitle"), Does.Contain(controller.GetArmy(1).displayName));
+            Assert.That((string)HudCall(hud, "SelectedOrderDetail"), Does.Not.Contain("X -100"));
+        }
+        [Test]
+        public void HudCancelOnlyExitsTargetPickingAndPreservesOrderAndPause()
+        {
+            var hud = CreateReadabilityHud();
+            controller.IssueMoveOrder(0, new Vector3(-100, 0, 20), false);
+            controller.IssueMoveOrder(0, new Vector3(-110, 0, 30), true);
+            controller.PauseBattle(); var old = controller.GetArmy(0).currentOrder;
+            HudCall(hud, "BeginMoveOrder"); Assert.That(IsPicking(hud), Is.True);
+            HudCall(hud, "CancelMoveTarget"); Assert.That(IsPicking(hud), Is.False);
+            Assert.That(controller.Phase, Is.EqualTo(WarSandboxBattlePhase.Paused));
+            Assert.That(controller.GetMoveRoutePointCount(0), Is.EqualTo(2));
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(old.target));
+        }
+        [Test]
+        public void HudPausedTargetHintDistinguishesAppendFromNewRoute()
+        {
+            var hud = CreateReadabilityHud(); controller.PauseBattle();
+            Assert.That((string)HudCall(hud, "MoveTargetHint"), Does.Contain("确认目标将继续战斗（含 Shift）"));
+            controller.IssueMoveOrder(0, new Vector3(-100, 0, 20), false); controller.PauseBattle();
+            Assert.That((string)HudCall(hud, "MoveTargetHint"), Does.Contain("只追加，不解除暂停"));
+        }
+        [Test]
+        public void HudPersistentPauseButtonResumesWithoutReplacingOrders()
+        {
+            var hud = CreateReadabilityHud(); controller.IssueMoveOrder(0, new Vector3(-100, 0, 20), false);
+            HudCall(hud, "ToggleBattleFromUI"); Assert.That(controller.Phase, Is.EqualTo(WarSandboxBattlePhase.Paused));
+            Assert.That((string)HudCall(hud, "BattleActionLabel"), Does.Contain("继续"));
+            HudCall(hud, "ToggleBattleFromUI"); Assert.That(controller.Phase, Is.EqualTo(WarSandboxBattlePhase.Running));
+            Assert.That(controller.GetArmy(0).currentOrder.target, Is.EqualTo(new Vector3(-100, 0, 20)));
+        }
+        [Test]
+        public void HudTerminalBattleDoesNotEnterMoveTargetMode()
+        {
+            var hud = CreateReadabilityHud(); controller.IssueOrder(ArmyOrder.Hold(0));
+            Assert.That(controller.EndBattle(), Is.True); HudCall(hud, "BeginMoveOrder");
+            Assert.That(IsPicking(hud), Is.False);
+            Assert.That((string)HudCall(hud, "BattleActionLabel"), Does.Contain("再来一局"));
         }
 
         [Test]

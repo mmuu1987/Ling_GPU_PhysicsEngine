@@ -22,5 +22,9 @@ namespace MassEngine
         public Vector3 velocity;
         public int currentState;
         public float currentAnimationTime;
+        // Presentation only: tactical currentState retains its original meaning.
+        public int presentationState;
+        public float locomotionSpeed; // filtered final displacement / dt (including slopes)
+        public const int StrideBytes = 64;
     }
 }
