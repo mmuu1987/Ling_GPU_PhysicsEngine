@@ -3,6 +3,8 @@
     "rootNamespace": "MassEngine.Game.Editor",
     "references": [
         "MassEngine",
+        "MassEngine.Editor",
+        "Unity.ugui",
         "Game"
     ],
     "includePlatforms": [

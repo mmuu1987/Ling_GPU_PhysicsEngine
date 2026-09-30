@@ -393,6 +393,86 @@ namespace MassEngine.Tests
         }
 
         [Test]
+        public void CreateUnitTypePersistsItsAssetsWithoutSavingUnrelatedDirtyAsset()
+        {
+            // 先完成所有持久化夹具；Profile() 的准备阶段会保存资产，必须早于下面的脏改动。
+            // 模板和 Scenario 都是本测试目录中的资产，现役材质只作为只读引用。
+            string folder = NewTempFolder();
+            ProfileFixture fixture = Profile("IsolatedClean", null, null);
+            UnitTypeBinder.ApplyProfile(template.renderConfig, fixture.Asset, fixture.Data);
+            EditorUtility.SetDirty(template.renderConfig);
+            AssetDatabase.SaveAssetIfDirty(template.renderConfig);
+            Assert.IsTrue(UnitTypeBinder.ValidateBinding(template).IsValid, "测试前提：持久化模板绑定必须合法。");
+
+            string scenarioPath = folder + "/Scenario.asset";
+            AssetDatabase.CreateAsset(scenario, scenarioPath);
+            AssetDatabase.SaveAssetIfDirty(scenario);
+            Assert.IsTrue(EditorUtility.IsPersistent(scenario), "测试前提：Scenario 必须已落盘。");
+
+            var unrelated = ScriptableObject.CreateInstance<SpawnConfig>();
+            created.Add(unrelated);
+            unrelated.unitCount = 17;
+            string unrelatedPath = NewTempFolder() + "/UnrelatedSpawn.asset";
+            AssetDatabase.CreateAsset(unrelated, unrelatedPath);
+            AssetDatabase.SaveAssetIfDirty(unrelated);
+            byte[] unrelatedBytesBefore = System.IO.File.ReadAllBytes(unrelatedPath);
+            Assert.IsFalse(EditorUtility.IsDirty(unrelated), "测试前提：无关资产的初始状态已经保存。");
+
+            unrelated.unitCount = 29;
+            EditorUtility.SetDirty(unrelated);
+            Assert.IsTrue(EditorUtility.IsDirty(unrelated), "测试前提：内存中确实存在尚未保存的无关改动。");
+            CollectionAssert.AreEqual(unrelatedBytesBefore, System.IO.File.ReadAllBytes(unrelatedPath),
+                "测试前提：SetDirty 本身不应保存无关资产。");
+
+            // 从这里开始不再调用测试侧的 SaveAssets/Refresh，否则会掩盖或制造被测副作用。
+            UnitTypeConfig unit = UnitTypeBinder.CreateUnitType(new UnitTypeCreationRequest
+            {
+                scenario = scenario,
+                template = template,
+                unitTypeName = "IsolatedSave",
+                teamId = 1,
+                directory = folder,
+                profile = fixture.Asset,
+                exclusiveRender = true
+            }, out string error);
+            Assert.IsNotNull(unit, "合法持久化输入应创建成功：" + error);
+            Assert.IsTrue(UnitTypeBinder.ValidateBinding(unit).IsValid, "新兵种的绑定仍须合法。");
+
+            // 直接检查磁盘，不用可能命中同一内存对象的 LoadAssetAtPath，也不替生产代码补保存。
+            Object[] outputs = { unit.spawnConfig, unit.combatConfig, unit.renderConfig, unit };
+            foreach (Object output in outputs)
+            {
+                Assert.IsTrue(EditorUtility.IsPersistent(output), "本次新建资产必须持久化。");
+                string path = AssetDatabase.GetAssetPath(output);
+                StringAssert.StartsWith(folder + "/", path, "本次新建资产只能落在指定的唯一测试目录。");
+                Assert.IsTrue(System.IO.File.Exists(path), "本次新建资产必须已经写到磁盘：" + path);
+            }
+            string unitPath = AssetDatabase.GetAssetPath(unit);
+            string unitYaml = System.IO.File.ReadAllText(unitPath);
+            AssertReferenceWritten(unitYaml, "spawnConfig");
+            AssertReferenceWritten(unitYaml, "combatConfig");
+            AssertReferenceWritten(unitYaml, "renderConfig");
+            foreach (Object child in new Object[] { unit.spawnConfig, unit.combatConfig, unit.renderConfig })
+                StringAssert.Contains("guid: " + AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(child)), unitYaml,
+                    "主资产必须引用本次新建的子配置，而非仅在内存中接好引用。");
+            StringAssert.Contains("  unitCount: " + template.spawnConfig.unitCount,
+                System.IO.File.ReadAllText(AssetDatabase.GetAssetPath(unit.spawnConfig)));
+            string renderYaml = System.IO.File.ReadAllText(AssetDatabase.GetAssetPath(unit.renderConfig));
+            AssertReferenceWritten(renderYaml, "vatProfile");
+            AssertReferenceWritten(renderYaml, "nearMesh");
+            AssertReferenceWritten(renderYaml, "midMesh");
+            AssertReferenceWritten(renderYaml, "farMesh");
+            StringAssert.Contains("guid: " + AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(fixture.Asset)), renderYaml);
+            StringAssert.Contains("guid: " + AssetDatabase.AssetPathToGUID(unitPath), System.IO.File.ReadAllText(scenarioPath),
+                "Scenario 的新增兵种登记必须由 CreateUnitType 自己保存到磁盘。");
+
+            Assert.AreEqual(29, unrelated.unitCount, "无关的内存改动不能丢失或被还原。");
+            CollectionAssert.AreEqual(unrelatedBytesBefore, System.IO.File.ReadAllBytes(unrelatedPath),
+                "创建兵种只能保存自己的资产和 Scenario，不能顺带保存调用者已有的无关脏资产。");
+            Assert.IsTrue(EditorUtility.IsDirty(unrelated), "无关改动应继续保持未保存状态，留给调用者决定是否保存。");
+        }
+
+        [Test]
         public void CreateUnitTypeKeepsSpawnAndCombatExclusiveButSharesTemplateSubConfigs()
         {
             // 现役约定：出生/战斗各自独占，移动/群体/动画按模板共享。

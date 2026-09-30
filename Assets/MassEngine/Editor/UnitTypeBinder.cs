@@ -315,7 +315,12 @@ namespace MassEngine.Editor
 
                 // 登记进战役清单：不登记的话运行时根本看不到这个兵种（不扫文件夹）。
                 AppendToScenario(request.scenario, unit);
-                AssetDatabase.SaveAssets();
+                // 只保存本次产物和目标清单，不把调用者已有的无关脏资产一起写回。
+                foreach (UnityEngine.Object asset in created)
+                    if (EditorUtility.IsPersistent(asset))
+                        AssetDatabase.SaveAssetIfDirty(asset);
+                if (EditorUtility.IsPersistent(request.scenario))
+                    AssetDatabase.SaveAssetIfDirty(request.scenario);
                 return unit;
             }
             catch (Exception exception)

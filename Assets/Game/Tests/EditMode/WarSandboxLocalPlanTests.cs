@@ -83,6 +83,19 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
+        public void ManualChecklistUsesAsciiIdAndRoundTripsAChineseDisplayName()
+        {
+            var expected = Plan("M54_Manual");
+            expected.displayName = "M54_人工验收";
+            Assert.That(store.TrySave(expected, false, out string error), Is.True, error);
+            var reopened = new WarSandboxLocalPlanStore(directory);
+            Assert.That(reopened.TryLoad("M54_Manual", out var loaded, out error), Is.True, error);
+            Assert.That(loaded.planId, Is.EqualTo("M54_Manual"));
+            Assert.That(loaded.displayName, Is.EqualTo("M54_人工验收"));
+            Assert.That(Resolve(loaded, out _, out error), Is.True, error);
+        }
+
+        [Test]
         public void TemplateReorderingAndRenamingDoNotChangeIdentity()
         {
             var plan = Plan(); Array.Reverse(catalog.templates); a.name = "Renamed asset"; a.unitTypeName = "Renamed label";
@@ -153,6 +166,7 @@ namespace MassEngine.Game.Tests
         [TestCase("")]
         [TestCase("A.")]
         [TestCase("C:A")]
+        [TestCase("M54_人工验收")]
         public void UnsafeOrReservedSlotNamesAreRejected(string slot)
         {
             Assert.That(store.TryLoad(slot, out var plan, out var error), Is.False);
