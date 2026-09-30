@@ -1,0 +1,966 @@
+{
+  "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+  "newModels": 3,
+  "normalModelsPreserved": 12,
+  "largeUniqueModels": 5,
+  "totalUniqueBodies": 17,
+  "largeMenuVariants": 6,
+  "humanAcceptance": false,
+  "oldCodeChanged": false,
+  "models": [
+    {
+      "key": "triceratops",
+      "title": "三角龙",
+      "pipeline": {
+        "status": "ready-for-human-review",
+        "output": "Assets/Game/CharacterPipeline/Generated/Triceratops01",
+        "evidence": "Logs/CharacterPipeline/Triceratops01-5d188db1",
+        "sourceModel": "Assets/Game/NonhumanBatch2/Prepared01/Triceratops/Prepared.prefab",
+        "sourceGuid": "a3bb894026608f7448d024b85f38bddd",
+        "sourceDependencyHash": "a23f857ee53d548a532b65eb31ab2c3b",
+        "unityVersion": "6000.3.14f1",
+        "createdUtc": "2026-09-30T11:53:28.4935457Z",
+        "sourceBodyHeight": 2.5371522903442383,
+        "targetBodyHeight": 2.5371522903442383,
+        "bodyScaleFactor": 1.0,
+        "agentRadius": 3.5999999046325684,
+        "maxPositionError": 0.001379153341986239,
+        "allowedPositionError": 0.0024999999441206455,
+        "fullVertices": 2458,
+        "lowVertices": 758,
+        "totalFrames": 141,
+        "gpuSnapshots": 48,
+        "sourceReferenceSnapshots": 16,
+        "positionComparisons": 346578,
+        "textureBytes": 7855392,
+        "automatedPassed": true,
+        "humanAcceptance": false,
+        "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+        "actions": [
+          {
+            "action": "Idle",
+            "frames": 61,
+            "maximumPositionError": 0.0013535931939259171
+          },
+          {
+            "action": "Move",
+            "frames": 19,
+            "maximumPositionError": 0.0013429583050310612
+          },
+          {
+            "action": "Attack",
+            "frames": 18,
+            "maximumPositionError": 0.0012927267234772444
+          },
+          {
+            "action": "Death",
+            "frames": 43,
+            "maximumPositionError": 0.001379153341986239
+          }
+        ],
+        "warnings": [
+          "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+          "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+          "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+          "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+        ]
+      }
+    },
+    {
+      "key": "stegosaurus",
+      "title": "剑龙",
+      "pipeline": {
+        "status": "ready-for-human-review",
+        "output": "Assets/Game/CharacterPipeline/Generated/Stegosaurus01",
+        "evidence": "Logs/CharacterPipeline/Stegosaurus01-c7be6461",
+        "sourceModel": "Assets/Game/NonhumanBatch2/Prepared01/Stegosaurus/Prepared.prefab",
+        "sourceGuid": "e82d9bf92f1cac84aaf17f00e38d65e4",
+        "sourceDependencyHash": "926c73681b83d0f4c8830dae3e414b5d",
+        "unityVersion": "6000.3.14f1",
+        "createdUtc": "2026-09-30T11:53:36.1357577Z",
+        "sourceBodyHeight": 3.6814651489257812,
+        "targetBodyHeight": 3.6814651489257812,
+        "bodyScaleFactor": 1.0,
+        "agentRadius": 4.5,
+        "maxPositionError": 0.0019629441667348146,
+        "allowedPositionError": 0.0024999999441206455,
+        "fullVertices": 4196,
+        "lowVertices": 1358,
+        "totalFrames": 163,
+        "gpuSnapshots": 48,
+        "sourceReferenceSnapshots": 16,
+        "positionComparisons": 683948,
+        "textureBytes": 26705920,
+        "automatedPassed": true,
+        "humanAcceptance": false,
+        "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+        "actions": [
+          {
+            "action": "Idle",
+            "frames": 61,
+            "maximumPositionError": 0.0010907490504905581
+          },
+          {
+            "action": "Move",
+            "frames": 19,
+            "maximumPositionError": 0.0012425023596733809
+          },
+          {
+            "action": "Attack",
+            "frames": 45,
+            "maximumPositionError": 0.0019629441667348146
+          },
+          {
+            "action": "Death",
+            "frames": 38,
+            "maximumPositionError": 0.0013804564950987697
+          }
+        ],
+        "warnings": [
+          "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+          "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+          "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+          "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+        ]
+      }
+    },
+    {
+      "key": "spider",
+      "title": "巨型蜘蛛",
+      "pipeline": {
+        "status": "ready-for-human-review",
+        "output": "Assets/Game/CharacterPipeline/Generated/LargeSpider04",
+        "evidence": "Logs/CharacterPipeline/LargeSpider04-cc1ff5bd",
+        "sourceModel": "Assets/Game/LargeBeasts/Prepared02/Spider/Prepared.prefab",
+        "sourceGuid": "289955ccfe747334da211071917d03e2",
+        "sourceDependencyHash": "5b8a4fa59715f8926ec442a480cd6156",
+        "unityVersion": "6000.3.14f1",
+        "createdUtc": "2026-09-30T11:53:41.2350389Z",
+        "sourceBodyHeight": 2.2755956649780273,
+        "targetBodyHeight": 2.2755956649780273,
+        "bodyScaleFactor": 1.0,
+        "agentRadius": 4.800000190734863,
+        "maxPositionError": 0.002388562774285674,
+        "allowedPositionError": 0.0024999999441206455,
+        "fullVertices": 5318,
+        "lowVertices": 1097,
+        "totalFrames": 165,
+        "gpuSnapshots": 48,
+        "sourceReferenceSnapshots": 16,
+        "positionComparisons": 877470,
+        "textureBytes": 27033600,
+        "automatedPassed": true,
+        "humanAcceptance": false,
+        "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+        "actions": [
+          {
+            "action": "Idle",
+            "frames": 101,
+            "maximumPositionError": 0.0013648899039253592
+          },
+          {
+            "action": "Move",
+            "frames": 20,
+            "maximumPositionError": 0.0013780184090137482
+          },
+          {
+            "action": "Attack",
+            "frames": 18,
+            "maximumPositionError": 0.0019029079703614116
+          },
+          {
+            "action": "Death",
+            "frames": 26,
+            "maximumPositionError": 0.002388562774285674
+          }
+        ],
+        "warnings": [
+          "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+          "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+          "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+          "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+        ]
+      }
+    }
+  ],
+  "runtime": [
+    {
+      "key": "triceratops",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "triceratops",
+        "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+        "pid": 18124,
+        "elapsedSeconds": 75.943,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentNonhumanBatch2\\player-triceratops-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T11:59:32.114Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 50.17666244506836,
+        "realSeconds": 50.22728729248047,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          2,
+          0
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "mode": "triceratops",
+        "uiSelected": [
+          "三角龙",
+          "大型对照·骑士",
+          "大型·巨狼",
+          "大型·公牛",
+          "剑龙",
+          "巨型蜘蛛"
+        ],
+        "bindings": [
+          {
+            "name": "三角龙",
+            "profile": "FinalVAT",
+            "mesh": "Triceratops01_CleanMesh",
+            "material": "TriceratopsNear",
+            "vertices": 2458,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "key": "triceratops",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "triceratops",
+        "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+        "pid": 16608,
+        "elapsedSeconds": 65.495,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentNonhumanBatch2\\player-triceratops-reload-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T12:00:37.678Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 48.69635009765625,
+        "realSeconds": 48.75129699707031,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          2,
+          0
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "mode": "triceratops",
+        "uiSelected": [
+          "三角龙",
+          "大型对照·骑士",
+          "大型·巨狼",
+          "大型·公牛",
+          "剑龙",
+          "巨型蜘蛛"
+        ],
+        "bindings": [
+          {
+            "name": "三角龙",
+            "profile": "FinalVAT",
+            "mesh": "Triceratops01_CleanMesh",
+            "material": "TriceratopsNear",
+            "vertices": 2458,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "key": "stegosaurus",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "stegosaurus",
+        "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+        "pid": 24404,
+        "elapsedSeconds": 77.602,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentNonhumanBatch2\\player-stegosaurus-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T12:01:55.344Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "DefenderVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 1,
+        "simulationSeconds": 57.18363952636719,
+        "realSeconds": 57.23191452026367,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          0,
+          8
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "mode": "stegosaurus",
+        "uiSelected": [
+          "剑龙",
+          "大型对照·骑士",
+          "大型·巨狼",
+          "大型·公牛",
+          "三角龙",
+          "巨型蜘蛛"
+        ],
+        "bindings": [
+          {
+            "name": "剑龙",
+            "profile": "FinalVAT",
+            "mesh": "Stegosaurus01_CleanMesh",
+            "material": "StegosaurusNear",
+            "vertices": 4196,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "key": "stegosaurus",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "stegosaurus",
+        "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+        "pid": 24500,
+        "elapsedSeconds": 73.084,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentNonhumanBatch2\\player-stegosaurus-reload-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T12:03:08.492Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "DefenderVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 1,
+        "simulationSeconds": 56.2186279296875,
+        "realSeconds": 56.270118713378906,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          0,
+          8
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "mode": "stegosaurus",
+        "uiSelected": [
+          "剑龙",
+          "大型对照·骑士",
+          "大型·巨狼",
+          "大型·公牛",
+          "三角龙",
+          "巨型蜘蛛"
+        ],
+        "bindings": [
+          {
+            "name": "剑龙",
+            "profile": "FinalVAT",
+            "mesh": "Stegosaurus01_CleanMesh",
+            "material": "StegosaurusNear",
+            "vertices": 4196,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "key": "spider",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "spider",
+        "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+        "pid": 16056,
+        "elapsedSeconds": 71.901,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentNonhumanBatch2\\player-spider-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T12:04:20.455Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 51.661102294921875,
+        "realSeconds": 51.7080078125,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          2,
+          0
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "mode": "spider",
+        "uiSelected": [
+          "巨型蜘蛛",
+          "大型对照·骑士",
+          "大型·巨狼",
+          "大型·公牛",
+          "三角龙",
+          "剑龙"
+        ],
+        "bindings": [
+          {
+            "name": "巨型蜘蛛",
+            "profile": "FinalVAT",
+            "mesh": "LargeSpider04_CleanMesh",
+            "material": "SpiderNear",
+            "vertices": 5318,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "key": "spider",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "spider",
+        "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+        "pid": 23716,
+        "elapsedSeconds": 68.377,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentNonhumanBatch2\\player-spider-reload-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T12:05:28.898Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 51.70215606689453,
+        "realSeconds": 51.757869720458984,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          2,
+          0
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "mode": "spider",
+        "uiSelected": [
+          "巨型蜘蛛",
+          "大型对照·骑士",
+          "大型·巨狼",
+          "大型·公牛",
+          "三角龙",
+          "剑龙"
+        ],
+        "bindings": [
+          {
+            "name": "巨型蜘蛛",
+            "profile": "FinalVAT",
+            "mesh": "LargeSpider04_CleanMesh",
+            "material": "SpiderNear",
+            "vertices": 5318,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "key": "regular",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "regular",
+        "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+        "pid": 23100,
+        "elapsedSeconds": 37.907,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentNonhumanBatch2\\player-regular-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 12,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T12:06:06.872Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 15.122830390930176,
+        "realSeconds": 15.174030303955078,
+        "initial": [
+          8,
+          6
+        ],
+        "survivors": [
+          8,
+          0
+        ],
+        "restartAlive": [
+          8,
+          6
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 12,
+        "liveTypes": 2,
+        "mode": "regular",
+        "uiSelected": [
+          "原有·男战士",
+          "原有·女角色",
+          "UnityChan（UCL）",
+          "原有·Sazen骷髅",
+          "剑盾骑士",
+          "持弓游侠",
+          "斧盾骷髅",
+          "双刃骷髅",
+          "持杖骷髅",
+          "兽人",
+          "雪怪",
+          "蘑菇怪"
+        ],
+        "bindings": [
+          {
+            "name": "原有·男战士",
+            "profile": "MaleCharacter_Stage5_MultiClip_Profile",
+            "mesh": "MaleCharacter_CleanMesh",
+            "material": "LitInstancedAgent",
+            "vertices": 4112,
+            "count": 8,
+            "team": 0
+          },
+          {
+            "name": "原有·女角色",
+            "profile": "FemaleCharacterPBR_Stage5_MultiClip_Profile",
+            "mesh": "FemaleCharacterPBR_CleanMesh",
+            "material": "LitInstancedAgent_Defender",
+            "vertices": 4066,
+            "count": 6,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "key": "all",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "all",
+        "buildGuid": "fdb11ea9d9404c7795132978181e4a47",
+        "pid": 2028,
+        "elapsedSeconds": 51.444,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentNonhumanBatch2\\player-all-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 12,
+        "liveTypes": 12,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T12:06:58.382Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 28.66143798828125,
+        "realSeconds": 28.71324348449707,
+        "initial": [
+          38,
+          36
+        ],
+        "survivors": [
+          30,
+          0
+        ],
+        "restartAlive": [
+          38,
+          36
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 12,
+        "selectableTemplates": 12,
+        "liveTypes": 12,
+        "mode": "all",
+        "uiSelected": [
+          "原有·男战士",
+          "原有·女角色",
+          "UnityChan（UCL）",
+          "原有·Sazen骷髅",
+          "剑盾骑士",
+          "持弓游侠",
+          "斧盾骷髅",
+          "双刃骷髅",
+          "持杖骷髅",
+          "兽人",
+          "雪怪",
+          "蘑菇怪"
+        ],
+        "bindings": [
+          {
+            "name": "原有·男战士",
+            "profile": "MaleCharacter_Stage5_MultiClip_Profile",
+            "mesh": "MaleCharacter_CleanMesh",
+            "material": "LitInstancedAgent",
+            "vertices": 4112,
+            "count": 8,
+            "team": 0
+          },
+          {
+            "name": "原有·女角色",
+            "profile": "FemaleCharacterPBR_Stage5_MultiClip_Profile",
+            "mesh": "FemaleCharacterPBR_CleanMesh",
+            "material": "LitInstancedAgent_Defender",
+            "vertices": 4066,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "UnityChan（UCL）",
+            "profile": "UnityChanVAT",
+            "mesh": "UnityChanPrepared_CleanMesh",
+            "material": "UnityChanNear",
+            "vertices": 13369,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "原有·Sazen骷髅",
+            "profile": "FinalVAT",
+            "mesh": "LegacySkeleton01_CleanMesh",
+            "material": "LegacySkeletonNear",
+            "vertices": 11987,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "剑盾骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "持弓游侠",
+            "profile": "FinalVAT",
+            "mesh": "Ranger02_CleanMesh",
+            "material": "RangerNear",
+            "vertices": 9521,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "斧盾骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonWarrior01_CleanMesh",
+            "material": "SkeletonWarriorNear",
+            "vertices": 8695,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "双刃骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonRogue01_CleanMesh",
+            "material": "SkeletonRogueNear",
+            "vertices": 7109,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "持杖骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonMage03_CleanMesh",
+            "material": "SkeletonMageNear",
+            "vertices": 6835,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "兽人",
+            "profile": "FinalVAT",
+            "mesh": "Orc01_CleanMesh",
+            "material": "OrcNear",
+            "vertices": 4382,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "雪怪",
+            "profile": "FinalVAT",
+            "mesh": "Yeti01_CleanMesh",
+            "material": "YetiNear",
+            "vertices": 3349,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "蘑菇怪",
+            "profile": "FinalVAT",
+            "mesh": "MushroomKing01_CleanMesh",
+            "material": "MushroomKingNear",
+            "vertices": 3369,
+            "count": 6,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    }
+  ],
+  "protectionAudit": {
+    "auditPassed": true,
+    "watchedOriginalSources": 2851,
+    "protectedOldPackageFiles": 6893,
+    "personalFilesUnchanged": 3,
+    "changedSources": [
+      "Assets/方案设计/兵种模型制作管线.md",
+      "Assets/Game/README.md",
+      "NEXT_TASK.md"
+    ],
+    "errors": []
+  }
+}

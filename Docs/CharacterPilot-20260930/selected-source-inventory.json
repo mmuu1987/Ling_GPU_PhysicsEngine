@@ -1,0 +1,56 @@
+[
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/Knight.fbx",
+    "member": "KayKit_Adventurers_2.0_FREE/Characters/fbx/Knight.fbx",
+    "bytes": 486428,
+    "sha256": "e293bb352e62ddaa9ef79734026a9a86ddee71c2bca93f99b2c449afccdf62ab"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/knight_texture.png",
+    "member": "KayKit_Adventurers_2.0_FREE/Characters/fbx/knight_texture.png",
+    "bytes": 12914,
+    "sha256": "028db4d1cd8b3471e6ba21686515abd4e36ae582f8b314b71ad2ab1fb5453b12"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/sword_1handed.fbx",
+    "member": "KayKit_Adventurers_2.0_FREE/Assets/fbx(unity)/sword_1handed.fbx",
+    "bytes": 28236,
+    "sha256": "bc018b8251fae18c7c2cb247ad9492344855ee53df974447534967c8d7c59ba1"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/shield_badge.fbx",
+    "member": "KayKit_Adventurers_2.0_FREE/Assets/fbx(unity)/shield_badge.fbx",
+    "bytes": 27356,
+    "sha256": "77607a8bb6a91e07e9c396f57fef71bb0babcdbbfddc5652c34102968afcea1b"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/Characters-License.txt",
+    "member": "KayKit_Adventurers_2.0_FREE/License.txt",
+    "bytes": 1554,
+    "sha256": "d4adc31660d1db22eb60eba648e01db41577548f6fa1a3576cb4a6283dae0a58"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/Animations-License.txt",
+    "member": "KayKit_Character_Animations_1.1/License.txt",
+    "bytes": 1548,
+    "sha256": "373b159044d1a886ed15f57ca5a7673ba14e2623c460283452705f2056912ed9"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_General.fbx",
+    "member": "KayKit_Character_Animations_1.1/Animations/fbx/Rig_Medium/Rig_Medium_General.fbx",
+    "bytes": 2382700,
+    "sha256": "0a3420d6cbbf00694e625d84e55c2afbf0a7284c4280c46642f62f066dbd3950"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_MovementBasic.fbx",
+    "member": "KayKit_Character_Animations_1.1/Animations/fbx/Rig_Medium/Rig_Medium_MovementBasic.fbx",
+    "bytes": 1821068,
+    "sha256": "6b0339d304a07d87ac0a02028d1822078e581924eddf9c7c7f2049132ad89ec4"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_CombatMelee.fbx",
+    "member": "KayKit_Character_Animations_1.1/Animations/fbx/Rig_Medium/Rig_Medium_CombatMelee.fbx",
+    "bytes": 3313740,
+    "sha256": "018ba1c4f2ad30e9d4b051f12c46eb3fa3da01c1d4cba3603f673dca3bf899ca"
+  }
+]

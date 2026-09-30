@@ -1,0 +1,1 @@
+Final pilot: both private combat projectileRange=0, DefaultSwordUnit, template revisions=2; default camera=(5,23,-32), target=(5,0,0), FOV=65, private zoom range=1.5..70. Existing shared configs unchanged. First build/seed/reload are retained diagnostics, not final melee acceptance.

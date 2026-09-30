@@ -1,0 +1,6 @@
+Source baked-vertex bounds: Center: (0.00, 1.27, 0.11), Extents: (0.97, 1.27, 0.65); uniform child scale=0.7077963; prepared body height=1.8m; forward=+Z
+Attachments: author's Unity exports at handslot.r/l; local position=0, rotation=identity, scale=1; both included as explicit VAT MeshRenderers.
+Idle <- Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_General.fbx#Idle_A; duration=1.066667; curves=240; sword-tip delta=0.01321411; mid body bounds=Center: (0.00, 0.81, 0.06), Extents: (0.31, 0.81, 0.33)
+Move <- Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_MovementBasic.fbx#Running_A; duration=0.8000001; curves=240; sword-tip delta=0.4987903; mid body bounds=Center: (0.03, 0.81, 0.12), Extents: (0.32, 0.80, 0.39)
+Attack <- Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_CombatMelee.fbx#Melee_1H_Attack_Chop; duration=1.066667; curves=240; sword-tip delta=1.220572; mid body bounds=Center: (-0.01, 0.81, -0.09), Extents: (0.34, 0.82, 0.32)
+Death <- Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_General.fbx#Death_A; duration=0.8000001; curves=240; sword-tip delta=1.716685; mid body bounds=Center: (0.00, 0.72, -0.48), Extents: (0.36, 0.70, 0.50)

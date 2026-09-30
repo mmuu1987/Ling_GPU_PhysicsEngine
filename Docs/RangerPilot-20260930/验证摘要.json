@@ -1,0 +1,138 @@
+{
+  "buildGuid": "0a3ff2fb12ec4d1c852b276663e8cc52",
+  "output": "Assets/Game/CharacterPipeline/Generated/Ranger02",
+  "fullVertices": 9521,
+  "lowVertices": 1293,
+  "frames": 142,
+  "sampleRate": 24,
+  "positionComparisons": 1351982,
+  "maximumPositionErrorMetres": 0.001282578450627625,
+  "textureBytes": 32571392,
+  "humanAcceptance": false,
+  "v1Released": false,
+  "legalClearance": false,
+  "priorKnight04UserFeedback": "用户实际测试反馈：完全ok；不扩展为性能/法律/V1放行。",
+  "seed": {
+    "audit": {
+      "passed": true,
+      "exitCode": 0,
+      "timedOut": false,
+      "phase": "seed",
+      "buildGuid": "0a3ff2fb12ec4d1c852b276663e8cc52",
+      "pid": 18056,
+      "elapsedSeconds": 55.135,
+      "frameCapConfigured": true,
+      "checks": 6,
+      "report": "Logs\\AgentRangerPilot\\player-seed-02\\report.json",
+      "settingsFileUntouched": true,
+      "rangedEvidencePassed": true,
+      "maximumLaunched": 422,
+      "maximumDraw": 31,
+      "enemyDamage": 3540,
+      "humanAcceptance": false,
+      "finishedUtc": "2026-09-30T06:36:52.767Z"
+    },
+    "battle": {
+      "mode": "Annihilation",
+      "phase": "DefenderVictory",
+      "victoryReason": "Annihilation",
+      "naturalSettlement": true,
+      "winnerTeamId": 1,
+      "simulationSeconds": 37.572547912597656,
+      "realSeconds": 37.627288818359375,
+      "initial": [
+        96,
+        64
+      ],
+      "survivors": [
+        0,
+        38
+      ],
+      "restartAlive": [
+        96,
+        64
+      ]
+    },
+    "ranged": {
+      "passed": true,
+      "maximumLaunched": 422,
+      "maximumInFlight": 31,
+      "maximumDraw": 31,
+      "uniqueRangerShooters": 92,
+      "maximumHeight": 4.702733039855957,
+      "maximumVerticalVelocityChange": 1.7648978233337402,
+      "enemyDamage": 3540,
+      "epochs": 2,
+      "errors": 0
+    }
+  },
+  "reload": {
+    "audit": {
+      "passed": true,
+      "exitCode": 0,
+      "timedOut": false,
+      "phase": "reload",
+      "buildGuid": "0a3ff2fb12ec4d1c852b276663e8cc52",
+      "pid": 11620,
+      "elapsedSeconds": 48.567,
+      "frameCapConfigured": true,
+      "checks": 5,
+      "report": "Logs\\AgentRangerPilot\\player-reload-02\\report.json",
+      "settingsFileUntouched": true,
+      "rangedEvidencePassed": true,
+      "maximumLaunched": 397,
+      "maximumDraw": 32,
+      "enemyDamage": 3490,
+      "humanAcceptance": false,
+      "finishedUtc": "2026-09-30T06:38:12.887Z"
+    },
+    "battle": {
+      "mode": "Annihilation",
+      "phase": "DefenderVictory",
+      "victoryReason": "Annihilation",
+      "naturalSettlement": true,
+      "winnerTeamId": 1,
+      "simulationSeconds": 35.09542465209961,
+      "realSeconds": 35.147422790527344,
+      "initial": [
+        96,
+        64
+      ],
+      "survivors": [
+        0,
+        41
+      ],
+      "restartAlive": [
+        96,
+        64
+      ]
+    },
+    "ranged": {
+      "passed": true,
+      "maximumLaunched": 397,
+      "maximumInFlight": 32,
+      "maximumDraw": 32,
+      "uniqueRangerShooters": 88,
+      "maximumHeight": 5.007935047149658,
+      "maximumVerticalVelocityChange": 1.6495811939239502,
+      "enemyDamage": 3490,
+      "epochs": 2,
+      "errors": 0
+    }
+  },
+  "protectionAudit": {
+    "passed": true,
+    "originalSources": 1684,
+    "protectedOldPackageFiles": 3897,
+    "personalFilesUnchanged": 3,
+    "allowedChanges": [
+      "Assets/Game/Editor/CharacterPipeline/CharacterGeometry.cs",
+      "Assets/Game/Editor/CharacterPipeline/CharacterPipeline.cs",
+      "Assets/Game/Editor/CharacterPipeline/CharacterRecipe.cs",
+      "Assets/方案设计/兵种模型制作管线.md",
+      "Assets/Game/README.md",
+      "NEXT_TASK.md"
+    ],
+    "errors": []
+  }
+}

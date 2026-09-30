@@ -1,0 +1,38 @@
+[
+  {
+    "source": "Assets/SazenGames/Skeleton/Art/Meshes/Skeleton_Model_110.fbx",
+    "path": "Assets/CharacterPilotSource/LegacySkeleton01/Skeleton_Model_110.fbx",
+    "bytes": 3551132,
+    "sha256": "23d6524543d9e8c03788c8197ec0541a354e69fdc3a73d974b7b20d4f01135c1"
+  },
+  {
+    "source": "Assets/SazenGames/Skeleton/Art/Meshes/Falchion_01.fbx",
+    "path": "Assets/CharacterPilotSource/LegacySkeleton01/Falchion_01.fbx",
+    "bytes": 32048,
+    "sha256": "cee1b38ce573fb946369b66e65f93427065cd0504c9386b743af89f08ca9f1e6"
+  },
+  {
+    "source": "Assets/SazenGames/Skeleton/Art/Animations/Skeleton_idle.fbx",
+    "path": "Assets/CharacterPilotSource/LegacySkeleton01/Skeleton_idle.fbx",
+    "bytes": 2828764,
+    "sha256": "b34dfed62d1d96f8323593d320dc72a787a7b23125ee6767a0060d09a90017cb"
+  },
+  {
+    "source": "Assets/SazenGames/Skeleton/Art/Animations/Skeleton_run_forward.fbx",
+    "path": "Assets/CharacterPilotSource/LegacySkeleton01/Skeleton_run_forward.fbx",
+    "bytes": 2727932,
+    "sha256": "c7173a40310ff44754baa9596d67768e1dde3c76f191e703b878e1610d0a46de"
+  },
+  {
+    "source": "Assets/SazenGames/Skeleton/Art/Animations/Skeleton_slash01.fbx",
+    "path": "Assets/CharacterPilotSource/LegacySkeleton01/Skeleton_slash01.fbx",
+    "bytes": 2799644,
+    "sha256": "105f12b751b08fb5c9d321897e12834d57669cb9d5dd540dc0e7df6cd1447a0c"
+  },
+  {
+    "source": "Assets/SazenGames/Skeleton/Art/Animations/Skeleton_death.fbx",
+    "path": "Assets/CharacterPilotSource/LegacySkeleton01/Skeleton_death.fbx",
+    "bytes": 2844444,
+    "sha256": "c9892c8e5591f9d690ec0d3266d3764403ba55b49e7b33e310bf26de9e81418c"
+  }
+]

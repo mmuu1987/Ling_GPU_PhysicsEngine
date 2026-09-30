@@ -1,0 +1,1 @@
+Sampled Idle foot-to-toe XZ direction before finalization: (0.02, 0.00, 1.00); engine +Z contract; applied private ScalePivot 180-degree correction=False; final facing=(0.02, 0.00, 1.00); old/accepted content unchanged.

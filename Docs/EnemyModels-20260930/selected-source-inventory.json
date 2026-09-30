@@ -1,0 +1,56 @@
+[
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/Skeleton_Warrior.fbx",
+    "member": "KayKit_Skeletons_1.1_FREE/characters/fbx/Skeleton_Warrior.fbx",
+    "bytes": 497612,
+    "sha256": "c542c9ad95051f004f73c0804877ef114fc89a82210d98c1eb3ac40ed74e1faa"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/Skeleton_Rogue.fbx",
+    "member": "KayKit_Skeletons_1.1_FREE/characters/fbx/Skeleton_Rogue.fbx",
+    "bytes": 449180,
+    "sha256": "67a564b7b56c61f34cfc11bcd91f3c6e0ebfef15b7ee73aeb4943d49107f7cb5"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/Skeleton_Mage.fbx",
+    "member": "KayKit_Skeletons_1.1_FREE/characters/fbx/Skeleton_Mage.fbx",
+    "bytes": 406812,
+    "sha256": "8fdb86072d8caff46595dc0a57310c6ab908d98475976ca9b47b121082542679"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/skeleton_texture.png",
+    "member": "KayKit_Skeletons_1.1_FREE/characters/fbx/skeleton_texture.png",
+    "bytes": 17037,
+    "sha256": "15741a25c53e04fa9bf3beac3bc0de442359404b1ff9be863b892cb551ad3657"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/Skeleton_Axe.fbx",
+    "member": "KayKit_Skeletons_1.1_FREE/assets/fbx(unity)/Skeleton_Axe.fbx",
+    "bytes": 37404,
+    "sha256": "cf0c714ec592841829f11dc84159ac8ec47a3d89c9e1045d487fabcde6bc9a1e"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/Skeleton_Shield_Large_A.fbx",
+    "member": "KayKit_Skeletons_1.1_FREE/assets/fbx(unity)/Skeleton_Shield_Large_A.fbx",
+    "bytes": 44028,
+    "sha256": "274411fb13ebb3a777bc253a5653160d3ba47997424218174c991e90e0768761"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/Skeleton_Blade.fbx",
+    "member": "KayKit_Skeletons_1.1_FREE/assets/fbx(unity)/Skeleton_Blade.fbx",
+    "bytes": 34460,
+    "sha256": "f73947192afcf6f210622be5a1915837382a34217d052b9181f777474acd6d15"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/Skeleton_Staff.fbx",
+    "member": "KayKit_Skeletons_1.1_FREE/assets/fbx(unity)/Skeleton_Staff.fbx",
+    "bytes": 77788,
+    "sha256": "36ca395d337d91eaa693335ec6440aab23f5a97cb86fee74431fc7e977dfbfbe"
+  },
+  {
+    "path": "Assets/CharacterPilotSource/KayKitSkeletons/License.txt",
+    "member": "KayKit_Skeletons_1.1_FREE/License.txt",
+    "bytes": 1552,
+    "sha256": "327a1aac6e6ff1259d82d0024cdaf088bcef302f8d7a116b5142538ac2b5cf8d"
+  }
+]

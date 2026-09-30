@@ -1,0 +1,893 @@
+{
+  "buildGuid": "24b3d685ec344d6e94e9639b997bad9d",
+  "regularSelectableModels": 12,
+  "largeBodies": 2,
+  "uniqueBodies": 14,
+  "largeSelectableVariants": 3,
+  "humanAcceptance": false,
+  "combatCoreChanged": false,
+  "models": [
+    {
+      "key": "male",
+      "title": "原有·男战士",
+      "source": "Assets/Game/Settings/AttackerMeleeUnitConfig.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/male.asset",
+      "profile": "Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Profile.asset",
+      "vertices": 4112,
+      "large": false
+    },
+    {
+      "key": "female",
+      "title": "原有·女角色",
+      "source": "Assets/Game/Settings/DefenderUnitConfig.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/female.asset",
+      "profile": "Assets/VAT_Data/FemaleCharacterPBR_Stage5_MultiClip_Profile.asset",
+      "vertices": 4066,
+      "large": false
+    },
+    {
+      "key": "unitychan",
+      "title": "UnityChan（UCL）",
+      "source": "Assets/Game/M54TrialPlayable/Settings/UnityChanTrial.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/unitychan.asset",
+      "profile": "Assets/Game/M54TrialPlayable/UnityChanVAT.asset",
+      "vertices": 13369,
+      "large": false
+    },
+    {
+      "key": "legacy-skeleton",
+      "title": "原有·Sazen骷髅",
+      "source": "Assets/Game/CharacterPipeline/Generated/LegacySkeleton01/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/legacy-skeleton.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/LegacySkeleton01/FinalVAT.asset",
+      "vertices": 11987,
+      "large": false
+    },
+    {
+      "key": "knight",
+      "title": "剑盾骑士",
+      "source": "Assets/Game/CharacterPipeline/Generated/Knight04/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/knight.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/Knight04/FinalVAT.asset",
+      "vertices": 6666,
+      "large": false
+    },
+    {
+      "key": "ranger",
+      "title": "持弓游侠",
+      "source": "Assets/Game/CharacterPipeline/Generated/Ranger02/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/ranger.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/Ranger02/FinalVAT.asset",
+      "vertices": 9521,
+      "large": false
+    },
+    {
+      "key": "skeleton-warrior",
+      "title": "斧盾骷髅",
+      "source": "Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/skeleton-warrior.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/FinalVAT.asset",
+      "vertices": 8695,
+      "large": false
+    },
+    {
+      "key": "skeleton-rogue",
+      "title": "双刃骷髅",
+      "source": "Assets/Game/CharacterPipeline/Generated/SkeletonRogue01/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/skeleton-rogue.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/SkeletonRogue01/FinalVAT.asset",
+      "vertices": 7109,
+      "large": false
+    },
+    {
+      "key": "skeleton-mage",
+      "title": "持杖骷髅",
+      "source": "Assets/Game/CharacterPipeline/Generated/SkeletonMage03/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/skeleton-mage.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/SkeletonMage03/FinalVAT.asset",
+      "vertices": 6835,
+      "large": false
+    },
+    {
+      "key": "orc",
+      "title": "兽人",
+      "source": "Assets/Game/CharacterPipeline/Generated/Orc01/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/orc.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/Orc01/FinalVAT.asset",
+      "vertices": 4382,
+      "large": false
+    },
+    {
+      "key": "yeti",
+      "title": "雪怪",
+      "source": "Assets/Game/CharacterPipeline/Generated/Yeti01/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/yeti.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/Yeti01/FinalVAT.asset",
+      "vertices": 3349,
+      "large": false
+    },
+    {
+      "key": "mushroom",
+      "title": "蘑菇怪",
+      "source": "Assets/Game/CharacterPipeline/Generated/MushroomKing01/Unit.asset",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/mushroom.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/MushroomKing01/FinalVAT.asset",
+      "vertices": 3369,
+      "large": false
+    },
+    {
+      "key": "large-wolf",
+      "title": "大型·巨狼",
+      "source": "",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/large-wolf.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/LargeWolf02/FinalVAT.asset",
+      "vertices": 3815,
+      "large": true
+    },
+    {
+      "key": "large-bull",
+      "title": "大型·公牛",
+      "source": "",
+      "unit": "Assets/Game/UnifiedRoster/Version03/Library/large-bull.asset",
+      "profile": "Assets/Game/CharacterPipeline/Generated/LargeBull02/FinalVAT.asset",
+      "vertices": 4736,
+      "large": true
+    }
+  ],
+  "runtime": [
+    {
+      "mode": "regular",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "regular",
+        "buildGuid": "24b3d685ec344d6e94e9639b997bad9d",
+        "pid": 16524,
+        "elapsedSeconds": 42.153,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentUnifiedRoster\\player-regular-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 12,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T11:15:37.518Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 15.140691757202148,
+        "realSeconds": 15.179100036621094,
+        "initial": [
+          8,
+          6
+        ],
+        "survivors": [
+          8,
+          0
+        ],
+        "restartAlive": [
+          8,
+          6
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 12,
+        "liveTypes": 2,
+        "mode": "regular",
+        "uiSelected": [
+          "原有·男战士",
+          "原有·女角色",
+          "UnityChan（UCL）",
+          "原有·Sazen骷髅",
+          "剑盾骑士",
+          "持弓游侠",
+          "斧盾骷髅",
+          "双刃骷髅",
+          "持杖骷髅",
+          "兽人",
+          "雪怪",
+          "蘑菇怪"
+        ],
+        "bindings": [
+          {
+            "name": "原有·男战士",
+            "profile": "MaleCharacter_Stage5_MultiClip_Profile",
+            "mesh": "MaleCharacter_CleanMesh",
+            "material": "LitInstancedAgent",
+            "vertices": 4112,
+            "count": 8,
+            "team": 0
+          },
+          {
+            "name": "原有·女角色",
+            "profile": "FemaleCharacterPBR_Stage5_MultiClip_Profile",
+            "mesh": "FemaleCharacterPBR_CleanMesh",
+            "material": "LitInstancedAgent_Defender",
+            "vertices": 4066,
+            "count": 6,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "mode": "regular",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "regular",
+        "buildGuid": "24b3d685ec344d6e94e9639b997bad9d",
+        "pid": 22652,
+        "elapsedSeconds": 34.73,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentUnifiedRoster\\player-regular-reload-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 12,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T11:16:12.315Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 15.627777099609375,
+        "realSeconds": 15.677350997924805,
+        "initial": [
+          8,
+          6
+        ],
+        "survivors": [
+          8,
+          0
+        ],
+        "restartAlive": [
+          8,
+          6
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 12,
+        "liveTypes": 2,
+        "mode": "regular",
+        "uiSelected": [
+          "原有·男战士",
+          "原有·女角色",
+          "UnityChan（UCL）",
+          "原有·Sazen骷髅",
+          "剑盾骑士",
+          "持弓游侠",
+          "斧盾骷髅",
+          "双刃骷髅",
+          "持杖骷髅",
+          "兽人",
+          "雪怪",
+          "蘑菇怪"
+        ],
+        "bindings": [
+          {
+            "name": "原有·男战士",
+            "profile": "MaleCharacter_Stage5_MultiClip_Profile",
+            "mesh": "MaleCharacter_CleanMesh",
+            "material": "LitInstancedAgent",
+            "vertices": 4112,
+            "count": 8,
+            "team": 0
+          },
+          {
+            "name": "原有·女角色",
+            "profile": "FemaleCharacterPBR_Stage5_MultiClip_Profile",
+            "mesh": "FemaleCharacterPBR_CleanMesh",
+            "material": "LitInstancedAgent_Defender",
+            "vertices": 4066,
+            "count": 6,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "mode": "all",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "all",
+        "buildGuid": "24b3d685ec344d6e94e9639b997bad9d",
+        "pid": 9572,
+        "elapsedSeconds": 53.86,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentUnifiedRoster\\player-all-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 12,
+        "liveTypes": 12,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T11:17:06.244Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 31.14027214050293,
+        "realSeconds": 31.19127655029297,
+        "initial": [
+          38,
+          36
+        ],
+        "survivors": [
+          23,
+          0
+        ],
+        "restartAlive": [
+          38,
+          36
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 12,
+        "selectableTemplates": 12,
+        "liveTypes": 12,
+        "mode": "all",
+        "uiSelected": [
+          "原有·男战士",
+          "原有·女角色",
+          "UnityChan（UCL）",
+          "原有·Sazen骷髅",
+          "剑盾骑士",
+          "持弓游侠",
+          "斧盾骷髅",
+          "双刃骷髅",
+          "持杖骷髅",
+          "兽人",
+          "雪怪",
+          "蘑菇怪"
+        ],
+        "bindings": [
+          {
+            "name": "原有·男战士",
+            "profile": "MaleCharacter_Stage5_MultiClip_Profile",
+            "mesh": "MaleCharacter_CleanMesh",
+            "material": "LitInstancedAgent",
+            "vertices": 4112,
+            "count": 8,
+            "team": 0
+          },
+          {
+            "name": "原有·女角色",
+            "profile": "FemaleCharacterPBR_Stage5_MultiClip_Profile",
+            "mesh": "FemaleCharacterPBR_CleanMesh",
+            "material": "LitInstancedAgent_Defender",
+            "vertices": 4066,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "UnityChan（UCL）",
+            "profile": "UnityChanVAT",
+            "mesh": "UnityChanPrepared_CleanMesh",
+            "material": "UnityChanNear",
+            "vertices": 13369,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "原有·Sazen骷髅",
+            "profile": "FinalVAT",
+            "mesh": "LegacySkeleton01_CleanMesh",
+            "material": "LegacySkeletonNear",
+            "vertices": 11987,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "剑盾骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "持弓游侠",
+            "profile": "FinalVAT",
+            "mesh": "Ranger02_CleanMesh",
+            "material": "RangerNear",
+            "vertices": 9521,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "斧盾骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonWarrior01_CleanMesh",
+            "material": "SkeletonWarriorNear",
+            "vertices": 8695,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "双刃骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonRogue01_CleanMesh",
+            "material": "SkeletonRogueNear",
+            "vertices": 7109,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "持杖骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonMage03_CleanMesh",
+            "material": "SkeletonMageNear",
+            "vertices": 6835,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "兽人",
+            "profile": "FinalVAT",
+            "mesh": "Orc01_CleanMesh",
+            "material": "OrcNear",
+            "vertices": 4382,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "雪怪",
+            "profile": "FinalVAT",
+            "mesh": "Yeti01_CleanMesh",
+            "material": "YetiNear",
+            "vertices": 3349,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "蘑菇怪",
+            "profile": "FinalVAT",
+            "mesh": "MushroomKing01_CleanMesh",
+            "material": "MushroomKingNear",
+            "vertices": 3369,
+            "count": 6,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "mode": "all",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "all",
+        "buildGuid": "24b3d685ec344d6e94e9639b997bad9d",
+        "pid": 18804,
+        "elapsedSeconds": 49.913,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentUnifiedRoster\\player-all-reload-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 12,
+        "liveTypes": 12,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T11:17:56.219Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 30.64255142211914,
+        "realSeconds": 30.691875457763672,
+        "initial": [
+          38,
+          36
+        ],
+        "survivors": [
+          23,
+          0
+        ],
+        "restartAlive": [
+          38,
+          36
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 12,
+        "selectableTemplates": 12,
+        "liveTypes": 12,
+        "mode": "all",
+        "uiSelected": [
+          "原有·男战士",
+          "原有·女角色",
+          "UnityChan（UCL）",
+          "原有·Sazen骷髅",
+          "剑盾骑士",
+          "持弓游侠",
+          "斧盾骷髅",
+          "双刃骷髅",
+          "持杖骷髅",
+          "兽人",
+          "雪怪",
+          "蘑菇怪"
+        ],
+        "bindings": [
+          {
+            "name": "原有·男战士",
+            "profile": "MaleCharacter_Stage5_MultiClip_Profile",
+            "mesh": "MaleCharacter_CleanMesh",
+            "material": "LitInstancedAgent",
+            "vertices": 4112,
+            "count": 8,
+            "team": 0
+          },
+          {
+            "name": "原有·女角色",
+            "profile": "FemaleCharacterPBR_Stage5_MultiClip_Profile",
+            "mesh": "FemaleCharacterPBR_CleanMesh",
+            "material": "LitInstancedAgent_Defender",
+            "vertices": 4066,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "UnityChan（UCL）",
+            "profile": "UnityChanVAT",
+            "mesh": "UnityChanPrepared_CleanMesh",
+            "material": "UnityChanNear",
+            "vertices": 13369,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "原有·Sazen骷髅",
+            "profile": "FinalVAT",
+            "mesh": "LegacySkeleton01_CleanMesh",
+            "material": "LegacySkeletonNear",
+            "vertices": 11987,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "剑盾骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "持弓游侠",
+            "profile": "FinalVAT",
+            "mesh": "Ranger02_CleanMesh",
+            "material": "RangerNear",
+            "vertices": 9521,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "斧盾骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonWarrior01_CleanMesh",
+            "material": "SkeletonWarriorNear",
+            "vertices": 8695,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "双刃骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonRogue01_CleanMesh",
+            "material": "SkeletonRogueNear",
+            "vertices": 7109,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "持杖骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonMage03_CleanMesh",
+            "material": "SkeletonMageNear",
+            "vertices": 6835,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "兽人",
+            "profile": "FinalVAT",
+            "mesh": "Orc01_CleanMesh",
+            "material": "OrcNear",
+            "vertices": 4382,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "雪怪",
+            "profile": "FinalVAT",
+            "mesh": "Yeti01_CleanMesh",
+            "material": "YetiNear",
+            "vertices": 3349,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "蘑菇怪",
+            "profile": "FinalVAT",
+            "mesh": "MushroomKing01_CleanMesh",
+            "material": "MushroomKingNear",
+            "vertices": 3369,
+            "count": 6,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "mode": "large",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "large",
+        "buildGuid": "24b3d685ec344d6e94e9639b997bad9d",
+        "pid": 14152,
+        "elapsedSeconds": 74.31,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentUnifiedRoster\\player-large-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 3,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T11:19:10.602Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "DefenderVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 1,
+        "simulationSeconds": 55.1694450378418,
+        "realSeconds": 55.22093200683594,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          0,
+          4
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 3,
+        "liveTypes": 2,
+        "mode": "large",
+        "uiSelected": [
+          "大型·巨狼",
+          "大型对照·骑士",
+          "大型·公牛"
+        ],
+        "bindings": [
+          {
+            "name": "大型·巨狼",
+            "profile": "FinalVAT",
+            "mesh": "LargeWolf02_CleanMesh",
+            "material": "WolfNear",
+            "vertices": 3815,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "mode": "large",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "large",
+        "buildGuid": "24b3d685ec344d6e94e9639b997bad9d",
+        "pid": 2960,
+        "elapsedSeconds": 67.676,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentUnifiedRoster\\player-large-reload-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 3,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T11:20:18.342Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "DefenderVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 1,
+        "simulationSeconds": 52.117164611816406,
+        "realSeconds": 52.168766021728516,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          0,
+          5
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 3,
+        "liveTypes": 2,
+        "mode": "large",
+        "uiSelected": [
+          "大型·巨狼",
+          "大型对照·骑士",
+          "大型·公牛"
+        ],
+        "bindings": [
+          {
+            "name": "大型·巨狼",
+            "profile": "FinalVAT",
+            "mesh": "LargeWolf02_CleanMesh",
+            "material": "WolfNear",
+            "vertices": 3815,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "mode": "warrior",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "warrior",
+        "buildGuid": "24b3d685ec344d6e94e9639b997bad9d",
+        "pid": 23360,
+        "elapsedSeconds": 29.621,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentUnifiedRoster\\player-warrior-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": false,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T11:20:48.028Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 12.561437606811523,
+        "realSeconds": 12.613930702209473,
+        "initial": [
+          96,
+          64
+        ],
+        "survivors": [
+          76,
+          0
+        ],
+        "restartAlive": [
+          96,
+          64
+        ]
+      }
+    }
+  ],
+  "protectionAudit": {
+    "auditPassed": true,
+    "watchedOriginalSources": 2653,
+    "protectedOldPackageFiles": 6397,
+    "personalFilesUnchanged": 3,
+    "changedSources": [
+      "Assets/方案设计/兵种模型制作管线.md",
+      "Assets/Game/README.md",
+      "Assets/Game/Scripts/WarSandboxDeploymentDraft.cs",
+      "Assets/Game/Scripts/WarSandboxDeploymentHUD.UGUI.cs",
+      "Assets/Game/Scripts/WarSandboxDeploymentHUD.cs",
+      "Assets/Game/Scripts/WarSandboxRuntimeDeployment.cs",
+      "NEXT_TASK.md"
+    ],
+    "errors": []
+  }
+}

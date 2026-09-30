@@ -1,0 +1,34 @@
+[
+  {
+    "name": "Wolf.fbx",
+    "driveId": "128WmNfZthQqZ1OZpinWCAJ8IgvjNcoSm",
+    "bytes": 3501740,
+    "sha256": "91d5c31678fa291571f82abb029fde5c14fdd5932a1569c3afaa5e9602bebf94",
+    "officialPage": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+    "path": "Assets/CharacterPilotSource/LargeBeasts/Wolf.fbx"
+  },
+  {
+    "name": "Bull.fbx",
+    "driveId": "1g7bLOpgPJhRnKt8LzeO3KbO26lrkpLE0",
+    "bytes": 3000860,
+    "sha256": "9c34d1156fbb376c7624ddc268186affdb064ea26b889fafad6e047df01bfb0a",
+    "officialPage": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+    "path": "Assets/CharacterPilotSource/LargeBeasts/Bull.fbx"
+  },
+  {
+    "name": "Animals-License.txt",
+    "driveId": "1F2uy8T2fRpdc6gZ4mnS02_C2E63WvKtn",
+    "bytes": 364,
+    "sha256": "83d8959f9fc56353ed571fbe2dc52e4bcd64508e2399501cd45ac2ce3df0bf8c",
+    "officialPage": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+    "path": "Assets/CharacterPilotSource/LargeBeasts/Animals-License.txt"
+  },
+  {
+    "name": "Spider.fbx",
+    "archiveMember": "Easy Animated Enemy Pack - Jan 2019/FBX/Spider.fbx",
+    "bytes": 1233452,
+    "sha256": "4337f167f59ad5cf590e38c76176210f96a2c7eab62f743110f783694ee0d2c0",
+    "officialPage": "https://quaternius.itch.io/animated-easy-enemies",
+    "path": "Assets/CharacterPilotSource/LargeBeasts/Spider.fbx"
+  }
+]

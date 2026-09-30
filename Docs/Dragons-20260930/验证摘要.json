@@ -1,0 +1,46 @@
+{
+  "cavalryScale": {
+    "output": "MountedKnight02",
+    "horseHeight": [
+      1.8,
+      3.5
+    ],
+    "riderHeight": 1.95,
+    "vatMaxErrorMm": 2.008,
+    "build": "Builds/UnifiedCavalry-20260930-03",
+    "buildGuid": "dd5350dd83774c08ba81b5d83aa57168",
+    "playerCases": "5/5 passed"
+  },
+  "dragons": {
+    "build": "Builds/UnifiedDragons-20260930-01",
+    "buildGuid": "f6913b1357d94aa2aa7fe80e6810438d",
+    "models": [
+      {
+        "id": "dragons-dragon",
+        "output": "Dragon02",
+        "wingspan": 7.553,
+        "bodyLength": 6.535,
+        "hoverTop": 5.649,
+        "radius": 4.3,
+        "vatMaxErrorMm": 2.172
+      },
+      {
+        "id": "dragons-dragon-evolved",
+        "output": "Dragon_Evolved02",
+        "wingspan": 7.401,
+        "bodyLength": 6.028,
+        "hoverTop": 5.23,
+        "radius": 4.2,
+        "vatMaxErrorMm": 2.163
+      }
+    ],
+    "precisionLimit": "3D Half rounding bound <=2.35mm (gate 2.5mm); first attempt failed at 2.756mm and is kept as evidence",
+    "playerCases": "6/6 passed",
+    "humanAcceptance": false
+  },
+  "protection": {
+    "files": 3046,
+    "changed": 0,
+    "missing": 0
+  }
+}

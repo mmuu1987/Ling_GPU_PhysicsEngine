@@ -1,0 +1,32 @@
+{
+    "root": "Assets/Game/CharacterPilotPlayable",
+    "sourceModel": "Assets/CharacterPilotSource/KayKitKnight/Knight.fbx",
+    "preparedPrefab": "Assets/Game/CharacterPilotPlayable/Prepared/KayKitKnightPrepared.prefab",
+    "profile": "Assets/Game/CharacterPilotPlayable/KnightPaletteSafeVAT.asset",
+    "trialUnit": "Assets/Game/CharacterPilotPlayable/Settings/KayKitKnightTrial.asset",
+    "scenario": "Assets/Game/CharacterPilotPlayable/Settings/TrialScenario.asset",
+    "catalog": "Assets/Game/CharacterPilotPlayable/Settings/TrialCatalog.asset",
+    "menuScene": "Assets/Game/CharacterPilotPlayable/ModelTrialMenu.unity",
+    "battlefieldScene": "Assets/Game/CharacterPilotPlayable/ModelTrialBattlefield.unity",
+    "unityVersion": "6000.3.14f1",
+    "createdUtc": "2026-09-30T03:36:02.5788041Z",
+    "clips": [
+        "Assets/Game/CharacterPilotPlayable/Prepared/Idle.anim",
+        "Assets/Game/CharacterPilotPlayable/Prepared/Move.anim",
+        "Assets/Game/CharacterPilotPlayable/Prepared/Attack.anim",
+        "Assets/Game/CharacterPilotPlayable/Prepared/Death.anim"
+    ],
+    "stages": [
+        "Generic rig paths verified; real clips remapped",
+        "single author atlas; sword/shield attached to hand slots",
+        "production VatBaker.Bake and SaveNew",
+        "production UnitTypeBinder.CreateUnitType and ValidateBinding",
+        "raw YAML persistent references",
+        "isolated Scenario/Catalog/menu/battlefield"
+    ],
+    "fullVertices": 6666,
+    "lowVertices": 1337,
+    "frames": 114,
+    "startingUnits": 128,
+    "humanAcceptance": false
+}

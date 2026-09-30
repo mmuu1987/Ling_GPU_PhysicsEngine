@@ -1,0 +1,499 @@
+{
+  "buildGuid": "a587838cc5834bf5b6bec123fde0b8ec",
+  "newAcceptedModels": 2,
+  "deferredCandidate": "Spider",
+  "catalogEntries": 8,
+  "humanAcceptance": false,
+  "combatCoreChanged": false,
+  "models": [
+    {
+      "key": "wolf",
+      "title": "巨狼",
+      "pipeline": {
+        "status": "ready-for-human-review",
+        "output": "Assets/Game/CharacterPipeline/Generated/LargeWolf02",
+        "evidence": "Logs/CharacterPipeline/LargeWolf02-3486b1b3",
+        "sourceModel": "Assets/Game/LargeBeasts/Prepared02/Wolf/Prepared.prefab",
+        "sourceGuid": "d25fd9521a1e53c4d96743a419ba0992",
+        "sourceDependencyHash": "0fb92eb676fce83cbb9e313f4a6ac784",
+        "unityVersion": "6000.3.14f1",
+        "createdUtc": "2026-09-30T09:45:54.2542645Z",
+        "sourceBodyHeight": 3.0418076515197754,
+        "targetBodyHeight": 3.0418076515197754,
+        "bodyScaleFactor": 1.0,
+        "agentRadius": 3.5999999046325684,
+        "maxPositionError": 0.0018456903053447604,
+        "allowedPositionError": 0.0024999999441206455,
+        "fullVertices": 3815,
+        "lowVertices": 1186,
+        "totalFrames": 164,
+        "gpuSnapshots": 48,
+        "sourceReferenceSnapshots": 16,
+        "positionComparisons": 625660,
+        "textureBytes": 15384512,
+        "automatedPassed": true,
+        "humanAcceptance": false,
+        "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+        "actions": [
+          {
+            "action": "Idle",
+            "frames": 80,
+            "maximumPositionError": 0.0018255026079714298
+          },
+          {
+            "action": "Move",
+            "frames": 26,
+            "maximumPositionError": 0.0018107086652889848
+          },
+          {
+            "action": "Attack",
+            "frames": 32,
+            "maximumPositionError": 0.0018375313375145197
+          },
+          {
+            "action": "Death",
+            "frames": 26,
+            "maximumPositionError": 0.0018456903053447604
+          }
+        ],
+        "warnings": [
+          "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+          "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+          "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+          "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+        ]
+      },
+      "preparation": {
+        "model": "Wolf",
+        "method": "Prepared only: remove static import scales by preserving world rest transforms, transforming owned mesh vertices/normals and bindposes, resampling authored local poses from world transforms. Original imported LBS positions compared at every baked frame. No scale channel is silently treated as real unit animation.",
+        "frames": 164,
+        "positions": 625660,
+        "paletteColors": 4,
+        "maximumScaledPositionError": 4.282455392967677e-06,
+        "maximumScaleDeviationFromRest": 4.768372718899627e-07,
+        "sourceHeight": 2.673936128616333,
+        "targetHeight": 3.0418076515197754,
+        "targetSpan": 6.0,
+        "sourceSpan": 5.274369239807129,
+        "collisionRadius": 3.5999999046325684,
+        "minimumActiveY": -0.050437744706869125,
+        "maximumActiveY": 3.125959873199463,
+        "sourceXZCenter": {
+          "x": 2.384185791015625e-07,
+          "y": 0.0,
+          "z": -0.07599377632141113
+        },
+        "passed": true
+      }
+    },
+    {
+      "key": "bull",
+      "title": "重型公牛",
+      "pipeline": {
+        "status": "ready-for-human-review",
+        "output": "Assets/Game/CharacterPipeline/Generated/LargeBull02",
+        "evidence": "Logs/CharacterPipeline/LargeBull02-a121ed1b",
+        "sourceModel": "Assets/Game/LargeBeasts/Prepared02/Bull/Prepared.prefab",
+        "sourceGuid": "85d4106bc1017064589edc185e147103",
+        "sourceDependencyHash": "bd83855e58583dd54d6d892a81e7916a",
+        "unityVersion": "6000.3.14f1",
+        "createdUtc": "2026-09-30T09:46:06.3920641Z",
+        "sourceBodyHeight": 3.4114391803741455,
+        "targetBodyHeight": 3.41144061088562,
+        "bodyScaleFactor": 1.0000004768371582,
+        "agentRadius": 4.0,
+        "maxPositionError": 0.002065911190584302,
+        "allowedPositionError": 0.0024999999441206455,
+        "fullVertices": 4736,
+        "lowVertices": 1344,
+        "totalFrames": 158,
+        "gpuSnapshots": 48,
+        "sourceReferenceSnapshots": 16,
+        "positionComparisons": 748288,
+        "textureBytes": 25886720,
+        "automatedPassed": true,
+        "humanAcceptance": false,
+        "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+        "actions": [
+          {
+            "action": "Idle",
+            "frames": 80,
+            "maximumPositionError": 0.002065911190584302
+          },
+          {
+            "action": "Move",
+            "frames": 29,
+            "maximumPositionError": 0.002031227806583047
+          },
+          {
+            "action": "Attack",
+            "frames": 25,
+            "maximumPositionError": 0.00203342130407691
+          },
+          {
+            "action": "Death",
+            "frames": 24,
+            "maximumPositionError": 0.002028306247666478
+          }
+        ],
+        "warnings": [
+          "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+          "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+          "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+          "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+        ]
+      },
+      "preparation": {
+        "model": "Bull",
+        "method": "Prepared only: remove static import scales by preserving world rest transforms, transforming owned mesh vertices/normals and bindposes, resampling authored local poses from world transforms. Original imported LBS positions compared at every baked frame. No scale channel is silently treated as real unit animation.",
+        "frames": 158,
+        "positions": 748288,
+        "paletteColors": 7,
+        "maximumScaledPositionError": 6.567579930560896e-06,
+        "maximumScaleDeviationFromRest": 8.344654816028196e-07,
+        "sourceHeight": 4.586671829223633,
+        "targetHeight": 3.41144061088562,
+        "targetSpan": 6.0,
+        "sourceSpan": 8.06698226928711,
+        "collisionRadius": 4.0,
+        "minimumActiveY": -0.04193563014268875,
+        "maximumActiveY": 3.63046932220459,
+        "sourceXZCenter": {
+          "x": -4.76837158203125e-07,
+          "y": 0.0,
+          "z": 1.0538766384124756
+        },
+        "passed": true
+      }
+    }
+  ],
+  "runtime": [
+    {
+      "key": "wolf",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "wolf",
+        "buildGuid": "a587838cc5834bf5b6bec123fde0b8ec",
+        "pid": 20192,
+        "elapsedSeconds": 74.525,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentLargeBeasts\\player-wolf-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "largeBodyEvidencePassed": true,
+        "radius": 3.5999999046325684,
+        "routeDisplacement": 4.557511806488037,
+        "routeTurn": 64.0223388671875,
+        "maxFriendlyOverlap": 0.12391296029090881,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T09:57:45.171Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "DefenderVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 1,
+        "simulationSeconds": 52.89756393432617,
+        "realSeconds": 52.950462341308594,
+        "initial": [
+          12,
+          32
+        ],
+        "survivors": [
+          0,
+          18
+        ],
+        "restartAlive": [
+          12,
+          32
+        ]
+      },
+      "large": {
+        "passed": true,
+        "routeCompleted": true,
+        "privateGridCoversDiameter": true,
+        "mutualCenterReach": true,
+        "method": "Real lateral Move/Hold orders, bounded3s, then normal reset; subsequent passive position/rotation/HP sampling. Circular body approximation, not anatomical collision or zero-clipping proof.",
+        "radius": 3.5999999046325684,
+        "cellSize": 9.0,
+        "beastReach": 4.650000095367432,
+        "controlReach": 4.650000095367432,
+        "initialMinimumMargin": 5.590855598449707,
+        "routeMaximumDisplacement": 4.557511806488037,
+        "routeMaximumTurnDegrees": 64.0223388671875,
+        "maximumFriendlyBeastOverlapFraction": 0.12391296029090881,
+        "routeSamples": 18,
+        "naturalSamples": 319,
+        "attackSamples": 507,
+        "stoppedAttackSamples": 389,
+        "beastDamage": 3600,
+        "controlDamage": 1880,
+        "errors": 0
+      }
+    },
+    {
+      "key": "wolf",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "wolf",
+        "buildGuid": "a587838cc5834bf5b6bec123fde0b8ec",
+        "pid": 8120,
+        "elapsedSeconds": 74.642,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentLargeBeasts\\player-wolf-reload-01\\report.json",
+        "settingsFileUntouched": true,
+        "largeBodyEvidencePassed": true,
+        "radius": 3.5999999046325684,
+        "routeDisplacement": 4.502671241760254,
+        "routeTurn": 64.0223388671875,
+        "maxFriendlyOverlap": 0.10879655927419662,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T09:58:59.873Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "DefenderVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 1,
+        "simulationSeconds": 57.85169219970703,
+        "realSeconds": 57.902992248535156,
+        "initial": [
+          12,
+          32
+        ],
+        "survivors": [
+          0,
+          10
+        ],
+        "restartAlive": [
+          12,
+          32
+        ]
+      },
+      "large": {
+        "passed": true,
+        "routeCompleted": true,
+        "privateGridCoversDiameter": true,
+        "mutualCenterReach": true,
+        "method": "Real lateral Move/Hold orders, bounded3s, then normal reset; subsequent passive position/rotation/HP sampling. Circular body approximation, not anatomical collision or zero-clipping proof.",
+        "radius": 3.5999999046325684,
+        "cellSize": 9.0,
+        "beastReach": 4.650000095367432,
+        "controlReach": 4.650000095367432,
+        "initialMinimumMargin": 5.590855598449707,
+        "routeMaximumDisplacement": 4.502671241760254,
+        "routeMaximumTurnDegrees": 64.0223388671875,
+        "maximumFriendlyBeastOverlapFraction": 0.10879655927419662,
+        "routeSamples": 18,
+        "naturalSamples": 349,
+        "attackSamples": 710,
+        "stoppedAttackSamples": 581,
+        "beastDamage": 3600,
+        "controlDamage": 2590,
+        "errors": 0
+      }
+    },
+    {
+      "key": "bull",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "bull",
+        "buildGuid": "a587838cc5834bf5b6bec123fde0b8ec",
+        "pid": 8132,
+        "elapsedSeconds": 83.003,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentLargeBeasts\\player-bull-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "largeBodyEvidencePassed": true,
+        "radius": 4,
+        "routeDisplacement": 4.618821620941162,
+        "routeTurn": 64.72958374023438,
+        "maxFriendlyOverlap": 0.10514205694198608,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T10:00:22.937Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 62.84141159057617,
+        "realSeconds": 62.89256286621094,
+        "initial": [
+          12,
+          32
+        ],
+        "survivors": [
+          3,
+          0
+        ],
+        "restartAlive": [
+          12,
+          32
+        ]
+      },
+      "large": {
+        "passed": true,
+        "routeCompleted": true,
+        "privateGridCoversDiameter": true,
+        "mutualCenterReach": true,
+        "method": "Real lateral Move/Hold orders, bounded3s, then normal reset; subsequent passive position/rotation/HP sampling. Circular body approximation, not anatomical collision or zero-clipping proof.",
+        "radius": 4.0,
+        "cellSize": 9.0,
+        "beastReach": 5.050000190734863,
+        "controlReach": 5.050000190734863,
+        "initialMinimumMargin": 6.038745880126953,
+        "routeMaximumDisplacement": 4.618821620941162,
+        "routeMaximumTurnDegrees": 64.72958374023438,
+        "maximumFriendlyBeastOverlapFraction": 0.10514205694198608,
+        "routeSamples": 18,
+        "naturalSamples": 379,
+        "attackSamples": 710,
+        "stoppedAttackSamples": 533,
+        "beastDamage": 3120,
+        "controlDamage": 3200,
+        "errors": 0
+      }
+    },
+    {
+      "key": "bull",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "bull",
+        "buildGuid": "a587838cc5834bf5b6bec123fde0b8ec",
+        "pid": 20484,
+        "elapsedSeconds": 78.055,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentLargeBeasts\\player-bull-reload-01\\report.json",
+        "settingsFileUntouched": true,
+        "largeBodyEvidencePassed": true,
+        "radius": 4,
+        "routeDisplacement": 4.50189208984375,
+        "routeTurn": 64.72958374023438,
+        "maxFriendlyOverlap": 0.11234581470489502,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T10:01:41.056Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 61.376426696777344,
+        "realSeconds": 61.42827606201172,
+        "initial": [
+          12,
+          32
+        ],
+        "survivors": [
+          3,
+          0
+        ],
+        "restartAlive": [
+          12,
+          32
+        ]
+      },
+      "large": {
+        "passed": true,
+        "routeCompleted": true,
+        "privateGridCoversDiameter": true,
+        "mutualCenterReach": true,
+        "method": "Real lateral Move/Hold orders, bounded3s, then normal reset; subsequent passive position/rotation/HP sampling. Circular body approximation, not anatomical collision or zero-clipping proof.",
+        "radius": 4.0,
+        "cellSize": 9.0,
+        "beastReach": 5.050000190734863,
+        "controlReach": 5.050000190734863,
+        "initialMinimumMargin": 6.038745880126953,
+        "routeMaximumDisplacement": 4.50189208984375,
+        "routeMaximumTurnDegrees": 64.72958374023438,
+        "maximumFriendlyBeastOverlapFraction": 0.11234581470489502,
+        "routeSamples": 18,
+        "naturalSamples": 370,
+        "attackSamples": 716,
+        "stoppedAttackSamples": 515,
+        "beastDamage": 3340,
+        "controlDamage": 3200,
+        "errors": 0
+      }
+    },
+    {
+      "key": "warrior",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "warrior",
+        "buildGuid": "a587838cc5834bf5b6bec123fde0b8ec",
+        "pid": 6796,
+        "elapsedSeconds": 29.491,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentLargeBeasts\\player-warrior-seed-01\\report.json",
+        "settingsFileUntouched": true,
+        "largeBodyEvidencePassed": false,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T10:02:10.612Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 12.513449668884277,
+        "realSeconds": 12.566304206848145,
+        "initial": [
+          96,
+          64
+        ],
+        "survivors": [
+          77,
+          0
+        ],
+        "restartAlive": [
+          96,
+          64
+        ]
+      }
+    }
+  ],
+  "protectionAudit": {
+    "auditPassed": true,
+    "watchedOriginalSources": 2381,
+    "protectedOldPackageFiles": 5842,
+    "personalFilesUnchanged": 3,
+    "changedSources": [
+      "Assets/Game/Scripts/WarSandboxModelTrialSmoke.cs",
+      "Assets/方案设计/兵种模型制作管线.md",
+      "Assets/Game/README.md",
+      "NEXT_TASK.md"
+    ],
+    "errors": []
+  }
+}
