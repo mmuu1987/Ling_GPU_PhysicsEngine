@@ -57,5 +57,13 @@ groupshared 树形归约后由 0 号线程写目标槽、InterlockedAdd 累加 s
 
 ## 如何验证
 
+### M6.2 地形路径
+
+Manager 配置地形提供者时，`TerrainNavigationRuntime` 替换直线方向生成阶段：固定目标或异步敌军密度
+作为多源，在合并坡度/禁行/半径/障碍的八邻接图上求流场，各军团仍写原方向缓冲的独立切片。
+不可达为零方向，不使用穿山的直线后备；详细规则和生命周期见 [Terrain](../Terrain/README.md)。
+该路径不生成原平面方向预览，当前也不叠加旧的局部拥堵绕行方向；先确保路径可通行。
+保留原更新节奏与旧平面生成器，CPU 求解耗时不能用 M6.1 查询耗时代替。
+
 预览：RuntimeFlowConfig.runtimeFlowPreviewEnabled=true + 场景挂 `FlowFieldPreviewHUD`。
 方向模式 = 色相环编码方向；密度模式 = 敌方密度热力图。

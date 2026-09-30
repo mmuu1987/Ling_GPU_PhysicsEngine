@@ -41,10 +41,19 @@ namespace MassEngine.Game
                 return;
 
             Ray ray = cameraToUse.ScreenPointToRay(Input.mousePosition);
-            if (!Physics.Raycast(ray, out RaycastHit hit, Mathf.Max(0f, maxRayDistance), hitMask, QueryTriggerInteraction.Ignore))
-                return;
-
-            SetTargetPoint(hit.point);
+            var targetManager = manager != null ? manager : GetComponent<MassEngineManager>();
+            if (targetManager == null || !targetManager.TryGetTerrainContext(out var surface, out _, out _)) return;
+            Vector3 point;
+            if (surface != null)
+            {
+                if (!TerrainSurfaceQueries.Raycast(surface, ray, Mathf.Max(0, maxRayDistance), out point)) return;
+            }
+            else
+            {
+                if (!Physics.Raycast(ray, out var hit, Mathf.Max(0f, maxRayDistance), hitMask, QueryTriggerInteraction.Ignore)) return;
+                point = hit.point;
+            }
+            SetTargetPoint(point);
         }
 
         public void SetTargetPoint(Vector3 point)
@@ -53,7 +62,8 @@ namespace MassEngine.Game
             if (targetManager == null)
                 return;
 
-            targetManager.SetFlowTargetOverride(teamId, point);
+            if (!targetManager.TrySetFlowTargetOverride(teamId, point, out string error))
+            { Debug.LogWarning(error, this); return; }
 
             if (startBattleOnClick)
                 targetManager.StartBattle();

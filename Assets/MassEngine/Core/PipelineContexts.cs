@@ -141,6 +141,7 @@ namespace MassEngine
         public int staticObstacleCount;
         public float staticObstaclePadding;
         public Vector4[] staticObstacleRects;
+        public TerrainNavigationRuntime terrain;
         public GridFrameSettings grid;
         /// <summary>One entry per navigating team, indexed by raw teamId. Never null once built.</summary>
         public TeamFlowFrameSettings[] teamFlows;

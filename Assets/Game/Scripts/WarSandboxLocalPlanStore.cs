@@ -340,6 +340,13 @@ namespace MassEngine.Game
             { error = "方案地形缺失或版本不兼容，不能替换为平面。"; return false; }
             if (plan.worldWidth != world.x || plan.worldDepth != world.y || plan.boundaryPadding != padding)
             { error = "方案战场尺寸或边界已改变，当前布阵未改变。"; return false; }
+            if (!battlefield.TryValidateTerrain(out error)) return false;
+            if (battlefield.terrainSurface != null)
+            {
+                if (!battlefield.terrainSurface.TryCreateSurface(out var surface, out error)) return false;
+                if (surface.Origin != -world * .5f || surface.Size != world)
+                { error = "方案地形提供者空间契约与战场不匹配。"; return false; }
+            }
             if (catalog == null) { error = "兵种模板目录缺失。"; return false; }
             var entries = new WarSandboxDeploymentEntry[plan.entries.Length];
             for (int i = 0; i < entries.Length; i++)

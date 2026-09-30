@@ -10,13 +10,14 @@ namespace MassEngine.Game
     {
         private readonly List<GameObject> visuals = new List<GameObject>();
         private int lastHash = int.MinValue;
+        private TerrainSurface lastSurface;
 
-        public void Sync(StaticObstacleRect[] obstacles)
+        public void Sync(StaticObstacleRect[] obstacles, TerrainSurface surface = null)
         {
             int hash = ComputeHash(obstacles);
-            if (hash == lastHash)
+            if (hash == lastHash && lastSurface == surface)
                 return;
-            lastHash = hash;
+            lastHash = hash; lastSurface = surface;
             ClearVisuals();
 
             if (obstacles == null)
@@ -29,11 +30,17 @@ namespace MassEngine.Game
                 if (!obstacle.IsValid)
                     continue;
 
+                float groundY = 0;
+                if (surface != null)
+                {
+                    if (!surface.TrySample(obstacle.center, out var sample)) continue;
+                    groundY = sample.Position.y;
+                }
                 GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 visual.name = "Static Obstacle " + (i + 1);
                 visual.hideFlags = HideFlags.DontSave;
                 visual.transform.SetParent(transform, false);
-                visual.transform.position = new Vector3(obstacle.center.x, 2f, obstacle.center.y);
+                visual.transform.position = new Vector3(obstacle.center.x, groundY + 2f, obstacle.center.y);
                 visual.transform.localScale = new Vector3(obstacle.size.x, 4f, obstacle.size.y);
 
                 Collider collider = visual.GetComponent<Collider>();
