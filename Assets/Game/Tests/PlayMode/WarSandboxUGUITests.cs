@@ -24,6 +24,18 @@ namespace MassEngine.Game.Tests
             ui.Dispose(); Object.Destroy(owner); yield return null;
         }
         [Test]
+        public void VolumeSliderUsesLatestCallbackWithoutSavingOnRefresh()
+        {
+            int changes = 0; float volume = 0;
+            ui.Begin(); ui.Slider("volume", rect, .65f, value => changes += 100); ui.End();
+            var slider = owner.GetComponentInChildren<Slider>();
+            ui.Begin(); ui.Slider("volume", rect, .27f, value => { changes++; volume = value; }); ui.End();
+            Assert.That(changes, Is.Zero); Assert.That(slider.value, Is.EqualTo(.27f));
+            slider.value = .4f; Assert.That(changes, Is.EqualTo(1)); Assert.That(volume, Is.EqualTo(.4f));
+            Assert.That(owner.GetComponentsInChildren<Slider>().Length, Is.EqualTo(1));
+        }
+
+        [Test]
         public void RepeatedRefreshRetainsNodesAndUsesLatestButtonAction()
         {
             int result = 0;

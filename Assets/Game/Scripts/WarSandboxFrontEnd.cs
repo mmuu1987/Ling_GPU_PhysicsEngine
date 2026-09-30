@@ -3,7 +3,7 @@ using UnityEngine;
 namespace MassEngine.Game
 {
     [RequireComponent(typeof(WarSandboxSceneSession))]
-    public sealed class WarSandboxFrontEnd : MonoBehaviour
+    public sealed partial class WarSandboxFrontEnd : MonoBehaviour
     {
         private WarSandboxSceneSession session;
         private WarSandboxUGUI ui;
@@ -13,12 +13,14 @@ namespace MassEngine.Game
         private void Update()
         {
             if (session == null || WarSandboxSceneSession.Instance != session) return;
+            if (Input.GetKeyDown(KeyCode.Escape) && session.SettingsOpen) CloseSettings();
             if (Input.GetKeyDown(KeyCode.Escape) && session.ConfirmationOpen) session.CancelConfirmation();
             if (ui == null) ui = new WarSandboxUGUI(transform, "Front End Canvas", 200);
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + 0.1f;
             ui.Begin();
-            if (session.ConfirmationOpen) DrawConfirmation();
+            if (session.SettingsOpen) DrawSettings();
+            else if (session.ConfirmationOpen) DrawConfirmation();
             else switch (session.State)
             {
                 case WarSandboxEntryState.Battle: DrawNavigation(); break;
@@ -31,7 +33,7 @@ namespace MassEngine.Game
         public static Rect NavigationRect(float width, float height)
         {
             float scale = Mathf.Clamp(Mathf.Min(width / 1280f, height / 720f), 0.85f, 1.5f);
-            float w = Mathf.Min(400 * scale, width - 24);
+            float w = Mathf.Min(488 * scale, width - 24);
             return new Rect((width - w) * 0.5f, height - 54 * scale, w, 42 * scale);
         }
         public static bool IsOverNavigation(Vector2 point)
@@ -41,9 +43,10 @@ namespace MassEngine.Game
         }
         private void DrawNavigation()
         {
-            float w = Mathf.Min(400, ui.Width - 24), x = (ui.Width - w) / 2, y = ui.Height - 54;
+            float w = Mathf.Min(488, ui.Width - 24), x = (ui.Width - w) / 2, y = ui.Height - 54;
             ui.Panel("nav", new Rect(x, y, w, 42));
-            ui.Label("nav-name", new Rect(x + 4, y + 3, w - 176, 36), session.CurrentDisplayName, 14, WarSandboxUGUI.Muted);
+            ui.Label("nav-name", new Rect(x + 4, y + 3, w - 264, 36), session.CurrentDisplayName, 14, WarSandboxUGUI.Muted);
+            ui.Button("nav-settings", new Rect(x + w - 258, y + 4, 80, 34), "设置", session.OpenSettings);
             ui.Button("nav-menu", new Rect(x + w - 170, y + 4, 108, 34), "战场目录", RequestReturn);
             ui.Button("nav-quit", new Rect(x + w - 56, y + 4, 52, 34), "退出", RequestQuit);
             if (!string.IsNullOrEmpty(session.Error))
@@ -57,9 +60,10 @@ namespace MassEngine.Game
             ui.Panel("catalog-bg", new Rect(0, 0, ui.Width, ui.Height), WarSandboxUGUI.Background);
             float width = Mathf.Min(1100, ui.Width - 48), left = (ui.Width - width) / 2;
             ui.Label("brand", new Rect(left, 22, width - 100, 22), "MASS WAR SANDBOX  /  战争沙盒", 13, WarSandboxUGUI.Accent, true);
-            ui.Label("catalog-title", new Rect(left, 52, width - 100, 44), "选择你的下一场战役", 30, null, true);
+            ui.Label("catalog-title", new Rect(left, 52, width - 200, 44), "选择你的下一场战役", 30, null, true);
             ui.Label("catalog-note", new Rect(left, 98, width, 32), "选择战场 · 调整军团 · 保存方案 · 自由指挥", 15, WarSandboxUGUI.Muted);
             ui.Button("quit", new Rect(left + width - 80, 52, 80, 38), "退出", RequestQuit);
+            ui.Button("menu-settings", new Rect(left + width - 170, 52, 80, 38), "设置", session.OpenSettings);
             string validation = null;
             bool valid = session.catalog != null && session.catalog.TryValidate(WarSandboxSceneSession.CanLoadScene, out validation);
             string message = session.Error ?? validation;
@@ -80,8 +84,9 @@ namespace MassEngine.Game
                 ui.Label(k + "-name", new Rect(x + 14, y + ih + 10, cw - 28, 34), entry.displayName, 23, null, true);
                 var rules = entry.rules.rules;
                 string mode = rules.gameMode == WarSandboxGameMode.ControlPoint ? "据点战" : "歼灭战";
-                string detail = rules.staticObstaclesEnabled ? rules.staticObstacles.Length + " 处障碍" : "开阔地形";
-                ui.Label(k + "-detail", new Rect(x + 14, y + ih + 48, cw - 28, 42), mode + "  /  " + detail, 15, WarSandboxUGUI.Muted);
+                string detail = rules.staticObstaclesEnabled ? rules.staticObstacles.Length + " 处障碍" : entry.terrainSurface != null ? "山地地形" : "开阔地形";
+                ui.Label(k + "-detail", new Rect(x + 14, y + ih + 48, cw - 28, 54),
+                    string.IsNullOrEmpty(entry.description) ? mode + "  /  " + detail : entry.description, 15, WarSandboxUGUI.Muted);
                 ui.Button(k + "-enter", new Rect(x + 24, y + ch - 60, cw - 48, 42), "进入战场  →", () => session.TryEnterBattlefield(entry.id, false, out _), true);
             }
             ui.EndScroll();

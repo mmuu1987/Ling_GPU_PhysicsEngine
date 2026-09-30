@@ -25,7 +25,8 @@ namespace MassEngine.Game
         /// WarSandboxBattleResult.winnerTeamId. Two-army battles keep reporting
         /// AttackerVictory/DefenderVictory so existing HUD and saves read the same as before.
         /// </summary>
-        ArmyVictory = 6
+        ArmyVictory = 6,
+        Ended = 7
     }
 
     public enum WarSandboxGameMode
@@ -37,7 +38,18 @@ namespace MassEngine.Game
     public enum WarSandboxVictoryReason
     {
         Annihilation = 0,
-        ControlPoint = 1
+        ControlPoint = 1,
+        ManualEnd = 2
+    }
+
+    [Serializable]
+    public struct WarSandboxArmyResult
+    {
+        public int teamId;
+        public string displayName;
+        public int initial;
+        public int survivors;
+        public int Casualties => Mathf.Max(0, initial - survivors);
     }
 
     [Serializable]
@@ -56,6 +68,35 @@ namespace MassEngine.Game
         /// <summary>Winning teamId, or -1 for a draw. The only way to name a winner past two armies.</summary>
         public int winnerTeamId;
         public bool valid;
+        [SerializeField] private WarSandboxArmyResult[] armyResults;
+        public int ArmyCount => armyResults != null ? armyResults.Length : 0;
+        // Returning a value prevents UI callers from changing the frozen rows.
+        public WarSandboxArmyResult GetArmy(int index) => armyResults[index];
+        public bool TryGetArmy(int teamId, out WarSandboxArmyResult army)
+        {
+            for (int i = 0; i < ArmyCount; i++) if (armyResults[i].teamId == teamId) { army = armyResults[i]; return true; }
+            army = default; return false;
+        }
+
+        public static WarSandboxBattleResult Capture(WarSandboxBattlePhase phase, ArmyRuntimeState[] armies,
+            BattleTelemetrySnapshot telemetry, WarSandboxVictoryReason reason, int winnerTeamId)
+        {
+            var result = Capture(phase, 0, 0, telemetry, reason, winnerTeamId);
+            var rows = new System.Collections.Generic.List<WarSandboxArmyResult>();
+            if (armies != null) foreach (var army in armies)
+            {
+                if (army == null || army.initialUnitCount <= 0) continue;
+                int alive = army.initialUnitCount;
+                if (telemetry.valid && army.teamId >= 0 && army.teamId < telemetry.TeamCount)
+                    alive = telemetry.GetAliveCount(army.teamId);
+                rows.Add(new WarSandboxArmyResult { teamId = army.teamId, displayName = army.displayName,
+                    initial = army.initialUnitCount, survivors = Mathf.Clamp(alive, 0, army.initialUnitCount) });
+            }
+            result.armyResults = rows.ToArray();
+            if (result.TryGetArmy(0, out var attacker)) { result.attackerInitial = attacker.initial; result.attackerSurvivors = attacker.survivors; }
+            if (result.TryGetArmy(1, out var defender)) { result.defenderInitial = defender.initial; result.defenderSurvivors = defender.survivors; }
+            return result;
+        }
 
         public int AttackerCasualties
         {
@@ -85,8 +126,14 @@ namespace MassEngine.Game
                     winnerTeamId = 1;
             }
 
+            var rows = new System.Collections.Generic.List<WarSandboxArmyResult>();
+            if (attackerInitial > 0) rows.Add(new WarSandboxArmyResult { teamId = 0, displayName = WarSandboxBattleController.DefaultArmyName(0),
+                initial = attackerInitial, survivors = Mathf.Clamp(telemetry.aliveAttackers, 0, attackerInitial) });
+            if (defenderInitial > 0) rows.Add(new WarSandboxArmyResult { teamId = 1, displayName = WarSandboxBattleController.DefaultArmyName(1),
+                initial = defenderInitial, survivors = Mathf.Clamp(telemetry.aliveDefenders, 0, defenderInitial) });
             return new WarSandboxBattleResult
             {
+                armyResults = rows.ToArray(),
                 phase = phase,
                 attackerInitial = Mathf.Max(0, attackerInitial),
                 defenderInitial = Mathf.Max(0, defenderInitial),

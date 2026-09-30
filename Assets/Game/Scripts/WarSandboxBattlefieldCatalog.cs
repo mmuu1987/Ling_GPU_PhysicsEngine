@@ -36,8 +36,11 @@ namespace MassEngine.Game
         public int contentVersion = 1;
         public string terrainId = "flat-ground";
         public int terrainVersion = 1;
+        public TerrainSurfaceAsset terrainSurface;
         public WarSandboxBattlefieldConfig rules;
         public Texture2D preview;
+        [TextArea] public string description;
+        [TextArea] public string briefing;
 
         public bool TryValidate(Func<string, bool> canLoadScene, out string error)
         {
@@ -48,11 +51,35 @@ namespace MassEngine.Game
             else if (contentVersion <= 0) error = "Battlefield contentVersion must be positive: " + id;
             else if (string.IsNullOrWhiteSpace(terrainId) || terrainId != terrainId.Trim()) error = "Battlefield terrainId is missing: " + id;
             else if (terrainVersion <= 0) error = "Battlefield terrainVersion must be positive: " + id;
+            else if (!TryValidateTerrain(out error)) return false;
             else if (rules == null) error = "Battlefield rules are missing: " + id;
             else if (!rules.TryCreateSnapshot(out _, out string ruleError)) error = id + ": " + ruleError;
             else if (canLoadScene != null && !canLoadScene(scenePath)) error = "Battlefield scene is not included in the build: " + scenePath;
             return error == null;
         }
+
+        public bool TryValidateTerrain(out string error)
+        {
+            error = null;
+            if (terrainId == "flat-ground")
+            {
+                if (terrainVersion != 1 || terrainSurface != null)
+                    error = "flat-ground@1 requires an explicit null terrainSurface provider.";
+            }
+            else if (terrainSurface == null) error = "Terrain provider is missing: " + terrainId;
+            else if (terrainSurface.Id != terrainId || terrainSurface.Version != terrainVersion)
+                error = "Terrain provider identity/version does not match the battlefield: " + terrainId;
+            else if (!terrainSurface.TryCreateSurface(out _, out error)) return false;
+            return error == null;
+        }
+
+        // Value copy freezes a load request; the provider must remain the exact authored asset.
+        public WarSandboxBattlefieldEntry CopyIdentity() => new WarSandboxBattlefieldEntry
+        {
+            id = id, displayName = displayName, scenePath = scenePath, contentVersion = contentVersion,
+            terrainId = terrainId, terrainVersion = terrainVersion, terrainSurface = terrainSurface,
+            rules = rules, preview = preview, description = description, briefing = briefing
+        };
 
         public static bool IsScenePath(string path)
         {

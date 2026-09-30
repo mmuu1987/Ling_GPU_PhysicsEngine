@@ -23,6 +23,16 @@ namespace MassEngine.Game.Tests
         public void TearDown() { Object.DestroyImmediate(catalog); Object.DestroyImmediate(rules); }
 
         [Test]
+        public void LoadIdentityFreezesPresetInstructions()
+        {
+            var entry = catalog.entries[0]; entry.description = "Small battle"; entry.briefing = "Press Enter to start";
+            var request = entry.CopyIdentity();
+            entry.description = "Changed"; entry.briefing = "Changed";
+            Assert.That(request.description, Is.EqualTo("Small battle"));
+            Assert.That(request.briefing, Is.EqualTo("Press Enter to start"));
+        }
+
+        [Test]
         public void MultipleRulesCanShareASceneWithoutSharingIdentity()
         {
             string before = JsonUtility.ToJson(catalog);

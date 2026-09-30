@@ -27,6 +27,8 @@ namespace MassEngine.Game
             if (controller == null)
                 controller = manager.gameObject.AddComponent<WarSandboxBattleController>();
             controller.manager = manager;
+            if (manager.GetComponent<WarSandboxBattleFeedback>() == null)
+                manager.gameObject.AddComponent<WarSandboxBattleFeedback>();
 
             WarSandboxCommandHUD hud = manager.GetComponent<WarSandboxCommandHUD>();
             if (hud == null)

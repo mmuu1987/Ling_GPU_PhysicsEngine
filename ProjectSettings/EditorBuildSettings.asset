@@ -6,11 +6,23 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Game/Scenes/WarSandboxMenu.unity
-    guid: cd82a04d4aa35d3469d361b988d1ec9d
+    path: Assets/Game/M71LaunchPresets/LaunchMenu.unity
+    guid: 44eb06dc12e212b4e83cc6b446212676
   - enabled: 1
-    path: Assets/Game/Scenes/WarSandbox.unity
-    guid: 54a42f8af69493e40b134c0f6e23f2d5
+    path: Assets/Game/M71LaunchPresets/launch-open/WarSandbox.unity
+    guid: 5cb91da9fb0c8e24ca9b51b91e0a0b8b
+  - enabled: 1
+    path: Assets/Game/M71LaunchPresets/launch-mountain/WarSandbox.unity
+    guid: 2efbedca0cd90a54b9085ed4fdf53984
+  - enabled: 1
+    path: Assets/Game/M71LaunchPresets/launch-point/WarSandbox.unity
+    guid: b3ddb1e1cc6a7134a8c4386abe1af5d6
+  - enabled: 1
+    path: Assets/Game/M71LaunchPresets/launch-three/WarSandbox.unity
+    guid: 33461e41c987ba74f8455b03ceb1a824
+  - enabled: 1
+    path: Assets/Game/M71LaunchPresets/launch-standard/WarSandbox.unity
+    guid: 26021c555a7d0dc4cadc4da3c2d50cd9
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

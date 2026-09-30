@@ -22,8 +22,9 @@ namespace MassEngine.Game
         public string Error { get; private set; }
         public float LoadingProgress { get; private set; }
         public bool ConfirmationOpen { get; private set; }
+        public bool SettingsOpen { get; private set; }
         public bool IsLoading => transitionInFlight || State == WarSandboxEntryState.Loading;
-        public bool InputBlocked => IsLoading || State != WarSandboxEntryState.Battle || ConfirmationOpen;
+        public bool InputBlocked => IsLoading || State != WarSandboxEntryState.Battle || ConfirmationOpen || SettingsOpen;
         public bool RequiresEndConfirmation => Controller != null &&
             (Controller.Phase == WarSandboxBattlePhase.Running || Controller.Phase == WarSandboxBattlePhase.Paused ||
              WarSandboxRuntimeDeployment.BlocksCommands(Controller));
@@ -34,8 +35,12 @@ namespace MassEngine.Game
         private string pendingDisplayName;
         private WarSandboxBattlefieldConfig pendingRules;
         private WarSandboxBattlefieldConfig activeRules;
+        private WarSandboxBattlefieldEntry pendingEntry;
+        private WarSandboxBattlefieldEntry activeEntry;
+        public WarSandboxBattlefieldEntry CurrentBattlefield => activeEntry?.CopyIdentity();
         private bool returningToMenu;
         private bool resumeAfterConfirmation;
+        private bool resumeAfterSettings;
         private bool receivedScene;
         private bool transitionInFlight;
 
@@ -80,6 +85,8 @@ namespace MassEngine.Game
             snapshot.hideFlags = HideFlags.DontSave;
             BeginTransition();
             pendingRules = snapshot;
+            pendingEntry = entry.CopyIdentity();
+            pendingEntry.rules = snapshot;
             pendingEntryId = entry.id;
             pendingDisplayName = entry.displayName;
             returningToMenu = false;
@@ -101,13 +108,14 @@ namespace MassEngine.Game
         {
             error = null;
             if (IsLoading) { error = "A scene is already loading."; return false; }
+            if (SettingsOpen) { error = "Close settings before changing battlefields."; return false; }
             if (RequiresEndConfirmation && !confirmed) { error = "Confirm ending the current battle first."; return false; }
             return true;
         }
 
         public void BeginConfirmation()
         {
-            if (IsLoading || ConfirmationOpen) return;
+            if (IsLoading || ConfirmationOpen || SettingsOpen) return;
             resumeAfterConfirmation = Controller != null && Controller.Phase == WarSandboxBattlePhase.Running;
             if (resumeAfterConfirmation) Controller.PauseBattle();
             ConfirmationOpen = true;
@@ -123,6 +131,22 @@ namespace MassEngine.Game
             resumeAfterConfirmation = false;
         }
 
+        public void OpenSettings()
+        {
+            if (IsLoading || ConfirmationOpen || SettingsOpen) return;
+            resumeAfterSettings = Controller != null && Controller.Phase == WarSandboxBattlePhase.Running;
+            if (resumeAfterSettings) Controller.PauseBattle();
+            SettingsOpen = true; SetCameraInput(false);
+        }
+
+        public void CloseSettings()
+        {
+            if (!SettingsOpen) return;
+            SettingsOpen = false; SetCameraInput(true);
+            if (resumeAfterSettings && Controller != null) Controller.StartOrResumeBattle();
+            resumeAfterSettings = false;
+        }
+
         public void ClearError() => Error = null;
 
         private void BeginTransition()
@@ -135,6 +159,7 @@ namespace MassEngine.Game
             ConfirmationOpen = false;
             resumeAfterConfirmation = false;
             receivedScene = false;
+            SettingsOpen = false; resumeAfterSettings = false;
             transitionInFlight = true;
             Time.timeScale = 1;
         }
@@ -187,6 +212,7 @@ namespace MassEngine.Game
             Controller = null;
             if (activeRules != null) Destroy(activeRules);
             activeRules = null;
+            activeEntry = null;
             CurrentEntryId = null;
             CurrentDisplayName = null;
             if (returningToMenu)
@@ -199,14 +225,21 @@ namespace MassEngine.Game
             MassEngineManager manager = FindManager(scene, out string error);
             if (manager == null) { Fail(error); return; }
             manager.PauseBattle();
-            if (!TryValidateScene(manager, out error)) { Fail(error); return; }
+            if (!TryValidateTerrainProvider(manager, pendingEntry, out error) ||
+                !TryValidateScene(manager, out error, false)) { Fail(error); return; }
             Controller = WarSandboxRuntimeBootstrap.EnsureControls(manager);
             Controller.GetComponent<WarSandboxRuntimeDeployment>().battlefieldCatalog = catalog;
             Controller.pauseOnStart = true;
             if (!Controller.TryApplyBattlefieldConfig(pendingRules, out error)) { Fail(error); return; }
+            // Awake may have rejected the scene's authored obstacles. The already-validated
+            // catalog rules, not that obsolete layout, are the requested initialization contract.
+            if (manager.terrainSurfaceAsset != null && (manager.Buffers == null || !manager.Buffers.IsAllocated))
+            { manager.ResetScenario(); manager.PauseBattle(); }
+            if (!TryValidateScene(manager, out error)) { Fail(error); return; }
             Controller.RebuildArmyStates();
             Controller.selectedTeam = FirstDeployedTeam(Controller);
             activeRules = pendingRules;
+            activeEntry = pendingEntry;
             pendingRules = null;
             CurrentEntryId = pendingEntryId;
             CurrentDisplayName = pendingDisplayName;
@@ -234,6 +267,7 @@ namespace MassEngine.Game
         {
             if (pendingRules != null) Destroy(pendingRules);
             pendingRules = null;
+            pendingEntry = null;
             pendingEntryId = null;
             pendingDisplayName = null;
             pendingScenePath = null;
@@ -264,7 +298,38 @@ namespace MassEngine.Game
             return found;
         }
 
-        public static bool TryValidateScene(MassEngineManager manager, out string error)
+        // CPU-only contract check: never treats an absent/broken mountain provider as flat ground.
+        public static bool TryValidateTerrainProvider(MassEngineManager manager,
+            WarSandboxBattlefieldEntry entry, out string error)
+        {
+            error = null;
+            if (manager == null || entry == null) { error = "Terrain battlefield request is missing."; return false; }
+            if (manager.terrainSurfaceAsset != entry.terrainSurface)
+            { error = "Loaded terrain provider is not the requested asset."; return false; }
+            if (entry.terrainId == "flat-ground")
+            {
+                if (entry.terrainVersion != 1 || entry.terrainSurface != null)
+                { error = "flat-ground@1 requires a null terrain provider."; return false; }
+            }
+            else if (entry.terrainSurface == null || entry.terrainSurface.Id != entry.terrainId ||
+                entry.terrainSurface.Version != entry.terrainVersion)
+            { error = "Requested terrain provider identity/version changed or is missing."; return false; }
+            if (!manager.TryGetTerrainContext(out var surface, out var navigation, out error)) return false;
+            if (entry.terrainId == "flat-ground")
+            {
+                if (surface == null && navigation == null) return true;
+                error = "Flat battlefield unexpectedly has a terrain snapshot."; return false;
+            }
+            if (surface == null || navigation == null || surface.Id != entry.terrainId || surface.Version != entry.terrainVersion)
+            { error = "Loaded terrain snapshot identity/version does not match the request."; return false; }
+            var simulation = manager.systemConfig != null ? manager.systemConfig.simulationConfig : null;
+            if (simulation == null || surface.Origin != -simulation.simulationWorldSize * .5f ||
+                surface.Size != simulation.simulationWorldSize)
+            { error = "Terrain origin/size does not match the battlefield world."; return false; }
+            return true;
+        }
+
+        public static bool TryValidateScene(MassEngineManager manager, out string error, bool requireGpu = true)
         {
             error = null;
             if (manager == null || !manager.isActiveAndEnabled) error = "Battlefield manager is missing or disabled.";
@@ -285,8 +350,10 @@ namespace MassEngine.Game
                 teams.Add(unit.teamId);
             }
             if (teams.Count < 2) error = "A battlefield needs at least two deployed armies.";
-            else if (manager.Buffers == null || !manager.Buffers.IsAllocated || manager.UnitTypes == null)
-                error = "Battlefield GPU initialization failed. Check its shader and deployment configuration.";
+            else if (requireGpu && (manager.Buffers == null || !manager.Buffers.IsAllocated || manager.UnitTypes == null))
+                error = string.IsNullOrEmpty(manager.TerrainError)
+                    ? "Battlefield GPU initialization failed. Check its shader and deployment configuration."
+                    : "Battlefield terrain initialization failed: " + manager.TerrainError;
             return error == null;
         }
 

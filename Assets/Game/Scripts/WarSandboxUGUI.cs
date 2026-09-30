@@ -25,9 +25,11 @@ namespace MassEngine.Game
             public Image image;
             public Button button;
             public InputField input;
+            public Slider slider;
             public RawImage raw;
             public Action click;
             public Action<string> change;
+            public Action<float> changeNumber;
             public Action<Vector2, int, bool> pointer;
             public RectTransform content;
             public bool used;
@@ -199,6 +201,24 @@ namespace MassEngine.Game
                 });
                 trigger.triggers.Add(entry);
             }
+        }
+        public void Slider(string id, Rect rect, float value, Action<float> change)
+        {
+            var node = Get(id, rect);
+            if (node.slider == null)
+            {
+                Image(node).color = Line;
+                var handle = new GameObject("Handle", typeof(RectTransform), typeof(Image));
+                var transform = (RectTransform)handle.transform; transform.SetParent(node.rect, false);
+                transform.anchorMin = Vector2.zero; transform.anchorMax = Vector2.up;
+                transform.sizeDelta = new Vector2(20, 0); handle.GetComponent<Image>().color = Accent;
+                node.slider = node.rect.gameObject.AddComponent<Slider>();
+                node.slider.minValue = 0; node.slider.maxValue = 1;
+                node.slider.handleRect = transform; node.slider.targetGraphic = handle.GetComponent<Image>();
+                node.slider.navigation = new Navigation { mode = Navigation.Mode.None };
+                node.slider.onValueChanged.AddListener(v => node.changeNumber?.Invoke(v));
+            }
+            node.changeNumber = change; node.slider.SetValueWithoutNotify(value);
         }
         public void Picture(string id, Rect rect, Texture texture)
         {
