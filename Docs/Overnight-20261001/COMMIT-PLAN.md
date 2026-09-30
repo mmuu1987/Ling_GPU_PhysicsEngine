@@ -68,3 +68,24 @@
    - PlayMode：`Projectile;MeleeChargeTests;MassEngineGpuKernelTests`（今晚最终状态为 120/120，见 reg-play-01）；
    - EditMode：`MassEngine`（431/433，另外 2 项属于 D3）。
 3. 按功能拆出的中间提交可能单独编译不过（比如 C7 依赖 C4 的 Projectile 池）。**要么严格按上面的顺序提交，要么把 C7、C8、C10、C11 合成一个"引擎可选扩展"提交**，这样最省事。
+
+## 执行记录（2026-10-01，用户决定"都提交"）
+- 决定：D1 直接提交，不用 LFS；D2 被取代的版本也提交；D3 EditorBuildSettings 随 M7.1 一起提交，2 个失败测试按用户决定不处理；D4 不做逐块拆分，6 个混改文件整体放进 C7，提交说明里已注明。
+- 实际分组与计划基本一致：内容类拆成 C8 源模型、C9 生成物、C10 集成战场与 builder；方案设计文档按里程碑分到各组；文档类为 C11。**没有 push。**
+
+| 组 | 提交 | 文件数 | 标题 |
+|---|---|---|---|
+| C1 | `d452fcf` | 217 | feat: M5.3–M5.4 VAT 外观回归、UnityChan 模型试玩与兵种绑定修正 |
+| C2 | `9eca820` | 81 | feat: M6.1–M6.3 连续地形原型、地形查询与可玩整合 |
+| C3 | `f9dbfce` | 175 | feat: M7.1–M7.2 首发预设、轻量入口、设置/音频/结算反馈与内存释放 |
+| C4 | `47da7c4` | 120 | feat: M7.3 远景 LOD、动作与弹道反馈、拥堵等待、远程有效射击、地形循环 |
+| C5 | `3e510f6` | 35 | feat: M7 完整对局闭环、可玩性与长时复测 |
+| C6 | `1939282` | 37 | feat(Game): 角色管线运行时、统一角色库与部署名册策略 |
+| C7 | `a292041` | 33 | feat(MassEngine): 可选引擎扩展——火球溅射、落点特效与拖尾宽度、骑兵冲锋；修复测试夹具状态泄漏与空 shader NRE |
+| C8 | `0de69e3` | 115 | feat(Content): 角色源模型（KayKit、Quaternius CC0 怪物/巨龙/巨人、骑兵等，附许可） |
+| C9 | `fb8ad60` | 730 | feat(Content): 角色管线生成物（VAT 烘焙结果，含历史版本） |
+| C10 | `26d8249` | 2131 | feat(Content): 骑兵、巨龙、巨人、统一角色库等集成战场与 builder、内容测试 |
+| C11 | `ee50f90` | 134 | docs: M5–M7 方案文档、交接说明与通宵报告 |
+
+- 未提交（故意排除）：5 个 `Assets/InitTestScene*.unity` 及其 .meta（Unity 测试临时场景，可以删除），以及 `.local-mcp-audit/`。
+- 回执：`Logs/AgentGiants/commit-receipt-01.json`；分组清单：`Logs/AgentGiants/commit-plan.json`。
