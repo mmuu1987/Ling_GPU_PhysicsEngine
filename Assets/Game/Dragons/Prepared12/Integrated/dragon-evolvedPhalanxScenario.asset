@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010008, type: 3}
+  m_Name: dragon-evolvedPhalanxScenario
+  m_EditorClassIdentifier: MassEngine::MassEngine.ScenarioConfig
+  unitTypes:
+  - {fileID: 11400000, guid: e6d40ad8e47393b40a4609e3620132d5, type: 2}
+  - {fileID: 11400000, guid: 59a3e66822706ff4bbd5d55966bf65d3, type: 2}
