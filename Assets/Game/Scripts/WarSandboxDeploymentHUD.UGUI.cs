@@ -70,7 +70,7 @@ namespace MassEngine.Game
                 if (!CommitFields()) return;
                 var template = draft.Count > 0 ? draft[selected].template : deployment.Templates[0];
                 int team = draft.Count > 0 ? draft[selected].teamId : 0;
-                if (draft.Add(template, team)) { selected = draft.Count - 1; RefreshAfterUiChange(); }
+                if (draft.Add(template, team, deployment.UseTemplateSpawnDefaults)) { selected = draft.Count - 1; RefreshAfterUiChange(); }
             });
             ui.Button("roster-remove", new Rect(x + toolWidth + 6, y, toolWidth, 32), "移除", () => { draft.Remove(selected); ClampSelection(); RefreshAfterUiChange(); }, false, draft.Count > 0);
             ui.Button("roster-undo", new Rect(x + 2 * (toolWidth + 6), y, toolWidth, 32), "撤销", () => { draft.Undo(); ClampSelection(); RefreshAfterUiChange(); }, false, draft.CanUndo);
@@ -90,8 +90,9 @@ namespace MassEngine.Game
             y += rosterHeight + 12;
             if (draft.Count == 0) return;
             float extra = (templateMenu ? deployment.Templates.Count * 38 : 0) + (armyMenu ? (ConfigValidator.MaxTeamId + 1) * 38 : 0);
-            ui.Scroll("roster-properties", new Rect(x, y, width, Mathf.Max(60, area.yMax - y - 12)), 548 + extra);
+            ui.Scroll("roster-properties", new Rect(x, y, width, Mathf.Max(60, area.yMax - y - 12)), 548 + extra + (deployment.rosterPolicy != null ? 72 : 0));
             float fy = 0;
+            if (deployment.rosterPolicy != null) { ui.Label("roster-policy-note", new Rect(0, fy, width, 64), deployment.rosterPolicy.explanation, 12, WarSandboxUGUI.Muted); fy += 72; }
             ui.Label("field-section", new Rect(0, fy, width, 26), "编成属性", 15, null, true); fy += 32;
             ui.Button("field-template", new Rect(0, fy, width, 34), "兵种  /  " + draft[selected].Name + "  ▾", () => templateMenu = !templateMenu); fy += 42;
             if (templateMenu)
@@ -99,7 +100,7 @@ namespace MassEngine.Game
                 {
                     var template = deployment.Templates[i];
                     ui.Button("template-" + i, new Rect(12, fy, width - 12, 32), template.unitTypeName, () =>
-                    { if (CommitFields()) { var entry = draft[selected]; entry.template = template; draft.Set(selected, entry); templateMenu = false; RefreshAfterUiChange(); } }); fy += 38;
+                    { if (CommitFields()) { deployment.SelectTemplate(selected, template); templateMenu = false; RefreshAfterUiChange(); } }); fy += 38;
                 }
             ui.Button("field-army", new Rect(0, fy, width, 34), "军团  /  " + WarSandboxBattleController.DefaultArmyName(draft[selected].teamId) + "  ▾", () => armyMenu = !armyMenu); fy += 42;
             if (armyMenu)
@@ -112,7 +113,7 @@ namespace MassEngine.Game
             ui.Button("army-add", new Rect(0, fy, (width - 8) / 2, 32), "新增军团", () =>
             {
                 if (!CommitFields()) return; int team = draft.NextArmyId();
-                if (team >= 0 && draft.Add(draft[selected].template, team)) { selected = draft.Count - 1; RefreshAfterUiChange(); }
+                if (team >= 0 && draft.Add(draft[selected].template, team, deployment.UseTemplateSpawnDefaults)) { selected = draft.Count - 1; RefreshAfterUiChange(); }
                 else inputError = "军团或编成数量已达上限。";
             });
             ui.Button("army-remove", new Rect((width + 8) / 2, fy, (width - 8) / 2, 32), "移除整团", () => { draft.RemoveArmy(draft[selected].teamId); ClampSelection(); RefreshAfterUiChange(); }); fy += 44;
@@ -135,7 +136,11 @@ namespace MassEngine.Game
             ui.Panel("map-card", area);
             ui.Label("map-title", new Rect(area.x + 12, area.y + 8, area.width - 144, 34), "部署预览", 21, null, true);
             ui.Button("map-place", new Rect(area.xMax - 124, area.y + 10, 110, 32), placing ? "取消放置" : "点击放置", () => placing = !placing, false, deployment.Draft.Count > 0, placing);
-            ui.Label("map-note", new Rect(area.x + 12, area.y + 48, area.width - 24, 30), placing ? "在下方点击，放置选中的编成" : "色块对应军团 · 点击色块选择编成", 13, WarSandboxUGUI.Muted);
+            string note = placing ? "在下方点击，放置选中的编成" : "色块对应军团 · 点击色块选择编成";
+            if (deployment.controller.manager.terrainSurfaceAsset != null && deployment.Draft.Count > 0 &&
+                deployment.controller.TryResolveGroundPoint(deployment.Draft[selected].center, out var ground, out _))
+                note = "地表高程 " + ground.y.ToString("F1") + "m · 完整脚印须可通行";
+            ui.Label("map-note", new Rect(area.x + 12, area.y + 48, area.width - 24, 30), note, 13, WarSandboxUGUI.Muted);
             Vector2 world = deployment.WorldSize; if (world.x <= 0 || world.y <= 0) return;
             float scale = Mathf.Min((area.width - 32) / world.x, (area.height - 106) / world.y);
             Rect map = new Rect(area.center.x - world.x * scale / 2, area.y + 86, world.x * scale, world.y * scale);
@@ -179,6 +184,8 @@ namespace MassEngine.Game
                 if (placing && draft.Count > 0)
                 {
                     var entry = draft[selected]; var center = WarSandboxMinimapProjection.MapToWorld(point, world, map);
+                    if (!deployment.controller.TryResolveGroundPoint(center, out center, out string error)) { inputError = error; return; }
+                    // Authoring Y is not a terrain height array; the runtime presentation samples it on apply.
                     entry.center = new Vector3(center.x, entry.center.y, center.z); draft.Set(selected, entry); placing = false; RefreshAfterUiChange();
                 }
                 else for (int i = draft.Count - 1; i >= 0; i--)

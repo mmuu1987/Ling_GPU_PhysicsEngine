@@ -166,7 +166,7 @@ namespace MassEngine.Game
             {
                 var template = draft.Count > 0 ? draft[Mathf.Clamp(selected, 0, draft.Count - 1)].template : deployment.Templates[0];
                 int team = draft.Count > 0 ? draft[Mathf.Clamp(selected, 0, draft.Count - 1)].teamId : 0;
-                if (draft.Add(template, team)) { selected = draft.Count - 1; RefreshAfterUiChange(); }
+                if (draft.Add(template, team, deployment.UseTemplateSpawnDefaults)) { selected = draft.Count - 1; RefreshAfterUiChange(); }
             }
             if (Tool("−", "删除编成", draft.Count > 0)) { draft.Remove(selected); selected = Mathf.Max(0, selected - 1); RefreshAfterUiChange(); }
             if (Tool("↶", "撤销", draft.CanUndo)) { draft.Undo(); ClampSelection(); RefreshAfterUiChange(); }
@@ -196,7 +196,7 @@ namespace MassEngine.Game
             if (templateMenu)
                 foreach (var template in deployment.Templates)
                     if (GUILayout.Button(template.unitTypeName, button, GUILayout.MinHeight(30)) && CommitFields())
-                    { e = draft[selected]; e.template = template; draft.Set(selected, e); templateMenu = false; RefreshAfterUiChange(); }
+                    { deployment.SelectTemplate(selected, template); templateMenu = false; RefreshAfterUiChange(); }
             if (GUILayout.Button("军团：" + WarSandboxBattleController.DefaultArmyName(draft[selected].teamId) + " ▾", button, GUILayout.Height(32))) { armyMenu = !armyMenu; GUIUtility.ExitGUI(); }
             if (armyMenu)
                 for (int team = 0; team <= ConfigValidator.MaxTeamId; team++)

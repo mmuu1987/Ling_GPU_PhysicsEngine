@@ -84,12 +84,12 @@ namespace MassEngine.Game
             Remember(); entries[index] = value; return true;
         }
 
-        public bool Add(UnitTypeConfig template, int teamId)
+        public bool Add(UnitTypeConfig template, int teamId, bool templateDefaults = false)
         {
             if (Count >= MaxCompositions || template == null || template.spawnConfig == null ||
                 teamId < 0 || teamId > ConfigValidator.MaxTeamId) return false;
             var value = WarSandboxDeploymentEntry.From(template);
-            value.teamId = teamId; value.count = 1000; value.manualSize = Vector3.zero;
+            value.teamId = teamId; if (!templateDefaults) { value.count = 1000; value.manualSize = Vector3.zero; }
             Remember(); entries.Add(value); return true;
         }
 

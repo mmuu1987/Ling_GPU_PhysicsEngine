@@ -1,9 +1,47 @@
 # Game — 战争沙盒（游戏层）
 
+## 第一套派生骑兵（2026-09-30）
+
+已有CC0骑士+官方CC0马，新制作坐姿/鞍位跟随/四动作组合VAT，统一库新增剑盾骑兵入口。正式UnifiedCavalry-20260930-02/Start-Roster.cmd，工程Assets/Game/Cavalry/Prepared01/Integrated02。骑乘与巨兽接敌上下文分开；不是新上下马/冲锋系统或原厂成套动画。详见[骑兵说明](../../Docs/Cavalry-20260930/README.md)。既有代码/核心/旧包不动，人工骑乘观感待确认。
+
+## 非人形第二批直接扩展统一库（2026-09-30）
+
+前版统一库用户已试玩认可。新三角龙、剑龙、蜘蛛04加入扩大后的大型菜单，旧12常规/混合示例保留，合计17不同身体；不是另造孤立单角色入口。新包UnifiedNonhuman2-20260930-01/Start-Roster.cmd，项目Assets/Game/NonhumanBatch2/Prepared01/Integrated。仍受大型队伍/网格/占地限制，不新技能/核心/100k。详情[本批说明](../../Docs/NonhumanBatch2-20260930/README.md)。新三种人类观感待确认，旧包/方案原样保留。
+
+## 新旧统一角色库（2026-09-30）
+
+原男/女/UnityChan复用既有战斗资产，原Sazen骷髅补齐四动作，与新增角色进入同一12种常规布阵菜单；另有受限大型场。入口Builds/UnifiedRoster-20260930-01/Start-Roster.cmd，工程Menu在Assets/Game/UnifiedRoster/Version03/Scenes。不是只注册Catalog：初始2种也能选12；全角色示例12类实际同场和保存重载。新RosterPolicy只在新场启用，旧无policy行为保留。详见[整合说明](../../Docs/UnifiedRoster-20260930/README.md)。UnityChanUCL及原AssetStore许可不变；非全局玩法/性能/法律V1签收。
+
+## 大型兽形第一批（2026-09-30）
+
+用户选择大型兽形，正式巨狼/公牛两种约6m四足。Start-Beasts.cmd位于Builds/LargeBeasts-20260930-01；目录包含此前6敌方。默认8大型对32骑士，私有9m网格、稀疏阵型和可互相触及的中心近战配置。源/姿态/LOD与移动转向、自然交战、保存重载验证见[本批说明](../../Docs/LargeBeasts-20260930/README.md)。Spider未过几何门禁，不列正式模型；碰撞是保守圆近似，不承诺零穿插。核心不改，验收器默认兼容64/96；本批人类观感待确认。
+
+## 敌方第二批：兽人／雪怪／蘑菇怪（2026-09-30）
+
+模型优先继续。本包EnemyModelsBatch2-20260930-01/Start-Enemies.cmd聚合6场（新3怪物+上一批3骷髅只读引用）。不同作者43骨骼、自带动作，通过本批单位缩放准备器和原始逐帧位置对照后，复用原管线/近战。配方Orc、Yeti、MushroomKing，各独立资产和场景身份。详见[第二批说明](../../Docs/EnemyBatch2-20260930/README.md)。没有既有C#/核心修改；人类观感待确认，非玩法/平衡/100k专项。
+
+## 敌方模型扩充第一批（2026-09-30）
+
+用户认可Ranger02后明确优先模型数量，本批新增斧盾、双刃、持杖三个不同骷髅模型，复用现有近战/投射逻辑。入口`Builds/EnemyModels-20260930-01/Start-Enemies.cmd`，战场目录可切三场。最终配方SkeletonWarrior、SkeletonRogue、SkeletonMage03；每种具备四动作/LOD/独立场景与保存重载证据。详见[敌方模型专项](../../Docs/EnemyModels-20260930/README.md)。没有既有C#/核心改动；本批真人观感待确认。
+
+## 第二角色持弓游侠：Ranger02（2026-09-30）
+
+04已获用户实际测试“完全ok”。当前新试点 `Builds/RangerPilot-20260930-02/Start-Ranger.cmd`，使用配方 `Assets/Game/CharacterPipeline/Recipes/Ranger02.asset`。同一Medium骨架的不同远程角色；只新增有界形变附件支持和私有资产/只读证据，不改战斗核心。01为挂接诊断历史，02才是校准后入口。详情 [游侠专项](../../Docs/RangerPilot-20260930/README.md)。真人Ranger观感待确认，非兵种平衡/100k/V1放行。
+
+## 角色接入流程第一版（2026-09-30）
+
+新制作入口 `MassEngine > Character pipeline > Open workflow`，骑士示例 `Select Knight example`。使用已准备Generic模型、显式附件与四动作，尺寸/预算检查、全帧位置门禁、私有配置/试点、失败回滚均走同一核心。新Knight04是独立复现，不替换03或正式主包。说明 [角色接入流程](../../Docs/CharacterPipeline-20260930/README.md)。已有Knight04禁止覆盖，后续选择新输出名；真人窗口点击/观感待确认。
+
+## 2026-09-30 骑士头颈修正03（覆盖此前02外观判断）
+
+当前独立骑士入口为 `Builds/CharacterPilot-Knight-20260930-03/Start-Knight.cmd`。源模型完整；准备层级缩放与BakeMesh变换叠加导致旧Full部件重复缩小，已在私有配方修复。114帧×6666顶点独立蒙皮对照最大约1.194mm，Low1337不增预算。详情 [头颈修复](../../Docs/KnightNeck-20260930/README.md)。01/02保留，非主候选替换，人工观感待确认。
+
 引擎之上的"这一款游戏"：阵营、场景、下令、观战。只依赖 `MassEngine` 程序集；
 引擎永远不反向依赖这里。
 
 产品总方向见 [根目录产品总策划案](../../GAME_DESIGN.md)；本文只说明游戏层当前实现和使用方式。
+
+当前人工试玩候选包为 `Builds/M7HumanPlaytest-20260928.zip`，解压后从 `Start-WarSandbox.cmd` 正常启动；操作说明和空白反馈表随包提供。与M73FarLod同GUID、运行文件逐字节一致，五预设烟测通过；人工体验尚待填写，见 [试玩包准备](../方案设计/M7人工试玩包准备.md)。
 
 ## 内容
 
@@ -132,7 +170,7 @@ M3.1 不包含玩家存档或运行时军团编辑；后续场景入口见下节
 玩家明确下令后才开战。底部“战场目录”返回选择界面；交战或暂停中返回需确认，取消后恢复此前状态。
 目录有“开阔会战”和“双墙据点”两个条目，使用真实场景截图作为缩略图。
 两者复用 WarSandbox 场景及其默认部署，只选择不同规则，没有复制或改写原 Scenario/Spawn。
-目前沿用现有大规模部署；更小的首次引导预设与完整结算验收留给 M3.3/后续内容收口。
+此旧入口沿用现有大规模部署；独立轻量入口与 M7.2 全军团结算见下文。
 
 - `WarSandboxBattlefieldCatalog` 保存稳定 ID、名称、构建场景路径、规则与预览图。
   Inspector 提供 SceneAsset 选择便利，运行时只读路径，不引用 UnityEditor 或部署方案接口。
@@ -177,7 +215,7 @@ Windows 开发构建：菜单 `MassEngine/Build Windows Sandbox`，产物为 `Bu
 结果来自真实 GPU 对局，不修改兵力、伤害或遥测；不保证每次运行产生同一胜者或人数。
 证据在 Logs/PlayableBattles/player-full-1/report.json 与同目录结算截图。
 EditMode 185/185、GPU PlayMode 43/43；该轮没有修改引擎、旧战场或部署资产。
-现有结算 HUD 仍主要展示攻守两方统计，全军团展示和更小的首次引导预设属于后续内容收口。
+上述为早期验收口径。M7.1 已制作独立轻量预设，M7.2 已补齐并验证全军团冻结统计及 uGUI 结算表；见后文。
 
 ## 游戏内战前布阵（M4.1）
 
@@ -250,16 +288,182 @@ M4.3 开发构建验证增加 `--war-sandbox-plan-cycle`，与 `--war-sandbox-pl
 分别组合运行两个进程，使用同一个独立测试存档目录。每个进程均载入 A/B、自然结算、满兵重开、换场并校验配置/GPU 释放。
 按钮烟测通过真实 uGUI Button 回调触发，输入经 InputField 回调传递；不冒充人工鼠标/键盘视觉验收。
 
+## M5.3 隔离性能验证
+
+`Editor/WarSandboxVatRegressionBuilder.cs` 生成专用 Windows Development Player：临时复制菜单并注入
+`Scripts/WarSandboxVatPerformance.cs`，不覆盖原场景、配置或构建清单。提供持久重烘 Male 的资产路径后，
+通过 `--vat-performance` 显式启动原版/重烘 ABBA 采样；正常游戏构建不会自行运行该探针。
+
+2026-09-23：110k 默认部署、固定相机、1280×720、VSync 关闭，暖机后分别采 Setup 和交战时窗；
+原始帧时 CSV、分位数、硬件、截图和资产/GPU 释放检查保存在 `Logs/M53Regression/player/`。
+重烘平均帧时约 +3.2%，按非阻塞差异记录。历史 100k 编辑器约 30 FPS 不是此构建的同条件基线。
+命令及数值见 [M5.3 回归记录](../方案设计/M5.3重烘回归记录.md)，制作步骤见
+[兵种模型制作管线](../方案设计/兵种模型制作管线.md)。M5.4 已于 2026-09-26 获用户人工验收，M5 关闭。
+
+## M5.4 独立模型试验
+
+`Editor/UnityChanTrialImporter.cs` 将可信的 UnityChan 输入整理成独立图集/网格/Prefab，
+`Editor/WarSandboxModelTrialBuilder.cs` 复用现役 Baker/Binder，生成 `M54TrialPlayable/` 的独立兵种、
+Scenario、Catalog、菜单和战场。`Game.Editor` 单向引用 `MassEngine.Editor`，不让编辑器依赖进入 Player。
+源素材/许可在 `Assets/ModelTrialSource/`，原工程和默认 110k 内容保持不动。
+
+`Scripts/WarSandboxModelTrialSmoke.cs` 只在 `--model-trial-smoke` 时启用：seed/reload 两个独立进程通过
+真实 uGUI 回调及业务 API 检查配兵、非法部署拒绝、保存载入、自然结算、满兵重开与返回释放。
+正常试玩不运行探针；2026-09-26 用户确认已运行并验收。2026-09-25 两进程通过，完整 EditMode 327/327、GPU PlayMode 55/55 全绿，后续代码复核为333/333与55/55。
+
+本机试玩：`Builds/M54Trial/Start-Trial.cmd`；供人工解压试玩的完整包：
+`Builds/M54Trial_20260926_review.zip`（含许可和 `开始验收.md`）。详细数据、简化与复现见
+[M5.4 验收记录](../方案设计/M5.4试验模型验收记录.md)。人工保存的**编号用 `M54_Manual`，名称可中文**，不要覆盖旧方案。
+构建器从 `Assets/方案设计/M5.4试玩验收清单.md` 复制清单并生成启动器；固定资产名称已存在时拒绝覆盖。
+交付后复核及333/333、55/55回归见 [代码复核记录](../方案设计/M5.4代码复核记录.md)。
+
+## M6.1 连续地表原型
+
+独立场景 `M61TerrainPrototype/TerrainPrototype.unity` 展示48米高地、坡道、峡谷与禁行区。
+菜单 `MassEngine/Terrain Prototype/Create M6.1 Scene` 只创建新目录；已有产物拒绝覆盖。
+`Build Windows Viewer` 构建独立观察程序，不修改默认战场、目录或 Build Settings。
+双击 `Builds/M61TerrainPrototype/Start-Terrain.cmd`，右键+WASD飞行，滚轮缩放。
+
+`WarSandboxTerrainPrototype` 的预算探针须显式传 `--terrain-benchmark --terrain-output=<独立输出目录>`；
+100k/110k指表面查询数量，不是完整战斗。CPU/GPU采样和网格对齐，实际单位导航/战斗在M6.2接通。
+2026-09-26 M6.1已通过346/346 EditMode、57/57 GPU PlayMode与独立构建；最终预算证据在
+`Logs/M61Validation/player-v3/`。隐藏窗口下显式离屏绘制并检查非空画面，首轮黑屏帧时已作废。
+约定、命令与实测见 [M6.1记录](../方案设计/M6.1连续地表原型.md)。
+
+## M6.2 山地可玩整合
+
+独立入口 `M62TerrainPlayable/TerrainMenu.unity` 复用 M6.1 地表，配置三军各 128 人的近战/远程混编。
+`MassEngine/Terrain Prototype/Create M6.2 Playable` 生成新资源；`Build M6.2 Windows Playable` 构建到
+`Builds/M62TerrainPlayable/Start-TerrainBattle.cmd`。目录还保留原 11 万单位平面战场入口。
+
+Manager 持有真实地形提供者并验证版本、世界原点/尺寸；单位贴地与导航、三维交战/弹道阻挡已接入。
+`WarSandboxTerrainValidation` 在应用前校验完整脚印，错误部署不替换当前配置；不可达移动保留旧命令。
+点击、指示标记、镜头和本地方案身份验证消费同一快照，地形缺失不能静默降级为平面。
+`--terrain-smoke --terrain-smoke-output=<目录>` 启用独立程序的实际 GPU 爬坡与释放验证，正常试玩不运行探针。
+实现与证据口径见 [M6.2记录](../方案设计/M6.2山地可玩整合.md)。
+
+## M6.3 地形闭环
+
+`Build M6.3 Windows Validation` 构建 `Builds/M63TerrainValidation/Start-TerrainBattle.cmd`，复用同一山地/平面目录。
+`WarSandboxTerrainCycle` 仅在 `--terrain-cycle` 下运行，`--terrain-cycle-phase=seed|reload|performance` 分别验证
+实际UI保存/载入、不同进程方案恢复和离屏性能。输出目录必须新建且为绝对路径，Seed方案目录亦须新建并与玩家存档隔离。
+Seed/Reload检查不同进程、相同构建GUID与方案哈希，正常速度自然结算、满兵重开、再战、切换110k平面后回到默认384人山地。
+正常启动不改变镜头或存档；显式性能模式才渲染至离屏纹理并等待GPU完成，数据不冒充桌面FPS。
+本轮389/389 EditMode、81/81 GPU PlayMode全绿。完整证据、复现参数及人工试玩范围见 [M6.3记录](../方案设计/M6.3地形闭环验收.md)。
+
+## M7.1 首发预设与轻量入口
+
+`M71LaunchPresets/LaunchMenu.unity` 统一四种玩法，首次进入 512 人的开阔对冲准备战场。
+目录另有 384 人山地绕行、512 人中央据点、768 人三方混编，以及两军各 50k 的标准规模选项。
+各预设显示人数、规则和准备阶段操作说明；目录图片由真实准备画面生成。
+
+每个预设拥有独立 Scenario/Unit/Spawn/Rules 与稳定模板 ID，复用既有模型和战斗配置；
+布阵、保存、载入继续走现有运行时副本链路。原 110k 场景及 M6 山地入口保留。
+`MassEngine/Launch Presets/Build M7.1 Windows` 输出 `Builds/M71LaunchPresets/Start-WarSandbox.cmd`。
+
+`--terrain-cycle-phase=presets` 检查四个预设的方案往返、自然结算、满兵重开/再战和退出释放；
+`presets-ui` 检查最终目录图片、说明及五个入口。两者均须显式 `--terrain-cycle` 和独立输出/方案目录。
+本轮范围、证据与后续门槛见 [M7.1记录](../方案设计/M7.1首发预设与轻量入口.md)。
+2026-09-27：396/396 EditMode、81/81 GPU PlayMode通过，四预设自然结算/方案往返和满兵重开通过。
+最终包GUID `fffef718c60f40aa9d90deded77e1c2c`，720p/1080p五入口验证通过，64份场景/配置哈希一致；
+据点墙体的紫色材质等非阻塞表现缺口留待后续表现工作，未将自动验证当成人工试玩或V1放行。
+
+## M7.2 结算、反馈与设置
+
+`MassEngine/Launch Presets/Build M7.2 Windows` 输出M7.2试玩包 `Builds/M72Playability/Start-WarSandbox.cmd`，继续使用上述场景和五个预设。
+
+`WarSandboxBattleResult` 独立冻结全部实际参战军团的 ID、名称、初始人数和存活，损失由初始减存活得出；uGUI 从快照显示统计。
+保留原攻守方字段兼容已有读取方。结束后可满兵重开、回到战前布阵或选择其他战场。
+运行/暂停时可主动结束本局，使用 `Ended / ManualEnd`，胜者为 -1，不伪装成平局或歼灭胜利。
+
+`WarSandboxBattleFeedback` 接收控制器事件，`WarSandboxAudio` 用一个跨场景 2D 音源播放命令、拒绝、开战、据点变化和结束提示。
+五个短音效由本地波形生成；没有逐士兵音源，据点进度逐帧变化和暂停恢复不会重复播放开战提示。
+底部和目录的“设置”提供音量、静音、试听与恢复默认；设置窗口暂停正在运行的战斗并阻止命令，关闭后恢复原有运行状态。
+`WarSandboxSettingsStore` 保存到 `Application.persistentDataPath/WarSandboxSettings.json`，默认 65% 音量、未静音。
+显式“保存并返回”使用临时文件原子替换；无效文件回退默认值并显示错误，读取不覆盖原文件。
+
+410/410 EditMode、82/82 GPU PlayMode 通过。独立包验证与边界见 [M7.2记录](../方案设计/M7.2结算反馈与设置.md)。
+开发探针新增 `playability-seed` / `playability-reload`，使用独立方案目录和 `--war-sandbox-settings-file=` 隔离音量文件，正常启动不执行。
+
+## M7.3 参考机基线与持续切换
+
+`MassEngine/Launch Presets/Build M7.3 Windows` 输出 `Builds/M73Stability/Start-WarSandbox.cmd`，正常试玩内容不变。
+显式 `--terrain-cycle-phase=release-performance` 对100k平面/384人山地做ABBA采样；`stability` 执行五预设×四轮的布阵应用、重开与切场。
+均需 `--terrain-cycle`、新的绝对输出路径与未使用的隔离 `--war-sandbox-settings-file=`；不写玩家设置或执行方案存盘。
+采样包含实际UI和GPU完成同步，不代表桌面FPS。进程内存使用Windows `GetProcessMemoryInfo`，无效/零值不能通过稳定性门槛。
+416/416 EditMode、82/82 GPU PlayMode及最终同构建双进程通过，20次切场/40次重开未超既定资源容差。
+四轮私有提交仍增加19.602MiB，默认档30FPS目标也未验收；方法、原始数据和后续范围见 [M7.3记录](../方案设计/M7.3参考机采样与持续切换.md)。
+
+后续优化包为 `Builds/M73Budget/Start-WarSandbox.cmd`，构建菜单 `Build M7.3 Budget Windows`。动态地形流场回读当帧保存稀疏快照，按军团轮转每Tick最多求解一张；显式命令仍即时生效。
+同口径山地交战p99从约64～65ms降至26.8ms，最高就绪排队约80ms；416/416 EditMode、85/85 GPU PlayMode、四预设自然结算/重开通过。
+`stability --terrain-cycle-rounds=12` 完成60次布阵应用/切场、120次重开，资源计数不增，私有提交首尾+21.238MiB且未超原64MiB门槛；不声称严格内存平台期。
+独立 `Build M7.3 Desktop Windows` / `Builds/M73Desktop/Measure-Desktop.cmd` 为普通窗口采样入口，显式开启FrameTiming、构建后恢复工程设置，使用正常相机/Present、完整uGUI和隔离输出，无逐帧强制回读。采样须前台可见，失焦会失败。
+证据、延迟代价和复现见 [山地错峰与长时复测](../方案设计/M7.3山地错峰与长时复测.md)。
+
+普通窗口ABBA已完成：100k交战13.97/13.74 FPS，GPU平均68.828/70.046ms，约30 FPS目标未达成；山地交战p99为19.708/19.938ms。
+8窗采样、GPU有效值、前台状态、8张截图和64份内容哈希核验通过；下一项先拆分GPU绘制与计算成本，见 [普通窗口验证](../方案设计/M7.3普通窗口帧率验证.md)。
+
+GPU拆分后已新增首发专用Male远景VAT：994→98顶点，原近/中景共享且逐像素相同。仅10个首发单位的渲染引用改变，历史场景及原配置保留。
+当前入口`Builds/M73FarLod/Start-WarSandbox.cmd`，测量入口`Measure-Desktop.cmd`；新采样同时检查Unity焦点和Windows前台PID。
+36组GPU外观、79项相关EditMode检查通过。旧desktop-1失焦失败及29.08 FPS窗口保留；同包desktop-2完整前台ABBA通过，两组100k交战31.07/30.59 FPS，p95 36.033/36.268ms，64份迁移后内容哈希不变。
+指定参考机720p既定镜头/时段的平均约30 FPS目标已确认，不承诺每帧或全工况。见 [GPU拆分与远景预算](../方案设计/M7.3GPU拆分与远景预算.md)；下一项为 [人工试玩与V1交付清单](../方案设计/M7人工试玩与V1交付清单.md)，不代签M7/V1。
+
 ## 扩展这款游戏
 
 - 新兵种：见 `../MassEngine/UnitTypes/README.md`（三步，零改引擎）
 - 新指令类型/新阵营 UI：写在本层，通过 `MassEngineManager` 的公共 API
   （StartBattle/StopBattle/ResetScenario/SetFlowTargetOverride）驱动引擎
 - 战争沙盒编辑器：M2 已获用户验收，规则/障碍归档与场景目录已经实现；
-  M3.1～M3.3 未修改引擎与 GPU 数据契约，两套预设完整对局验证通过，人工视觉验收仍待完成
+  M3.1～M3.3 未修改引擎与 GPU 数据契约，两套预设完整对局验证通过，人工视觉验收随M4于2026-09-14关闭
 
 ## 性能档位
 
-默认产品档为 **50k vs 50k**（约 30 FPS），也是 `WarSandbox.unity` 的实配值；
-10k vs 10k 是轻量档（113 FPS），编辑器里迭代时用；100k/200k 每方属于压力与容量展示。
-详见 [PerformanceBaseline.md](PerformanceBaseline.md)。
+历史默认产品档为 **50k vs 50k**（100k编辑器约30FPS）；现役 `WarSandbox.unity` 三军样例为 **110k**，
+不能继续把旧数字当当前独立包帧率。10k vs 10k 是历史轻量档，100k/200k每方属于压力与容量展示。
+M7.1的512人上手局是专用配方；M7.3远景优化后的100k标准入口已取得参考机720p平均约30 FPS的完整前台对照，范围和高分位帧时以上述最新记录为准。
+历次口径见 [PerformanceBaseline.md](PerformanceBaseline.md)，本轮山地/平面分别见 [M6.3记录](../方案设计/M6.3地形闭环验收.md)。
+
+## 小规模地形与连续命令验证（2026-09-29）
+
+在用户认可真实拥堵等待观感后，新增显式 `--terrain-cycle --terrain-cycle-phase=commands` 开发探针；
+须提供新的绝对 `--terrain-cycle-output=`、隔离 `--terrain-cycle-plans=` 和 `--war-sandbox-settings-file=`。
+正常启动不执行，功能测试限制30FPS，只使用512人平地及384人山地，不作为性能或桌面输入验收。
+命令层10/10、真实GPU地形/队列14/14通过；独立程序24条检查通过，包括暂停中追加/恢复、自动航点、换目标、Hold/Retreat、拒绝悬崖目标、重开与释放。
+山地西/东两军各128人全部通过上坡、下坡检查线并接近对应目标，而不是只检查军团中心。
+本轮只加探针/测试/记录，未改游戏移动、等待、动画、场景或配置；继续使用已获用户观感认可的 `Builds/M7CongestionPlaytest-20260929`。
+验证构建、证据和限制见 [地形与连续命令验证](../方案设计/M7地形与连续命令验证_20260929.md)。
+
+## UI 可读性与操作引导（2026-09-29）
+
+当前UI试玩入口 `Builds/M7UiReadabilityPlaytest-20260929/Start-WarSandbox.cmd`，保留原拥堵等待版，不覆盖。
+HUD固定显示已选军团、命令、目标和后续航点数；顶栏常驻开战/暂停/继续，小窗口收起面板后仍可操作。
+选点提示同步受令军团，Esc/取消按钮只退出选点，不撤销已有路线；开局目标与操作提示更明确，帮助与技术信息互斥。
+暂停中替换活动命令会继续运行，追加已有路线不会；没有已有路线时Shift也会建立新命令。这是既有控制器语义，未改玩法。
+8/8 EditMode、10/10 uGUI PlayMode、独立程序49条检查及6/6打包工具测试通过；1280×720/640×480、512/384人场景、四张实际界面图已检查。
+显式开发探针 `--terrain-cycle --terrain-cycle-phase=readability` 使用新的绝对输出/方案/设置路径，30FPS功能上限，正常启动不执行。
+只是UI事件/射线和回调验证，不是完整OS输入、新手人工通关或FPS测量；移动/拥堵/GPU/资源配置未变。
+细节与证据见 [UI可读性与操作引导](../方案设计/M7界面可读性与操作引导_20260929.md)。
+
+## 远程有效发射专项候选（2026-09-30）
+
+试玩入口 `Builds/M7RangedPlaytest-20260930/Start-WarSandbox.cmd`，旧UI/拥堵候选保留。
+GPU空槽异步回收、有限配置容量预算、体型/距离净空高抛与真实射界预检；受阻自动进攻单位有限侧移，Hold/明确Move仍优先，既有拥堵等待/UI保留。
+不修改默认射程/伤害/射速/阵形、动作资源或曳光视觉。预算数据池上限16MiB（另有元数据），不等于100k性能已验收。
+预算Edit3项、74个不同GPU用例最终均有通过记录；独立Ranged02程序96/48人、23项检查、后排实际射手47/48与24/24、无容量暂停/拒绝，真实截图已核对。
+开发探针 `--terrain-cycle --terrain-cycle-phase=ranged` 必须使用全新隔离输出/方案/设置路径，30FPS功能上限；仅创建合法运行时布阵副本，不注入弹体/伤害，不改变原场景资产。正常启动不运行探针。
+详细目标、红绿实验、边界、GUID/包哈希及待人工项目见 [远程有效发射目标与进度](../方案设计/M7远程有效发射专项_目标与进度_20260930.md)。未代签100k性能、全体型或V1验收。
+
+
+## 完整对局闭环与跨重启保存验证（2026-09-30）
+
+在用户认可远程基本效果后，完成84/84定向EditMode和两组独立进程seed→reload：5场自然结算、6次方案应用、15次场景释放、10248真实渲染帧。山地两方案及四军团方案按模板/军团/人数/阵形/坐标、规则、战场/地形身份逐字段恢复；拒绝坏档/缺档/错误战场及未确认覆盖。设置恢复音量0.27/静音，模态暂停保持正确，重启静音阶段播放计数0；结算冻结、满兵重开、返回布阵通过。
+只补开发探针/测试/文档，未改正式玩法；继续使用用户已认可的 `Builds/M7RangedPlaytest-20260930/Start-WarSandbox.cmd`，不需要为验证换包。
+验证构建是另一GUID `2f0b634a26424e8aaa2f9c646897de63`（`Builds/M7MotionReview-20260930-Loop03`），不能声称本轮直接跑了旧试玩EXE。
+显式 `--terrain-cycle-light` 仅用于 `seed/reload/playability-seed/playability-reload`：30FPS、最多896单位、只3张必要截图；山地用当前 `launch-mountain`，平地切换为512人，避免历史探针11万人分支。须提供各自隔离的绝对输出/方案/设置路径。`Logs/AgentLoopValidation/run-02/complete.json` 为四进程证据，最终保护审计见同目录上级 `final-source-audit.json`。
+详见 [完整对局与跨重启目标/结果](../方案设计/M7完整对局闭环与跨重启保存_目标与进度_20260930.md)。这是功能验证，不代签真人听感/OS输入/100k性能/长时稳定性/V1；历史09-28性能数字不能移作当前远程版成绩。
+
+
+## KayKit Knight 单角色试点（2026-09-30）
+
+新增独立 `Builds/CharacterPilot-Knight-20260930-02/Start-Knight.cmd`；作者CC0模型/动作，64v64默认，Full6666/Low1337、114帧，独立Scenario+Catalog（模板revision2），不改正式阵容。两个新进程验证96v64保存重载、自然结算、满编重开与返回释放通过；12组48张真实GPU动作/LOD图通过。私有atlas色块减面避免串色，核心引擎未改。
+01诊断包曾继承远程参数，最终交付为02近战包。保留现役网格溢出/搜敌上限提示，未做100k/人工观感/自然Far切换验收；30FPS只是功能限帧。详见[试点报告](../../Docs/CharacterPilot-20260930/README.md)。

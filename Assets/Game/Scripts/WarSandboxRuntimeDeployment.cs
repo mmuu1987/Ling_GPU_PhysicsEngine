@@ -9,6 +9,9 @@ namespace MassEngine.Game
     {
         public WarSandboxBattleController controller;
         public WarSandboxBattlefieldCatalog battlefieldCatalog;
+        [Tooltip("Optional battlefield-local selectable library. Null preserves the legacy Scenario-only roster.")]
+        public WarSandboxRosterPolicy rosterPolicy;
+        public bool UseTemplateSpawnDefaults => rosterPolicy != null && rosterPolicy.useTemplateSpawnDefaults;
         public bool IsEditing { get; private set; }
         public WarSandboxDeploymentDraft Draft { get; private set; }
         public string Error { get; private set; }
@@ -24,6 +27,7 @@ namespace MassEngine.Game
         private WarSandboxDeploymentInstance active;
         private bool dispatchBeforeEdit;
         private WarSandboxLocalPlanStore planStore;
+        private readonly WarSandboxTerrainValidation terrainValidation = new WarSandboxTerrainValidation();
         public WarSandboxLocalPlanStore PlanStore
         {
             get => planStore ?? (planStore = new WarSandboxLocalPlanStore());
@@ -48,6 +52,7 @@ namespace MassEngine.Game
             error = null;
             if (!CanAccess()) return Reject("当前无法编辑布阵。", out error);
             if (IsEditing) return true;
+            if (rosterPolicy != null && !rosterPolicy.TryValidateDefinition(out error)) { Error = error; return false; }
             if ((controller.Phase == WarSandboxBattlePhase.Running || controller.Phase == WarSandboxBattlePhase.Paused) && !confirmEndBattle)
                 return Reject("请先确认结束当前战斗。", out error);
             var manager = controller.manager;
@@ -57,6 +62,8 @@ namespace MassEngine.Game
                 sourceScenario = manager.scenarioConfig;
                 committed = initial.Snapshot();
                 foreach (var entry in committed) if (!templates.Contains(entry.template)) templates.Add(entry.template);
+                if (rosterPolicy != null) foreach (var template in rosterPolicy.templates)
+                    if (!templates.Contains(template)) templates.Add(template);
             }
             if (controller.Phase != WarSandboxBattlePhase.Setup) controller.ResetBattle();
             if (controller.Phase != WarSandboxBattlePhase.Setup) return Reject("无法返回布阵阶段。", out error);
@@ -76,6 +83,15 @@ namespace MassEngine.Game
             return ValidateDraft(Draft, out error);
         }
 
+        public bool SelectTemplate(int index, UnitTypeConfig template)
+        {
+            if (!IsEditing || Draft == null || index < 0 || index >= Draft.Count || !templates.Contains(template)) return false;
+            var entry = Draft[index];
+            if (rosterPolicy != null) entry = rosterPolicy.Select(entry, template);
+            else entry.template = template;
+            return Draft.Set(index, entry);
+        }
+
         private bool ValidateDraft(WarSandboxDeploymentDraft draft, out string error)
         {
             error = null;
@@ -84,7 +100,12 @@ namespace MassEngine.Game
             var simulation = controller.manager.systemConfig != null ? controller.manager.systemConfig.simulationConfig : null;
             float padding = simulation != null ? simulation.boundaryPadding : 0;
             if (float.IsNaN(padding) || float.IsInfinity(padding) || padding < 0) { error = "战场边界留白无效。"; return false; }
-            return draft.TryValidate(WorldSize - Vector2.one * (padding * 2), draft.Rules, out error);
+            if (!draft.TryValidate(WorldSize - Vector2.one * (padding * 2), draft.Rules, out error)) return false;
+            if (rosterPolicy != null && !rosterPolicy.TryValidate(draft, simulation, out error)) return false;
+            var session = WarSandboxSceneSession.Instance;
+            if (session != null && session.CurrentBattlefield != null &&
+                !WarSandboxSceneSession.TryValidateTerrainProvider(controller.manager, session.CurrentBattlefield, out error)) return false;
+            return terrainValidation.TryValidate(controller.manager, draft, out _, out error);
         }
 
         public bool TrySavePlan(string slot, string displayName, bool overwrite, out string error)
@@ -108,6 +129,13 @@ namespace MassEngine.Game
             float padding = controller.manager.systemConfig.simulationConfig.boundaryPadding;
             if (!WarSandboxLocalPlanStore.TryResolve(plan, entry, battlefieldCatalog, WorldSize, padding, out var candidate, out error))
                 return Reject(error, out error);
+            return TryReplaceDraft(candidate, out error);
+        }
+
+        public bool TryReplaceDraft(WarSandboxDeploymentDraft candidate, out string error)
+        {
+            if (!CanAccess() || !IsEditing || Draft == null || candidate == null)
+                return Reject("请先进入布阵阶段。", out error);
             if (!ValidateDraft(candidate, out error)) return Reject(error, out error);
             Draft.Replace(candidate.Snapshot(), candidate.Rules);
             Error = null; return true;
@@ -119,7 +147,9 @@ namespace MassEngine.Game
             var session = WarSandboxSceneSession.Instance;
             if (session == null || battlefieldCatalog == null || string.IsNullOrEmpty(session.CurrentEntryId))
             { error = "此场景未关联战场目录，无法保存或载入本地方案。"; return false; }
-            return battlefieldCatalog.TryResolve(session.CurrentEntryId, null, out entry, out error);
+            entry = session.CurrentBattlefield;
+            if (entry == null) { error = "战场请求身份缺失。"; return false; }
+            return WarSandboxSceneSession.TryValidateTerrainProvider(controller.manager, entry, out error);
         }
 
         public bool TryApply(out string error)
@@ -132,7 +162,19 @@ namespace MassEngine.Game
             WarSandboxDeploymentInstance candidate = null;
             try
             {
-                candidate = new WarSandboxDeploymentInstance(nextEntries);
+                // Only runtime copies acquire terrain height; authored/saved XZ and Y stay intact.
+                if (!manager.TryGetTerrainContext(out var surface, out _, out string terrainError))
+                    throw new InvalidOperationException(terrainError);
+                var runtimeEntries = (WarSandboxDeploymentEntry[])nextEntries.Clone();
+                if (surface != null)
+                    for (int i = 0; i < runtimeEntries.Length; i++)
+                    {
+                        var point = runtimeEntries[i].center;
+                        if (!surface.TrySample(new Vector2(point.x, point.z), out var sample))
+                            throw new InvalidOperationException("部署中心不在地表上。");
+                        runtimeEntries[i].center.y = sample.Position.y;
+                    }
+                candidate = new WarSandboxDeploymentInstance(runtimeEntries);
                 manager.scenarioConfig = candidate.Scenario;
                 manager.enableGpuDispatch = dispatchBeforeEdit;
                 IsEditing = false;
