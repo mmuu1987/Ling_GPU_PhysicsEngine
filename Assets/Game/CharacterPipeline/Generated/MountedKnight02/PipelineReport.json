@@ -1,0 +1,54 @@
+{
+    "status": "ready-for-human-review",
+    "output": "Assets/Game/CharacterPipeline/Generated/MountedKnight02",
+    "evidence": "Logs/CharacterPipeline/MountedKnight02-9f209759",
+    "sourceModel": "Assets/Game/Cavalry/Prepared03/MountedKnight.prefab",
+    "sourceGuid": "34249525670f5c845803fdd4b3b30d30",
+    "sourceDependencyHash": "d7699dac60dc70596cd5ed524c31d91e",
+    "unityVersion": "6000.3.14f1",
+    "createdUtc": "2026-09-30T14:31:25.4067320Z",
+    "sourceBodyHeight": 4.288646697998047,
+    "targetBodyHeight": 4.288646697998047,
+    "bodyScaleFactor": 1.0,
+    "agentRadius": 3.299999952316284,
+    "maxPositionError": 0.002008494222536683,
+    "allowedPositionError": 0.0024999999441206457,
+    "fullVertices": 10872,
+    "lowVertices": 2130,
+    "totalFrames": 145,
+    "gpuSnapshots": 48,
+    "sourceReferenceSnapshots": 16,
+    "positionComparisons": 1576440,
+    "textureBytes": 38010880,
+    "automatedPassed": true,
+    "humanAcceptance": false,
+    "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+    "actions": [
+        {
+            "action": "Idle",
+            "frames": 80,
+            "maximumPositionError": 0.002008494222536683
+        },
+        {
+            "action": "Move",
+            "frames": 15,
+            "maximumPositionError": 0.0019676447845995428
+        },
+        {
+            "action": "Attack",
+            "frames": 26,
+            "maximumPositionError": 0.002007124712690711
+        },
+        {
+            "action": "Death",
+            "frames": 24,
+            "maximumPositionError": 0.001953275641426444
+        }
+    ],
+    "warnings": [
+        "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+        "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+        "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+        "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+    ]
+}

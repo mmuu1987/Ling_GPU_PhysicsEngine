@@ -1,0 +1,47 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 1901689465343980333, guid: 34249525670f5c845803fdd4b3b30d30, type: 3}
+  sizeRootPath: 
+  attachmentPaths:
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/SaddleBlanket
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/SaddleSeat
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/StirrupLeft
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/StirrupRight
+  - Rider/Body/Rig_Medium/root/hips/spine/chest/upperarm.l/lowerarm.l/wrist.l/hand.l/handslot.l/Shield
+  - Rider/Body/Rig_Medium/root/hips/spine/chest/upperarm.r/lowerarm.r/wrist.r/hand.r/handslot.r/Sword
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: 174b5056c1c0ebb4290def057dec9d20, type: 2}
+  move: {fileID: 7400000, guid: 261122b05252aa44abbdcf0ed356f1b2, type: 2}
+  attack: {fileID: 7400000, guid: 08547b987356b6b44a9a62687c9faab5, type: 2}
+  death: {fileID: 7400000, guid: 460925ed4c78c4043a74bc4017e652d5, type: 2}
+  frameRate: 24
+  targetBodyHeight: 4.2886467
+  groundBindFeet: 0
+  agentRadius: 3.3
+  lowPolicy: 2
+  lowVertexBudget: 2200
+  paletteColumns: 8
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 48
+  maximumPositionError: 0.0025
+  outputName: MountedKnight02
+  unitTemplate: {fileID: 11400000, guid: 4a438b2a1b6c6804b88c45fdbdf2b7e2, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

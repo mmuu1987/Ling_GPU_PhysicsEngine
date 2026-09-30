@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 7373901711050823610, guid: 435de3ce929568f43a9d8600f6fdfe92, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths:
+  - ScalePivot/Body/root/c_traj/root.x/spine_01.x/spine_02.x/spine_03.x/shoulder.r/arm_stretch.r/forearm_stretch.r/hand.r/Falchion
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: c1930b6df5bdf97478d4e26e13321d43, type: 2}
+  move: {fileID: 7400000, guid: 084eefdd33cc8ce49a3ed576dd949e52, type: 2}
+  attack: {fileID: 7400000, guid: fd68e45927f250a468b59a3a62e9addc, type: 2}
+  death: {fileID: 7400000, guid: 8aaf65c42c16ca14fb3af45fad271d50, type: 2}
+  frameRate: 24
+  targetBodyHeight: 1.9
+  groundBindFeet: 1
+  agentRadius: 0.5
+  lowPolicy: 1
+  lowVertexBudget: 2500
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: LegacySkeleton01
+  unitTemplate: {fileID: 11400000, guid: 060e9cf1377eefe48b68614ee950a54b, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

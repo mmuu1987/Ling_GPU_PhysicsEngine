@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: MountedKnight04
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 210962829211865667, guid: f7b930ce5b64d57449a71b725b10544b, type: 3}
+  sizeRootPath: 
+  attachmentPaths:
+  - Rider/Body/Rig_Medium/root/hips/spine/chest/upperarm.l/lowerarm.l/wrist.l/hand.l/handslot.l/Shield
+  - Rider/Body/Rig_Medium/root/hips/spine/chest/upperarm.r/lowerarm.r/wrist.r/hand.r/handslot.r/Sword
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: 78992b7402103fc41979d3607eb7918a, type: 2}
+  move: {fileID: 7400000, guid: cb3f25f9f2217324ea9c9d38c803e3bc, type: 2}
+  attack: {fileID: 7400000, guid: ba2aeb1e90044824c96e7ebb830bb57d, type: 2}
+  death: {fileID: 7400000, guid: f8a0c3c9aaef25b4ea7894843bf0ca81, type: 2}
+  frameRate: 24
+  targetBodyHeight: 4.2188735
+  groundBindFeet: 0
+  agentRadius: 3.3
+  lowPolicy: 2
+  lowVertexBudget: 2200
+  paletteColumns: 8
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 48
+  maximumPositionError: 0.0025
+  outputName: MountedKnight04
+  unitTemplate: {fileID: 11400000, guid: e79ff37e26e4deb4cbed6b7868bdddb2, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

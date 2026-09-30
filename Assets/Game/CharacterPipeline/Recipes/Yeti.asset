@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: Yeti
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 4276804592243497334, guid: fde7e96a58365ad4182ce07713980301, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: ced81f061d123a94d92b8097be413266, type: 2}
+  move: {fileID: 7400000, guid: 506c9b9b1b890334abc1221f760e2f02, type: 2}
+  attack: {fileID: 7400000, guid: 45e3da483566e0249ad90b4b43cdb033, type: 2}
+  death: {fileID: 7400000, guid: 0e4e5255e7771914892b886fc08d7ed9, type: 2}
+  frameRate: 24
+  targetBodyHeight: 2.4
+  groundBindFeet: 1
+  agentRadius: 0.65
+  lowPolicy: 2
+  lowVertexBudget: 1600
+  paletteColumns: 32
+  paletteRows: 32
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: Yeti01
+  unitTemplate: {fileID: 11400000, guid: df50f86b1ec225340830417e6a906fa6, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

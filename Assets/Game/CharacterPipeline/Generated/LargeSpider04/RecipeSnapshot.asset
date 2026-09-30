@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 93901649949641199, guid: 289955ccfe747334da211071917d03e2, type: 3}
+  sizeRootPath: 
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: c85b7262542e52e4db8fcf01ddb29ef9, type: 2}
+  move: {fileID: 7400000, guid: de78d92a2f4aa0d4caaadccd125e3c16, type: 2}
+  attack: {fileID: 7400000, guid: 06fbddda0335e5d488702f56861bc5e5, type: 2}
+  death: {fileID: 7400000, guid: d4ffcf6081b4a73498d9c402a5df44c3, type: 2}
+  frameRate: 24
+  targetBodyHeight: 2.2755957
+  groundBindFeet: 0
+  agentRadius: 4.8
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: LargeSpider04
+  unitTemplate: {fileID: 11400000, guid: 58567472651f78f4aba1e9bf613c8da9, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

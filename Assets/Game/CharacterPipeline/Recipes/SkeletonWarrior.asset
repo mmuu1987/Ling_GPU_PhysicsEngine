@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: SkeletonWarrior
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 1422798093970346191, guid: e3fe751891e190146987375a918413cf, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths:
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/head/Skeleton_Warrior_Helmet
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/upperarm.l/lowerarm.l/wrist.l/hand.l/handslot.l/Shield
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/upperarm.r/lowerarm.r/wrist.r/hand.r/handslot.r/Axe
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: 0180342cee13a2045992d1336b46e740, type: 2}
+  move: {fileID: 7400000, guid: 2e11973d1007e3648ab10f77a0522bbd, type: 2}
+  attack: {fileID: 7400000, guid: 79f30cf7625483944a2848c59bdf11d6, type: 2}
+  death: {fileID: 7400000, guid: ff17047e94c863e43b351e9e530b9b8b, type: 2}
+  frameRate: 24
+  targetBodyHeight: 1.9
+  groundBindFeet: 1
+  agentRadius: 0.5
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: SkeletonWarrior01
+  unitTemplate: {fileID: 11400000, guid: cf7a66f4e466ae9488603609d1863b15, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit
