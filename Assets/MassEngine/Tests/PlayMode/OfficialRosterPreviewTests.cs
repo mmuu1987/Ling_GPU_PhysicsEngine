@@ -38,7 +38,13 @@ namespace MassEngine.Tests
             new[] { "unified-all-regular", "Assets/Game/UnifiedRoster/Version03/Scenes/AllRegularBattlefield.unity" },
             new[] { "unified-large", "Assets/Game/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity" },
         };
-        private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "OfficialRoster", "shots-03"));
+        /// <summary>Battlefields added in official v2 (giant batch 3); captured on their own so v1 previews are not re-shot.</summary>
+        private static readonly string[][] ScenesV2 =
+        {
+            new[] { "giants-yeti", "Assets/Game/Giants3/Prepared01/Integrated/giant-yetiBattlefield.unity" },
+        };
+        private static string dir = "shots-03";
+        private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "OfficialRoster", dir));
 
         [UnityTearDown] public IEnumerator Cleanup()
         {
@@ -52,11 +58,14 @@ namespace MassEngine.Tests
             }
         }
 
-        [UnityTest, Timeout(1500000)] public IEnumerator CaptureOfficialPreviews()
+        [UnityTest, Timeout(1500000)] public IEnumerator CaptureOfficialPreviews() { dir = "shots-03"; yield return Capture(Scenes); }
+        [UnityTest, Timeout(900000)] public IEnumerator CaptureOfficialV2Previews() { dir = "shots-04"; yield return Capture(ScenesV2); }
+
+        private static IEnumerator Capture(string[][] scenes)
         {
             Directory.CreateDirectory(Dir);
             var rows = new List<string>();
-            foreach (var item in Scenes)
+            foreach (var item in scenes)
             {
                 string id = item[0];
                 yield return EditorSceneManager.LoadSceneAsyncInPlayMode(item[1], new LoadSceneParameters(LoadSceneMode.Single));
@@ -92,7 +101,7 @@ namespace MassEngine.Tests
                     id, agents, teamCount, contact, sim));
                 File.WriteAllText(Path.Combine(Dir, "previews.json"), "[\n" + string.Join(",\n", rows) + "\n]\n", new UTF8Encoding(false));
             }
-            Assert.AreEqual(Scenes.Length, rows.Count);
+            Assert.AreEqual(scenes.Length, rows.Count);
         }
 
         /// <summary>Frames team 0 (the featured unit) and the enemies nearest to it; steep pitch keeps the horizon out of the card.</summary>

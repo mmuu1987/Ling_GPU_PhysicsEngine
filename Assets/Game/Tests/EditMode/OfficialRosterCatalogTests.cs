@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace MassEngine.Game.Tests
 {
-    /// <summary>Official catalog v1 (OfficialRosterBuilder.Prepare01): M7.1 launch content first and unchanged, new-unit battlefields after.</summary>
+    /// <summary>Current official catalog (OfficialRosterBuilder.Prepare02, v2): M7.1 launch content first and unchanged, new-unit battlefields after.</summary>
     public sealed class OfficialRosterCatalogTests
     {
         private static WarSandboxBattlefieldCatalog Official => Load<WarSandboxBattlefieldCatalog>(OfficialRosterBuilder.CatalogPath);
@@ -80,6 +80,33 @@ namespace MassEngine.Game.Tests
             Assert.That(scenes[0].path, Is.EqualTo(OfficialRosterBuilder.MenuScene));
             Assert.That(scenes.Select(s => s.path), Is.EqualTo(OfficialRosterBuilder.Scenes(Official)));
             Assert.That(scenes.All(s => s.enabled), Is.True);
+        }
+
+        [Test]
+        public void Version01IsKeptAndTheCurrentCatalogExtendsIt()
+        {
+            var v1 = Load<WarSandboxBattlefieldCatalog>(OfficialRosterBuilder.Version01Root + "/Catalog.asset");
+            var current = Official;
+            Assert.That(OfficialRosterBuilder.Root, Is.Not.EqualTo(OfficialRosterBuilder.Version01Root));
+            Assert.That(current.entries.Length, Is.GreaterThan(v1.entries.Length));
+            // Every v1 battlefield is kept with identical content and in the same relative order (new ones may sit next to their kind).
+            int previous = -1;
+            foreach (var a in v1.entries)
+            {
+                int index = System.Array.FindIndex(current.entries, e => e.id == a.id);
+                Assert.That(index, Is.GreaterThan(previous), a.id); previous = index;
+                var b = current.entries[index];
+                Assert.That(b.id, Is.EqualTo(a.id)); Assert.That(b.displayName, Is.EqualTo(a.displayName));
+                Assert.That(b.scenePath, Is.EqualTo(a.scenePath)); Assert.That(b.rules, Is.SameAs(a.rules));
+                Assert.That(b.description, Is.EqualTo(a.description)); Assert.That(b.briefing, Is.EqualTo(a.briefing));
+            }
+            // Old saved plans keep resolving: every v1 template resolves to the same config in the current catalog.
+            foreach (var t in v1.templates)
+            {
+                Assert.That(current.TryResolveTemplate(t.templateId, t.revision, out var config, out string error), Is.True, error);
+                Assert.That(config, Is.SameAs(t.config));
+            }
+            Assert.That(File.Exists(OfficialRosterBuilder.Version01Root + "/LaunchMenu.unity"), Is.True);
         }
 
         private static T Load<T>(string path) where T : Object

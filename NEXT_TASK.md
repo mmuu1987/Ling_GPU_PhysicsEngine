@@ -1,3 +1,14 @@
+# 当前：超大第三批·巨型雪人已接入正式目录 Version02（2026-10-01）
+
+- 完成者：Arena.ai Agent Mode（AI 智能体；底层模型由平台调度，未披露）。需求和决策来自用户：这一批选雪人、蓝魔、外星人；雪人做成新的超大兵种；另外两个等配额恢复后再做。
+- 巨型雪人 `roster-giant-yeti`、战场 `giants-yeti`（GiantBatch3Builder，复用已有的 Yeti.fbx，源文件和 .meta 都没改；原来的雪怪保留）。身高 4.47m，HP1600/攻击75/移速3。2 只对 16 名骑士时碾压，平衡点约 30–40 人。
+- 正式目录切到 `Assets/Game/OfficialRoster/Version02`（19 个战场，Version01 保留只读），EditorBuildSettings 已指向它。试玩包 `Builds/OfficialRoster-20261001-03`（GUID 61b4a770…），冒烟 19/19 通过。
+- 待办：蓝魔和外星人的 Drive 文件"配额已满"，恢复后按 `Docs/Monsters3-20261001/GIANT-YETI.md` 末尾的步骤操作（PrepareBlueDemonAlien01 → IntegrateBlueDemonAlien02 → 正式目录 Version03）。
+- 测试：GiantBatch3BattlefieldTests 2/2，OfficialRosterCatalogTests 5/5，EditMode 全量 459/461；PlayMode 游戏层只有既有的 7 个构建列表失败。
+
+---
+历史保留：
+
 # 当前：兵种属性配置已实施并推送（2026-10-01）
 
 - 完成者：Arena.ai Agent Mode（AI 智能体；底层模型由平台调度，未披露）。需求和决策来自用户，流程图和 D1–D3 界面稿经用户确认后才实施。

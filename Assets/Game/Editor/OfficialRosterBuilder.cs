@@ -14,21 +14,24 @@ using Object = UnityEngine.Object;
 namespace MassEngine.Game.Editor
 {
     /// <summary>
-    /// Official game content v1: the five M7.1 launch battlefields, unchanged, followed by the new-unit battlefields
-    /// (cavalry, dragons, giants, non-human batch 2, unified roster). New authored content only: the M7.1 catalog,
+    /// Official game content: the five M7.1 launch battlefields, unchanged, followed by the new-unit battlefields
+    /// (cavalry, dragons, giants, non-human batch 2, unified roster; v2 adds the giant batch 3). New authored content only: the M7.1 catalog,
     /// the unified-roster catalogs and every referenced scene are read, never written. Player-facing names and
     /// descriptions replace the internal trial labels; previews come from OfficialRosterPreviewTests.
     /// </summary>
     public static class OfficialRosterBuilder
     {
         public const string Parent = "Assets/Game/OfficialRoster";
-        public const string Root = Parent + "/Version01";
+        /// <summary>Current official content (v2 = v1 + giant batch 3). Version01 stays in the project, read-only.</summary>
+        public const string Root = Parent + "/Version02";
+        public const string Version01Root = Parent + "/Version01";
         public const string CatalogPath = Root + "/Catalog.asset";
         public const string MenuScene = Root + "/LaunchMenu.unity";
-        public const string SourceCatalog = "Assets/Game/Giants/Prepared02/Integrated/Catalog.asset";
+        public const string SourceCatalog = "Assets/Game/Giants3/Prepared01/Integrated/Catalog.asset";
         public const string PreviewSource = "Logs/OfficialRoster/previews";
         public const string Output01 = "Builds/OfficialRoster-20261001-01";
         public const string Output02 = "Builds/OfficialRoster-20261001-02";
+        public const string Output03 = "Builds/OfficialRoster-20261001-03";
 
         /// <summary>id in <see cref="SourceCatalog"/>, official display name, one-line flavour (no fixed winner).</summary>
         public static readonly string[][] NewEntries =
@@ -40,6 +43,7 @@ namespace MassEngine.Game.Editor
             new[] { "dragons-dragon-evolved-phalanx", "进化巨龙 vs 密集方阵", "150 名骑士组成方阵围攻进化巨龙。" },
             new[] { "giants-demon", "巨型恶魔", "两头巨型恶魔冲击骑士队列，生命与攻击远超常规兵种。" },
             new[] { "giants-dino", "巨型暴龙", "两头巨型暴龙撕开骑士阵线，体型巨大、难以合围。" },
+            new[] { "giants-yeti", "巨型雪人", "两头巨型雪人挥拳横扫骑士队列，皮糙肉厚、力大无穷。" },
             new[] { "nonhuman2-triceratops", "三角龙冲阵", "体型庞大的三角龙投入战场。" },
             new[] { "nonhuman2-stegosaurus", "剑龙防线", "背负骨板的剑龙投入战场。" },
             new[] { "nonhuman2-spider", "巨型蜘蛛", "成群的巨型蜘蛛投入战场。" },
@@ -48,7 +52,10 @@ namespace MassEngine.Game.Editor
             new[] { "unified-large", "自由编成 · 大型兵种", "面向大型兵种的配兵战场，可编入体型较大的单位。" },
         };
 
-        public static void Prepare01()
+        /// <summary>v1 was authored on 2026-10-01 and is kept as is; the current content is <see cref="Prepare02"/>.</summary>
+        public static void Prepare01() => throw new InvalidOperationException("Version01 is already authored and kept read-only; run Prepare02.");
+
+        public static void Prepare02()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play Mode first.");
             if (Directory.Exists(Root)) throw new InvalidOperationException("Refusing to overwrite existing official content: " + Root);
@@ -71,7 +78,7 @@ namespace MassEngine.Game.Editor
 
                 // Pass 2: author the catalog with fresh asset wrappers.
                 if (!AssetDatabase.IsValidFolder(Parent)) AssetDatabase.CreateFolder("Assets/Game", "OfficialRoster");
-                AssetDatabase.CreateFolder(Parent, "Version01");
+                AssetDatabase.CreateFolder(Parent, Path.GetFileName(Root));
                 AssetDatabase.CreateFolder(Root, "Previews");
                 var launch = Load<WarSandboxBattlefieldCatalog>(WarSandboxLaunchPresetsBuilder.CatalogPath);
                 source = Load<WarSandboxBattlefieldCatalog>(SourceCatalog);
@@ -107,7 +114,7 @@ namespace MassEngine.Game.Editor
                 EditorBuildSettings.scenes = Scenes(Load<WarSandboxBattlefieldCatalog>(CatalogPath)).Select(p => new EditorBuildSettingsScene(p, true)).ToArray();
                 AssetDatabase.SaveAssets();
                 int previews = catalog.entries.Count(e => e.preview != null);
-                Debug.Log("OFFICIAL_ROSTER_READY entries=" + catalog.entries.Length + " templates=" + catalog.templates.Length + " previews=" + previews);
+                Debug.Log("OFFICIAL_ROSTER_READY root=" + Root + " entries=" + catalog.entries.Length + " templates=" + catalog.templates.Length + " previews=" + previews);
             }
             finally
             {
@@ -119,6 +126,8 @@ namespace MassEngine.Game.Editor
         public static void Build01() => Build(Output01);
         /// <summary>Same content as 01 plus the opt-in official-catalog smoke in WarSandboxTerrainCycle (development build only).</summary>
         public static void Build02() => Build(Output02);
+        /// <summary>v2 content (adds the giant Yeti), with the same opt-in official-catalog smoke as 02.</summary>
+        public static void Build03() => Build(Output03);
 
         private static void Build(string outputPath)
         {
@@ -135,7 +144,7 @@ namespace MassEngine.Game.Editor
             File.WriteAllText(Path.Combine(output, "说明.txt"),
                 "首次进入 512 人开阔对冲，按 Enter 开战、Space 暂停。配兵布阵可编辑并保存自己的方案。\r\n" +
                 "返回战场目录可选择全部 " + catalog.entries.Length + " 个战场：M7.1 的 5 个首发战场，以及骑兵、飞龙、进化巨龙、巨型恶魔、巨型暴龙、" +
-                "三角龙、剑龙、巨型蜘蛛和自由编成等新兵种战场。\r\n", new UTF8Encoding(true));
+                "巨型雪人、三角龙、剑龙、巨型蜘蛛和自由编成等新兵种战场。\r\n", new UTF8Encoding(true));
             Debug.Log("OFFICIAL_ROSTER_BUILD_OK " + output + " scenes=" + scenes.Length);
         }
 
@@ -161,7 +170,9 @@ namespace MassEngine.Game.Editor
 
         private static Texture2D ImportPreview(string id)
         {
-            string source = Path.Combine(PreviewSource, id + ".png");
+            // v1 previews are tracked assets: reuse them byte for byte; new battlefields come from the picked captures.
+            string v1 = Version01Root + "/Previews/" + id + ".png";
+            string source = File.Exists(v1) ? v1 : Path.Combine(PreviewSource, id + ".png");
             if (!File.Exists(source)) { Debug.LogWarning("OFFICIAL_ROSTER no preview for " + id); return null; }
             string target = Root + "/Previews/" + id + ".png";
             if (File.Exists(target)) throw new BuildFailedException("Refusing to overwrite preview: " + target);
