@@ -1,3 +1,15 @@
+# 当前：兵种属性配置已实施并推送（2026-10-01）
+
+- 完成者：Arena.ai Agent Mode（AI 智能体；底层模型由平台调度，未披露）。需求和决策来自用户，流程图和 D1–D3 界面稿经用户确认后才实施。
+- 提交 `f21e4aa`（分支 feat/war-sandbox-battlefield-rules，已推送）。设计与实现文档：`Assets/方案设计/兵种属性配置_设计与实现_20261001.md`。
+- 三层数值：本局（方案 statOverrides）> 全局（persistentDataPath/WarSandboxUnitOverrides.json，按 templateId）> 官方（资源只读），逐字段 clamp；没有覆盖文件时与旧版一致。
+- 入口：布阵页"兵种属性"→ 兵种档案（D1）/ 推送到全局（D2）；目录页"兵种库"（D3）；战斗 HUD 显示"自定义数值"。
+- 测试：EditMode WarSandboxUnitStatsTests 23/23；PlayMode 端到端通过；EditMode 全量 458/460、PlayMode 全量 151/158，失败的都是既有构建列表问题（用户决定不处理）。证据见 Logs/AgentUnitStats。
+- 待办：人工手动验收（文档第 7 节）；修复构建列表后重跑 SceneEntryTests。
+
+---
+历史保留：
+
 # 当前：第一套CC0派生骑兵（2026-09-30）
 
 - 用户认可前批并授权骑兵；许可选择被跳过后再次“继续，开干”，按不增加同许可义务的保守默认选已有CC0骑士+官方CC0马，新制作骑乘姿态。0AD只读研究，不导入CC BY-SA，不购买。
