@@ -3,6 +3,8 @@
 > **完成者**：Arena.ai Agent Mode（AI 编程智能体；底层模型由平台调度，智能体自己无法确认，也不能披露）。**需求与决策**：用户。这一批选 3 个（雪人、蓝魔、外星人）；雪人做成新的超大兵种，原来的雪怪保留；蓝魔和外星人等 Drive 配额恢复后再下载。
 > **证据**：`Logs/AgentMonsters3/`、`Logs/OfficialRoster/shots-04/`（Logs 不入库）。
 
+> **更新（同日）**：Drive 配额已恢复，蓝魔和外星人也已完成，正式目录升级到 Version03，见 `GIANTS3B.md`。
+
 ## 结论
 - 新兵种 **巨型雪人**（模板 `roster-giant-yeti`），战场 `giants-yeti`，已接入正式游戏目录 **Version02**，共 19 个战场。
 - 试玩包：`Builds/OfficialRoster-20261001-03/Start-WarSandbox.cmd`，GUID `61b4a770fb1c44faa27d84ed1020174f`。旧包都保留。

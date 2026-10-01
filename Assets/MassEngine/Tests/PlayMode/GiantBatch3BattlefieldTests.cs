@@ -20,8 +20,8 @@ namespace MassEngine.Tests
     /// </summary>
     public sealed class GiantBatch3BattlefieldTests
     {
-        private const string Folder = "Assets/Game/Giants3/Prepared01/Integrated/";
-        private static readonly string[] Keys = { "giant-yeti" };
+        private const string Folder = "Assets/Game/Giants3/Prepared01/Integrated/", Folder2 = "Assets/Game/Giants3/Prepared02/Integrated/";
+        private static readonly string[] Keys = { "giant-yeti" }, Keys2 = { "giant-bluedemon", "giant-alien" };
         private static readonly int[] Sweep = { 24, 48, 96, 144 };
         private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "AgentMonsters3"));
 
@@ -37,16 +37,19 @@ namespace MassEngine.Tests
             }
         }
 
-        [UnityTest, Timeout(900000)] public IEnumerator Giant3BattlefieldsAsShipped() { yield return Run("giants3-shipped", new[] { 0 }, true); }
-        [UnityTest, Timeout(1500000)] public IEnumerator Giant3KnightSweep() { yield return Run("giants3-sweep", Sweep, false); }
+        [UnityTest, Timeout(900000)] public IEnumerator Giant3BattlefieldsAsShipped() { yield return Run("giants3-shipped", new[] { 0 }, true, Folder, Keys); }
+        [UnityTest, Timeout(1500000)] public IEnumerator Giant3KnightSweep() { yield return Run("giants3-sweep", Sweep, false, Folder, Keys); }
+        // Batch 3b (IntegrateBlueDemonAlien02): blue demon (melee) and alien (ranged, direct shots, no splash).
+        [UnityTest, Timeout(900000)] public IEnumerator Giant3BlueDemonAlienAsShipped() { yield return Run("giants3b-shipped", new[] { 0 }, true, Folder2, Keys2); }
+        [UnityTest, Timeout(1500000)] public IEnumerator Giant3BlueDemonAlienKnightSweep() { yield return Run("giants3b-sweep", Sweep, false, Folder2, Keys2); }
 
-        private static IEnumerator Run(string output, int[] counts, bool shipped)
+        private static IEnumerator Run(string output, int[] counts, bool shipped, string folder, string[] keys)
         {
             Directory.CreateDirectory(Dir);
             var rows = new List<string>();
-            foreach (string key in Keys)
+            foreach (string key in keys)
             {
-                yield return EditorSceneManager.LoadSceneAsyncInPlayMode(Folder + key + "Battlefield.unity", new LoadSceneParameters(LoadSceneMode.Single));
+                yield return EditorSceneManager.LoadSceneAsyncInPlayMode(folder + key + "Battlefield.unity", new LoadSceneParameters(LoadSceneMode.Single));
                 MassEngineManager manager = null;
                 for (int i = 0; i < 300 && manager == null; i++) { manager = Object.FindFirstObjectByType<MassEngineManager>(); yield return null; }
                 Assert.IsNotNull(manager);
@@ -54,7 +57,9 @@ namespace MassEngine.Tests
                 ScenarioConfig source = manager.scenarioConfig;
                 Assert.AreEqual(2, source.unitTypes.Length);
                 UnitTypeConfig giant = source.unitTypes[0], knight = source.unitTypes[1];
-                Assert.AreEqual(0f, giant.combatConfig.projectileRange, "Giants are melee.");
+                bool ranged = key == "giant-alien";
+                if (ranged) { Assert.Greater(giant.combatConfig.projectileRange, 10f, "The alien is ranged."); Assert.AreEqual(0f, giant.combatConfig.projectileSplashRadius, "Alien shots have no splash."); }
+                else Assert.AreEqual(0f, giant.combatConfig.projectileRange, "Giants are melee.");
                 Assert.AreEqual(2, giant.spawnConfig.unitCount); Assert.AreEqual(16, knight.spawnConfig.unitCount);
                 try
                 {
@@ -80,13 +85,18 @@ namespace MassEngine.Tests
                         if (shipped) Shot(manager, teams, agents, key + "-start.png");
                         Time.captureFramerate = 30;
                         manager.StartBattle();
-                        float sim = 0f, contact = -1f; int gl = g0, kl = k0; bool midShot = false;
+                        float sim = 0f, contact = -1f, firstKnightHit = -1f, firstGiantHit = -1f; int gl = g0, kl = k0; bool midShot = false;
                         while (sim < 180f)
                         {
                             yield return null; sim += 1f / 30f;
                             var snap = manager.Telemetry.Snapshot;
                             if (!snap.valid || snap.TeamCount < 2) continue;
                             gl = snap.GetAliveCount(0); kl = snap.GetAliveCount(1);
+                            if ((firstKnightHit < 0 || firstGiantHit < 0) && Time.frameCount % 3 == 0)
+                            {
+                                if (firstKnightHit < 0 && Hp(manager, teams, agents, 1) < kHp0) firstKnightHit = sim;
+                                if (firstGiantHit < 0 && Hp(manager, teams, agents, 0) < gHp0) firstGiantHit = sim;
+                            }
                             if (contact < 0 && (gl < g0 || kl < k0 || Time.frameCount % 15 == 0 && Hp(manager, teams, agents, 0) < gHp0)) contact = sim;
                             if (shipped && !midShot && contact >= 0 && sim >= contact + 2.5f) { midShot = true; Time.captureFramerate = 0; Shot(manager, teams, agents, key + "-fight.png"); Time.captureFramerate = 30; }
                             if (gl == 0 || kl == 0 || !manager.IsBattleRunning) break;
@@ -101,15 +111,21 @@ namespace MassEngine.Tests
                             "{{\"giant\":\"{0}\",\"giants\":{1},\"knights\":{2},\"giantHp\":{3},\"giantDamage\":{4},\"giantRadius\":{5},\"giantRange\":{6},\"winner\":\"{7}\",\"simSeconds\":{8},\"giantsLeft\":{9},\"knightsLeft\":{10},\"giantHpLost\":{11},\"knightHpLost\":{12},\"contactAt\":{13},\"peakGridOverflow\":{14}}}",
                             key, g0, k0, giant.combatConfig.maxHp, giant.combatConfig.attackDamage, giant.flockingConfig.agentRadius.ToString("F2", CultureInfo.InvariantCulture), giant.combatConfig.attackRange.ToString("F2", CultureInfo.InvariantCulture),
                             winner, sim.ToString("F1", CultureInfo.InvariantCulture), gl, kl, gLost, kLost, contact.ToString("F1", CultureInfo.InvariantCulture), final.peakGridOverflowPerFrame);
+                        row = row.Substring(0, row.Length - 1) + string.Format(CultureInfo.InvariantCulture, ",\"ranged\":{0},\"firstKnightHit\":{1},\"firstGiantHit\":{2}}}",
+                            ranged ? "true" : "false", firstKnightHit.ToString("F1", CultureInfo.InvariantCulture), firstGiantHit.ToString("F1", CultureInfo.InvariantCulture));
                         Debug.Log("GIANT3_RESULT " + row); rows.Add(row);
                         File.WriteAllText(Path.Combine(Dir, output + ".json"), "[\n" + string.Join(",\n", rows) + "\n]\n", new UTF8Encoding(false));
                         if (shipped)
                         {
-                            Assert.Greater(gLost, 0, "Knights must damage the giant (reach covers the giant radius).");
+                            // A ranged giant may legitimately win the 16-knight showcase untouched; its reach is checked in the sweep instead.
+                            if (!ranged) Assert.Greater(gLost, 0, "Knights must damage the giant (reach covers the giant radius).");
                             Assert.Greater(kLost, 0, "The giant must damage knights.");
                             Assert.AreNotEqual("timeout", winner, "Shipped giant fight must end.");
                             Assert.AreEqual(0, final.peakGridOverflowPerFrame, "Giant grid must not overflow.");
+                            if (ranged) Assert.IsTrue(firstKnightHit >= 0 && (firstGiantHit < 0 || firstKnightHit < firstGiantHit),
+                                "The ranged alien must hit knights before they reach it (knight " + firstKnightHit + "s, alien " + firstGiantHit + "s).");
                         }
+                        if (!shipped && ranged && n >= 48) Assert.Greater(gLost, 0, "Knights must be able to reach and damage the ranged giant.");
                         manager.StopBattle();
                         manager.scenarioConfig = source;
                         foreach (var o in created) Object.Destroy(o);
@@ -117,7 +133,7 @@ namespace MassEngine.Tests
                 }
                 finally { Time.captureFramerate = 0; if (manager != null) manager.scenarioConfig = source; }
             }
-            Assert.AreEqual(counts.Length * Keys.Length, rows.Count);
+            Assert.AreEqual(counts.Length * keys.Length, rows.Count);
         }
 
         private static void Shot(MassEngineManager manager, int[] teams, int agents, string file)

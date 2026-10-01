@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace MassEngine.Game.Tests
 {
-    /// <summary>Current official catalog (OfficialRosterBuilder.Prepare02, v2): M7.1 launch content first and unchanged, new-unit battlefields after.</summary>
+    /// <summary>Current official catalog (OfficialRosterBuilder.Prepare03, v3): M7.1 launch content first and unchanged, new-unit battlefields after.</summary>
     public sealed class OfficialRosterCatalogTests
     {
         private static WarSandboxBattlefieldCatalog Official => Load<WarSandboxBattlefieldCatalog>(OfficialRosterBuilder.CatalogPath);
@@ -82,12 +82,13 @@ namespace MassEngine.Game.Tests
             Assert.That(scenes.All(s => s.enabled), Is.True);
         }
 
-        [Test]
-        public void Version01IsKeptAndTheCurrentCatalogExtendsIt()
+        [TestCase(OfficialRosterBuilder.Version01Root)]
+        [TestCase(OfficialRosterBuilder.Version02Root)]
+        public void PreviousVersionIsKeptAndTheCurrentCatalogExtendsIt(string root)
         {
-            var v1 = Load<WarSandboxBattlefieldCatalog>(OfficialRosterBuilder.Version01Root + "/Catalog.asset");
+            var v1 = Load<WarSandboxBattlefieldCatalog>(root + "/Catalog.asset");
             var current = Official;
-            Assert.That(OfficialRosterBuilder.Root, Is.Not.EqualTo(OfficialRosterBuilder.Version01Root));
+            Assert.That(OfficialRosterBuilder.Root, Is.Not.EqualTo(root));
             Assert.That(current.entries.Length, Is.GreaterThan(v1.entries.Length));
             // Every v1 battlefield is kept with identical content and in the same relative order (new ones may sit next to their kind).
             int previous = -1;
@@ -106,7 +107,7 @@ namespace MassEngine.Game.Tests
                 Assert.That(current.TryResolveTemplate(t.templateId, t.revision, out var config, out string error), Is.True, error);
                 Assert.That(config, Is.SameAs(t.config));
             }
-            Assert.That(File.Exists(OfficialRosterBuilder.Version01Root + "/LaunchMenu.unity"), Is.True);
+            Assert.That(File.Exists(root + "/LaunchMenu.unity"), Is.True);
         }
 
         private static T Load<T>(string path) where T : Object

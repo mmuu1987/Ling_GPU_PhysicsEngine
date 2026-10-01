@@ -22,16 +22,20 @@ namespace MassEngine.Game.Editor
     public static class OfficialRosterBuilder
     {
         public const string Parent = "Assets/Game/OfficialRoster";
-        /// <summary>Current official content (v2 = v1 + giant batch 3). Version01 stays in the project, read-only.</summary>
-        public const string Root = Parent + "/Version02";
+        /// <summary>Current official content (v3 = v2 + giant batch 3b: blue demon, alien). Earlier versions stay in the project, read-only.</summary>
+        public const string Root = Parent + "/Version03";
         public const string Version01Root = Parent + "/Version01";
+        public const string Version02Root = Parent + "/Version02";
+        /// <summary>Earlier official versions, oldest first; their previews are reused byte for byte.</summary>
+        public static readonly string[] PreviousRoots = { Version01Root, Version02Root };
         public const string CatalogPath = Root + "/Catalog.asset";
         public const string MenuScene = Root + "/LaunchMenu.unity";
-        public const string SourceCatalog = "Assets/Game/Giants3/Prepared01/Integrated/Catalog.asset";
+        public const string SourceCatalog = "Assets/Game/Giants3/Prepared02/Integrated/Catalog.asset";
         public const string PreviewSource = "Logs/OfficialRoster/previews";
         public const string Output01 = "Builds/OfficialRoster-20261001-01";
         public const string Output02 = "Builds/OfficialRoster-20261001-02";
         public const string Output03 = "Builds/OfficialRoster-20261001-03";
+        public const string Output04 = "Builds/OfficialRoster-20261001-04";
 
         /// <summary>id in <see cref="SourceCatalog"/>, official display name, one-line flavour (no fixed winner).</summary>
         public static readonly string[][] NewEntries =
@@ -44,6 +48,8 @@ namespace MassEngine.Game.Editor
             new[] { "giants-demon", "巨型恶魔", "两头巨型恶魔冲击骑士队列，生命与攻击远超常规兵种。" },
             new[] { "giants-dino", "巨型暴龙", "两头巨型暴龙撕开骑士阵线，体型巨大、难以合围。" },
             new[] { "giants-yeti", "巨型雪人", "两头巨型雪人挥拳横扫骑士队列，皮糙肉厚、力大无穷。" },
+            new[] { "giants-bluedemon", "巨型蓝魔", "两头巨型蓝魔猛扑骑士队列，攻击凶猛、出手沉重。" },
+            new[] { "giants-alien", "外星巨人", "两名外星巨人远距离发射能量弹，骑士必须顶着火力冲到近前。" },
             new[] { "nonhuman2-triceratops", "三角龙冲阵", "体型庞大的三角龙投入战场。" },
             new[] { "nonhuman2-stegosaurus", "剑龙防线", "背负骨板的剑龙投入战场。" },
             new[] { "nonhuman2-spider", "巨型蜘蛛", "成群的巨型蜘蛛投入战场。" },
@@ -52,10 +58,11 @@ namespace MassEngine.Game.Editor
             new[] { "unified-large", "自由编成 · 大型兵种", "面向大型兵种的配兵战场，可编入体型较大的单位。" },
         };
 
-        /// <summary>v1 was authored on 2026-10-01 and is kept as is; the current content is <see cref="Prepare02"/>.</summary>
-        public static void Prepare01() => throw new InvalidOperationException("Version01 is already authored and kept read-only; run Prepare02.");
+        /// <summary>v1 and v2 were authored on 2026-10-01 and are kept as is; the current content is <see cref="Prepare03"/>.</summary>
+        public static void Prepare01() => throw new InvalidOperationException("Version01 is already authored and kept read-only; run Prepare03.");
+        public static void Prepare02() => throw new InvalidOperationException("Version02 is already authored and kept read-only; run Prepare03.");
 
-        public static void Prepare02()
+        public static void Prepare03()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play Mode first.");
             if (Directory.Exists(Root)) throw new InvalidOperationException("Refusing to overwrite existing official content: " + Root);
@@ -128,6 +135,7 @@ namespace MassEngine.Game.Editor
         public static void Build02() => Build(Output02);
         /// <summary>v2 content (adds the giant Yeti), with the same opt-in official-catalog smoke as 02.</summary>
         public static void Build03() => Build(Output03);
+        public static void Build04() => Build(Output04);
 
         private static void Build(string outputPath)
         {
@@ -170,9 +178,8 @@ namespace MassEngine.Game.Editor
 
         private static Texture2D ImportPreview(string id)
         {
-            // v1 previews are tracked assets: reuse them byte for byte; new battlefields come from the picked captures.
-            string v1 = Version01Root + "/Previews/" + id + ".png";
-            string source = File.Exists(v1) ? v1 : Path.Combine(PreviewSource, id + ".png");
+            // Earlier official previews are tracked assets: reuse them byte for byte; new battlefields come from the picked captures.
+            string source = PreviousRoots.Select(r => r + "/Previews/" + id + ".png").FirstOrDefault(File.Exists) ?? Path.Combine(PreviewSource, id + ".png");
             if (!File.Exists(source)) { Debug.LogWarning("OFFICIAL_ROSTER no preview for " + id); return null; }
             string target = Root + "/Previews/" + id + ".png";
             if (File.Exists(target)) throw new BuildFailedException("Refusing to overwrite preview: " + target);

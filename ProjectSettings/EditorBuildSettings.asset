@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Game/OfficialRoster/Version02/LaunchMenu.unity
-    guid: 7fd2e1ebe3e4fb84db1b4bb9e1637c93
+    path: Assets/Game/OfficialRoster/Version03/LaunchMenu.unity
+    guid: e92bb747f9e94fa41842a12217b33816
   - enabled: 1
     path: Assets/Game/M71LaunchPresets/launch-open/WarSandbox.unity
     guid: 5cb91da9fb0c8e24ca9b51b91e0a0b8b
@@ -47,6 +47,12 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Game/Giants3/Prepared01/Integrated/giant-yetiBattlefield.unity
     guid: 1aff53efb6601b349aa543eb6074a850
+  - enabled: 1
+    path: Assets/Game/Giants3/Prepared02/Integrated/giant-bluedemonBattlefield.unity
+    guid: 08c123f4d6d7c1141bf29a1e0e366928
+  - enabled: 1
+    path: Assets/Game/Giants3/Prepared02/Integrated/giant-alienBattlefield.unity
+    guid: cea78a17392fe854b8996b9da14e07ea
   - enabled: 1
     path: Assets/Game/NonhumanBatch2/Prepared01/Integrated/triceratopsBattlefield.unity
     guid: 947f843232441da42a9c8287e6d44394

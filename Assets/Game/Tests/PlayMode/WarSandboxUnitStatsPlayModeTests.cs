@@ -21,7 +21,7 @@ namespace MassEngine.Game.Tests
     /// </summary>
     public sealed class WarSandboxUnitStatsPlayModeTests
     {
-        private const string Menu = "Assets/Game/OfficialRoster/Version02/LaunchMenu.unity";
+        private const string Menu = "Assets/Game/OfficialRoster/Version03/LaunchMenu.unity";
         private const string Field = "dragons-dragon-evolved-phalanx";
         private float previousCaptureDelta;
         private string directory, shots;
