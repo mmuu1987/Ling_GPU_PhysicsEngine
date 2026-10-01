@@ -89,3 +89,28 @@
 
 - 未提交（故意排除）：5 个 `Assets/InitTestScene*.unity` 及其 .meta（Unity 测试临时场景，可以删除），以及 `.local-mcp-audit/`。
 - 回执：`Logs/AgentGiants/commit-receipt-01.json`；分组清单：`Logs/AgentGiants/commit-plan.json`。
+
+## LFS 迁移与推送（2026-10-01）
+
+- `git lfs migrate import` 只重写了上面 12 个提交（d7f0a5c 之后），更早的历史和已推送的基线没有变。240 个大文件（`*.anim`、VAT/Full 网格 `.asset`、`CharacterPilotSource`/`ModelTrialSource` 下的 fbx/png 等）转为 LFS，规则写在 `.gitattributes` 末尾。
+- 校验：240 个文件的内容与迁移前的原始 blob 逐个比对，全部一致。迁移结束后 worktree 里留下的是指针文件，已用 `git lfs checkout` 从本地恢复成真实内容。
+- 备份分支：`backup/pre-lfs-20261001` 指向迁移前的 `98d62d1`，只在本地，没有推送。确认无误后可以删除。
+- 推送：`a9ad0c4..4157f38`，上传了 224 个 LFS 对象，共 1.9 GB。回执在 `Logs/AgentGiants/push-receipt-01.json`。
+- 迁移后的提交 hash：
+
+| 组 | 迁移前 | 迁移后 |
+|---|---|---|
+| C1 | d452fcf | `b1ad0ce` |
+| C2 | 9eca820 | `f8b48fa` |
+| C3 | f9dbfce | `cfd6ce1` |
+| C4 | 47da7c4 | `3220646` |
+| C5 | 3e510f6 | `b4c49d1` |
+| C6 | 1939282 | `55eb684` |
+| C7 | a292041 | `d632318` |
+| C8 | 0de69e3 | `71b35b8` |
+| C9 | fb8ad60 | `acf0b26` |
+| C10 | 26d8249 | `98c00fa` |
+| C11 | ee50f90 | `fcc00c0` |
+| C12 | 98d62d1 | `4157f38` |
+
+- 另外更正一处：上文说 EditMode 的 2 个失败都和 EditorBuildSettings 有关，这不准确。`WarSandboxCatalogTests.ShippingCatalog…` 确实是构建场景列表的问题；`WarSandboxLaunchPresetTests.QuickDefault…110kContent` 则是 M7.3 远景 LOD 把渲染配置换成了 `*_Far128`。两个都是旧问题，9 月 30 日的 `charge-edit-01` 里就已经失败。
