@@ -170,6 +170,7 @@ namespace MassEngine.Game
             Stage("catalog");
             yield return Screenshot("catalog.png");
             int catalogIndex = Array.FindIndex(session.catalog.entries, e => e.id == battlefieldId);
+            yield return ClickUI("card-" + catalogIndex); // B1 catalog: select the row, then deploy
             yield return ClickUI("card-" + catalogIndex + "-enter");
             yield return WaitForLoad(WarSandboxEntryState.Battle);
             Require(session.CurrentEntryId == battlefieldId, "UI entered a different battlefield.");

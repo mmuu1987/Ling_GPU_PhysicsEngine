@@ -36,6 +36,8 @@ namespace MassEngine.Game.Editor
         public const string Output02 = "Builds/OfficialRoster-20261001-02";
         public const string Output03 = "Builds/OfficialRoster-20261001-03";
         public const string Output04 = "Builds/OfficialRoster-20261001-04";
+        public const string Output05 = "Builds/OfficialRoster-20261001-05";
+        public const string Output06 = "Builds/OfficialRoster-20261001-06";
 
         /// <summary>id in <see cref="SourceCatalog"/>, official display name, one-line flavour (no fixed winner).</summary>
         public static readonly string[][] NewEntries =
@@ -136,6 +138,10 @@ namespace MassEngine.Game.Editor
         /// <summary>v2 content (adds the giant Yeti), with the same opt-in official-catalog smoke as 02.</summary>
         public static void Build03() => Build(Output03);
         public static void Build04() => Build(Output04);
+        /// <summary>v3 content unchanged; the runtime UI is unified on the B "tactical command" style.</summary>
+        public static void Build05() => Build(Output05);
+        /// <summary>05 plus a dark plate behind the battle title (readable over bright terrain) and a one-line move-target label.</summary>
+        public static void Build06() => Build(Output06);
 
         private static void Build(string outputPath)
         {

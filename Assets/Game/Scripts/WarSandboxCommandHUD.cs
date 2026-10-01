@@ -934,7 +934,7 @@ namespace MassEngine.Game
 
             Vector2 center = new Vector2(centerScreen.x, Screen.height - centerScreen.y);
             float radius = Mathf.Clamp(Mathf.Abs(edgeScreen.x - centerScreen.x), 8f, 240f);
-            Color color = new Color(1f, 0.85f, 0.2f, 0.8f);
+            Color color = new Color(1f, 0.71f, 0.15f, 0.85f); // B amber (objective)
             const int segments = 24;
             Vector2 previous = center + Vector2.right * radius;
             bool terrain = controller.manager.terrainSurfaceAsset != null, previousVisible = true;
@@ -956,7 +956,9 @@ namespace MassEngine.Game
                 previous = next; previousVisible = visible;
             }
 
+            Color labelColor = GUI.contentColor; GUI.contentColor = color;
             GUI.Label(new Rect(center.x + 8f, center.y - 12f, 100f, 22f), "中央据点");
+            GUI.contentColor = labelColor;
         }
 
         private void DrawArmyMarker(Camera targetCamera, ArmyRuntimeState army, Color color)

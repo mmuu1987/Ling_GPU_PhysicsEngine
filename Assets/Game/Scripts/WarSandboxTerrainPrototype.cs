@@ -223,13 +223,39 @@ namespace MassEngine.Game
             finally { Application.logMessageReceived -= TrackError; Release(); Application.Quit(exitCode); }
         }
 
+        // Same text as before, drawn in the shared B "tactical command" palette (IMGUI: this scene has no uGUI canvas).
+        private GUIStyle codeStyle, bodyStyle;
         private void OnGUI()
         {
             if (surface == null) return;
-            GUI.Box(new Rect(16, 16, 490, 110), "M6.1  |  Continuous terrain prototype");
-            GUI.Label(new Rect(30, 42, 460, 24), "48m plateau / west ramp / narrow east ramp / canyon");
-            GUI.Label(new Rect(30, 65, 460, 24), "Red: steep or excluded. Green/yellow: passable surface.");
-            GUI.Label(new Rect(30, 88, 460, 24), benchmarking ? "Budget probe: " + stage : "RMB + WASD: fly / wheel: zoom. Battle integration: M6.2.");
+            if (codeStyle == null)
+            {
+                Font mono = Font.CreateDynamicFontFromOSFont(new[] { "Consolas", "Cascadia Mono", "Courier New" }, 13);
+                codeStyle = new GUIStyle(GUI.skin.label) { font = mono, fontSize = 13, fontStyle = FontStyle.Bold };
+                codeStyle.normal.textColor = WarSandboxUGUI.Accent;
+                bodyStyle = new GUIStyle(GUI.skin.label) { fontSize = 13 };
+                bodyStyle.normal.textColor = WarSandboxUGUI.Ink;
+            }
+            var panel = new Rect(16, 16, 490, 110);
+            Fill(panel, WarSandboxUGUI.Surface);
+            Fill(new Rect(panel.x, panel.y, panel.width, 1), WarSandboxUGUI.Line); Fill(new Rect(panel.x, panel.yMax - 1, panel.width, 1), WarSandboxUGUI.Line);
+            Fill(new Rect(panel.x, panel.y, 1, panel.height), WarSandboxUGUI.Line); Fill(new Rect(panel.xMax - 1, panel.y, 1, panel.height), WarSandboxUGUI.Line);
+            const float l = 12, t = 2;
+            foreach (var corner in new[] { new Vector2(panel.x - 1, panel.y - 1), new Vector2(panel.xMax + 1 - l, panel.y - 1), new Vector2(panel.x - 1, panel.yMax + 1 - t), new Vector2(panel.xMax + 1 - l, panel.yMax + 1 - t) })
+                Fill(new Rect(corner.x, corner.y, l, t), WarSandboxUGUI.Accent);
+            foreach (var corner in new[] { new Vector2(panel.x - 1, panel.y - 1), new Vector2(panel.xMax + 1 - t, panel.y - 1), new Vector2(panel.x - 1, panel.yMax + 1 - l), new Vector2(panel.xMax + 1 - t, panel.yMax + 1 - l) })
+                Fill(new Rect(corner.x, corner.y, t, l), WarSandboxUGUI.Accent);
+            GUI.Label(new Rect(30, 20, 460, 22), "M6.1  //  Continuous terrain prototype", codeStyle);
+            GUI.Label(new Rect(30, 44, 460, 22), "48m plateau / west ramp / narrow east ramp / canyon", bodyStyle);
+            bodyStyle.normal.textColor = WarSandboxUGUI.Muted;
+            GUI.Label(new Rect(30, 66, 460, 22), "Red: steep or excluded. Green/yellow: passable surface.", bodyStyle);
+            bodyStyle.normal.textColor = benchmarking ? WarSandboxUGUI.Amber : WarSandboxUGUI.Muted;
+            GUI.Label(new Rect(30, 88, 460, 22), benchmarking ? "Budget probe: " + stage : "RMB + WASD: fly / wheel: zoom. Battle integration: M6.2.", bodyStyle);
+            bodyStyle.normal.textColor = WarSandboxUGUI.Ink;
+        }
+        private static void Fill(Rect rect, Color color)
+        {
+            Color before = GUI.color; GUI.color = color; GUI.DrawTexture(rect, Texture2D.whiteTexture); GUI.color = before;
         }
 
         private int renderedTerrainPixels;

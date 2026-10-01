@@ -33,6 +33,7 @@ namespace MassEngine.Game
                 Stage("official-" + entry.id);
                 if (i > 0)
                 {
+                    yield return Click("card-" + i); // B1 catalog: select the row, then deploy
                     yield return Click("card-" + i + "-enter");
                     yield return WaitForLoad(WarSandboxEntryState.Battle);
                 }

@@ -41,6 +41,7 @@ namespace MassEngine.Game
                 Stage("preset-" + entry.id);
                 if (preset > 0)
                 {
+                    yield return Click("card-" + preset); // B1 catalog: select the row, then deploy
                     yield return Click("card-" + preset + "-enter");
                     yield return WaitForLoad(WarSandboxEntryState.Battle);
                 }

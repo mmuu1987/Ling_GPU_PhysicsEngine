@@ -20,50 +20,54 @@ namespace MassEngine.Game
             nextUiRefresh = Time.unscaledTime + 0.1f;
             var ui = runtimeUi; ui.Begin();
             float w = ui.Width, h = ui.Height;
-            ui.Panel("deployment-bg", new Rect(0, 0, w, h - 62), WarSandboxUGUI.Background);
+            ui.Panel("deployment-bg", new Rect(0, 0, w, h), WarSandboxUGUI.Background);
             if (Confirming) DrawUGUIConfirmation(ui);
             else if (plansOpen) DrawUGUIPlans(ui);
             else if (statsOpen && deployment.Draft != null) DrawUGUIStats(ui);
             else if (deployment.Draft != null)
             {
                 bool narrow = w < 900;
-                ui.Label("deployment-brand", new Rect(18, 10, w - 270, 24), "BATTLE PLANNER  /  战前准备", 12, WarSandboxUGUI.Accent, true);
+                // The battle system strip (设置 / 战场目录 / 退出) sits top right, so the plan library button goes below it.
+                ui.Code("deployment-brand", new Rect(20, 10, w - 270, 22), "BATTLE PLANNER // 战前准备", 12, WarSandboxUGUI.Accent, TextAnchor.MiddleLeft, true);
+                ui.Panel("deployment-title-mark", new Rect(20, 40, 3, 26), WarSandboxUGUI.Accent, false);
                 ui.Label("deployment-title", new Rect(18, 34, w - 270, 40), "配兵与布阵", 28, null, true);
-                ui.Button("deployment-plans", new Rect(w - 158, 26, 138, 40), "本地方案库", OpenPlanLibrary, true);
+                ui.Button("deployment-plans", new Rect(w - 16 - 138, 48, 138, 34), "本地方案库", OpenPlanLibrary, true);
                 float top = narrow ? 128 : 94;
                 if (narrow)
                 {
                     ui.Button("tab-roster", new Rect(24, 84, (w - 56) / 2, 34), "01  军团编成", () => narrowMap = false, false, true, !narrowMap);
                     ui.Button("tab-map", new Rect(32 + (w - 56) / 2, 84, (w - 56) / 2, 34), "02  部署预览", () => narrowMap = true, false, true, narrowMap);
                 }
-                float bodyHeight = Mathf.Max(180, h - top - 162);
+                float bodyHeight = Mathf.Max(180, h - top - 112);
                 float sidebar = narrow ? w - 40 : 344;
                 if (!narrow || !narrowMap) DrawUGUIRoster(ui, new Rect(20, top, sidebar, bodyHeight));
                 if (!narrow || narrowMap) DrawUGUIMap(ui, new Rect(narrow ? 20 : 382, top, narrow ? w - 40 : w - 402, bodyHeight));
                 bool valid = deployment.TryValidate(out string error);
-                ui.Panel("deployment-footer", new Rect(20, h - 150, w - 40, 82));
-                ui.Label("deployment-validation", new Rect(26, h - 148, w - 52, 32), inputError ?? error ?? (HasPendingInputs() ? "输入待更新 · 应用前将重新检查" : "布阵有效 · 可以开战"), 14,
+                ui.Panel("deployment-footer", new Rect(20, h - 100, w - 40, 82));
+                ui.Brackets("deployment-footer-br", new Rect(20, h - 100, w - 40, 82), null, 10);
+                ui.Label("deployment-validation", new Rect(26, h - 98, w - 52, 32), inputError ?? error ?? (HasPendingInputs() ? "输入待更新 · 应用前将重新检查" : "布阵有效 · 可以开战"), 14,
                     inputError != null || !valid ? WarSandboxUGUI.Danger : WarSandboxUGUI.Accent);
                 float bw = Mathf.Min(180, (w - 64) / 3), bx = w - 32 - 3 * bw - 16;
-                ui.Button("deployment-cancel", new Rect(bx, h - 110, bw, 34), "取消修改", () => { deployment.CancelEditing(); ReleaseCamera(); });
-                ui.Button("deployment-apply", new Rect(bx + bw + 8, h - 110, bw, 34), "应用布阵", () => Apply(false), false, valid);
-                ui.Button("deployment-start", new Rect(bx + 2 * (bw + 8), h - 110, bw, 34), "应用并开战", () => Apply(true), true, valid);
+                ui.Button("deployment-cancel", new Rect(bx, h - 60, bw, 34), "取消修改", () => { deployment.CancelEditing(); ReleaseCamera(); });
+                ui.Button("deployment-apply", new Rect(bx + bw + 8, h - 60, bw, 34), "应用布阵", () => Apply(false), false, valid);
+                ui.Button("deployment-start", new Rect(bx + 2 * (bw + 8), h - 60, bw, 34), "应用并开战", () => Apply(true), true, valid);
             }
             ui.End();
         }
         private void DrawUGUIConfirmation(WarSandboxUGUI ui)
         {
             float w = Mathf.Min(480, ui.Width - 40), x = (ui.Width - w) / 2, y = Mathf.Max(20, (ui.Height - 270) / 2);
-            ui.Panel("edit-confirm-card", new Rect(x, y, w, 240));
-            ui.Label("edit-confirm-title", new Rect(x + 18, y + 18, w - 36, 42), "结束本局并返回布阵？", 24, null, true);
-            ui.Label("edit-confirm-note", new Rect(x + 18, y + 72, w - 36, 48), "当前战斗进度不会保留，战前方案仍可继续修改。", 16, WarSandboxUGUI.Muted);
+            ui.Panel("edit-confirm-card", new Rect(x, y, w, 240)); ui.Brackets("edit-confirm-br", new Rect(x, y, w, 240));
+            ui.Code("edit-confirm-code", new Rect(x + 24, y + 8, w - 48, 18), "MISSION // REDEPLOY", 11, WarSandboxUGUI.Accent);
+            ui.Label("edit-confirm-title", new Rect(x + 18, y + 26, w - 36, 42), "结束本局并返回布阵？", 24, null, true);
+            ui.Label("edit-confirm-note", new Rect(x + 18, y + 76, w - 36, 48), "当前战斗进度不会保留，战前方案仍可继续修改。", 16, WarSandboxUGUI.Muted);
             ui.Button("edit-confirm-yes", new Rect(x + 28, y + 138, w - 56, 38), "结束并布阵", () => { Confirming = false; resumeAfterConfirmation = false; Open(true); }, true);
             ui.Button("edit-confirm-no", new Rect(x + 28, y + 186, w - 56, 34), "取消，回到战场", CancelConfirmation);
         }
         private void DrawUGUIRoster(WarSandboxUGUI ui, Rect area)
         {
             var draft = deployment.Draft;
-            ui.Panel("roster-card", area);
+            ui.Panel("roster-card", area); ui.Brackets("roster-card-br", area, null, 10);
             float x = area.x + 12, y = area.y + 10, width = area.width - 24;
             float toolWidth = (width - 18) / 4;
             ui.Button("roster-add", new Rect(x, y, toolWidth, 32), "新增", () =>
@@ -96,7 +100,7 @@ namespace MassEngine.Game
             ui.Scroll("roster-properties", new Rect(x, y, width, Mathf.Max(60, area.yMax - y - 12)), 548 + 42 + extra + (deployment.rosterPolicy != null ? 72 : 0));
             float fy = 0;
             if (deployment.rosterPolicy != null) { ui.Label("roster-policy-note", new Rect(0, fy, width, 64), deployment.rosterPolicy.explanation, 12, WarSandboxUGUI.Muted); fy += 72; }
-            ui.Label("field-section", new Rect(0, fy, width, 26), "编成属性", 15, null, true); fy += 32;
+            ui.Code("field-section", new Rect(0, fy, width, 26), "UNIT // 编成属性", 13, WarSandboxUGUI.Accent, TextAnchor.MiddleLeft, true); fy += 32;
             ui.Button("field-template", new Rect(0, fy, width, 34), "兵种  /  " + draft[selected].Name + "  ▾", () => templateMenu = !templateMenu); fy += 42;
             if (templateMenu)
                 for (int i = 0; i < deployment.Templates.Count; i++)
@@ -138,8 +142,9 @@ namespace MassEngine.Game
         }
         private void DrawUGUIMap(WarSandboxUGUI ui, Rect area)
         {
-            ui.Panel("map-card", area);
-            ui.Label("map-title", new Rect(area.x + 12, area.y + 8, area.width - 144, 34), "部署预览", 21, null, true);
+            ui.Panel("map-card", area); ui.Brackets("map-card-br", area, null, 10);
+            ui.Code("map-code", new Rect(area.x + 22, area.y + 6, area.width - 160, 16), "RECON // DEPLOYMENT", 10, WarSandboxUGUI.Muted);
+            ui.Label("map-title", new Rect(area.x + 12, area.y + 16, area.width - 144, 34), "部署预览", 21, null, true);
             ui.Button("map-place", new Rect(area.xMax - 124, area.y + 10, 110, 32), placing ? "取消放置" : "点击放置", () => placing = !placing, false, deployment.Draft.Count > 0, placing);
             string note = placing ? "在下方点击，放置选中的编成" : "色块对应军团 · 点击色块选择编成";
             if (deployment.controller.manager.terrainSurfaceAsset != null && deployment.Draft.Count > 0 &&
@@ -149,20 +154,20 @@ namespace MassEngine.Game
             Vector2 world = deployment.WorldSize; if (world.x <= 0 || world.y <= 0) return;
             float scale = Mathf.Min((area.width - 32) / world.x, (area.height - 106) / world.y);
             Rect map = new Rect(area.center.x - world.x * scale / 2, area.y + 86, world.x * scale, world.y * scale);
-            ui.Panel("deployment-map-surface", map, WarSandboxUGUI.Background, false);
+            ui.Panel("deployment-map-surface", map, WarSandboxUGUI.FieldFill, false, WarSandboxUGUI.Line);
             for (int i = 1; i < 8; i++)
             {
-                ui.Panel("map-grid-x-" + i, new Rect(map.x + map.width * i / 8, map.y, 1, map.height), WarSandboxUGUI.Line, false);
-                ui.Panel("map-grid-y-" + i, new Rect(map.x, map.y + map.height * i / 8, map.width, 1), WarSandboxUGUI.Line, false);
+                ui.Panel("map-grid-x-" + i, new Rect(map.x + map.width * i / 8, map.y, 1, map.height), new Color32(20, 38, 50, 255), false);
+                ui.Panel("map-grid-y-" + i, new Rect(map.x, map.y + map.height * i / 8, map.width, 1), new Color32(20, 38, 50, 255), false);
             }
             var rules = deployment.Draft.Rules;
             if (rules.staticObstaclesEnabled && rules.staticObstacles != null)
                 for (int i = 0; i < rules.staticObstacles.Length; i++)
-                    ui.Panel("map-wall-" + i, MapBounds(rules.staticObstacles[i].Bounds, world, map), WarSandboxUGUI.Muted, false);
+                    ui.Panel("map-wall-" + i, MapBounds(rules.staticObstacles[i].Bounds, world, map), WarSandboxUGUI.Dim, false);
             if (rules.gameMode == WarSandboxGameMode.ControlPoint)
             {
                 var point = WarSandboxMinimapProjection.WorldToMap(rules.controlPointCenter, world, map);
-                ui.Panel("map-objective", new Rect(point.x - 5, point.y - 5, 10, 10), new Color32(170, 132, 24, 255), false);
+                ui.Panel("map-objective", new Rect(point.x - 5, point.y - 5, 10, 10), WarSandboxUGUI.Amber, false);
             }
             var draft = deployment.Draft;
             for (int i = 0; i < draft.Count; i++)
@@ -175,10 +180,10 @@ namespace MassEngine.Game
                 ui.Panel("map-unit-" + i, rect, WarSandboxTeamPalette.Resolve(entry.teamId), false);
                 if (i == selected)
                 {
-                    ui.Panel("map-selected-top", new Rect(rect.x, rect.y, rect.width, 2), WarSandboxUGUI.Ink, false);
-                    ui.Panel("map-selected-bottom", new Rect(rect.x, rect.yMax - 2, rect.width, 2), WarSandboxUGUI.Ink, false);
-                    ui.Panel("map-selected-left", new Rect(rect.x, rect.y, 2, rect.height), WarSandboxUGUI.Ink, false);
-                    ui.Panel("map-selected-right", new Rect(rect.xMax - 2, rect.y, 2, rect.height), WarSandboxUGUI.Ink, false);
+                    ui.Panel("map-selected-top", new Rect(rect.x, rect.y, rect.width, 2), WarSandboxUGUI.Accent, false);
+                    ui.Panel("map-selected-bottom", new Rect(rect.x, rect.yMax - 2, rect.width, 2), WarSandboxUGUI.Accent, false);
+                    ui.Panel("map-selected-left", new Rect(rect.x, rect.y, 2, rect.height), WarSandboxUGUI.Accent, false);
+                    ui.Panel("map-selected-right", new Rect(rect.xMax - 2, rect.y, 2, rect.height), WarSandboxUGUI.Accent, false);
                 }
                 if (rect.width > 40 && rect.height > 24) ui.Label("map-number-" + i, rect, (i + 1).ToString(), 14, WarSandboxUGUI.Ink, true);
             }
@@ -200,14 +205,14 @@ namespace MassEngine.Game
         private void DrawUGUIPlans(WarSandboxUGUI ui)
         {
             float w = Mathf.Min(920, ui.Width - 40), x = (ui.Width - w) / 2, h = ui.Height;
-            ui.Label("plans-brand", new Rect(x, 16, w - 260, 24), "LOCAL PLANS  /  本地方案", 12, WarSandboxUGUI.Accent, true);
+            ui.Code("plans-brand", new Rect(x + 10, 16, w - 260, 24), "LOCAL PLANS // 本地方案", 12, WarSandboxUGUI.Accent, TextAnchor.MiddleLeft, true);
             ui.Label("plans-title", new Rect(x, 42, w - 260, 42), "本地方案库", 28, null, true);
-            ui.Button("plans-refresh", new Rect(x + w - 244, 36, 100, 36), "刷新列表", RefreshPlans);
-            ui.Button("plans-back", new Rect(x + w - 132, 36, 132, 36), "返回布阵", () => { plansOpen = false; pendingPlanAction = null; clearFocusRequested = true; });
+            ui.Button("plans-refresh", new Rect(x + w - 244, 52, 100, 34), "刷新列表", RefreshPlans);
+            ui.Button("plans-back", new Rect(x + w - 132, 52, 132, 34), "返回布阵", () => { plansOpen = false; pendingPlanAction = null; clearFocusRequested = true; });
             if (pendingPlanAction != null)
             {
                 bool save = pendingPlanAction == "save";
-                ui.Panel("plans-confirm", new Rect(x, 114, w, 234));
+                ui.Panel("plans-confirm", new Rect(x, 114, w, 234)); ui.Brackets("plans-confirm-br", new Rect(x, 114, w, 234));
                 ui.Label("plans-confirm-title", new Rect(x + 18, 134, w - 36, 44), (save ? "覆盖方案 " : "载入方案 ") + pendingPlanSlot + "？", 24, null, true);
                 ui.Label("plans-confirm-note", new Rect(x + 18, 192, w - 36, 60), save ? "旧文件将被替换。写入失败时会保留旧方案。" : "当前输入将被替换，已更新的布阵可撤销恢复。", 16, WarSandboxUGUI.Muted);
                 ui.Button("plans-confirm-yes", new Rect(x + 28, 278, (w - 68) / 2, 40), save ? "确认覆盖" : "确认载入", ExecutePlanAction, true);
@@ -215,7 +220,7 @@ namespace MassEngine.Game
             }
             else
             {
-                ui.Panel("plans-save-card", new Rect(x, 104, w, 152));
+                ui.Panel("plans-save-card", new Rect(x, 104, w, 152)); ui.Brackets("plans-save-card-br", new Rect(x, 104, w, 152), null, 10);
                 ui.Label("plans-save-heading", new Rect(x + 12, 112, w - 24, 28), "保存当前布阵", 18, null, true);
                 ui.Label("plans-slot-label", new Rect(x + 12, 150, 70, 34), "编号", 14, WarSandboxUGUI.Muted);
                 ui.Field("plans-slot", new Rect(x + 82, 150, 96, 34), planSlot, v => planSlot = v, WarSandboxLocalPlanStore.MaxSlotLength);

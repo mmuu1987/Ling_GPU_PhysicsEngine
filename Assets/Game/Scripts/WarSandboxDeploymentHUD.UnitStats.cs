@@ -11,18 +11,19 @@ namespace MassEngine.Game
         public static readonly Color Card = new Color32(10, 20, 28, 255);
         public static readonly Color Row = new Color32(14, 27, 37, 255);
         public static readonly Color Line = new Color(0.47f, 0.78f, 0.94f, 0.28f);
-        public static readonly Color Text = new Color32(217, 232, 242, 255);
+        // Text and accent colours come from the shared B theme so every runtime screen uses one palette.
+        public static readonly Color Text = WarSandboxUGUI.Ink;
         public static readonly Color Bright = Color.white;
-        public static readonly Color Muted = new Color32(127, 169, 192, 255);
-        public static readonly Color Cyan = new Color32(63, 211, 255, 255);
-        public static readonly Color Amber = new Color32(255, 182, 39, 255);
-        public static readonly Color Red = new Color32(255, 91, 85, 255);
-        public static readonly Color Purple = new Color32(177, 140, 255, 255);
+        public static readonly Color Muted = WarSandboxUGUI.Muted;
+        public static readonly Color Cyan = WarSandboxUGUI.Accent;
+        public static readonly Color Amber = WarSandboxUGUI.Amber;
+        public static readonly Color Red = WarSandboxUGUI.Danger;
+        public static readonly Color Purple = WarSandboxUGUI.Purple;
         public static readonly Color Official = new Color32(111, 143, 161, 255);
         public static readonly Color Button = new Color32(16, 32, 44, 255);
         public static readonly Color ButtonInk = new Color32(207, 230, 242, 255);
         public static readonly Color Field = new Color32(5, 12, 18, 255);
-        public static readonly Color Deep = new Color32(4, 18, 26, 255);
+        public static readonly Color Deep = WarSandboxUGUI.Deep;
         public static Color Alpha(Color c, float a) => new Color(c.r, c.g, c.b, a);
         public static Color SourceColor(WarSandboxStatSource source) =>
             source == WarSandboxStatSource.Local ? Cyan : source == WarSandboxStatSource.Global ? Purple : Official;
@@ -118,7 +119,8 @@ namespace MassEngine.Game
 
         private void DrawUGUIStats(WarSandboxUGUI ui)
         {
-            float w = ui.Width, h = ui.Height - 62;
+            // Full height (the battle navigation is a top-right strip now); the card starts below that strip.
+            float w = ui.Width, h = ui.Height;
             var templatesInDraft = DraftTemplates();
             if (templatesInDraft.Count == 0) { CloseStats(); return; }
             if (!templatesInDraft.Contains(statsTemplate)) statsTemplate = templatesInDraft[0];
@@ -128,7 +130,7 @@ namespace MassEngine.Game
             bool ranged = WarSandboxUnitStats.IsRanged(template);
 
             ui.Panel("st-shade", new Rect(0, 0, w, h), WarSandboxStatTheme.Shade);
-            float W = Mathf.Min(1080, w - 32), H = h - 20, x0 = (w - W) / 2, y0 = 10;
+            float W = Mathf.Min(1080, w - 32), y0 = WarSandboxFrontEnd.NavigationLayout(w).yMax + 8, H = h - y0 - 10, x0 = (w - W) / 2;
             var card = new Rect(x0, y0, W, H);
             ui.Panel("st-card", card, WarSandboxStatTheme.Card);
             ui.Panel("st-card-top", new Rect(x0, y0, W, 1), WarSandboxStatTheme.Line, false);

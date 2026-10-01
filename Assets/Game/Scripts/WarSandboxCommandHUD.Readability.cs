@@ -56,13 +56,16 @@ namespace MassEngine.Game
         }
         private void DrawSelectedOrder(WarSandboxUGUI ui, float x, float y, float width)
         {
-            ui.Panel("selection-card", new Rect(x, y, width, 100), WarSandboxUGUI.Soft);
-            ui.Panel("selection-color", new Rect(x, y, 4, 100), WarSandboxTeamPalette.Resolve(controller.selectedTeam), false);
-            ui.Label("selected-army", new Rect(x + 6, y + 3, width - 12, 26), SelectedArmyTitle(), 18, null, true);
+            var card = new Rect(x, y, width, 104);
+            ui.Panel("selection-card", card, new Color32(13, 30, 41, 245), true, WarSandboxUGUI.Line);
+            ui.Brackets("selection-card-br", card, null, 10);
+            ui.Panel("selection-color", new Rect(x, y, 4, 104), WarSandboxTeamPalette.Resolve(controller.selectedTeam), false);
+            ui.Code("selection-code", new Rect(x + 6, y + 4, width - 12, 16), "SELECTED // 指挥目标", 10, WarSandboxUGUI.Accent);
+            ui.LabelAligned("selected-army", new Rect(x + 4, y + 18, width - 8, 28), SelectedArmyTitle(), 18, WarSandboxUGUI.Ink, true, TextAnchor.MiddleLeft);
             var army = controller.SelectedArmy;
             string order = army != null && army.hasOrder ? FormatOrder(army.currentOrder.type) : "等待命令";
-            ui.Label("order-status", new Rect(x + 6, y + 30, width - 12, 24), "军团命令 / " + order, 15, null, true);
-            ui.Label("order-detail", new Rect(x + 6, y + 53, width - 12, 44), SelectedOrderDetail(), 13, WarSandboxUGUI.Muted);
+            ui.LabelAligned("order-status", new Rect(x + 4, y + 44, width - 8, 22), "军团命令 / " + order, 14, WarSandboxUGUI.Accent, true, TextAnchor.MiddleLeft);
+            ui.Label("order-detail", new Rect(x + 4, y + 62, width - 8, 42), SelectedOrderDetail(), 12, WarSandboxUGUI.Muted);
         }
     }
 }
