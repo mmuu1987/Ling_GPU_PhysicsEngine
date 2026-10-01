@@ -23,6 +23,7 @@ namespace MassEngine.Game
             ui.Panel("deployment-bg", new Rect(0, 0, w, h - 62), WarSandboxUGUI.Background);
             if (Confirming) DrawUGUIConfirmation(ui);
             else if (plansOpen) DrawUGUIPlans(ui);
+            else if (statsOpen && deployment.Draft != null) DrawUGUIStats(ui);
             else if (deployment.Draft != null)
             {
                 bool narrow = w < 900;
@@ -77,12 +78,14 @@ namespace MassEngine.Game
             ui.Button("roster-redo", new Rect(x + 3 * (toolWidth + 6), y, toolWidth, 32), "重做", () => { draft.Redo(); ClampSelection(); RefreshAfterUiChange(); }, false, draft.CanRedo);
             y += 42;
             float rosterHeight = Mathf.Min(150, area.height * 0.3f);
+            var stats = deployment.DraftStats;
             ui.Scroll("roster-list", new Rect(x, y, width, rosterHeight), Mathf.Max(48, draft.Count * 48));
             if (draft.Count == 0) ui.Label("roster-empty", new Rect(0, 0, width, 44), "暂无编成 · 点击新增开始", 15, WarSandboxUGUI.Muted);
             for (int i = 0; i < draft.Count; i++)
             {
                 int index = i; var entry = draft[i];
-                ui.Button("roster-item-" + i, new Rect(0, i * 48, width, 42), WarSandboxBattleController.DefaultArmyName(entry.teamId) + "  /  " + entry.Name + "  " + entry.count.ToString("N0"), () =>
+                ui.Button("roster-item-" + i, new Rect(0, i * 48, width, 42), WarSandboxBattleController.DefaultArmyName(entry.teamId) + "  /  " + entry.Name + "  " + entry.count.ToString("N0") +
+                    (stats.HasCustom(entry.template) ? "  · 自定义" : ""), () =>
                 { if (index != selected && CommitFields()) { selected = index; templateMenu = armyMenu = false; RefreshAfterUiChange(); } }, false, true, selected == i);
                 ui.Panel("roster-stripe-" + i, new Rect(0, i * 48, 4, 42), WarSandboxTeamPalette.Resolve(entry.teamId), false);
             }
@@ -90,7 +93,7 @@ namespace MassEngine.Game
             y += rosterHeight + 12;
             if (draft.Count == 0) return;
             float extra = (templateMenu ? deployment.Templates.Count * 38 : 0) + (armyMenu ? (ConfigValidator.MaxTeamId + 1) * 38 : 0);
-            ui.Scroll("roster-properties", new Rect(x, y, width, Mathf.Max(60, area.yMax - y - 12)), 548 + extra + (deployment.rosterPolicy != null ? 72 : 0));
+            ui.Scroll("roster-properties", new Rect(x, y, width, Mathf.Max(60, area.yMax - y - 12)), 548 + 42 + extra + (deployment.rosterPolicy != null ? 72 : 0));
             float fy = 0;
             if (deployment.rosterPolicy != null) { ui.Label("roster-policy-note", new Rect(0, fy, width, 64), deployment.rosterPolicy.explanation, 12, WarSandboxUGUI.Muted); fy += 72; }
             ui.Label("field-section", new Rect(0, fy, width, 26), "编成属性", 15, null, true); fy += 32;
@@ -102,6 +105,8 @@ namespace MassEngine.Game
                     ui.Button("template-" + i, new Rect(12, fy, width - 12, 32), template.unitTypeName, () =>
                     { if (CommitFields()) { deployment.SelectTemplate(selected, template); templateMenu = false; RefreshAfterUiChange(); } }); fy += 38;
                 }
+            bool custom = stats.HasCustom(draft[selected].template);
+            ui.Button("field-unit-stats", new Rect(0, fy, width, 34), "兵种属性  /  " + (custom ? "自定义数值" : "官方数值") + "  ›", OpenStats, false, true, custom); fy += 42;
             ui.Button("field-army", new Rect(0, fy, width, 34), "军团  /  " + WarSandboxBattleController.DefaultArmyName(draft[selected].teamId) + "  ▾", () => armyMenu = !armyMenu); fy += 42;
             if (armyMenu)
                 for (int i = 0; i <= ConfigValidator.MaxTeamId; i++)

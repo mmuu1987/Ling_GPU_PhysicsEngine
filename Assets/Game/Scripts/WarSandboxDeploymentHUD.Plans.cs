@@ -26,7 +26,8 @@ namespace MassEngine.Game
             for (int i = 0; i < planSlots.Length; i++)
             {
                 if (deployment.PlanStore.TryLoad(planSlots[i], out var plan, out _))
-                    planLabels[i] = planSlots[i] + "  /  " + plan.displayName + "  /  " + plan.battlefieldId;
+                    planLabels[i] = planSlots[i] + "  /  " + plan.displayName + "  /  " + plan.battlefieldId +
+                        (plan.statOverrides != null && plan.statOverrides.Length > 0 ? "  /  含兵种数值" : "");
                 else planLabels[i] = planSlots[i] + "  /  文件损坏或版本不支持";
             }
             if (Array.IndexOf(planSlots, selectedPlanSlot) < 0) selectedPlanSlot = null;

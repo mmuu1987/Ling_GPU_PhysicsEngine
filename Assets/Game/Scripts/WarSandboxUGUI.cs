@@ -29,6 +29,7 @@ namespace MassEngine.Game
             public RawImage raw;
             public Action click;
             public Action<string> change;
+            public Action<string> endEdit;
             public Action<float> changeNumber;
             public Action<Vector2, int, bool> pointer;
             public RectTransform content;
@@ -44,9 +45,13 @@ namespace MassEngine.Game
         private static readonly List<RaycastResult> hits = new List<RaycastResult>();
         private RectTransform parent;
         private GameObject ownedEvents;
-        public float Width => Screen.width / Scale;
-        public float Height => Screen.height / Scale;
-        public float Scale => Mathf.Clamp(Mathf.Min(Screen.width / 1280f, Screen.height / 720f), 0.85f, 1.5f);
+        /// <summary>Capture/test hook: lay out as if the screen had this size (null = the real screen). Never set by the game.</summary>
+        public static Vector2? ScreenSizeOverride { get; set; }
+        private static float ScreenWidth => ScreenSizeOverride.HasValue ? ScreenSizeOverride.Value.x : Screen.width;
+        private static float ScreenHeight => ScreenSizeOverride.HasValue ? ScreenSizeOverride.Value.y : Screen.height;
+        public float Width => ScreenWidth / Scale;
+        public float Height => ScreenHeight / Scale;
+        public float Scale => Mathf.Clamp(Mathf.Min(ScreenWidth / 1280f, ScreenHeight / 720f), 0.85f, 1.5f);
         public bool Visible => root != null && root.activeInHierarchy;
 
         public WarSandboxUGUI(Transform owner, string name, int order)
@@ -219,6 +224,58 @@ namespace MassEngine.Game
                 node.slider.onValueChanged.AddListener(v => node.changeNumber?.Invoke(v));
             }
             node.changeNumber = change; node.slider.SetValueWithoutNotify(value);
+        }
+        // ---- Themed variants (additive): explicit colours for dark panels; the light defaults above are unchanged. ----
+        public void LabelAligned(string id, Rect rect, string value, int size, Color color, bool bold, TextAnchor anchor)
+        {
+            var text = Text(Get(id, rect)); if (text.text != value) text.text = value;
+            text.fontSize = size; text.color = color; text.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal; text.alignment = anchor;
+        }
+        public void TintButton(string id, Rect rect, string value, Action click, Color fill, Color ink, bool enabled = true, bool bold = false, int size = 15)
+        {
+            var node = Get(id, rect); var image = Image(node);
+            if (node.button == null)
+            {
+                node.button = node.rect.gameObject.AddComponent<Button>(); node.button.targetGraphic = image;
+                node.button.navigation = new Navigation { mode = Navigation.Mode.None };
+                node.button.onClick.AddListener(() => node.click?.Invoke());
+            }
+            node.click = click; node.button.interactable = enabled; image.color = fill; image.raycastTarget = true;
+            var colors = node.button.colors; colors.normalColor = Color.white; colors.highlightedColor = new Color(0.8f, 0.9f, 0.95f);
+            colors.pressedColor = new Color(0.62f, 0.74f, 0.8f); colors.selectedColor = Color.white; colors.disabledColor = new Color(1, 1, 1, 0.4f);
+            node.button.colors = colors;
+            var text = Text(node); if (text.text != value) text.text = value;
+            text.fontSize = size; text.color = enabled ? ink : new Color(ink.r, ink.g, ink.b, 0.45f);
+            text.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal; text.alignment = TextAnchor.MiddleCenter;
+        }
+        /// <summary>Single-line input committed on end-edit (Enter / focus loss). Never overwritten while focused.</summary>
+        public void TintField(string id, Rect rect, string value, Action<string> endEdit, Color fill, Color ink, bool enabled = true, int limit = 12)
+        {
+            var node = Get(id, rect); Image(node).color = fill;
+            if (node.input == null)
+            {
+                var text = Text(node); text.alignment = TextAnchor.MiddleRight; text.fontSize = 15;
+                node.input = node.rect.gameObject.AddComponent<InputField>(); node.input.textComponent = text;
+                node.input.targetGraphic = node.image; node.input.lineType = InputField.LineType.SingleLine;
+                node.input.onValueChanged.AddListener(v => node.change?.Invoke(v));
+                node.input.onEndEdit.AddListener(v => node.endEdit?.Invoke(v));
+            }
+            node.text.color = ink; node.input.customCaretColor = true; node.input.caretColor = ink;
+            node.input.selectionColor = new Color(ink.r, ink.g, ink.b, 0.3f);
+            node.endEdit = endEdit; node.input.characterLimit = limit; node.input.interactable = enabled;
+            if (!node.input.isFocused && node.input.text != (value ?? "")) node.input.SetTextWithoutNotify(value ?? "");
+        }
+        public void TintSlider(string id, Rect rect, float value, Action<float> change, Color track, Color handle, bool enabled = true)
+        {
+            Slider(id, rect, value, change);
+            var node = nodes[id]; node.image.color = track; node.slider.interactable = enabled;
+            var knob = node.slider.handleRect.GetComponent<Image>(); knob.color = enabled ? handle : new Color(handle.r, handle.g, handle.b, 0.35f);
+            var colors = node.slider.colors; colors.disabledColor = Color.white; node.slider.colors = colors;
+        }
+        public void TintScroll(string id, Rect rect, float contentHeight, Color fill)
+        {
+            Scroll(id, rect, contentHeight);
+            nodes[id].image.color = fill;
         }
         public void Picture(string id, Rect rect, Texture texture)
         {

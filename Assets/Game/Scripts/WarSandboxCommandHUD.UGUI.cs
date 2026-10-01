@@ -10,6 +10,11 @@ namespace MassEngine.Game
         private BattleTelemetryHUD telemetryHud;
         private FlowFieldPreviewHUD flowHud;
         private bool telemetryWasEnabled, flowWasEnabled, diagnosticsCaptured;
+        private bool CustomStatsActive()
+        {
+            var deployment = controller != null ? controller.GetComponent<WarSandboxRuntimeDeployment>() : null;
+            return deployment != null && deployment.HasCustomStats;
+        }
         private void RefreshRuntimeUI()
         {
             ResolveReferences();
@@ -36,7 +41,8 @@ namespace MassEngine.Game
             ui.Panel("brand-mark", new Rect(16, 16, 4, 62), WarSandboxUGUI.Accent, false);
             ui.Label("battle-title", new Rect(30, 23, Mathf.Min(270, w - 478), 24), "战争沙盒  /  " + FormatPhase(controller.Phase), 19, null, true);
             ui.Label("battle-subtitle", new Rect(30, 49, Mathf.Min(310, w - 478), 22),
-                (controller.gameMode == WarSandboxGameMode.ControlPoint ? "中央据点" : "歼灭会战") + "  ·  " + FormatBattleTime(controller.TelemetrySnapshot.battleSeconds), 13, WarSandboxUGUI.Muted);
+                (controller.gameMode == WarSandboxGameMode.ControlPoint ? "中央据点" : "歼灭会战") + "  ·  " + FormatBattleTime(controller.TelemetrySnapshot.battleSeconds) +
+                (CustomStatsActive() ? "  ·  自定义数值" : ""), 13, CustomStatsActive() ? new Color32(176, 112, 0, 255) : WarSandboxUGUI.Muted);
             ui.Button("battle-toggle", new Rect(w - 424, 30, 184, 34), BattleActionLabel(), ToggleBattleFromUI, true,
                 string.IsNullOrEmpty(controller.BattlefieldRuleError));
             ui.Button("battle-help", new Rect(w - 232, 30, 92, 34), "操作提示", () => { helpOpen = !helpOpen; if (helpOpen) diagnosticsOpen = false; nextUiRefresh = 0; }, false, true, helpOpen);
@@ -165,7 +171,8 @@ namespace MassEngine.Game
             ui.Panel("result-shade", new Rect(0, 80, ui.Width, ui.Height - 144), new Color(0.86f, 0.90f, 0.92f, 0.8f), false);
             ui.Panel("result-card", new Rect(x, y, w, height));
             ui.Label("result-title", new Rect(x + 16, y + 18, w - 32, 42), FormatResultTitle(result), 28, WarSandboxUGUI.Accent, true);
-            ui.Label("result-reason", new Rect(x + 16, y + 66, w - 32, 28), FormatVictoryReason(result.victoryReason) + "  /  " + FormatBattleTime(result.battleSeconds), 16, WarSandboxUGUI.Muted);
+            ui.Label("result-reason", new Rect(x + 16, y + 66, w - 32, 28), FormatVictoryReason(result.victoryReason) + "  /  " + FormatBattleTime(result.battleSeconds) +
+                (CustomStatsActive() ? "  /  自定义数值" : ""), 16, WarSandboxUGUI.Muted);
             float tableWidth = w - 48, column = tableWidth / 4;
             string[] headings = { "军团", "初始", "存活", "损失" };
             for (int i = 0; i < headings.Length; i++)

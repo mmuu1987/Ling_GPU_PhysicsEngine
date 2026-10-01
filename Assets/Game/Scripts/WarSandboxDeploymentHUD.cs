@@ -47,7 +47,7 @@ namespace MassEngine.Game
             if (deployment.TryBeginEdit(confirmed, out inputError))
             {
                 CaptureCamera(); selected = 0; placing = false; templateMenu = armyMenu = false;
-                plansOpen = false; pendingPlanAction = null;
+                plansOpen = false; pendingPlanAction = null; statsOpen = pushConfirm = false;
                 ReadFields();
             }
         }
@@ -83,6 +83,11 @@ namespace MassEngine.Game
             { ClampSelection(); ReadFields(); }
             if (Input.GetKeyDown(KeyCode.Escape))
             {
+                if (statsOpen && deployment.IsEditing && !Confirming && !plansOpen)
+                {
+                    if (pushConfirm) pushConfirm = false; else CloseStats();
+                    clearFocusRequested = true; return;
+                }
                 if (plansOpen)
                 {
                     if (pendingPlanAction != null) pendingPlanAction = null;

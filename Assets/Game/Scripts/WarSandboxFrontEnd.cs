@@ -13,6 +13,8 @@ namespace MassEngine.Game
         private void Update()
         {
             if (session == null || WarSandboxSceneSession.Instance != session) return;
+            if (libraryOpen && (session.State != WarSandboxEntryState.Menu || session.SettingsOpen || session.ConfirmationOpen)) CloseLibrary();
+            if (Input.GetKeyDown(KeyCode.Escape) && libraryOpen) LibraryEscape();
             if (Input.GetKeyDown(KeyCode.Escape) && session.SettingsOpen) CloseSettings();
             if (Input.GetKeyDown(KeyCode.Escape) && session.ConfirmationOpen) session.CancelConfirmation();
             if (ui == null) ui = new WarSandboxUGUI(transform, "Front End Canvas", 200);
@@ -26,7 +28,7 @@ namespace MassEngine.Game
                 case WarSandboxEntryState.Battle: DrawNavigation(); break;
                 case WarSandboxEntryState.Loading: DrawLoading(); break;
                 case WarSandboxEntryState.Failed: DrawFailure(); break;
-                default: DrawCatalog(); break;
+                default: if (libraryOpen) DrawLibrary(); else DrawCatalog(); break;
             }
             ui.End();
         }
@@ -64,6 +66,7 @@ namespace MassEngine.Game
             ui.Label("catalog-note", new Rect(left, 98, width, 32), "选择战场 · 调整军团 · 保存方案 · 自由指挥", 15, WarSandboxUGUI.Muted);
             ui.Button("quit", new Rect(left + width - 80, 52, 80, 38), "退出", RequestQuit);
             ui.Button("menu-settings", new Rect(left + width - 170, 52, 80, 38), "设置", session.OpenSettings);
+            ui.Button("menu-unit-library", new Rect(left + width - 280, 52, 100, 38), "兵种库", OpenLibrary);
             string validation = null;
             bool valid = session.catalog != null && session.catalog.TryValidate(WarSandboxSceneSession.CanLoadScene, out validation);
             string message = session.Error ?? validation;

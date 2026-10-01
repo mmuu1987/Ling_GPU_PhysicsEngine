@@ -27,7 +27,23 @@ namespace MassEngine.Game
         private WarSandboxDeploymentInstance active;
         private bool dispatchBeforeEdit;
         private WarSandboxLocalPlanStore planStore;
+        private WarSandboxUnitStatStore statStore;
+        private WarSandboxStatOverrides committedStats = new WarSandboxStatOverrides();
         private readonly WarSandboxTerrainValidation terrainValidation = new WarSandboxTerrainValidation();
+        /// <summary>Player-wide stat layer. Tests may substitute a store in a temporary directory.</summary>
+        public WarSandboxUnitStatStore StatStore
+        {
+            get => statStore ?? (statStore = new WarSandboxUnitStatStore());
+            set => statStore = value ?? throw new ArgumentNullException(nameof(value));
+        }
+        /// <summary>True while the running deployment uses at least one non-official unit stat.</summary>
+        public bool HasCustomStats => active != null && active.HasCustomStats && controller != null &&
+            controller.manager != null && controller.manager.scenarioConfig == active.Scenario;
+        public int CustomTemplateCount => HasCustomStats ? active.CustomTemplateCount : 0;
+        /// <summary>Local (plan) overrides of the applied deployment.</summary>
+        public WarSandboxStatOverrides CommittedStats => committedStats.Clone();
+        /// <summary>Resolver for the open draft: draft-local &gt; global &gt; official.</summary>
+        public WarSandboxStatResolver DraftStats => new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, Draft != null ? Draft.Stats : committedStats);
         public WarSandboxLocalPlanStore PlanStore
         {
             get => planStore ?? (planStore = new WarSandboxLocalPlanStore());
@@ -56,23 +72,108 @@ namespace MassEngine.Game
             if ((controller.Phase == WarSandboxBattlePhase.Running || controller.Phase == WarSandboxBattlePhase.Paused) && !confirmEndBattle)
                 return Reject("请先确认结束当前战斗。", out error);
             var manager = controller.manager;
-            if (committed == null)
-            {
-                if (!WarSandboxDeploymentDraft.TryCapture(manager.scenarioConfig, out var initial, out error)) { Error = error; return false; }
-                sourceScenario = manager.scenarioConfig;
-                committed = initial.Snapshot();
-                foreach (var entry in committed) if (!templates.Contains(entry.template)) templates.Add(entry.template);
-                if (rosterPolicy != null) foreach (var template in rosterPolicy.templates)
-                    if (!templates.Contains(template)) templates.Add(template);
-            }
+            if (!EnsureCommitted(out error)) { Error = error; return false; }
             if (controller.Phase != WarSandboxBattlePhase.Setup) controller.ResetBattle();
             if (controller.Phase != WarSandboxBattlePhase.Setup) return Reject("无法返回布阵阶段。", out error);
             manager.PauseBattle();
-            Draft = new WarSandboxDeploymentDraft(committed, controller.CaptureBattlefieldRules());
+            StatStore.Invalidate();
+            Draft = new WarSandboxDeploymentDraft(committed, controller.CaptureBattlefieldRules(), committedStats);
             dispatchBeforeEdit = manager.enableGpuDispatch;
             manager.enableGpuDispatch = false;
             IsEditing = true; Error = null;
             return true;
+        }
+
+        // The authored scenario is captured once, before any runtime copy replaces it on the manager.
+        private bool EnsureCommitted(out string error)
+        {
+            error = null;
+            if (committed != null) return true;
+            var manager = controller.manager;
+            if (!WarSandboxDeploymentDraft.TryCapture(manager.scenarioConfig, out var initial, out error)) return false;
+            sourceScenario = manager.scenarioConfig;
+            committed = initial.Snapshot();
+            foreach (var entry in committed) if (!templates.Contains(entry.template)) templates.Add(entry.template);
+            if (rosterPolicy != null) foreach (var template in rosterPolicy.templates)
+                if (!templates.Contains(template)) templates.Add(template);
+            return true;
+        }
+
+        /// <summary>
+        /// Called by the scene session while a catalog battlefield finishes loading (before input is
+        /// enabled). With no applicable global override the authored scenario is left untouched. A
+        /// failure never blocks the battlefield: it falls back to official values and reports why.
+        /// </summary>
+        public bool TryApplyGlobalStatsOnLoad(out string warning)
+        {
+            warning = null;
+            if (controller == null || controller.manager == null || battlefieldCatalog == null) return false;
+            var manager = controller.manager;
+            var global = StatStore.Current;
+            warning = StatStore.Warning;
+            if (global.IsEmpty || manager.scenarioConfig == null || manager.scenarioConfig.unitTypes == null) return false;
+            var resolver = new WarSandboxStatResolver(battlefieldCatalog, global, null);
+            bool affected = false;
+            foreach (var unit in manager.scenarioConfig.unitTypes) affected |= unit != null && resolver.HasCustom(unit);
+            if (!affected) return false;
+            if (!EnsureCommitted(out string error)) { warning = "全局兵种数值未生效：" + error; return false; }
+            var previousScenario = manager.scenarioConfig;
+            WarSandboxDeploymentInstance candidate = null;
+            try
+            {
+                candidate = new WarSandboxDeploymentInstance(committed, resolver);
+                manager.scenarioConfig = candidate.Scenario;
+                manager.ResetScenario(); manager.PauseBattle();
+                if (Application.isPlaying && (manager.Buffers == null || !manager.Buffers.IsAllocated ||
+                    manager.UnitTypes == null || manager.UnitTypes.UnitTypeCount != committed.Length))
+                    throw new InvalidOperationException("GPU 部署初始化失败。");
+                var previous = active; active = candidate; candidate = null;
+                previous?.Dispose();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                manager.Release(); manager.scenarioConfig = previousScenario;
+                try { manager.ResetScenario(); manager.PauseBattle(); } catch { }
+                candidate?.Dispose();
+                warning = "全局兵种数值未生效，已按官方数值运行：" + exception.Message;
+                return false;
+            }
+        }
+
+        public bool SetStat(UnitTypeConfig template, WarSandboxUnitStat stat, float value) =>
+            IsEditing && Draft != null && templates.Contains(template) && Draft.SetStat(template, stat, value);
+
+        /// <summary>
+        /// Pushes this plan's overrides of one template to the global layer (by template id). Only the
+        /// fields set locally are written; other global fields are kept. Optionally removes the
+        /// pushed fields from the plan so the template follows the global value from now on.
+        /// </summary>
+        public bool TryPushStats(UnitTypeConfig template, bool clearLocal, out string error)
+        {
+            error = null;
+            if (!IsEditing || Draft == null) return Reject("请先进入布阵阶段。", out error);
+            if (battlefieldCatalog == null || !battlefieldCatalog.TryGetTemplateId(template, out string id, out int revision))
+                return Reject("此兵种没有稳定的模板编号，不能推送到全局。", out error);
+            var local = Draft.Stats.Get(template);
+            if (local.Count == 0) return Reject("本局没有可推送的修改。", out error);
+            var next = StatStore.Current.Clone();
+            next.Merge(id, revision, local);
+            if (!StatStore.TrySave(next, "推送 " + template.unitTypeName + "（" + id + "）" + local.Count + " 项", out error))
+                return Reject(error, out error);
+            if (clearLocal)
+            {
+                var fields = new List<WarSandboxUnitStat>();
+                foreach (var pair in local.Values) fields.Add(pair.Key);
+                Draft.ClearStats(template, fields);
+            }
+            Error = null; return true;
+        }
+
+        public bool TryUndoGlobalChange(out string error)
+        {
+            if (!StatStore.TryUndo(out error)) return Reject(error, out error);
+            Error = null; return true;
         }
 
         public bool TryValidate(out string error)
@@ -115,7 +216,7 @@ namespace MassEngine.Game
             if (!battlefieldCatalog.TryValidateTemplates(out error)) return Reject(error, out error);
             float padding = controller.manager.systemConfig.simulationConfig.boundaryPadding;
             var plan = WarSandboxLocalPlanStore.Create(slot, displayName, entry.id, entry.contentVersion,
-                entry.terrainId, entry.terrainVersion, WorldSize, padding, Draft.Rules, Draft.Snapshot(), battlefieldCatalog, out error);
+                entry.terrainId, entry.terrainVersion, WorldSize, padding, Draft.Rules, Draft.Snapshot(), battlefieldCatalog, Draft.Stats, out error);
             if (plan == null || !PlanStore.TrySave(plan, overwrite, out error)) return Reject(error, out error);
             Error = null; return true;
         }
@@ -137,7 +238,7 @@ namespace MassEngine.Game
             if (!CanAccess() || !IsEditing || Draft == null || candidate == null)
                 return Reject("请先进入布阵阶段。", out error);
             if (!ValidateDraft(candidate, out error)) return Reject(error, out error);
-            Draft.Replace(candidate.Snapshot(), candidate.Rules);
+            Draft.Replace(candidate.Snapshot(), candidate.Rules, candidate.Stats);
             Error = null; return true;
         }
 
@@ -174,7 +275,10 @@ namespace MassEngine.Game
                             throw new InvalidOperationException("部署中心不在地表上。");
                         runtimeEntries[i].center.y = sample.Position.y;
                     }
-                candidate = new WarSandboxDeploymentInstance(runtimeEntries);
+                StatStore.Invalidate();
+                var nextStats = Draft.Stats;
+                candidate = new WarSandboxDeploymentInstance(runtimeEntries,
+                    new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, nextStats));
                 manager.scenarioConfig = candidate.Scenario;
                 manager.enableGpuDispatch = dispatchBeforeEdit;
                 IsEditing = false;
@@ -183,7 +287,7 @@ namespace MassEngine.Game
                     manager.UnitTypes == null || manager.UnitTypes.UnitTypeCount != nextEntries.Length))
                     throw new InvalidOperationException("GPU 部署初始化失败。");
                 var previous = active; active = candidate; candidate = null;
-                committed = nextEntries; Draft = null; Error = null;
+                committed = nextEntries; committedStats = nextStats; Draft = null; Error = null;
                 controller.CommitDeploymentRules();
                 previous?.Dispose();
                 for (int i = 0; i < controller.ArmyCount; i++)

@@ -38,21 +38,30 @@ namespace MassEngine.Game
         {
             public WarSandboxDeploymentEntry[] entries;
             public WarSandboxBattlefieldRules rules;
+            public WarSandboxStatOverrides stats;
         }
         private readonly List<State> undo = new List<State>();
         private readonly List<State> redo = new List<State>();
         private WarSandboxBattlefieldRules rules;
+        private WarSandboxStatOverrides stats;
+        // Consecutive edits of one field (slider drag, repeated typing) collapse into one Undo step.
+        private UnitTypeConfig coalesceTemplate;
+        private WarSandboxUnitStat coalesceStat;
         public WarSandboxBattlefieldRules Rules => rules.Copy();
+        /// <summary>Local (this plan) unit stat overrides; a copy, edit through SetStat/ClearStat.</summary>
+        public WarSandboxStatOverrides Stats => stats.Clone();
         public int Count => entries.Count;
         public int Revision { get; private set; }
         public bool CanUndo => undo.Count > 0;
         public bool CanRedo => redo.Count > 0;
         public WarSandboxDeploymentEntry this[int index] => entries[index];
 
-        public WarSandboxDeploymentDraft(IEnumerable<WarSandboxDeploymentEntry> source, WarSandboxBattlefieldRules? initialRules = null)
+        public WarSandboxDeploymentDraft(IEnumerable<WarSandboxDeploymentEntry> source, WarSandboxBattlefieldRules? initialRules = null,
+            WarSandboxStatOverrides initialStats = null)
         {
             entries = new List<WarSandboxDeploymentEntry>(source);
             rules = (initialRules ?? WarSandboxBattlefieldRules.Default).Copy();
+            stats = initialStats != null ? initialStats.Clone() : new WarSandboxStatOverrides();
         }
 
         public static bool TryCapture(ScenarioConfig scenario, out WarSandboxDeploymentDraft draft, out string error)
@@ -76,6 +85,48 @@ namespace MassEngine.Game
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             Remember(); entries.Clear(); entries.AddRange(source); rules = newRules.Copy();
+        }
+
+        /// <summary>Loading a plan replaces entries, rules and local stat overrides as one Undo step.</summary>
+        public void Replace(WarSandboxDeploymentEntry[] source, WarSandboxBattlefieldRules newRules, WarSandboxStatOverrides newStats)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            Remember(); entries.Clear(); entries.AddRange(source); rules = newRules.Copy();
+            stats = newStats != null ? newStats.Clone() : new WarSandboxStatOverrides();
+        }
+
+        public bool TryGetStat(UnitTypeConfig template, WarSandboxUnitStat stat, out float value) => stats.TryGet(template, stat, out value);
+
+        public bool SetStat(UnitTypeConfig template, WarSandboxUnitStat stat, float value)
+        {
+            if (template == null || !WarSandboxUnitStats.Applies(template, WarSandboxUnitStats.Get(stat))) return false;
+            var probe = stats.Clone();
+            if (!probe.Set(template, stat, value)) return false;
+            bool coalesce = undo.Count > 0 && redo.Count == 0 && coalesceTemplate == template && coalesceStat == stat;
+            if (coalesce) Revision++; else Remember();
+            stats = probe; coalesceTemplate = template; coalesceStat = stat;
+            return true;
+        }
+
+        public bool ClearStat(UnitTypeConfig template, WarSandboxUnitStat stat)
+        {
+            if (!stats.TryGet(template, stat, out _)) return false;
+            Remember(); stats.Remove(template, stat); return true;
+        }
+
+        public bool ClearTemplateStats(UnitTypeConfig template)
+        {
+            if (stats.Get(template).Count == 0) return false;
+            Remember(); stats.RemoveTemplate(template); return true;
+        }
+
+        /// <summary>Removes only the given fields of a template (after they were pushed to the global layer).</summary>
+        public bool ClearStats(UnitTypeConfig template, IEnumerable<WarSandboxUnitStat> fields)
+        {
+            var next = stats.Clone(); bool changed = false;
+            foreach (var field in fields) changed |= next.Remove(template, field);
+            if (!changed) return false;
+            Remember(); stats = next; return true;
         }
 
         public bool Set(int index, WarSandboxDeploymentEntry value)
@@ -119,11 +170,12 @@ namespace MassEngine.Game
         {
             if (from.Count == 0) return false;
             Push(to, Capture()); var snapshot = from[from.Count - 1]; from.RemoveAt(from.Count - 1);
-            entries.Clear(); entries.AddRange(snapshot.entries); rules = snapshot.rules.Copy(); Revision++; return true;
+            entries.Clear(); entries.AddRange(snapshot.entries); rules = snapshot.rules.Copy(); stats = snapshot.stats.Clone();
+            coalesceTemplate = null; Revision++; return true;
         }
 
-        private State Capture() => new State { entries = Snapshot(), rules = rules.Copy() };
-        private void Remember() { Push(undo, Capture()); redo.Clear(); Revision++; }
+        private State Capture() => new State { entries = Snapshot(), rules = rules.Copy(), stats = stats.Clone() };
+        private void Remember() { Push(undo, Capture()); redo.Clear(); coalesceTemplate = null; Revision++; }
         private static void Push(List<State> history, State snapshot)
         {
             if (history.Count == HistoryLimit) history.RemoveAt(0);
@@ -184,10 +236,21 @@ namespace MassEngine.Game
     public sealed class WarSandboxDeploymentInstance : IDisposable
     {
         public ScenarioConfig Scenario { get; private set; }
+        /// <summary>Number of templates running with at least one non-official stat.</summary>
+        public int CustomTemplateCount { get; private set; }
+        public bool HasCustomStats => CustomTemplateCount > 0;
         private readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
 
-        public WarSandboxDeploymentInstance(WarSandboxDeploymentEntry[] entries)
+        public WarSandboxDeploymentInstance(WarSandboxDeploymentEntry[] entries) : this(entries, null) { }
+
+        /// <summary>
+        /// stats == null or no effective change keeps the template's authored Combat/Movement assets
+        /// (byte-for-byte legacy behaviour). Otherwise those two sub-configs are cloned once per
+        /// template and receive the resolved values; source assets are never written.
+        /// </summary>
+        public WarSandboxDeploymentInstance(WarSandboxDeploymentEntry[] entries, WarSandboxStatResolver stats)
         {
+            var tuned = new Dictionary<UnitTypeConfig, KeyValuePair<CombatConfig, MovementConfig>>();
             try
             {
                 Scenario = Own(ScriptableObject.CreateInstance<ScenarioConfig>());
@@ -201,12 +264,47 @@ namespace MassEngine.Game
                     unit.name = e.template.name + " (Runtime)";
                     spawn.name = e.template.spawnConfig.name + " (Runtime)";
                     unit.teamId = e.teamId; unit.spawnConfig = spawn;
+                    if (stats != null)
+                    {
+                        if (!tuned.TryGetValue(e.template, out var configs))
+                        {
+                            configs = default;
+                            if (stats.TryGetEffectiveChanges(e.template, out var changes)) { configs = Tune(e.template, changes); CustomTemplateCount++; }
+                            tuned.Add(e.template, configs);
+                        }
+                        if (configs.Key != null) unit.combatConfig = configs.Key;
+                        if (configs.Value != null) unit.movementConfig = configs.Value;
+                    }
                     spawn.unitCount = e.count; spawn.spawnCenter = e.center;
                     spawn.formationDensity = e.density; spawn.formationAspect = e.aspect; spawn.spawnSize = e.manualSize;
                     Scenario.unitTypes[i] = unit;
                 }
             }
             catch { Dispose(); throw; }
+        }
+
+        private KeyValuePair<CombatConfig, MovementConfig> Tune(UnitTypeConfig template, WarSandboxStatSet changes)
+        {
+            CombatConfig combat = null; MovementConfig movement = null;
+            foreach (var pair in changes.Values)
+            {
+                var definition = WarSandboxUnitStats.Get(pair.Key);
+                if (definition.UsesMovement)
+                {
+                    if (movement == null)
+                    {
+                        movement = Own(UnityEngine.Object.Instantiate(template.movementConfig));
+                        movement.name = template.movementConfig.name + " (Tuned)";
+                    }
+                }
+                else if (combat == null)
+                {
+                    combat = Own(UnityEngine.Object.Instantiate(template.combatConfig));
+                    combat.name = template.combatConfig.name + " (Tuned)";
+                }
+                definition.Write(combat, movement, pair.Value);
+            }
+            return new KeyValuePair<CombatConfig, MovementConfig>(combat, movement);
         }
 
         private T Own<T>(T value) where T : UnityEngine.Object

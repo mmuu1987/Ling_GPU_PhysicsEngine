@@ -21,6 +21,8 @@ namespace MassEngine.Game
         public string CurrentDisplayName { get; private set; }
         public string Error { get; private set; }
         public float LoadingProgress { get; private set; }
+        /// <summary>Non-fatal note from the global unit stat layer for the current battlefield (null = none).</summary>
+        public string StatsWarning { get; private set; }
         public bool ConfirmationOpen { get; private set; }
         public bool SettingsOpen { get; private set; }
         public bool IsLoading => transitionInFlight || State == WarSandboxEntryState.Loading;
@@ -235,6 +237,9 @@ namespace MassEngine.Game
             // catalog rules, not that obsolete layout, are the requested initialization contract.
             if (manager.terrainSurfaceAsset != null && (manager.Buffers == null || !manager.Buffers.IsAllocated))
             { manager.ResetScenario(); manager.PauseBattle(); }
+            // Player-wide unit stat overrides (兵种库). No applicable override = authored scenario untouched.
+            Controller.GetComponent<WarSandboxRuntimeDeployment>().TryApplyGlobalStatsOnLoad(out string statsWarning);
+            StatsWarning = statsWarning;
             if (!TryValidateScene(manager, out error)) { Fail(error); return; }
             Controller.RebuildArmyStates();
             Controller.selectedTeam = FirstDeployedTeam(Controller);

@@ -36,6 +36,10 @@ namespace MassEngine.Game
         public WarSandboxPlanRules rules;
         [DataMember(IsRequired = true)]
         public WarSandboxPlanEntry[] entries;
+        /// <summary>Optional local unit stat overrides (one set per template id). Absent in older plans;
+        /// omitted when empty so plans without overrides stay byte-identical to schema 1.</summary>
+        [DataMember(IsRequired = false, EmitDefaultValue = false)]
+        public WarSandboxTemplateStats[] statOverrides;
     }
 
     [Serializable, DataContract]
@@ -272,7 +276,14 @@ namespace MassEngine.Game
 
         public static WarSandboxPlanFile Create(string slot, string displayName, string battlefieldId, int battlefieldVersion,
             string terrainId, int terrainVersion, Vector2 worldSize, float boundaryPadding,
-            WarSandboxBattlefieldRules rules, WarSandboxDeploymentEntry[] entries, WarSandboxBattlefieldCatalog catalog, out string error)
+            WarSandboxBattlefieldRules rules, WarSandboxDeploymentEntry[] entries, WarSandboxBattlefieldCatalog catalog, out string error) =>
+            Create(slot, displayName, battlefieldId, battlefieldVersion, terrainId, terrainVersion, worldSize, boundaryPadding,
+                rules, entries, catalog, null, out error);
+
+        public static WarSandboxPlanFile Create(string slot, string displayName, string battlefieldId, int battlefieldVersion,
+            string terrainId, int terrainVersion, Vector2 worldSize, float boundaryPadding,
+            WarSandboxBattlefieldRules rules, WarSandboxDeploymentEntry[] entries, WarSandboxBattlefieldCatalog catalog,
+            WarSandboxStatOverrides stats, out string error)
         {
             error = null;
             if (!TryValidateSlot(slot, out error)) return null;
@@ -284,12 +295,26 @@ namespace MassEngine.Game
                 { error = "兵种模板未注册稳定编号：" + (entries[i].template != null ? entries[i].template.name : "Missing"); return null; }
                 saved[i] = WarSandboxPlanEntry.From(entries[i], id, revision);
             }
+            WarSandboxTemplateStats[] savedStats = null;
+            if (stats != null && entries != null)
+            {
+                var used = stats.For(entries.Select(e => e.template));
+                var list = new System.Collections.Generic.List<WarSandboxTemplateStats>();
+                foreach (var template in used.Templates.OrderBy(t => t.name, StringComparer.Ordinal))
+                {
+                    var set = used.Get(template);
+                    if (set.Count == 0 || !catalog.TryGetTemplateId(template, out string id, out int revision)) continue;
+                    list.Add(new WarSandboxTemplateStats { valuesVersion = 1, templateId = id, templateRevision = revision, stats = set.ToContract() });
+                }
+                if (list.Count > 0) savedStats = list.OrderBy(t => t.templateId, StringComparer.Ordinal).ToArray();
+            }
             return new WarSandboxPlanFile
             {
                 schemaVersion = SchemaVersion, planId = slot, displayName = string.IsNullOrWhiteSpace(displayName) ? slot : displayName.Trim(),
                 battlefieldId = battlefieldId, battlefieldVersion = battlefieldVersion, terrainId = terrainId,
                 terrainVersion = terrainVersion, worldWidth = worldSize.x, worldDepth = worldSize.y,
-                boundaryPadding = boundaryPadding, rules = WarSandboxPlanRules.From(rules), entries = saved
+                boundaryPadding = boundaryPadding, rules = WarSandboxPlanRules.From(rules), entries = saved,
+                statOverrides = savedStats
             };
         }
 
@@ -324,6 +349,16 @@ namespace MassEngine.Game
             }
             if (plan.entries.Sum(entry => (long)entry.count) > WarSandboxDeploymentDraft.MaxTotalUnits)
             { error = "方案总人数超出上限。"; return false; }
+            if (plan.statOverrides != null)
+            {
+                if (plan.statOverrides.Length > WarSandboxDeploymentDraft.MaxCompositions) { error = "方案兵种数值条目过多。"; return false; }
+                var ids = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+                foreach (var item in plan.statOverrides)
+                {
+                    if (!WarSandboxTemplateStats.TryValidate(item, out error)) { error = "方案" + error; return false; }
+                    if (!ids.Add(item.templateId)) { error = "方案兵种数值重复：" + item.templateId; return false; }
+                }
+            }
             return true;
         }
 
@@ -356,7 +391,19 @@ namespace MassEngine.Game
                 if (!saved.TryToRuntime(template, out entries[i], out error)) return false;
             }
             if (!plan.rules.TryToRuntime(out var rules, out error)) return false;
-            var candidate = new WarSandboxDeploymentDraft(entries, rules);
+            var stats = new WarSandboxStatOverrides();
+            if (plan.statOverrides != null)
+                foreach (var item in plan.statOverrides)
+                {
+                    // Overrides follow the template id; a template not deployed by this plan is ignored.
+                    UnitTypeConfig template = null;
+                    foreach (var entry in entries)
+                        if (catalog.TryGetTemplateId(entry.template, out string id, out _) && id == item.templateId) { template = entry.template; break; }
+                    if (template == null) continue;
+                    foreach (var pair in WarSandboxStatSet.FromContract(item.stats, out _).Values)
+                        if (WarSandboxUnitStats.Applies(template, WarSandboxUnitStats.Get(pair.Key))) stats.Set(template, pair.Key, pair.Value);
+                }
+            var candidate = new WarSandboxDeploymentDraft(entries, rules, stats);
             if (!candidate.TryValidate(world - Vector2.one * (padding * 2), rules, out error)) return false;
             draft = candidate; return true;
         }
