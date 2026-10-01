@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 3415207974428300860, guid: e2115f63880e3034180c1c6ae1bde026, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: f9b7055b25f58ba4183e395a79dd787e, type: 2}
+  move: {fileID: 7400000, guid: d10b75b44d91dd149b54c2c8d9715c85, type: 2}
+  attack: {fileID: 7400000, guid: 4d880a09a7f263844b02d4da233185a9, type: 2}
+  death: {fileID: 7400000, guid: 1f4fe35d539424d4b92aff07ba26a0d6, type: 2}
+  frameRate: 24
+  targetBodyHeight: 1.8
+  groundBindFeet: 1
+  agentRadius: 0.45
+  lowPolicy: 2
+  lowVertexBudget: 1600
+  paletteColumns: 32
+  paletteRows: 32
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: Ninja01
+  unitTemplate: {fileID: 11400000, guid: 9fef3442a3c78464292da0569c0c5302, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

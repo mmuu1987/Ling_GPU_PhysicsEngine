@@ -75,7 +75,8 @@ namespace MassEngine.Game
             if (id.StartsWith("launch-", StringComparison.Ordinal)) return "首发战役";
             if (id.StartsWith("unified-", StringComparison.Ordinal)) return "自由编成";
             if (id.StartsWith("cavalry-", StringComparison.Ordinal) || id.StartsWith("dragons-", StringComparison.Ordinal) ||
-                id.StartsWith("giants-", StringComparison.Ordinal) || id.StartsWith("nonhuman", StringComparison.Ordinal)) return "新兵种";
+                id.StartsWith("giants-", StringComparison.Ordinal) || id.StartsWith("nonhuman", StringComparison.Ordinal) ||
+                id.StartsWith("troops4-", StringComparison.Ordinal)) return "新兵种";
             return "战场";
         }
         /// <summary>

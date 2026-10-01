@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Game/OfficialRoster/Version03/LaunchMenu.unity
-    guid: e92bb747f9e94fa41842a12217b33816
+    path: Assets/Game/OfficialRoster/Version04/LaunchMenu.unity
+    guid: 5356b26f7f56659489c576e0aebf9782
   - enabled: 1
     path: Assets/Game/M71LaunchPresets/launch-open/WarSandbox.unity
     guid: 5cb91da9fb0c8e24ca9b51b91e0a0b8b
@@ -53,6 +53,15 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Game/Giants3/Prepared02/Integrated/giant-alienBattlefield.unity
     guid: cea78a17392fe854b8996b9da14e07ea
+  - enabled: 1
+    path: Assets/Game/Troops4/Prepared01/Integrated/orcskullBattlefield.unity
+    guid: 491de8121182c94489da04f35ec7af53
+  - enabled: 1
+    path: Assets/Game/Troops4/Prepared01/Integrated/ninjaBattlefield.unity
+    guid: da988cff49edffd4382f7a193292aa1a
+  - enabled: 1
+    path: Assets/Game/Troops4/Prepared01/Integrated/tribalBattlefield.unity
+    guid: 1649ea6d4e9a4d34fb6b0a913a34c48e
   - enabled: 1
     path: Assets/Game/NonhumanBatch2/Prepared01/Integrated/triceratopsBattlefield.unity
     guid: 947f843232441da42a9c8287e6d44394

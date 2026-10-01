@@ -48,6 +48,13 @@ namespace MassEngine.Tests
             new[] { "giants-bluedemon", "Assets/Game/Giants3/Prepared02/Integrated/giant-bluedemonBattlefield.unity" },
             new[] { "giants-alien", "Assets/Game/Giants3/Prepared02/Integrated/giant-alienBattlefield.unity" },
         };
+        /// <summary>Official v4 (new-unit batch 4: regular-size skull orc, ninja, tribal warrior vs the knight legion).</summary>
+        private static readonly string[][] ScenesV4 =
+        {
+            new[] { "troops4-orcskull", "Assets/Game/Troops4/Prepared01/Integrated/orcskullBattlefield.unity" },
+            new[] { "troops4-ninja", "Assets/Game/Troops4/Prepared01/Integrated/ninjaBattlefield.unity" },
+            new[] { "troops4-tribal", "Assets/Game/Troops4/Prepared01/Integrated/tribalBattlefield.unity" },
+        };
         private static string dir = "shots-03";
         private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "OfficialRoster", dir));
 
@@ -66,6 +73,7 @@ namespace MassEngine.Tests
         [UnityTest, Timeout(1500000)] public IEnumerator CaptureOfficialPreviews() { dir = "shots-03"; yield return Capture(Scenes); }
         [UnityTest, Timeout(900000)] public IEnumerator CaptureOfficialV2Previews() { dir = "shots-04"; yield return Capture(ScenesV2); }
         [UnityTest, Timeout(900000)] public IEnumerator CaptureOfficialV3Previews() { dir = "shots-05"; yield return Capture(ScenesV3); }
+        [UnityTest, Timeout(900000)] public IEnumerator CaptureOfficialV4Previews() { dir = "shots-06"; yield return Capture(ScenesV4); }
 
         private static IEnumerator Capture(string[][] scenes)
         {

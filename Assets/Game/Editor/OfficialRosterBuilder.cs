@@ -15,22 +15,25 @@ namespace MassEngine.Game.Editor
 {
     /// <summary>
     /// Official game content: the five M7.1 launch battlefields, unchanged, followed by the new-unit battlefields
-    /// (cavalry, dragons, giants, non-human batch 2, unified roster; v2 adds the giant batch 3). New authored content only: the M7.1 catalog,
+    /// (cavalry, dragons, giants, non-human batch 2, unified roster; v2 adds the giant batch 3; v4 adds the regular-size batch 4).
+    /// New authored content only: the M7.1 catalog,
     /// the unified-roster catalogs and every referenced scene are read, never written. Player-facing names and
     /// descriptions replace the internal trial labels; previews come from OfficialRosterPreviewTests.
     /// </summary>
     public static class OfficialRosterBuilder
     {
         public const string Parent = "Assets/Game/OfficialRoster";
-        /// <summary>Current official content (v3 = v2 + giant batch 3b: blue demon, alien). Earlier versions stay in the project, read-only.</summary>
-        public const string Root = Parent + "/Version03";
+        /// <summary>Current official content (v4 = v3 + new-unit batch 4: skull orc, ninja, tribal warrior). Earlier versions stay in the project, read-only.</summary>
+        public const string Root = Parent + "/Version04";
         public const string Version01Root = Parent + "/Version01";
         public const string Version02Root = Parent + "/Version02";
+        public const string Version03Root = Parent + "/Version03";
         /// <summary>Earlier official versions, oldest first; their previews are reused byte for byte.</summary>
-        public static readonly string[] PreviousRoots = { Version01Root, Version02Root };
+        public static readonly string[] PreviousRoots = { Version01Root, Version02Root, Version03Root };
         public const string CatalogPath = Root + "/Catalog.asset";
         public const string MenuScene = Root + "/LaunchMenu.unity";
-        public const string SourceCatalog = "Assets/Game/Giants3/Prepared02/Integrated/Catalog.asset";
+        /// <summary>Batch-4 collection = the Giants3/Prepared02 collection (v3 source) + the three regular-size troops.</summary>
+        public const string SourceCatalog = "Assets/Game/Troops4/Prepared01/Integrated/Catalog.asset";
         public const string PreviewSource = "Logs/OfficialRoster/previews";
         public const string Output01 = "Builds/OfficialRoster-20261001-01";
         public const string Output02 = "Builds/OfficialRoster-20261001-02";
@@ -38,6 +41,7 @@ namespace MassEngine.Game.Editor
         public const string Output04 = "Builds/OfficialRoster-20261001-04";
         public const string Output05 = "Builds/OfficialRoster-20261001-05";
         public const string Output06 = "Builds/OfficialRoster-20261001-06";
+        public const string Output07 = "Builds/OfficialRoster-20261001-07";
 
         /// <summary>id in <see cref="SourceCatalog"/>, official display name, one-line flavour (no fixed winner).</summary>
         public static readonly string[][] NewEntries =
@@ -52,6 +56,9 @@ namespace MassEngine.Game.Editor
             new[] { "giants-yeti", "巨型雪人", "两头巨型雪人挥拳横扫骑士队列，皮糙肉厚、力大无穷。" },
             new[] { "giants-bluedemon", "巨型蓝魔", "两头巨型蓝魔猛扑骑士队列，攻击凶猛、出手沉重。" },
             new[] { "giants-alien", "外星巨人", "两名外星巨人远距离发射能量弹，骑士必须顶着火力冲到近前。" },
+            new[] { "troops4-orcskull", "骷髅兽人", "头戴骨盔的骷髅兽人步步压上，血厚力沉，以少打多硬撼骑士军团。" },
+            new[] { "troops4-ninja", "忍者突袭", "持刀忍者比骑士跑得更快，出手迅捷但身板单薄，抢先接敌是关键。" },
+            new[] { "troops4-tribal", "部落战士", "戴图腾面具的部落战士成群冲锋，攻守均衡，与骑士军团人数相当。" },
             new[] { "nonhuman2-triceratops", "三角龙冲阵", "体型庞大的三角龙投入战场。" },
             new[] { "nonhuman2-stegosaurus", "剑龙防线", "背负骨板的剑龙投入战场。" },
             new[] { "nonhuman2-spider", "巨型蜘蛛", "成群的巨型蜘蛛投入战场。" },
@@ -60,11 +67,12 @@ namespace MassEngine.Game.Editor
             new[] { "unified-large", "自由编成 · 大型兵种", "面向大型兵种的配兵战场，可编入体型较大的单位。" },
         };
 
-        /// <summary>v1 and v2 were authored on 2026-10-01 and are kept as is; the current content is <see cref="Prepare03"/>.</summary>
-        public static void Prepare01() => throw new InvalidOperationException("Version01 is already authored and kept read-only; run Prepare03.");
-        public static void Prepare02() => throw new InvalidOperationException("Version02 is already authored and kept read-only; run Prepare03.");
+        /// <summary>v1-v3 were authored on 2026-10-01 and are kept as is; the current content is <see cref="Prepare04"/>.</summary>
+        public static void Prepare01() => throw new InvalidOperationException("Version01 is already authored and kept read-only; run Prepare04.");
+        public static void Prepare02() => throw new InvalidOperationException("Version02 is already authored and kept read-only; run Prepare04.");
+        public static void Prepare03() => throw new InvalidOperationException("Version03 is already authored and kept read-only; run Prepare04.");
 
-        public static void Prepare03()
+        public static void Prepare04()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play Mode first.");
             if (Directory.Exists(Root)) throw new InvalidOperationException("Refusing to overwrite existing official content: " + Root);
@@ -142,6 +150,8 @@ namespace MassEngine.Game.Editor
         public static void Build05() => Build(Output05);
         /// <summary>05 plus a dark plate behind the battle title (readable over bright terrain) and a one-line move-target label.</summary>
         public static void Build06() => Build(Output06);
+        /// <summary>v4 content: adds the regular-size batch 4 (skull orc, ninja, tribal warrior) under "新兵种".</summary>
+        public static void Build07() => Build(Output07);
 
         private static void Build(string outputPath)
         {
@@ -158,7 +168,7 @@ namespace MassEngine.Game.Editor
             File.WriteAllText(Path.Combine(output, "说明.txt"),
                 "首次进入 512 人开阔对冲，按 Enter 开战、Space 暂停。配兵布阵可编辑并保存自己的方案。\r\n" +
                 "返回战场目录可选择全部 " + catalog.entries.Length + " 个战场：M7.1 的 5 个首发战场，以及骑兵、飞龙、进化巨龙、巨型恶魔、巨型暴龙、" +
-                "巨型雪人、三角龙、剑龙、巨型蜘蛛和自由编成等新兵种战场。\r\n", new UTF8Encoding(true));
+                "巨型雪人、巨型蓝魔、外星巨人、骷髅兽人、忍者、部落战士、三角龙、剑龙、巨型蜘蛛和自由编成等新兵种战场。\r\n", new UTF8Encoding(true));
             Debug.Log("OFFICIAL_ROSTER_BUILD_OK " + output + " scenes=" + scenes.Length);
         }
 
