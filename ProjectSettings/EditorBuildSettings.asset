@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Game/M71LaunchPresets/LaunchMenu.unity
-    guid: 44eb06dc12e212b4e83cc6b446212676
+    path: Assets/Game/OfficialRoster/Version01/LaunchMenu.unity
+    guid: cc3e78169542b624eaaf8a182c5b06e3
   - enabled: 1
     path: Assets/Game/M71LaunchPresets/launch-open/WarSandbox.unity
     guid: 5cb91da9fb0c8e24ca9b51b91e0a0b8b
@@ -23,6 +23,45 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Game/M71LaunchPresets/launch-standard/WarSandbox.unity
     guid: 26021c555a7d0dc4cadc4da3c2d50cd9
+  - enabled: 1
+    path: Assets/Game/Cavalry/Prepared07/Integrated/Battlefield.unity
+    guid: 9de843379c8635b40bc3bd4989bfb182
+  - enabled: 1
+    path: Assets/Game/Dragons/Prepared13/Integrated/dragonBattlefield.unity
+    guid: 57159cf916db7f749bf401a9acaa66c2
+  - enabled: 1
+    path: Assets/Game/Dragons/Prepared13/Integrated/dragonPhalanxBattlefield.unity
+    guid: ac14be5535563544ea7be97757e8bb51
+  - enabled: 1
+    path: Assets/Game/Dragons/Prepared13/Integrated/dragon-evolvedBattlefield.unity
+    guid: 1695237625d84f449abba26b216752fb
+  - enabled: 1
+    path: Assets/Game/Dragons/Prepared13/Integrated/dragon-evolvedPhalanxBattlefield.unity
+    guid: 3c68f657fd948e6469189e7b431b5413
+  - enabled: 1
+    path: Assets/Game/Giants/Prepared02/Integrated/giant-demonBattlefield.unity
+    guid: 17f37e623ac2e664c813857bb601877b
+  - enabled: 1
+    path: Assets/Game/Giants/Prepared02/Integrated/giant-dinoBattlefield.unity
+    guid: bd6b88c9663b5894e8f84e111374319b
+  - enabled: 1
+    path: Assets/Game/NonhumanBatch2/Prepared01/Integrated/triceratopsBattlefield.unity
+    guid: 947f843232441da42a9c8287e6d44394
+  - enabled: 1
+    path: Assets/Game/NonhumanBatch2/Prepared01/Integrated/stegosaurusBattlefield.unity
+    guid: ad08b454410cdfa46ac18721ca28fa41
+  - enabled: 1
+    path: Assets/Game/NonhumanBatch2/Prepared01/Integrated/spiderBattlefield.unity
+    guid: 062c012d46560104aac53e0ed20de78e
+  - enabled: 1
+    path: Assets/Game/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity
+    guid: c8d264540d45d9c42930606c8fed0602
+  - enabled: 1
+    path: Assets/Game/UnifiedRoster/Version03/Scenes/AllRegularBattlefield.unity
+    guid: 20729e9382d507644b308d553af84c47
+  - enabled: 1
+    path: Assets/Game/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity
+    guid: e96478486288f634bb27169fc23ba6fe
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

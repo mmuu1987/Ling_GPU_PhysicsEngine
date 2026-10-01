@@ -10,7 +10,7 @@ namespace MassEngine.Game
 {
     public sealed partial class WarSandboxTerrainCycle
     {
-        private bool IsPresetRun => report.phase == "presets" || report.phase == "presets-ui" || report.phase == "motion-review" || report.phase == "congestion" || report.phase == "commands" || report.phase == "readability" || report.phase == "ranged";
+        private bool IsPresetRun => report.phase == "presets" || report.phase == "presets-ui" || report.phase == "motion-review" || report.phase == "congestion" || report.phase == "commands" || report.phase == "readability" || report.phase == "ranged" || report.phase == "official-catalog";
 
         private IEnumerator RunPresets()
         {

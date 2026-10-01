@@ -74,12 +74,12 @@ namespace MassEngine.Game
             if (instance != null && instance != this) { Destroy(gameObject); return; }
             instance = this;
             string phase = Argument("--terrain-cycle-phase=");
-            if (phase != "presets" && phase != "presets-ui" && phase != "motion-review" && phase != "congestion" && phase != "commands" && phase != "readability" && phase != "ranged" && phase != "playability-seed" && phase != "playability-reload") session.enterDefaultOnStart = false;
+            if (phase != "presets" && phase != "presets-ui" && phase != "motion-review" && phase != "congestion" && phase != "commands" && phase != "readability" && phase != "ranged" && phase != "playability-seed" && phase != "playability-reload" && phase != "official-catalog") session.enterDefaultOnStart = false;
             DontDestroyOnLoad(gameObject);
             Application.runInBackground = true;
             QualitySettings.vSyncCount = 0;
             // This functional smoke mode is deliberately capped, never FPS evidence.
-            Application.targetFrameRate = phase == "motion-review" || phase == "congestion" || phase == "commands" || phase == "readability" || phase == "ranged" || IsLightLoop ? 30 : -1;
+            Application.targetFrameRate = phase == "motion-review" || phase == "congestion" || phase == "commands" || phase == "readability" || phase == "ranged" || phase == "official-catalog" || IsLightLoop ? 30 : -1;
         }
 
         private void Start()
@@ -97,6 +97,7 @@ namespace MassEngine.Game
             foreach (var entry in session.catalog.entries) { Capture(entry.rules); Capture(entry.terrainSurface); }
             foreach (var entry in session.catalog.templates) CaptureUnit(entry.config);
             if (report.phase == "performance") { yield return RunPerformance(); yield break; }
+            if (IsOfficialRun) { yield return RunOfficialCatalog(); yield break; }
             if (IsPresetRun) { yield return RunPresets(); yield break; }
             if (IsPlayabilityRun) { yield return RunPlayability(); yield break; }
             if (IsReleaseRun) { yield return RunReleaseValidation(); yield break; }
@@ -193,7 +194,7 @@ namespace MassEngine.Game
             report.lightLoop = IsLightLoop;
             Require(!IsLightLoop || report.phase == "seed" || report.phase == "reload" || IsPlayabilityRun, "Light mode only supports persistence loops.");
             Require(report.phase == "seed" || report.phase == "reload" || report.phase == "performance" || IsPresetRun || IsPlayabilityRun || IsReleaseRun,
-                "Specify seed, reload, performance, presets, presets-ui, motion-review, congestion, commands, readability, ranged, playability-seed, playability-reload, release-performance, desktop-performance, gpu-breakdown or stability phase.");
+                "Specify seed, reload, performance, presets, presets-ui, motion-review, congestion, commands, readability, ranged, official-catalog, playability-seed, playability-reload, release-performance, desktop-performance, gpu-breakdown or stability phase.");
             output = AbsoluteArgument("--terrain-cycle-output=");
             Require(!Directory.Exists(output) && !File.Exists(output), "Evidence directory must be fresh.");
             string defaultPlans = Path.GetFullPath(new WarSandboxLocalPlanStore().DirectoryPath);
@@ -213,7 +214,7 @@ namespace MassEngine.Game
                     Disjoint(settingsFile, output) && Disjoint(settingsFile, planDirectory) && !File.Exists(settingsFile), "Light terrain mode requires fresh isolated settings.");
             }
             if (IsReleaseRun) InitializeReleaseSettings();
-            if (report.phase == "motion-review" || report.phase == "congestion" || report.phase == "commands" || report.phase == "readability" || report.phase == "ranged")
+            if (report.phase == "motion-review" || report.phase == "congestion" || report.phase == "commands" || report.phase == "readability" || report.phase == "ranged" || IsOfficialRun)
             {
                 settingsFile = AbsoluteArgument("--war-sandbox-settings-file=");
                 Require(Disjoint(settingsFile, Application.persistentDataPath) && Disjoint(settingsFile, output) &&
