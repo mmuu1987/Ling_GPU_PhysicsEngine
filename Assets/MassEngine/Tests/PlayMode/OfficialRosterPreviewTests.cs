@@ -55,6 +55,13 @@ namespace MassEngine.Tests
             new[] { "troops4-ninja", "Assets/Game/Troops4/Prepared01/Integrated/ninjaBattlefield.unity" },
             new[] { "troops4-tribal", "Assets/Game/Troops4/Prepared01/Integrated/tribalBattlefield.unity" },
         };
+
+        private static readonly string[][] ScenesV5 =
+        {
+            new[] { "troops5-cactoro", "Assets/Game/Troops5/Prepared01/Integrated/cactoroBattlefield.unity" },
+            new[] { "troops5-frog", "Assets/Game/Troops5/Prepared01/Integrated/frogBattlefield.unity" },
+            new[] { "troops5-monkroose", "Assets/Game/Troops5/Prepared01/Integrated/monkrooseBattlefield.unity" },
+        };
         private static string dir = "shots-03";
         private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "OfficialRoster", dir));
 
@@ -74,6 +81,7 @@ namespace MassEngine.Tests
         [UnityTest, Timeout(900000)] public IEnumerator CaptureOfficialV2Previews() { dir = "shots-04"; yield return Capture(ScenesV2); }
         [UnityTest, Timeout(900000)] public IEnumerator CaptureOfficialV3Previews() { dir = "shots-05"; yield return Capture(ScenesV3); }
         [UnityTest, Timeout(900000)] public IEnumerator CaptureOfficialV4Previews() { dir = "shots-06"; yield return Capture(ScenesV4); }
+        [UnityTest, Timeout(900000)] public IEnumerator CaptureOfficialV5Previews() { dir = "shots-07"; yield return Capture(ScenesV5); }
 
         private static IEnumerator Capture(string[][] scenes)
         {

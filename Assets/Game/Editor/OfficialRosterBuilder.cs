@@ -24,16 +24,17 @@ namespace MassEngine.Game.Editor
     {
         public const string Parent = "Assets/Game/OfficialRoster";
         /// <summary>Current official content (v4 = v3 + new-unit batch 4: skull orc, ninja, tribal warrior). Earlier versions stay in the project, read-only.</summary>
-        public const string Root = Parent + "/Version04";
+        public const string Root = Parent + "/Version05";
         public const string Version01Root = Parent + "/Version01";
         public const string Version02Root = Parent + "/Version02";
         public const string Version03Root = Parent + "/Version03";
+        public const string Version04Root = Parent + "/Version04";
         /// <summary>Earlier official versions, oldest first; their previews are reused byte for byte.</summary>
-        public static readonly string[] PreviousRoots = { Version01Root, Version02Root, Version03Root };
+        public static readonly string[] PreviousRoots = { Version01Root, Version02Root, Version03Root, Version04Root };
         public const string CatalogPath = Root + "/Catalog.asset";
         public const string MenuScene = Root + "/LaunchMenu.unity";
         /// <summary>Batch-4 collection = the Giants3/Prepared02 collection (v3 source) + the three regular-size troops.</summary>
-        public const string SourceCatalog = "Assets/Game/Troops4/Prepared01/Integrated/Catalog.asset";
+        public const string SourceCatalog = "Assets/Game/Troops5/Prepared01/Integrated/Catalog.asset";
         public const string PreviewSource = "Logs/OfficialRoster/previews";
         public const string Output01 = "Builds/OfficialRoster-20261001-01";
         public const string Output02 = "Builds/OfficialRoster-20261001-02";
@@ -42,6 +43,7 @@ namespace MassEngine.Game.Editor
         public const string Output05 = "Builds/OfficialRoster-20261001-05";
         public const string Output06 = "Builds/OfficialRoster-20261001-06";
         public const string Output07 = "Builds/OfficialRoster-20261001-07";
+        public const string Output08 = "Builds/OfficialRoster-20261001-08";
 
         /// <summary>id in <see cref="SourceCatalog"/>, official display name, one-line flavour (no fixed winner).</summary>
         public static readonly string[][] NewEntries =
@@ -59,6 +61,9 @@ namespace MassEngine.Game.Editor
             new[] { "troops4-orcskull", "骷髅兽人", "头戴骨盔的骷髅兽人步步压上，血厚力沉，以少打多硬撼骑士军团。" },
             new[] { "troops4-ninja", "忍者突袭", "持刀忍者比骑士跑得更快，出手迅捷但身板单薄，抢先接敌是关键。" },
             new[] { "troops4-tribal", "部落战士", "戴图腾面具的部落战士成群冲锋，攻守均衡，与骑士军团人数相当。" },
+            new[] { "troops5-cactoro", "仙人掌枪手", "荒漠射手直射尖刺，抢先在接敌前压制骑士冲锋；无范围伤害，被近身后需防线支撑。" },
+            new[] { "troops5-frog", "毒蛙群", "体型娇小动作敏捷，数量占优；轻装近战抢攻，前排承受主要冲击。" },
+            new[] { "troops5-monkroose", "猴獴战士", "身手矫健兼具力量与速度，单体近战均衡；面对骑士军团寸土不让。" },
             new[] { "nonhuman2-triceratops", "三角龙冲阵", "体型庞大的三角龙投入战场。" },
             new[] { "nonhuman2-stegosaurus", "剑龙防线", "背负骨板的剑龙投入战场。" },
             new[] { "nonhuman2-spider", "巨型蜘蛛", "成群的巨型蜘蛛投入战场。" },
@@ -67,12 +72,13 @@ namespace MassEngine.Game.Editor
             new[] { "unified-large", "自由编成 · 大型兵种", "面向大型兵种的配兵战场，可编入体型较大的单位。" },
         };
 
-        /// <summary>v1-v3 were authored on 2026-10-01 and are kept as is; the current content is <see cref="Prepare04"/>.</summary>
-        public static void Prepare01() => throw new InvalidOperationException("Version01 is already authored and kept read-only; run Prepare04.");
-        public static void Prepare02() => throw new InvalidOperationException("Version02 is already authored and kept read-only; run Prepare04.");
-        public static void Prepare03() => throw new InvalidOperationException("Version03 is already authored and kept read-only; run Prepare04.");
+        /// <summary>v1-v4 were authored on 2026-10-01 and are kept as is; the current content is <see cref="Prepare05"/>.</summary>
+        public static void Prepare01() => throw new InvalidOperationException("Version01 is already authored and kept read-only; run Prepare05.");
+        public static void Prepare02() => throw new InvalidOperationException("Version02 is already authored and kept read-only; run Prepare05.");
+        public static void Prepare03() => throw new InvalidOperationException("Version03 is already authored and kept read-only; run Prepare05.");
+        public static void Prepare04() => throw new InvalidOperationException("Version04 is already authored and kept read-only; run Prepare05.");
 
-        public static void Prepare04()
+        public static void Prepare05()
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play Mode first.");
             if (Directory.Exists(Root)) throw new InvalidOperationException("Refusing to overwrite existing official content: " + Root);
@@ -152,6 +158,7 @@ namespace MassEngine.Game.Editor
         public static void Build06() => Build(Output06);
         /// <summary>v4 content: adds the regular-size batch 4 (skull orc, ninja, tribal warrior) under "新兵种".</summary>
         public static void Build07() => Build(Output07);
+        public static void Build08() => Build(Output08);
 
         private static void Build(string outputPath)
         {

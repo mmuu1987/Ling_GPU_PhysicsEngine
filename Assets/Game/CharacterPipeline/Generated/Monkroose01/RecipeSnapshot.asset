@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 5052395719043992859, guid: 09147ebb85c7ca640b04cd04ee6bae14, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: 75a43e609cde49b4f92bf912da3d9bd6, type: 2}
+  move: {fileID: 7400000, guid: eab90e711606816488ca692ffcc77f2a, type: 2}
+  attack: {fileID: 7400000, guid: 4f41407c42e8a8a4bb32e14546956781, type: 2}
+  death: {fileID: 7400000, guid: 8ee81b29d85977146b52663e2cb3d308, type: 2}
+  frameRate: 24
+  targetBodyHeight: 2
+  groundBindFeet: 1
+  agentRadius: 0.55
+  lowPolicy: 2
+  lowVertexBudget: 1600
+  paletteColumns: 32
+  paletteRows: 32
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: Monkroose01
+  unitTemplate: {fileID: 11400000, guid: 73dbe41791382fa4d8dc0bf8ee08728a, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

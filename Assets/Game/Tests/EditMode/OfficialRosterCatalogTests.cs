@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace MassEngine.Game.Tests
 {
-    /// <summary>Current official catalog (OfficialRosterBuilder.Prepare04, v4): M7.1 launch content first and unchanged, new-unit battlefields after.</summary>
+    /// <summary>Current official catalog (OfficialRosterBuilder.Prepare05, v5): M7.1 launch content first and unchanged, new-unit battlefields after.</summary>
     public sealed class OfficialRosterCatalogTests
     {
         private static WarSandboxBattlefieldCatalog Official => Load<WarSandboxBattlefieldCatalog>(OfficialRosterBuilder.CatalogPath);
@@ -85,6 +85,7 @@ namespace MassEngine.Game.Tests
         [TestCase(OfficialRosterBuilder.Version01Root)]
         [TestCase(OfficialRosterBuilder.Version02Root)]
         [TestCase(OfficialRosterBuilder.Version03Root)]
+        [TestCase(OfficialRosterBuilder.Version04Root)]
         public void PreviousVersionIsKeptAndTheCurrentCatalogExtendsIt(string root)
         {
             var v1 = Load<WarSandboxBattlefieldCatalog>(root + "/Catalog.asset");
