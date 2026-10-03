@@ -33,7 +33,7 @@ namespace MassEngine.Editor
         private bool disposed;
         public int Size { get; }
 
-        public VatAppearanceRegressionCapture(Bounds framingBounds, int size = DefaultSize)
+        public VatAppearanceRegressionCapture(Bounds framingBounds, int size = DefaultSize, Vector3? viewDirection = null)
         {
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null || !SystemInfo.supportsInstancing ||
                 !SystemInfo.supportsComputeShaders)
@@ -50,7 +50,9 @@ namespace MassEngine.Editor
                 // A loading/compiling placeholder is not valid appearance evidence.
                 ShaderUtil.allowAsyncCompilation = false;
                 float radius = Mathf.Max(.1f, framingBounds.extents.magnitude) * 1.12f;
-                Vector3 eye = framingBounds.center + new Vector3(3f, 1.8f, -5f).normalized * radius * 4f;
+                Vector3 direction = viewDirection ?? new Vector3(3f, 1.8f, -5f);
+                if (!(direction.sqrMagnitude > .00001f)) throw new ArgumentException("Capture view direction must be non-zero.", nameof(viewDirection));
+                Vector3 eye = framingBounds.center + direction.normalized * radius * 4f;
                 Quaternion rotation = Quaternion.LookRotation(framingBounds.center - eye, Vector3.up);
                 view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * Matrix4x4.TRS(eye, rotation, Vector3.one).inverse;
                 projection = GL.GetGPUProjectionMatrix(Matrix4x4.Ortho(-radius, radius, -radius, radius, .01f, radius * 10f + 10f), true);

@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
@@ -29,6 +30,17 @@ namespace MassEngine.Game.Editor
     {
         public const string Root = "Assets/Game/CharacterPipeline";
         public static string Output(CharacterRecipe r) => Root + "/Generated/" + r.outputName;
+
+        /// <summary>Header sniff to reject HTTP-200 error pages before import; Unity remains responsible for full FBX parsing.</summary>
+        public static bool IsFbxPayload(byte[] bytes, string contentType = "")
+        {
+            if (bytes == null || bytes.Length < 1024 || bytes.Length > 32 * 1024 * 1024) return false;
+            if ((contentType ?? "").IndexOf("text/html", StringComparison.OrdinalIgnoreCase) >= 0) return false;
+            string prefix = Encoding.ASCII.GetString(bytes, 0, Math.Min(bytes.Length, 4096));
+            return prefix.StartsWith("Kaydara FBX Binary", StringComparison.Ordinal) ||
+                (prefix.TrimStart().StartsWith("; FBX", StringComparison.Ordinal) && prefix.Contains("FBXHeaderExtension"));
+        }
+
         public static CharacterPipelineReport Preflight(CharacterRecipe r)
         {
             Require(r!=null,"Choose a recipe.");

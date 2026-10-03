@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: troops5-monkroose
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u7334\u7374\u6218\u58EB"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: d36647419c610bb41a49d5f02a239cf6, type: 2}
+  movementConfig: {fileID: 11400000, guid: c7895f342be490e4bbcf180fc086d39f, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 5f1c27a5bb92f5144b0a1d912a710aa0, type: 2}
+  animationConfig: {fileID: 11400000, guid: 3fb0b76563c3ce2409ea622fa29ff7b8, type: 2}
+  combatConfig: {fileID: 11400000, guid: eef974069fe6cc747b1c22738e4f815d, type: 2}
+  renderConfig: {fileID: 11400000, guid: d230a17112b2dbc48af3218dccc70baa, type: 2}

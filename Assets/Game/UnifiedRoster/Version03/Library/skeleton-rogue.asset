@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: skeleton-rogue
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u53CC\u5203\u9AB7\u9AC5"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 1
+  spawnConfig: {fileID: 11400000, guid: 45f0c6bdf82b4fa49a093b4ac793599f, type: 2}
+  movementConfig: {fileID: 11400000, guid: c8a38ecca47dcc2479f7cba9ab13ae1b, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 642118e5557d791498364d8688a367c3, type: 2}
+  animationConfig: {fileID: 11400000, guid: 6d4defec34ca6374b85ee7cd11c2f62a, type: 2}
+  combatConfig: {fileID: 11400000, guid: 917ffabfc46e44744ae37f5c79685c81, type: 2}
+  renderConfig: {fileID: 11400000, guid: 2e22ebe12081bc747a842c32eb3c9d88, type: 2}

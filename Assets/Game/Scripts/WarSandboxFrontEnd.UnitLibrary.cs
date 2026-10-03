@@ -42,7 +42,7 @@ namespace MassEngine.Game
             var list = new List<WarSandboxUnitTemplateEntry>();
             if (session.catalog == null || session.catalog.templates == null) return list;
             foreach (var t in session.catalog.templates)
-                if (t != null && t.config != null && !string.IsNullOrWhiteSpace(t.templateId)) list.Add(t);
+                if (t != null && !t.hiddenFromSelection && t.config != null && !string.IsNullOrWhiteSpace(t.templateId)) list.Add(t);
             return list;
         }
 
@@ -122,8 +122,10 @@ namespace MassEngine.Game
             WarSandboxStatTheme.Corners(ui, "lib-card", card);
             var template = entry.config; bool ranged = WarSandboxUnitStats.IsRanged(template);
             ui.LabelAligned("lib-name", new Rect(rx + 20, top + 12, rw * 0.55f, 36), template.unitTypeName, 24, WarSandboxStatTheme.Bright, true, TextAnchor.MiddleLeft);
-            ui.LabelAligned("lib-id", new Rect(rx + 20, top + 48, rw - 40, 20), entry.templateId + "  ·  r" + entry.revision + "  ·  " + (ranged ? "远程单位" : "近战单位"),
+            ui.LabelAligned("lib-id", new Rect(rx + 20, top + 48, rw - 140, 20), entry.templateId + "  ·  r" + entry.revision + "  ·  " + (ranged ? "远程单位" : "近战单位"),
                 12, WarSandboxStatTheme.Muted, false, TextAnchor.MiddleLeft);
+            ui.TintButton("lib-open-preview", new Rect(rx + rw - 116, top + 46, 96, 24), "查看模型", () => OpenUnitPreview(entry),
+                WarSandboxStatTheme.Button, WarSandboxStatTheme.Cyan);
             float lx = rx + rw - 20 - 2 * 58;
             WarSandboxStatTheme.Chip(ui, "lib-legend-glb", new Rect(lx, top + 18, 52, 22), "全局", WarSandboxStatTheme.Purple);
             WarSandboxStatTheme.Chip(ui, "lib-legend-off", new Rect(lx + 58, top + 18, 52, 22), "官方", WarSandboxStatTheme.Official);
@@ -131,9 +133,13 @@ namespace MassEngine.Game
             ui.Panel("lib-card-line", new Rect(rx + 16, top + 76, rw - 32, 1), WarSandboxStatTheme.Line, false);
 
             float labelW = 118, fieldW = 86, chipW = 50, resetW = 34, gap = 10, innerW = rw - 40;
+            bool portraitColumn = innerW >= 690;
+            float portraitW = portraitColumn ? Mathf.Clamp(innerW * .25f, 170, 214) : 0;
+            if (portraitColumn) innerW -= portraitW + 14;
             float sliderW = Mathf.Max(60, innerW - labelW - fieldW - chipW - resetW - 4 * gap);
-            bool twoRows = rw - 40 < 790;
+            bool twoRows = innerW < 790;
             float footerTop = bottom - (twoRows ? 158 : 110), tableTop = top + 86;
+            if (portraitColumn) DrawUnitPortrait("lib-unit", new Rect(rx + rw - 20 - portraitW, tableTop, portraitW, footerTop - tableTop - 6), entry);
             var rows = new List<WarSandboxStatDefinition>();
             foreach (var d in WarSandboxUnitStats.Definitions) if (WarSandboxUnitStats.Applies(template, d)) rows.Add(d);
             string group = null; float content = 0;

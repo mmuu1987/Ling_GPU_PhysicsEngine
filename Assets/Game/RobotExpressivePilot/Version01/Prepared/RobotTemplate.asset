@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: RobotTemplate
+  m_EditorClassIdentifier: 
+  unitTypeName: "KayKit \u5251\u76FE\u9A91\u58EB"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 47359f07ed8c7cb4c9bb4a3bee001359, type: 2}
+  movementConfig: {fileID: 11400000, guid: f652a250ccb615f46815f5266d6d1e2c, type: 2}
+  flockingConfig: {fileID: 11400000, guid: dba228bd92907134c8d429e937841ced, type: 2}
+  animationConfig: {fileID: 11400000, guid: 21b2a6a57333c6245ac953815562a923, type: 2}
+  combatConfig: {fileID: 11400000, guid: fa7c0984760f61f46bea0b6f690f0832, type: 2}
+  renderConfig: {fileID: 11400000, guid: f7708b2673d9fa64db3454e1665df3cb, type: 2}

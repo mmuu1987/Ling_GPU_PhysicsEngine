@@ -1,13 +1,15 @@
+using System;
 using System.IO;
 using System.Linq;
 using MassEngine.Game.Editor;
 using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace MassEngine.Game.Tests
 {
-    /// <summary>Current official catalog (OfficialRosterBuilder.Prepare05, v5): M7.1 launch content first and unchanged, new-unit battlefields after.</summary>
+    /// <summary>Current official catalog (OfficialRosterBuilder.Prepare07, curated v7): M7.1 launch content first and unchanged, new-unit battlefields after.</summary>
     public sealed class OfficialRosterCatalogTests
     {
         private static WarSandboxBattlefieldCatalog Official => Load<WarSandboxBattlefieldCatalog>(OfficialRosterBuilder.CatalogPath);
@@ -86,12 +88,14 @@ namespace MassEngine.Game.Tests
         [TestCase(OfficialRosterBuilder.Version02Root)]
         [TestCase(OfficialRosterBuilder.Version03Root)]
         [TestCase(OfficialRosterBuilder.Version04Root)]
+        [TestCase(OfficialRosterBuilder.Version05Root)]
+        [TestCase(OfficialRosterBuilder.Version06Root)]
         public void PreviousVersionIsKeptAndTheCurrentCatalogExtendsIt(string root)
         {
             var v1 = Load<WarSandboxBattlefieldCatalog>(root + "/Catalog.asset");
             var current = Official;
             Assert.That(OfficialRosterBuilder.Root, Is.Not.EqualTo(root));
-            Assert.That(current.entries.Length, Is.GreaterThan(v1.entries.Length));
+            Assert.That(current.entries.Length, Is.GreaterThanOrEqualTo(v1.entries.Length), "Quality curation keeps identities; increasing their count is not acceptance.");
             // Every v1 battlefield is kept with identical content and in the same relative order (new ones may sit next to their kind).
             int previous = -1;
             foreach (var a in v1.entries)
@@ -112,6 +116,21 @@ namespace MassEngine.Game.Tests
             Assert.That(File.Exists(root + "/LaunchMenu.unity"), Is.True);
         }
 
+        [Test]
+        public void HistoricalBuildEntrypointsCannotEmitVersion07IntoOldOutputSlots()
+        {
+            Action[] historicalBuilds =
+            {
+                OfficialRosterBuilder.Build01, OfficialRosterBuilder.Build02, OfficialRosterBuilder.Build03, OfficialRosterBuilder.Build04,
+                OfficialRosterBuilder.Build05, OfficialRosterBuilder.Build06, OfficialRosterBuilder.Build07, OfficialRosterBuilder.Build08, OfficialRosterBuilder.Build09
+            };
+            foreach (Action build in historicalBuilds)
+            {
+                var error = Assert.Throws<InvalidOperationException>(() => build());
+                Assert.That(error.Message, Does.Contain("Build10"));
+            }
+        }
+
         private static T Load<T>(string path) where T : Object
         {
             var asset = AssetDatabase.LoadAssetAtPath<T>(path);
@@ -120,3 +139,4 @@ namespace MassEngine.Game.Tests
         }
     }
 }
+

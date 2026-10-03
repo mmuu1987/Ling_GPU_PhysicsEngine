@@ -23,14 +23,14 @@ namespace MassEngine.Game
             Require(audio.SettingsPath == settingsFile && string.IsNullOrEmpty(audio.SettingsError), "Wrong isolated settings.");
             audio.SetMuted(true); // In-memory only; leave player preferences untouched.
             report.actions.Add("Functional smoke: 30 FPS cap; every official battlefield entered via its catalog card; no performance claim.");
-            var entries = session.catalog.entries;
+            var entries = session.catalog.entries; int entered = 0;
             Require(entries.Length > 5 && session.catalog.defaultEntryId == "launch-open" && entries[0].id == "launch-open", "Wrong official catalog.");
             yield return WaitForLoad(WarSandboxEntryState.Battle);
             Require(session.CurrentEntryId == "launch-open", "First launch did not enter the quick battle.");
             for (int i = 0; i < entries.Length; i++)
             {
-                var entry = entries[i];
-                Stage("official-" + entry.id);
+                var entry = entries[i]; if (entry.hiddenFromSelection) continue;
+                Stage("official-" + entry.id); entered++;
                 if (i > 0)
                 {
                     yield return Click("card-" + i); // B1 catalog: select the row, then deploy
@@ -62,7 +62,8 @@ namespace MassEngine.Game
                 }
             }
             Require(!File.Exists(settingsFile), "Smoke test wrote settings.");
-            report.actions.Add("Official catalog entered: " + entries.Length + " battlefields.");
+            Require(entered == session.catalog.SelectableEntryCount, "Not every selectable battlefield was entered.");
+            report.actions.Add("Official catalog entered: " + entered + " selectable battlefields; identity records=" + entries.Length + ".");
             Stage("complete");
         }
     }

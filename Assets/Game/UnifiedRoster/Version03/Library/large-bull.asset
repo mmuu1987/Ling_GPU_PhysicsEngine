@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: large-bull
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5927\u578B\xB7\u516C\u725B"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: f904a17fe760a324b946d152a331493c, type: 2}
+  movementConfig: {fileID: 11400000, guid: 5a411716725dcef44a63bca57ebe77f6, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 6854a477906c7814c98d8847c5048db7, type: 2}
+  animationConfig: {fileID: 11400000, guid: b615ab5f9e493f348ab793b2e9fda856, type: 2}
+  combatConfig: {fileID: 11400000, guid: cf5df731da884314ab8f7848778cbd91, type: 2}
+  renderConfig: {fileID: 11400000, guid: 37f0fb9e30d950d4aa0bd20b7d35112d, type: 2}

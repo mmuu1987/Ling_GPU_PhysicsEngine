@@ -93,11 +93,14 @@ namespace MassEngine.Game
             if (!WarSandboxDeploymentDraft.TryCapture(manager.scenarioConfig, out var initial, out error)) return false;
             sourceScenario = manager.scenarioConfig;
             committed = initial.Snapshot();
-            foreach (var entry in committed) if (!templates.Contains(entry.template)) templates.Add(entry.template);
+            // Only the NEW-unit chooser is filtered; committed drafts and ID resolution remain intact.
+            foreach (var entry in committed) if (Selectable(entry.template) && !templates.Contains(entry.template)) templates.Add(entry.template);
             if (rosterPolicy != null) foreach (var template in rosterPolicy.templates)
-                if (!templates.Contains(template)) templates.Add(template);
+                if (Selectable(template) && !templates.Contains(template)) templates.Add(template);
             return true;
         }
+
+        private bool Selectable(UnitTypeConfig template) => battlefieldCatalog == null || battlefieldCatalog.IsSelectableTemplate(template);
 
         /// <summary>
         /// Called by the scene session while a catalog battlefield finishes loading (before input is

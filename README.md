@@ -1,61 +1,37 @@
-# Ling GPU Physics Engine
+# Ling GPU Physics Engine / War Sandbox
 
-Unity 6 GPU 海量单位战争模拟实验工程。单位的空间哈希、流场导航、群体运动、战斗、弹道、LOD 分类和 VAT 渲染主要在 GPU 上完成，C# 负责配置、资源生命周期、调度与诊断。
+Unity 6 GPU 战争沙盒。Windows 离线单机；玩家在游戏内布阵、保存方案、指挥或观战，完成结算、重开与换场。
 
-## 当前能力
+## 当前版本（2026-10-03）
 
-- 多兵种、多军团的大规模 Agent 模拟
-- GPU 空间哈希、动态/静态流场与密度避让
-- 近战、远程弹道、伤害和状态机
-- VAT 动画、三级 LOD、视锥裁剪与间接绘制
-- 战争沙盒编辑器、运行时命令和异步遥测
+**Version08：机器人正式入列。** 当前为 66 个可选兵种模板、29 个可选战场；保留 68 个模板身份、31 个战场身份用于兼容。模板数不等于独立模型数。
 
-## 打开与验证
+- 本机游戏入口：[Start-WarSandbox.cmd](Builds/OfficialRoster-20261002-04/Start-WarSandbox.cmd)。保留完整包目录；Builds 不在 Git 中，其他机器需另取得构建包。
+- Unity：使用 `6000.3.14f1` 打开仓库根目录，入口为 [Version08/LaunchMenu.unity](Assets/Game/OfficialRoster/Version08/LaunchMenu.unity)。
+- 构建 GUID：`c9915b6a69974ad0ab3edeb66c846fdf`。首次仍进入 512 人准备战场。
+- [最新交付记录](Docs/RobotFormal-20261002/README.md)：机器人表现与入列获认可；人工试玩仍暂停，其他模型转换未授权，V1 尚未签收。
 
-使用 Unity `6000.3.14f1` 打开本目录。测试程序集：
+## 从哪里接手
 
-- EditMode：`MassEngine.Tests`、`Game.Tests`
-- PlayMode：`MassEngine.PlayModeTests`
+| 要了解的内容 | 文档 |
+|---|---|
+| 当前工程、内容依赖、制作与验证入口 | [工程导航](Docs/Engineering-20261003/README.md) |
+| 本地当前任务与限制 | [NEXT_TASK.md](NEXT_TASK.md) |
+| 未提交增量、共享文件与提交边界 | [改动清单](Docs/Engineering-20261003/CHANGE-PLAN.md) |
+| 产品范围与阶段 | [GAME_DESIGN.md](GAME_DESIGN.md)、[ROADMAP.md](ROADMAP.md) |
+| 模型适配与真实预览要求 | [内容门禁](Docs/ContentQuality-20261002/CONTENT-SUITABILITY.md) |
+| 历史交接 | [归档说明](Docs/HandoffHistory-20261003/README.md)（本地） |
 
-GPU PlayMode 测试需要支持 Compute Shader 的图形设备。
+当前工作服务 M7 内容收口。旧专题的“当前入口 / 下一步”按其日期理解；M73FarLod、RangedPlaytest、Version01–07 等不是当前发布入口，旧性能与测试结果不移作 Version08 成绩。
 
-当前试玩入口：`Builds/M73FarLod/Start-WarSandbox.cmd`，首次进入 512 人准备战场；
-目录提供开阔对冲、山地绕行、中央争夺、三方混编和 100k 标准规模选项。
-Unity 场景入口为 `Assets/Game/M71LaunchPresets/LaunchMenu.unity`。
-M7.2补齐全军团结算、手动结束、基础音效与设置；M7.3已完成山地错峰、12轮切场及首发远景优化。完整前台ABBA两组100k交战31.07/30.59 FPS，达到本参考机720p既定镜头/时段的平均约30 FPS目标。下一步为人工试玩，M7/V1尚未签收；旧包和失败证据保留。
+## 代码与验证
 
-人工试玩独立包：`Builds/M7HumanPlaytest-20260928.zip`（约79.4MiB），解压后运行 `Start-WarSandbox.cmd`。同GUID运行文件核对和五预设烟测通过，附操作说明、空白反馈表及独立日志入口；详见 [试玩包准备](Assets/方案设计/M7人工试玩包准备.md)。
+- [引擎层](Assets/MassEngine/README.md)：GPU 模拟、导航、近远程战斗、弹道、VAT/LOD 与资源生命周期；具体行为以模块 README 和代码为准。
+- [游戏层](Assets/Game/README.md)：战场、军团命令、玩家布阵、方案库、三层数值覆盖与运行时 uGUI。
+- `Assets/Game/Editor/CharacterPipeline`：内部角色制作；源件在 `Assets/CharacterPilotSource`，生成产物在 `Assets/Game/CharacterPipeline/Generated`。
+- `ArchivedStages`：不参与编译的历史快照，保留工具移植来源。
+- [性能历史](Assets/Game/PerformanceBaseline.md)：区分人数、硬件、构建 GUID 和测量方式，不代表当前版本已重新测量。
 
-## 目录
+EditMode 程序集：`MassEngine.Tests`、`Game.Tests`；PlayMode：`MassEngine.PlayModeTests`、`Game.PlayModeTests`。GPU 测试需要图形设备，绝不使用 `-nographics`。测试前先读[入口与夹具风险](Docs/Engineering-20261003/README.md)。仅文档改动不启动 Unity 回归。
 
-- `Assets/MassEngine/`：引擎实现与模块文档
-- `Assets/Game/`：战争沙盒玩法层
-- `Assets/方案设计/流场三维扩展方案.md`：仍未实施的三维导航方向
-- `ArchivedStages/`：旧阶段完整快照，不在 Unity 编译范围内，仅供历史追溯。
-  注意：其中的 VAT 烘焙工具（Stage2/3/5/6 四版 `VATBakerWindow_Stage*.cs`）是 M5.1 移植的源材料，
-  现役版本已移到 `Assets/MassEngine/Editor/`；归档版不要当作废弃代码清理。
-
-## 文档入口
-
-- [产品总策划案](GAME_DESIGN.md)
-- [执行路线图](ROADMAP.md)
-- [引擎总览](Assets/MassEngine/README.md)
-- [游戏层](Assets/Game/README.md)
-- [性能基线](Assets/Game/PerformanceBaseline.md)
-- [弹道系统](Assets/MassEngine/Projectiles/README.md)
-- [兵种模型制作管线（M5.4）](Assets/方案设计/兵种模型制作管线.md)
-- [M5.3 重烘外观与 110k 性能回归](Assets/方案设计/M5.3重烘回归记录.md)
-- [M5.4 UnityChan 试玩与验收记录](Assets/方案设计/M5.4试验模型验收记录.md)
-- [M6.1 连续地表原型与预算](Assets/方案设计/M6.1连续地表原型.md)
-- [M6.2 山地可玩整合与验证](Assets/方案设计/M6.2山地可玩整合.md)
-- [M6.3 地形闭环、跨进程方案与性能记录](Assets/方案设计/M6.3地形闭环验收.md)
-- [M7.1 首发预设与轻量入口](Assets/方案设计/M7.1首发预设与轻量入口.md)
-- [M7.2 全军团结算、反馈与设置](Assets/方案设计/M7.2结算反馈与设置.md)
-- [M7.3 参考机采样与持续切换](Assets/方案设计/M7.3参考机采样与持续切换.md)
-- [M7.3 山地错峰与长时复测](Assets/方案设计/M7.3山地错峰与长时复测.md)
-- [M7.3 普通窗口帧率验证](Assets/方案设计/M7.3普通窗口帧率验证.md)
-- [M7.3 GPU拆分与远景预算](Assets/方案设计/M7.3GPU拆分与远景预算.md)
-- [M7 人工试玩与 V1 交付清单](Assets/方案设计/M7人工试玩与V1交付清单.md)
-
-产品方向以 `GAME_DESIGN.md` 为准，阶段状态见 `ROADMAP.md`；当前任务交接仅记录在本地 `NEXT_TASK.md`。
-模块细节以对应目录的 `README.md` 和当前代码为准，不把策划目标当成已实现能力。
+工作边界见 [AGENTS.md](AGENTS.md)：保护 pelican SVG 及 meta，显式路径暂存，通过 PR 整合。NEXT_TASK 按约定不列入新提交，但本工作树已经跟踪它；本轮保留现状。

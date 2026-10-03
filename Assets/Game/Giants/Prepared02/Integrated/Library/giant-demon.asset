@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: giant-demon
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5DE8\u578B\u6076\u9B54\uFF08\u8D85\u5927\uFF09"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 786a0d3721ec19e41a21cdc9a746a701, type: 2}
+  movementConfig: {fileID: 11400000, guid: 6a03aaa23d1e3bc428fa52828acd6833, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 02a05ae1395d94444a5baa88b4d1d9b4, type: 2}
+  animationConfig: {fileID: 11400000, guid: 9fe6d85011f372841873c98dc69274a7, type: 2}
+  combatConfig: {fileID: 11400000, guid: a81f1f534c7ee1240ad6d7dcfbf5c894, type: 2}
+  renderConfig: {fileID: 11400000, guid: ada298ed75aa31044b6fd0a5b320f40b, type: 2}

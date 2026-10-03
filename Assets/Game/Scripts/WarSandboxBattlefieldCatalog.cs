@@ -10,6 +10,11 @@ namespace MassEngine.Game
         public string templateId;
         public int revision = 1;
         public UnitTypeConfig config;
+        [Tooltip("Hide from NEW formal choices only. Stable ID/revision and old-plan resolution are retained.")]
+        public bool hiddenFromSelection;
+        [TextArea] public string selectionNote;
+        [Tooltip("Static full-body image captured from this actual game config, never concept art.")]
+        public Texture2D unitPreview;
 
         public bool TryValidate(out string error)
         {
@@ -41,6 +46,11 @@ namespace MassEngine.Game
         public Texture2D preview;
         [TextArea] public string description;
         [TextArea] public string briefing;
+        [Tooltip("Hide the card without deleting the battlefield's stable identity or compatibility path.")]
+        public bool hiddenFromSelection;
+        [TextArea] public string selectionNote;
+        [Tooltip("Actual authored/selectable templates to inspect. First is the representative unit.")]
+        public string[] featuredTemplateIds = Array.Empty<string>();
 
         public bool TryValidate(Func<string, bool> canLoadScene, out string error)
         {
@@ -78,7 +88,9 @@ namespace MassEngine.Game
         {
             id = id, displayName = displayName, scenePath = scenePath, contentVersion = contentVersion,
             terrainId = terrainId, terrainVersion = terrainVersion, terrainSurface = terrainSurface,
-            rules = rules, preview = preview, description = description, briefing = briefing
+            rules = rules, preview = preview, description = description, briefing = briefing,
+            hiddenFromSelection = hiddenFromSelection, selectionNote = selectionNote,
+            featuredTemplateIds = featuredTemplateIds == null ? null : (string[])featuredTemplateIds.Clone()
         };
 
         public static bool IsScenePath(string path)
@@ -96,6 +108,25 @@ namespace MassEngine.Game
         public WarSandboxBattlefieldEntry[] entries = new WarSandboxBattlefieldEntry[0];
         public WarSandboxUnitTemplateEntry[] templates = new WarSandboxUnitTemplateEntry[0];
 
+        public int SelectableEntryCount
+        {
+            get { int count = 0; if (entries != null) foreach (var e in entries) if (e != null && !e.hiddenFromSelection) count++; return count; }
+        }
+
+        /// <summary>Availability is a menu concern, never a restriction on old-plan/template resolution.</summary>
+        public bool IsSelectableTemplate(UnitTypeConfig config)
+        {
+            if (config == null) return false;
+            if (templates != null) foreach (var t in templates) if (t != null && t.config == config) return !t.hiddenFromSelection;
+            return true; // Backward compatible with legacy Scenario-only/uncatalogued fixtures.
+        }
+
+        public WarSandboxUnitTemplateEntry FindTemplate(string id)
+        {
+            if (templates != null) foreach (var t in templates) if (t != null && t.templateId == id) return t;
+            return null;
+        }
+
         public bool TryValidate(Func<string, bool> canLoadScene, out string error)
         {
             error = null;
@@ -109,6 +140,8 @@ namespace MassEngine.Game
             }
             if (defaultEntryId == null || !ids.Contains(defaultEntryId))
             { error = "defaultEntryId does not name a battlefield in this catalog."; return false; }
+            foreach (var e in entries) if (e.id == defaultEntryId && e.hiddenFromSelection)
+            { error = "defaultEntryId cannot be withdrawn from formal selection."; return false; }
             return true;
         }
 

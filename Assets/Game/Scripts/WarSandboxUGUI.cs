@@ -304,6 +304,19 @@ namespace MassEngine.Game
             if (node.raw == null) { node.raw = node.rect.gameObject.AddComponent<RawImage>(); node.raw.raycastTarget = false; }
             node.raw.texture = texture; node.raw.color = texture != null ? Color.white : Background;
         }
+        /// <summary>Letterbox, never crop or stretch a battlefield photograph/full-body unit image.</summary>
+        public static Rect AspectFit(Rect area, float sourceWidth, float sourceHeight)
+        {
+            if (area.width <= 0 || area.height <= 0 || sourceWidth <= 0 || sourceHeight <= 0)
+                return new Rect(area.center.x, area.center.y, 0, 0);
+            float factor = Mathf.Min(area.width / sourceWidth, area.height / sourceHeight);
+            var size = new Vector2(sourceWidth * factor, sourceHeight * factor);
+            return new Rect(area.center - size * .5f, size);
+        }
+        public void PictureFit(string id, Rect rect, Texture texture)
+        {
+            Picture(id, texture != null ? AspectFit(rect, texture.width, texture.height) : rect, texture);
+        }
         public void Scroll(string id, Rect rect, float contentHeight)
         {
             var node = Get(id, rect);

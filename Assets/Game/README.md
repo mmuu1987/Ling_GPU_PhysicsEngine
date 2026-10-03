@@ -1,5 +1,8 @@
 # Game — 战争沙盒（游戏层）
 
+> **当前入口（2026-10-03）：** 使用 `Assets/Game/OfficialRoster/Version08/LaunchMenu.unity` 与 `Builds/OfficialRoster-20261002-04/Start-WarSandbox.cmd`。本页积累了多阶段实现记录；旧入口、旧待办与“尚未实现”描述按各节日期理解，当前依赖与制作/测试边界见[工程导航](../../Docs/Engineering-20261003/README.md)。人工试玩仍暂停，V1 未签收。
+
+
 ## 第一套派生骑兵（2026-09-30）
 
 已有CC0骑士+官方CC0马，新制作坐姿/鞍位跟随/四动作组合VAT，统一库新增剑盾骑兵入口。正式UnifiedCavalry-20260930-02/Start-Roster.cmd，工程Assets/Game/Cavalry/Prepared01/Integrated02。骑乘与巨兽接敌上下文分开；不是新上下马/冲锋系统或原厂成套动画。详见[骑兵说明](../../Docs/Cavalry-20260930/README.md)。既有代码/核心/旧包不动，人工骑乘观感待确认。

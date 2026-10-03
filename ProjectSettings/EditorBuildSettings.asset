@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Game/OfficialRoster/Version05/LaunchMenu.unity
-    guid: 01aa58efa1c17f54bb5596cfcf51bdbb
+    path: Assets/Game/OfficialRoster/Version08/LaunchMenu.unity
+    guid: fb24b85ee552592468e513710102cdcf
   - enabled: 1
     path: Assets/Game/M71LaunchPresets/launch-open/WarSandbox.unity
     guid: 5cb91da9fb0c8e24ca9b51b91e0a0b8b
@@ -72,6 +72,15 @@ EditorBuildSettings:
     path: Assets/Game/Troops5/Prepared01/Integrated/monkrooseBattlefield.unity
     guid: 2eff84d943ecfcf44989c8493d52cfbd
   - enabled: 1
+    path: Assets/Game/PlatformerBatch6/Prepared01/Integrated/crabBattlefield.unity
+    guid: 2a4a670df5b6365468bc7ccfd148fc62
+  - enabled: 1
+    path: Assets/Game/PlatformerBatch6/Prepared01/Integrated/enemyBattlefield.unity
+    guid: 9139c751961417a4bbb0ff779120e0f1
+  - enabled: 1
+    path: Assets/Game/PlatformerBatch6/Prepared01/Integrated/skullBattlefield.unity
+    guid: 8f0b9abd39d2e4941b0021962f882916
+  - enabled: 1
     path: Assets/Game/NonhumanBatch2/Prepared01/Integrated/triceratopsBattlefield.unity
     guid: 947f843232441da42a9c8287e6d44394
   - enabled: 1
@@ -89,6 +98,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Game/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity
     guid: e96478486288f634bb27169fc23ba6fe
+  - enabled: 1
+    path: Assets/Game/OfficialRoster/Version08/RobotBattlefield.unity
+    guid: f387cbc1cbd8ec34abd72a77979d1790
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

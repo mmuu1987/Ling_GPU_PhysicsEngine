@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RobotRecipe
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 5233611782544359046, guid: 3780f7110e805da4cb0e853b8d23aa27, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: aa2026dc52a281047bbc71ef95a74c04, type: 2}
+  move: {fileID: 7400000, guid: 7a0cc7a74628d5045980fcf02d86a20a, type: 2}
+  attack: {fileID: 7400000, guid: 672085e7f947af8468e035697fb5f73d, type: 2}
+  death: {fileID: 7400000, guid: 963fedbb80efc7d40af2e1b78e4a5186, type: 2}
+  frameRate: 24
+  targetBodyHeight: 1.8
+  groundBindFeet: 1
+  agentRadius: 0.45
+  lowPolicy: 2
+  lowVertexBudget: 1400
+  paletteColumns: 8
+  paletteRows: 4
+  fullVertexBudget: 8000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: TowerDefenseRobot01
+  unitTemplate: {fileID: 11400000, guid: 48887f6cef25af346bc9466d69fbfdbd, type: 2}
+  createTrial: 1
+  trialMenu: {fileID: 102900000, guid: 038d6dd89f90a314c9ffbc921a646c6e, type: 3}
+  trialBattlefield: {fileID: 102900000, guid: 1b128181d1566a34a843d1ae7023994a, type: 3}
+  trialCatalog: {fileID: 11400000, guid: 59c76d94f57ab084390602e610219fae, type: 2}
+  battlefieldId: robot-expressive-pilot
+  templateId: tower-defense-robot-pilot

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: skeleton-mage
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u6301\u6756\u9AB7\u9AC5"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 479680cf445454d44a4fab1312cf2a42, type: 2}
+  movementConfig: {fileID: 11400000, guid: 6c2d4f0c3a0357c448d4e7d9899c3a40, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 4cd3c60954408864ea7ca96c62c99571, type: 2}
+  animationConfig: {fileID: 11400000, guid: 64ee062abeca16e4da69d8c705825b9f, type: 2}
+  combatConfig: {fileID: 11400000, guid: 1433794c76ce24c46947052fee86285b, type: 2}
+  renderConfig: {fileID: 11400000, guid: 5482401b0d7401c43bc13b218f501939, type: 2}

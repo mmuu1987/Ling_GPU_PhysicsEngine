@@ -10,6 +10,7 @@ namespace MassEngine.Game
         private WarSandboxUGUI ui;
         private bool confirmingQuit;
         private float nextRefresh;
+        private Vector2 lastUiSize;
         // Catalog selection (B1 layout: list on the left, the selected battlefield on the right).
         private int catalogSelected = -1;
         private bool catalogReveal;
@@ -18,11 +19,15 @@ namespace MassEngine.Game
         {
             if (session == null || WarSandboxSceneSession.Instance != session) return;
             if (libraryOpen && (session.State != WarSandboxEntryState.Menu || session.SettingsOpen || session.ConfirmationOpen)) CloseLibrary();
-            if (Input.GetKeyDown(KeyCode.Escape) && libraryOpen) LibraryEscape();
+            bool closedPreview = Input.GetKeyDown(KeyCode.Escape) && unitPreviewOpen;
+            if (closedPreview) { unitPreviewOpen = false; nextRefresh = 0; }
+            if (Input.GetKeyDown(KeyCode.Escape) && libraryOpen && !closedPreview) LibraryEscape();
             if (Input.GetKeyDown(KeyCode.Escape) && session.SettingsOpen) CloseSettings();
             if (Input.GetKeyDown(KeyCode.Escape) && session.ConfirmationOpen) session.CancelConfirmation();
             if (CatalogInteractive()) CatalogKeys();
             if (ui == null) ui = new WarSandboxUGUI(transform, "Front End Canvas", 200);
+            var size = new Vector2(ui.Width, ui.Height);
+            if (size != lastUiSize) { lastUiSize = size; nextRefresh = 0; } // Resize must redraw now, not leave a clipped old layout.
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + 0.1f;
             ui.Begin();
@@ -35,6 +40,9 @@ namespace MassEngine.Game
                 case WarSandboxEntryState.Failed: DrawFailure(); break;
                 default: if (libraryOpen) DrawLibrary(); else DrawCatalog(); break;
             }
+            if (unitPreviewOpen && session.State == WarSandboxEntryState.Menu && !session.SettingsOpen && !session.ConfirmationOpen)
+                DrawExpandedUnitPreview();
+            else if (session.State != WarSandboxEntryState.Menu) unitPreviewOpen = false;
             ui.End();
         }
 
@@ -95,23 +103,37 @@ namespace MassEngine.Game
             flavour = newline >= 0 ? description.Substring(newline + 1).Trim() : "";
             return armies.Length > 0 && troops.Length > 0;
         }
-        private bool CatalogInteractive() => session.State == WarSandboxEntryState.Menu && !libraryOpen && !session.SettingsOpen && !session.ConfirmationOpen &&
+        private bool CatalogInteractive() => session.State == WarSandboxEntryState.Menu && !unitPreviewOpen && !libraryOpen && !session.SettingsOpen && !session.ConfirmationOpen &&
             !session.IsLoading && session.catalog != null && session.catalog.entries != null && session.catalog.entries.Length > 0 && !WarSandboxUGUI.IsTyping;
         private void CatalogKeys()
         {
             var entries = session.catalog.entries; EnsureCatalogSelection();
             int move = Input.GetKeyDown(KeyCode.DownArrow) ? 1 : Input.GetKeyDown(KeyCode.UpArrow) ? -1 : 0;
-            if (move != 0) { SelectCatalog(Mathf.Clamp(catalogSelected + move, 0, entries.Length - 1)); }
+            if (move != 0) { SelectCatalog(NextCatalogIndex(entries, catalogSelected, move)); }
             if ((Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) && session.Error == null)
                 session.TryEnterBattlefield(entries[catalogSelected].id, false, out _);
         }
         private void EnsureCatalogSelection()
         {
             var entries = session.catalog.entries;
-            if (catalogSelected >= 0 && catalogSelected < entries.Length) return;
-            catalogSelected = Mathf.Max(0, Array.FindIndex(entries, e => e != null && e.id == session.catalog.defaultEntryId));
+            if (catalogSelected >= 0 && catalogSelected < entries.Length && !entries[catalogSelected].hiddenFromSelection) return;
+            catalogSelected = Array.FindIndex(entries, e => e != null && !e.hiddenFromSelection && e.id == session.catalog.defaultEntryId);
+            if (catalogSelected < 0) catalogSelected = Array.FindIndex(entries, e => e != null && !e.hiddenFromSelection);
         }
-        private void SelectCatalog(int index) { catalogSelected = index; catalogReveal = true; nextRefresh = 0; }
+        public static int NextCatalogIndex(WarSandboxBattlefieldEntry[] entries, int current, int direction)
+        {
+            if (entries == null || direction == 0) return current;
+            int step = direction > 0 ? 1 : -1;
+            for (int i = current + step; i >= 0 && i < entries.Length; i += step)
+                if (entries[i] != null && !entries[i].hiddenFromSelection) return i;
+            return current; // No wrapping; retain the existing arrow-key behaviour at the ends.
+        }
+        private void SelectCatalog(int index)
+        {
+            var entries = session.catalog.entries;
+            if (index < 0 || index >= entries.Length || entries[index] == null || entries[index].hiddenFromSelection) return;
+            catalogSelected = index; catalogReveal = true; nextRefresh = 0;
+        }
         private void DrawCatalog()
         {
             float W = ui.Width, H = ui.Height;
@@ -136,23 +158,23 @@ namespace MassEngine.Game
                 ui.Button("catalog-recheck", new Rect(ex + 20, 282, 140, 40), "重新检查", session.ClearError); return;
             }
             var entries = session.catalog.entries; EnsureCatalogSelection();
-            ui.Code("catalog-version", new Rect(W - 400, 0, 164, 52), entries.Length + " 战场", 12, WarSandboxUGUI.Dim, TextAnchor.MiddleRight);
+            ui.Code("catalog-version", new Rect(W - 400, 0, 164, 52), session.catalog.SelectableEntryCount + " 战场", 12, WarSandboxUGUI.Dim, TextAnchor.MiddleRight);
 
             // Left: grouped list.
             float lx = 24, ly = 72, lw = Mathf.Clamp(W * 0.34f, 300, 440), lh = H - ly - 24;
             var list = new Rect(lx, ly, lw, lh);
             ui.Panel("catalog-list-bg", list); ui.Brackets("catalog-list-br", list);
             float rowH = 36, headH = 30, content = 0; string group = null;
-            for (int i = 0; i < entries.Length; i++) { string g = CatalogGroup(entries[i].id); if (g != group) { content += headH; group = g; } content += rowH; }
+            for (int i = 0; i < entries.Length; i++) { if (entries[i].hiddenFromSelection) continue; string g = CatalogGroup(entries[i].id); if (g != group) { content += headH; group = g; } content += rowH; }
             float sw = lw - 2;
             ui.Scroll("catalog-scroll", new Rect(lx + 1, ly + 10, sw, lh - 52), content + 8);
             float y = 0, selectedTop = 0; group = null; int number = 0;
             for (int i = 0; i < entries.Length; i++)
             {
-                var entry = entries[i]; string g = CatalogGroup(entry.id);
+                var entry = entries[i]; if (entry.hiddenFromSelection) continue; string g = CatalogGroup(entry.id);
                 if (g != group)
                 {
-                    group = g; int count = 0; foreach (var e in entries) if (CatalogGroup(e.id) == g) count++;
+                    group = g; int count = 0; foreach (var e in entries) if (!e.hiddenFromSelection && CatalogGroup(e.id) == g) count++;
                     ui.LabelAligned("group-" + i, new Rect(8, y, sw - 16, headH), g, 13, WarSandboxUGUI.Accent, true, TextAnchor.MiddleLeft);
                     ui.Code("group-" + i + "-count", new Rect(8, y, sw - 20, headH), count.ToString("00"), 12, WarSandboxUGUI.Accent, TextAnchor.MiddleRight);
                     y += headH;
@@ -207,15 +229,8 @@ namespace MassEngine.Game
                 ui.Chip("detail-warning", new Rect(px, ty, 214, 24), "▲ 运行负载较高 · 建议独立显卡", new Color32(40, 30, 8, 255), WarSandboxUGUI.Amber, WarSandboxUGUI.Amber, 12, false);
                 ty += 34;
             }
-            float buttonsY = ry + rh - 70, availableH = buttonsY - 16 - ty, pvw = pw, pvh = pvw * 9f / 16f;
-            if (pvh > availableH) { pvh = Mathf.Max(0, availableH); pvw = pvh * 16f / 9f; }
-            if (pvh >= 60)
-            {
-                var preview = new Rect(px, ty, pvw, pvh);
-                ui.Panel("detail-preview-frame", new Rect(preview.x - 1, preview.y - 1, preview.width + 2, preview.height + 2), WarSandboxUGUI.Line, false);
-                ui.Picture("detail-preview", preview, sel.preview);
-                ui.Chip("detail-preview-tag", new Rect(preview.x + 8, preview.y + 8, 124, 20), "RECON // 战场预览", new Color32(4, 12, 18, 230), WarSandboxUGUI.Accent, null, 11);
-            }
+            float buttonsY = ry + rh - 70, availableH = buttonsY - 16 - ty;
+            DrawCatalogPreviews(sel, new Rect(px, ty, pw, Mathf.Max(0, availableH)));
             ui.Button("card-" + catalogSelected + "-enter", new Rect(rx + rw - 28 - 220, buttonsY, 220, 48), "部署    ›", () => session.TryEnterBattlefield(sel.id, false, out _), true);
             ui.Chip("deploy-key", new Rect(rx + rw - 28 - 64, buttonsY + 16, 52, 16), "ENTER", WarSandboxUGUI.Deep, WarSandboxUGUI.Accent, null, 10);
         }

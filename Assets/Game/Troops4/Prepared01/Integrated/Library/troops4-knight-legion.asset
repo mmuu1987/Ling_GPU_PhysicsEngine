@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: troops4-knight-legion
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5251\u76FE\u9A91\u58EB\u519B\u56E2"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 1
+  spawnConfig: {fileID: 11400000, guid: 23036cb44645ed94984f43b7b210aa8b, type: 2}
+  movementConfig: {fileID: 11400000, guid: 51e661d465578a348b33b14df1fd7d8a, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 1571c2d2c2803ba479eba322cae2af75, type: 2}
+  animationConfig: {fileID: 11400000, guid: c6d478570cfcb054c98e62340dc2423a, type: 2}
+  combatConfig: {fileID: 11400000, guid: 6ae359f95eab438438371919fe04618e, type: 2}
+  renderConfig: {fileID: 11400000, guid: 24b0348e8e314814cbee712c5009c122, type: 2}

@@ -1,5 +1,8 @@
 # 新 Windows 构建与低负载独立验证
 
+> **历史专题 / 入口提示（2026-10-03）：** 本页保留该阶段原始记录；当前正式入口已由 Version08 取代，见[工程导航](Engineering-20261003/README.md)与最新机器人交付记录。下文“当前”“下一步”及构建命令不作为现在的执行清单。旧手工测试仍暂停，其他模型转换未授权；技术结果与人工认可范围按原记录保留。
+
+
 工程根目录：`E:\GitHub\_worktrees\WarSandboxBattlefieldRules`。Unity Hub 打开此目录，不是 `Assets`。
 入口场景：`Assets/Game/M71LaunchPresets/LaunchMenu.unity`。
 

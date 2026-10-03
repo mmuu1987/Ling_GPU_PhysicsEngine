@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: DragonPhalanxKnight160
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5BC6\u96C6\u65B9\u9635\u9A91\u58EB\uFF08160\uFF09"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 1
+  spawnConfig: {fileID: 11400000, guid: 5dccc2e7e7ee497428cd40d94ee7814f, type: 2}
+  movementConfig: {fileID: 11400000, guid: 47ac04e69e549244aacc27b550152388, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 70f9dab6dadd12a4e92d8c2a50f63744, type: 2}
+  animationConfig: {fileID: 11400000, guid: f97e393f166b9d042ba239f14ec0b0b7, type: 2}
+  combatConfig: {fileID: 11400000, guid: ad625ed4c03857c479346e3ec320c7ca, type: 2}
+  renderConfig: {fileID: 11400000, guid: f18505ae9eebb18439beefed6b2c3baf, type: 2}

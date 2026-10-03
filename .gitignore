@@ -1,5 +1,6 @@
 # Unity generated folders
-[Ll]ibrary/
+# Only the project-root Unity cache; Assets/**/Library contains source assets.
+/[Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
 [Bb]uild/

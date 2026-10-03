@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: troops6-enemy
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u7EFF\u76AE\u5C0F\u602A"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 034de13eb65063040ac4e74c2fc408b7, type: 2}
+  movementConfig: {fileID: 11400000, guid: c97fe571f4fab7b4f862fe149e82edc7, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 3ad883ea9a424194997ea42f0cd6b3e5, type: 2}
+  animationConfig: {fileID: 11400000, guid: 2f6a2742cdf879643b171260708528d5, type: 2}
+  combatConfig: {fileID: 11400000, guid: 8b02d1969609b40478b3dc77863290a1, type: 2}
+  renderConfig: {fileID: 11400000, guid: e66fdf27c325fb742a908e1ceda23b3c, type: 2}
