@@ -39,11 +39,7 @@ namespace MassEngine.Game
 
         private List<WarSandboxUnitTemplateEntry> LibraryTemplates()
         {
-            var list = new List<WarSandboxUnitTemplateEntry>();
-            if (session.catalog == null || session.catalog.templates == null) return list;
-            foreach (var t in session.catalog.templates)
-                if (t != null && !t.hiddenFromSelection && t.config != null && !string.IsNullOrWhiteSpace(t.templateId)) list.Add(t);
-            return list;
+            return WarSandboxRosterChoices.Library(session.catalog);
         }
 
         private bool LibraryDirty => libraryPending != null && libraryPendingId != null &&
@@ -81,8 +77,8 @@ namespace MassEngine.Game
             var templates = LibraryTemplates();
             float W = Mathf.Min(1180, w - 32), x0 = (w - W) / 2;
             ui.LabelAligned("lib-brand", new Rect(x0 + 4, 14, 400, 20), "UNIT LIBRARY  /  兵种库", 11, WarSandboxStatTheme.Cyan, true, TextAnchor.MiddleLeft);
-            ui.LabelAligned("lib-title", new Rect(x0 + 4, 34, W - 200, 40), "全局兵种数值", 28, WarSandboxStatTheme.Bright, true, TextAnchor.MiddleLeft);
-            ui.LabelAligned("lib-note", new Rect(x0 + 4, 74, W - 160, 26), W < 900 ? "按模板编号生效 · 官方数值不会被修改" : "按模板编号生效 · 影响所有战场与方案中未单独覆盖的字段 · 官方数值来自兵种资源，不会被修改",
+            ui.LabelAligned("lib-title", new Rect(x0 + 4, 34, W - 200, 40), "兵种图鉴", 28, WarSandboxStatTheme.Bright, true, TextAnchor.MiddleLeft);
+            ui.LabelAligned("lib-note", new Rect(x0 + 4, 74, W - 160, 26), W < 900 ? "同模型只展示代表角色 · 数值按模板编号生效" : "同模型展示代表角色 · 修改数值仅作用于该模板编号，不自动同步到旧战场同模型变体",
                 13, WarSandboxStatTheme.Muted, false, TextAnchor.MiddleLeft);
             ui.TintButton("lib-back", new Rect(x0 + W - 150, 34, 150, 40), "返回目录", () => LibraryGuard(CloseLibrary),
                 WarSandboxStatTheme.Cyan, WarSandboxStatTheme.Deep, true, true);

@@ -7,22 +7,22 @@ namespace MassEngine.Game
     /// <summary>Shared dark "tactical" palette for the unit stat screens (deployment dossier and front-end library).</summary>
     public static class WarSandboxStatTheme
     {
-        public static readonly Color Shade = new Color(0.02f, 0.04f, 0.06f, 0.97f);
-        public static readonly Color Card = new Color32(10, 20, 28, 255);
-        public static readonly Color Row = new Color32(14, 27, 37, 255);
-        public static readonly Color Line = new Color(0.47f, 0.78f, 0.94f, 0.28f);
+        public static readonly Color Shade = WarSandboxUGUI.Background;
+        public static readonly Color Card = WarSandboxUGUI.Surface;
+        public static readonly Color Row = WarSandboxUGUI.Raised;
+        public static readonly Color Line = WarSandboxUGUI.Line;
         // Text and accent colours come from the shared B theme so every runtime screen uses one palette.
         public static readonly Color Text = WarSandboxUGUI.Ink;
-        public static readonly Color Bright = Color.white;
+        public static readonly Color Bright = WarSandboxUGUI.Ink;
         public static readonly Color Muted = WarSandboxUGUI.Muted;
         public static readonly Color Cyan = WarSandboxUGUI.Accent;
         public static readonly Color Amber = WarSandboxUGUI.Amber;
         public static readonly Color Red = WarSandboxUGUI.Danger;
         public static readonly Color Purple = WarSandboxUGUI.Purple;
-        public static readonly Color Official = new Color32(111, 143, 161, 255);
-        public static readonly Color Button = new Color32(16, 32, 44, 255);
-        public static readonly Color ButtonInk = new Color32(207, 230, 242, 255);
-        public static readonly Color Field = new Color32(5, 12, 18, 255);
+        public static readonly Color Official = WarSandboxUGUI.Muted;
+        public static readonly Color Button = WarSandboxUGUI.Soft;
+        public static readonly Color ButtonInk = WarSandboxUGUI.Ink;
+        public static readonly Color Field = WarSandboxUGUI.FieldFill;
         public static readonly Color Deep = WarSandboxUGUI.Deep;
         public static Color Alpha(Color c, float a) => new Color(c.r, c.g, c.b, a);
         public static Color SourceColor(WarSandboxStatSource source) =>
@@ -32,10 +32,7 @@ namespace MassEngine.Game
 
         public static void Corners(WarSandboxUGUI ui, string id, Rect r)
         {
-            ui.Panel(id + "-c0", new Rect(r.x, r.y, 14, 2), Cyan, false); ui.Panel(id + "-c1", new Rect(r.x, r.y, 2, 14), Cyan, false);
-            ui.Panel(id + "-c2", new Rect(r.xMax - 14, r.y, 14, 2), Cyan, false); ui.Panel(id + "-c3", new Rect(r.xMax - 2, r.y, 2, 14), Cyan, false);
-            ui.Panel(id + "-c4", new Rect(r.x, r.yMax - 2, 14, 2), Cyan, false); ui.Panel(id + "-c5", new Rect(r.x, r.yMax - 14, 2, 14), Cyan, false);
-            ui.Panel(id + "-c6", new Rect(r.xMax - 14, r.yMax - 2, 14, 2), Cyan, false); ui.Panel(id + "-c7", new Rect(r.xMax - 2, r.yMax - 14, 2, 14), Cyan, false);
+            // Rounded shared panel primitives supply the frame.
         }
 
         public static void Chip(WarSandboxUGUI ui, string id, Rect r, string text, Color color)

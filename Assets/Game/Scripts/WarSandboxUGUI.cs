@@ -10,26 +10,25 @@ namespace MassEngine.Game
     // Owned by a presenter and destroyed with it. Does not write scenes or shared assets.
     public sealed class WarSandboxUGUI : IDisposable
     {
-        // B "tactical command" theme (dark field, cyan / amber / red). The names are the ones every presenter already
-        // uses, so screens that only rely on the defaults follow the theme without per-screen colours.
-        public static readonly Color Background = new Color32(6, 13, 19, 255);
-        public static readonly Color Surface = new Color32(11, 21, 30, 240);
-        public static readonly Color Ink = new Color32(217, 232, 242, 255);
-        public static readonly Color Muted = new Color32(127, 169, 192, 255);
-        public static readonly Color Accent = new Color32(63, 211, 255, 255);
-        public static readonly Color Soft = new Color32(22, 60, 78, 255);
-        public static readonly Color Line = new Color32(38, 66, 84, 255);
-        public static readonly Color Danger = new Color32(255, 91, 85, 255);
-        public static readonly Color Amber = new Color32(255, 182, 39, 255);
-        public static readonly Color Purple = new Color32(177, 140, 255, 255);
-        /// <summary>Default button fill (shown at the 0.86 normal tint, brightening on hover).</summary>
-        public static readonly Color Raised = new Color32(21, 40, 54, 255);
-        public static readonly Color FieldFill = new Color32(8, 17, 25, 255);
-        public static readonly Color Dim = new Color32(84, 113, 130, 255);
-        /// <summary>Ink on cyan (primary buttons, tags).</summary>
-        public static readonly Color Deep = new Color32(4, 18, 26, 255);
-        public static readonly Color Bar = new Color32(7, 15, 22, 250);
-        public static readonly Color Shade = new Color(0.01f, 0.03f, 0.05f, 0.86f);
+        // Toy-table presentation: cream paper, sky blue navigation and warm primary actions.
+        public static readonly Color Background = new Color32(245, 245, 232, 255);
+        public static readonly Color Surface = new Color32(255, 253, 244, 250);
+        public static readonly Color Ink = new Color32(38, 66, 81, 255);
+        public static readonly Color Muted = new Color32(94, 113, 118, 255);
+        public static readonly Color Accent = new Color32(37, 125, 176, 255);
+        public static readonly Color Soft = new Color32(216, 239, 247, 255);
+        public static readonly Color Line = new Color32(208, 217, 211, 255);
+        public static readonly Color Danger = new Color32(182, 65, 61, 255);
+        public static readonly Color Amber = new Color32(255, 185, 73, 255);
+        public static readonly Color Purple = new Color32(123, 99, 165, 255);
+        public static readonly Color Raised = new Color32(235, 243, 240, 255);
+        public static readonly Color FieldFill = new Color32(255, 255, 250, 255);
+        public static readonly Color Dim = new Color32(121, 138, 141, 255);
+        public static readonly Color Deep = new Color32(45, 60, 68, 255);
+        public static readonly Color Bar = new Color32(172, 217, 236, 250);
+        public static readonly Color Shade = new Color(0.12f, 0.20f, 0.24f, 0.72f);
+        private Texture2D roundedTexture;
+        private Sprite roundedSprite;
         private sealed class Node
         {
             public RectTransform rect;
@@ -46,6 +45,7 @@ namespace MassEngine.Game
             public Action<Vector2, int, bool> pointer;
             public RectTransform content;
             public Image[] edges;
+            public Outline outline;
             public bool used;
         }
         private readonly Dictionary<string, Node> nodes = new Dictionary<string, Node>();
@@ -64,7 +64,7 @@ namespace MassEngine.Game
         private static float ScreenHeight => ScreenSizeOverride.HasValue ? ScreenSizeOverride.Value.y : Screen.height;
         public float Width => ScreenWidth / Scale;
         public float Height => ScreenHeight / Scale;
-        public float Scale => Mathf.Clamp(Mathf.Min(ScreenWidth / 1280f, ScreenHeight / 720f), 0.85f, 1.5f);
+        public float Scale => Mathf.Clamp(Mathf.Min(ScreenWidth / 1280f, ScreenHeight / 720f), 0.5f, 1.5f);
         public bool Visible => root != null && root.activeInHierarchy;
 
         public WarSandboxUGUI(Transform owner, string name, int order)
@@ -76,6 +76,16 @@ namespace MassEngine.Game
             raycaster = root.GetComponent<GraphicRaycaster>();
             font = Font.CreateDynamicFontFromOSFont(new[] { "Microsoft YaHei", "SimHei", "Arial" }, 18);
             mono = Font.CreateDynamicFontFromOSFont(new[] { "Consolas", "Cascadia Mono", "Courier New", "Microsoft YaHei" }, 16);
+            roundedTexture = new Texture2D(64, 64, TextureFormat.RGBA32, false) { name = "Toy UI rounded card", hideFlags = HideFlags.DontSave, filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color[64 * 64];
+            for (int y = 0; y < 64; y++) for (int x = 0; x < 64; x++)
+            {
+                float dx = Mathf.Max(0, Mathf.Abs(x - 31.5f) - 15.5f), dy = Mathf.Max(0, Mathf.Abs(y - 31.5f) - 15.5f);
+                pixels[y * 64 + x] = new Color(1, 1, 1, Mathf.Clamp01(16f - Mathf.Sqrt(dx * dx + dy * dy)));
+            }
+            roundedTexture.SetPixels(pixels); roundedTexture.Apply(false, true);
+            roundedSprite = Sprite.Create(roundedTexture, new Rect(0, 0, 64, 64), new Vector2(.5f, .5f), 100, 0, SpriteMeshType.FullRect, new Vector4(18, 18, 18, 18));
+            roundedSprite.hideFlags = HideFlags.DontSave;
             EnsureEvents(); instances.Add(this);
         }
         private void EnsureEvents()
@@ -152,6 +162,9 @@ namespace MassEngine.Game
         private Image Image(Node node)
         {
             if (node.image == null) node.image = node.rect.gameObject.AddComponent<Image>();
+            bool rounded = Mathf.Min(node.rect.sizeDelta.x, node.rect.sizeDelta.y) >= 28;
+            node.image.sprite = rounded ? roundedSprite : null;
+            node.image.type = rounded ? UnityEngine.UI.Image.Type.Sliced : UnityEngine.UI.Image.Type.Simple;
             return node.image;
         }
         private Text Text(Node node)
@@ -186,8 +199,8 @@ namespace MassEngine.Game
                 node.button.onClick.AddListener(() => node.click?.Invoke());
             }
             node.click = click; node.button.interactable = enabled; image.raycastTarget = true;
-            image.color = primary ? Accent : selected ? Soft : Raised;
-            var colors = node.button.colors; colors.normalColor = new Color(0.86f, 0.86f, 0.86f); colors.highlightedColor = Color.white;
+            image.color = primary ? Amber : selected ? Soft : Raised;
+            var colors = node.button.colors; colors.normalColor = Color.white; colors.highlightedColor = Color.white;
             colors.pressedColor = new Color(0.7f, 0.7f, 0.7f); colors.selectedColor = colors.normalColor; colors.disabledColor = new Color(0.62f, 0.62f, 0.62f, 0.55f);
             node.button.colors = colors;
             Edge(node, primary ? Color.clear : selected ? Accent : Line);
@@ -349,34 +362,22 @@ namespace MassEngine.Game
         /// <summary>1px border as four anchored child images (no raycast); a transparent colour hides it.</summary>
         private void Edge(Node node, Color color)
         {
-            if (node.edges == null)
+            if (node.outline == null && color.a > 0 && node.image != null)
             {
-                if (color.a <= 0) return;
-                node.edges = new Image[4];
-                for (int i = 0; i < 4; i++)
-                {
-                    var go = new GameObject("Edge", typeof(RectTransform), typeof(Image)); var t = (RectTransform)go.transform; t.SetParent(node.rect, false);
-                    t.anchorMin = EdgeMin[i]; t.anchorMax = EdgeMax[i]; t.pivot = EdgePivot[i]; t.anchoredPosition = Vector2.zero;
-                    t.sizeDelta = i < 2 ? new Vector2(0, 1) : new Vector2(1, 0);
-                    node.edges[i] = go.GetComponent<Image>(); node.edges[i].raycastTarget = false;
-                }
+                node.outline = node.rect.gameObject.AddComponent<Outline>();
+                node.outline.effectDistance = new Vector2(1, -1); node.outline.useGraphicAlpha = true;
             }
-            bool show = color.a > 0;
-            foreach (var edge in node.edges) { if (edge.enabled != show) edge.enabled = show; if (show) edge.color = color; }
+            if (node.outline != null) { node.outline.enabled = color.a > 0; node.outline.effectColor = color; }
         }
         /// <summary>The cyan corner brackets that frame primary B panels. Purely decorative (no raycast).</summary>
         public void Brackets(string id, Rect r, Color? color = null, float length = 14, float thickness = 2)
         {
-            var c = color ?? Accent; float t = thickness, l = length;
-            Panel(id + "-tl-h", new Rect(r.x - 1, r.y - 1, l, t), c, false); Panel(id + "-tl-v", new Rect(r.x - 1, r.y - 1, t, l), c, false);
-            Panel(id + "-tr-h", new Rect(r.xMax + 1 - l, r.y - 1, l, t), c, false); Panel(id + "-tr-v", new Rect(r.xMax + 1 - t, r.y - 1, t, l), c, false);
-            Panel(id + "-bl-h", new Rect(r.x - 1, r.yMax + 1 - t, l, t), c, false); Panel(id + "-bl-v", new Rect(r.x - 1, r.yMax + 1 - l, t, l), c, false);
-            Panel(id + "-br-h", new Rect(r.xMax + 1 - l, r.yMax + 1 - t, l, t), c, false); Panel(id + "-br-v", new Rect(r.xMax + 1 - t, r.yMax + 1 - l, t, l), c, false);
+            // Rounded cards replace tactical corner decoration. Kept as a no-op for older presenters.
         }
         /// <summary>Monospace label for codes, keys and numbers ("OP-05 // ANNIHILATION", "02:14").</summary>
         public void Code(string id, Rect rect, string value, int size, Color color, TextAnchor anchor = TextAnchor.MiddleLeft, bool bold = false)
         {
-            LabelAligned(id, rect, value, size, color, bold, anchor); nodes[id].text.font = mono;
+            LabelAligned(id, rect, value, size, color, bold, anchor); nodes[id].text.font = font;
         }
         /// <summary>Small filled or outlined chip (NEW tags, key badges, warnings). Never blocks the pointer.</summary>
         public void Chip(string id, Rect rect, string value, Color fill, Color ink, Color? edge = null, int size = 10, bool monospace = true)
@@ -394,6 +395,8 @@ namespace MassEngine.Game
             if (root != null) UnityEngine.Object.Destroy(root);
             if (font != null) UnityEngine.Object.Destroy(font);
             if (mono != null) UnityEngine.Object.Destroy(mono);
+            if (roundedSprite != null) UnityEngine.Object.Destroy(roundedSprite);
+            if (roundedTexture != null) UnityEngine.Object.Destroy(roundedTexture);
         }
     }
 }

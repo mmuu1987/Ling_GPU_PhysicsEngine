@@ -25,6 +25,11 @@ namespace MassEngine.Game
             if (Input.GetKeyDown(KeyCode.Escape) && session.SettingsOpen) CloseSettings();
             if (Input.GetKeyDown(KeyCode.Escape) && session.ConfirmationOpen) session.CancelConfirmation();
             if (CatalogInteractive()) CatalogKeys();
+            if (openDeploymentOnEnter && session.State == WarSandboxEntryState.Battle && !session.InputBlocked)
+            {
+                var editor = session.Controller != null ? session.Controller.GetComponent<WarSandboxDeploymentHUD>() : null;
+                if (editor != null) { editor.RequestEdit(); openDeploymentOnEnter = false; }
+            }
             if (ui == null) ui = new WarSandboxUGUI(transform, "Front End Canvas", 200);
             var size = new Vector2(ui.Width, ui.Height);
             if (size != lastUiSize) { lastUiSize = size; nextRefresh = 0; } // Resize must redraw now, not leave a clipped old layout.
@@ -51,7 +56,7 @@ namespace MassEngine.Game
         /// <summary>Screen-space (GUI, top-left origin) rect of the in-battle system strip; the battle HUD lays out around it.</summary>
         public static Rect NavigationRect(float width, float height)
         {
-            float scale = Mathf.Clamp(Mathf.Min(width / 1280f, height / 720f), 0.85f, 1.5f);
+            float scale = Mathf.Clamp(Mathf.Min(width / 1280f, height / 720f), 0.5f, 1.5f);
             return new Rect(width - (NavMargin + NavWidth) * scale, NavTop * scale, NavWidth * scale, NavHeight * scale);
         }
         /// <summary>The same strip in UI units (what presenters pass to WarSandboxUGUI).</summary>
@@ -61,7 +66,7 @@ namespace MassEngine.Game
             var session = WarSandboxSceneSession.Instance;
             return session != null && (session.InputBlocked || NavigationRect(Screen.width, Screen.height).Contains(point));
         }
-        private void DrawNavigation()
+        private void DrawLegacyNavigation()
         {
             var r = NavigationLayout(ui.Width);
             ui.Button("nav-settings", new Rect(r.x, r.y, 56, r.height), "设置", session.OpenSettings);
@@ -103,15 +108,24 @@ namespace MassEngine.Game
             flavour = newline >= 0 ? description.Substring(newline + 1).Trim() : "";
             return armies.Length > 0 && troops.Length > 0;
         }
-        private bool CatalogInteractive() => session.State == WarSandboxEntryState.Menu && !unitPreviewOpen && !libraryOpen && !session.SettingsOpen && !session.ConfirmationOpen &&
+        private bool CatalogInteractive() => !homeOpen && session.State == WarSandboxEntryState.Menu && !unitPreviewOpen && !libraryOpen && !session.SettingsOpen && !session.ConfirmationOpen &&
             !session.IsLoading && session.catalog != null && session.catalog.entries != null && session.catalog.entries.Length > 0 && !WarSandboxUGUI.IsTyping;
         private void CatalogKeys()
         {
             var entries = session.catalog.entries; EnsureCatalogSelection();
             int move = Input.GetKeyDown(KeyCode.DownArrow) ? 1 : Input.GetKeyDown(KeyCode.UpArrow) ? -1 : 0;
-            if (move != 0) { SelectCatalog(NextCatalogIndex(entries, catalogSelected, move)); }
+            if (move != 0)
+            {
+                int next = catalogSelected;
+                while (true)
+                {
+                    int candidate = NextCatalogIndex(entries, next, move); if (candidate == next) break;
+                    next = candidate;
+                    if (catalogFilter == "全部" || CatalogGroup(entries[next].id) == catalogFilter) { SelectCatalog(next); break; }
+                }
+            }
             if ((Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) && session.Error == null)
-                session.TryEnterBattlefield(entries[catalogSelected].id, false, out _);
+                EnterSelectedBattlefield();
         }
         private void EnsureCatalogSelection()
         {
@@ -134,7 +148,7 @@ namespace MassEngine.Game
             if (index < 0 || index >= entries.Length || entries[index] == null || entries[index].hiddenFromSelection) return;
             catalogSelected = index; catalogReveal = true; nextRefresh = 0;
         }
-        private void DrawCatalog()
+        private void DrawLegacyCatalog()
         {
             float W = ui.Width, H = ui.Height;
             ui.Panel("catalog-bg", new Rect(0, 0, W, H), WarSandboxUGUI.Background);

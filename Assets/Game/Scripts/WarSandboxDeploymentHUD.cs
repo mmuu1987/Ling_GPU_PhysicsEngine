@@ -46,7 +46,7 @@ namespace MassEngine.Game
         {
             if (deployment.TryBeginEdit(confirmed, out inputError))
             {
-                CaptureCamera(); selected = 0; placing = false; templateMenu = armyMenu = false;
+                CaptureCamera(); selected = 0; legionOpen = pickerOpen = spatialSelection = removeArmyConfirm = false; placing = false; templateMenu = armyMenu = false;
                 plansOpen = false; pendingPlanAction = null; statsOpen = pushConfirm = false;
                 ReadFields();
             }
@@ -94,6 +94,10 @@ namespace MassEngine.Game
                     else plansOpen = false;
                     clearFocusRequested = true; return;
                 }
+                if (armyMenu) { armyMenu = false; nextUiRefresh = 0; return; }
+                if (removeArmyConfirm) { removeArmyConfirm = false; nextUiRefresh = 0; return; }
+                if (pickerOpen) { pickerOpen = false; clearFocusRequested = true; nextUiRefresh = 0; return; }
+                if (legionOpen && !Confirming) { ReturnFromLegion(); return; }
                 if (Confirming) CancelConfirmation();
                 else { placing = templateMenu = armyMenu = false; clearFocusRequested = true; }
             }

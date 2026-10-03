@@ -62,6 +62,7 @@ namespace MassEngine.Game
         {
             if (Instance != this || !enterDefaultOnStart || HasArgument("--war-sandbox-menu") || HasArgument("--war-sandbox-smoke")) return;
             if (catalog == null) { Error = "No battlefield catalog is assigned."; return; }
+            if (!HasArgument("--war-sandbox-auto-enter") && !HasArgument("--terrain-cycle") && !HasArgument("--model-trial-smoke")) return;
             TryEnterBattlefield(catalog.defaultEntryId, false, out _);
         }
 
