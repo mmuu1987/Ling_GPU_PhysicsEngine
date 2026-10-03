@@ -1,0 +1,1822 @@
+[
+  {
+    "path": "Builds/Version08-Synced-20261003-01/D3D12/D3D12Core.dll",
+    "bytes": 4725304,
+    "sha256": "625bd40005b1c3708695d5256ecf230d278e6b8edba5a88af70f3d91324f3052"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/D3D12/d3d12SDKLayers.dll",
+    "bytes": 4930104,
+    "sha256": "c0730cc70d3250d3de19c04c17845ba9e70eecaf502d684d1409195ebc5b5959"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/Ling_GPU_PhysicsEngine_BurstDebugInformation_DoNotShip/Data/Plugins/x86_64/lib_burst_generated.txt",
+    "bytes": 193479,
+    "sha256": "1abde3922c2ab76526b85d21b2e31dffb2c71f1a60ff58f1abcd570e2053dd59"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/EmbedRuntime/mono-2.0-bdwgc.dll",
+    "bytes": 7828912,
+    "sha256": "6852053ba5b18962a55f3e1dff5ac73d3a734528b2ec757468f392eb469e97cf"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/EmbedRuntime/MonoPosixHelper.dll",
+    "bytes": 611248,
+    "sha256": "01fddd116596029bdb8c4dc8a4c73a989177886996be52eb5079fe8f59513c8d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/2.0/Browsers/Compat.browser",
+    "bytes": 1605,
+    "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/2.0/DefaultWsdlHelpGenerator.aspx",
+    "bytes": 60575,
+    "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/2.0/machine.config",
+    "bytes": 29066,
+    "sha256": "e91782a27fa39fc6c1d6ee8b08529f5d35052310d0006034b878eb04b8f2af30"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/2.0/settings.map",
+    "bytes": 2622,
+    "sha256": "49c6160f9d54af4270a3b4e997fc4a8301f79b9e2070118fa46ddbcbbc44f9a2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/2.0/web.config",
+    "bytes": 11635,
+    "sha256": "cf2b54339e069b9e42f7d6795eecbf562c50c1011f4ca8f65f578fe52d97ff92"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.0/Browsers/Compat.browser",
+    "bytes": 1605,
+    "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.0/DefaultWsdlHelpGenerator.aspx",
+    "bytes": 60575,
+    "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.0/machine.config",
+    "bytes": 33598,
+    "sha256": "e60aec2c5115d65b3acb3c55ea21576dbd770f579166c017125571e46ae560ed"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.0/settings.map",
+    "bytes": 2622,
+    "sha256": "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.0/web.config",
+    "bytes": 18802,
+    "sha256": "e38bb8cc68fe5b4edecdfd288d094b9e8ced7629039b2a347682aba0d8bd7492"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.5/Browsers/Compat.browser",
+    "bytes": 1605,
+    "sha256": "8a1082057ac5681dcd4e9c227ed7fb8eb42ac1618963b5de3b65739dd77e2741"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.5/DefaultWsdlHelpGenerator.aspx",
+    "bytes": 60575,
+    "sha256": "751861040b69ea63a3827507b7c8da9c7f549dc181c1c8af4b7ca78cc97d710a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.5/machine.config",
+    "bytes": 34056,
+    "sha256": "ee950004b576fb28dc85f4b0435ed04bf96612de2e8b53be84d07afe85a0de6c"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.5/settings.map",
+    "bytes": 2622,
+    "sha256": "ce1db1ad8a9512073164e3eccdc193f7eda036e1a9733caec4635de21b2865c8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/4.5/web.config",
+    "bytes": 18811,
+    "sha256": "c4cbddd4fd9347b58cc5a72b36dc4ba1ad2bb699e65869d05cd3fb9865f0d824"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/browscap.ini",
+    "bytes": 311984,
+    "sha256": "4ddd50f31fb968f30bedefc253a46dc3f2890192d05cdaa9e0a64a056eee807e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/config",
+    "bytes": 3815,
+    "sha256": "5776169973a26a387b8b3e5c0f2301a7ab9a6dd7c7d3efa22a96abc47fbf8662"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/MonoBleedingEdge/etc/mono/mconfig/config.xml",
+    "bytes": 25817,
+    "sha256": "0c56e34c69124510fa8c19e7b4c2ca6c1c4ff460ae19f798dd0ca035809e396d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/Start-WarSandbox.cmd",
+    "bytes": 112,
+    "sha256": "042338309e4bfce644f76fcd4b41e63c0853432a4bb25bdf84df54485e43dae3"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/UnityCrashHandler64.exe",
+    "bytes": 1674152,
+    "sha256": "2b6bdc06e57fb2e4b7a1a5948a35b73bd8670a1766ddc7ab8f5d686acb244aca"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/UnityPlayer.dll",
+    "bytes": 83834288,
+    "sha256": "20257dcf8c19acef1cfce59862bc556003430392d280c64a0003646fa626b7c2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox.exe",
+    "bytes": 667648,
+    "sha256": "f66f7c51e430cae07717f7c68f9bc4e86f04ee9652c5fb9f00b24b0c1547fb69"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/app.info",
+    "bytes": 37,
+    "sha256": "db106427d1147de0417c705ce530f685d44eb68992401f5ee5ac691eb45076cb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/boot.config",
+    "bytes": 470,
+    "sha256": "c45721eed8bc476575823b1b27455521daf3c7d67c37fa8c43295cab7ce33961"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/globalgamemanagers",
+    "bytes": 227524,
+    "sha256": "cb9655c1025039b6d59feef5743a335458e533a17b5c8f19014c4b2f1b9f377b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/globalgamemanagers.assets",
+    "bytes": 996520,
+    "sha256": "7a42aa34418c9910856c77c3ca30fd571b093d4e1f47d0a68f83903cbb9aa387"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/globalgamemanagers.assets.resS",
+    "bytes": 6176992,
+    "sha256": "f122983b2e999b7f97c5b76ff4a4d07663df0407e3d921d2826aa61d3671a70a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level0",
+    "bytes": 2608,
+    "sha256": "01b54680712b47f86396d79ab2cb4512e1bad8d0d9e7c585f0fefc98221fd44e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level1",
+    "bytes": 4856,
+    "sha256": "13e0a5d4708883b0a2871eb93ed8d5f5373552b3324ae1196067a4a673dee303"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level10",
+    "bytes": 6248,
+    "sha256": "03819e2af8e6df9419e9f530fe87bb8e3d1bc75cfec29d51fce62b484c2901dc"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level11",
+    "bytes": 6200,
+    "sha256": "8d1138b87b903e16252afea1f2567dcb7ce6c8ea4149a7614461f4196523e1ee"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level12",
+    "bytes": 6248,
+    "sha256": "83fc1890458137d784a3d1bba65ced43e1239ed8590d823d01c1193f65d52295"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level13",
+    "bytes": 6200,
+    "sha256": "2615c19cd0bcd8be43464b1c97e20a9d4e79e389281b6c1790403893cf74ad87"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level14",
+    "bytes": 6200,
+    "sha256": "c0be8c4b6f7f7b37afc7fdbc978784df544ef4f6899014acaf2605117723ddeb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level15",
+    "bytes": 6248,
+    "sha256": "cdc0beabbc88fb497377bd20b308db0db8fcfb24b9bbeead4cadd393988a9bbd"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level16",
+    "bytes": 6200,
+    "sha256": "2cafb6cadff05583f03e02668058e43154d22618cd5bbd54f1d160439344425b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level17",
+    "bytes": 6248,
+    "sha256": "b842f62e27b2e9be2879ec81dd38b8d7426101fd9d2f764b71be86f470991bf0"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level18",
+    "bytes": 6248,
+    "sha256": "65c2a87acc94c5015f0193ce2004472e76a14a159e20e8746630d4297bcae585"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level19",
+    "bytes": 6248,
+    "sha256": "6edce4e222ea184581310910ce68706d9eefad1c53012d53ec418925157edb0b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level2",
+    "bytes": 5464,
+    "sha256": "abd42bc75dcad1c20afc885ad248f83251aba41aabfa99e2af9e3e98b9e3e5f0"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level20",
+    "bytes": 6296,
+    "sha256": "29df75e6788e7df5331cac6d479ac78a3b727d4502e177109d90c1df23c32dce"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level21",
+    "bytes": 6296,
+    "sha256": "97c4b52fcecfba499cbeb05baab0fa7306f57f066aada08d149f3f8901226809"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level22",
+    "bytes": 6248,
+    "sha256": "b530f4a3fd4f8825b787407c7634fe02b5db77a363685706f0688caaf2771a3b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level23",
+    "bytes": 6296,
+    "sha256": "54be61e16594ea27f240c1bfe84d91be0d65e391e59f7cda06a2c5ddbdade111"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level24",
+    "bytes": 6296,
+    "sha256": "41a7d15e117ffd9fab72566f817f5bdd5507dcaa98acbbb2eb0908761889873b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level25",
+    "bytes": 6248,
+    "sha256": "dfdf3b8777fe0467a6beb9596b32082d4ec7a57df68084ef212fd917519a4743"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level26",
+    "bytes": 6248,
+    "sha256": "46eda6dff7c96abe2167b98169e73a02e1a37a860f9f69d609c112765f2876e8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level27",
+    "bytes": 6248,
+    "sha256": "ab810bd102c0251f1491b6543a97cb55bfa66ccfa1e30242f1d501c820ef25d0"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level28",
+    "bytes": 6248,
+    "sha256": "9665b36e444e6d3ca2aa84ef8c6687c52f553647844e209ac09eea874acd2f59"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level29",
+    "bytes": 6256,
+    "sha256": "f2ce847e5d043609e7368e62afef84eeb3b404ccd569533a42836c1df50151c7"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level3",
+    "bytes": 4904,
+    "sha256": "b96715a26615291a005b4a03881aa94b39acc29fd64cc3aecaee69cfa3d934fb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level30",
+    "bytes": 6200,
+    "sha256": "0e75debd767743ea3bac57f3fe356bdd516ebcb13d05f880cdaa3610c558b71f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level31",
+    "bytes": 5040,
+    "sha256": "1e770abdbb8793aa935b27da0a6d616944dbb3fb2006c048da612aeb1d5dd444"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level4",
+    "bytes": 4904,
+    "sha256": "29daa086ed742034132a0ab7b9b522741db4dcc67cc9dc8db27cfb10ea6e6f7a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level5",
+    "bytes": 4904,
+    "sha256": "35e77f31e8fbe9c09d8a1486edde9dfd4a615263f51311c18f0297bde324dfae"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level6",
+    "bytes": 6200,
+    "sha256": "2912936440f0f81acb68b5d4d664045d29edc895eca41873be1b0bf3419de00c"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level7",
+    "bytes": 6200,
+    "sha256": "cbd0371264079b143df903e99bfa43f570d17769eb9c97714f87c55710da1b23"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level8",
+    "bytes": 6200,
+    "sha256": "f17725d708db794191a0ad302e217506c374c8c38f3f0bf8c1fdbeecf63efd45"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/level9",
+    "bytes": 6248,
+    "sha256": "0b7bfc2deaec5ad3507530c412e1eccdf7015722c6b130b87be6275f774b2eff"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Assembly-CSharp.dll",
+    "bytes": 9216,
+    "sha256": "91e35a0164dbdfac719f7377bbcbe7b3ed8d968cf199a5718b013bc43b13525d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Assembly-CSharp.pdb",
+    "bytes": 19972,
+    "sha256": "55b943d66a842129119324633d1eb0c5888bd9faf20d23a3e4b74929d60ea4ee"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Autodesk.Fbx.BuildTestAssets.dll",
+    "bytes": 4608,
+    "sha256": "a487f4617fefc3dbc96bd42d0c706d0f1ed1cd3f29a97637ddc71927ae5ff6e5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Autodesk.Fbx.BuildTestAssets.pdb",
+    "bytes": 16780,
+    "sha256": "f4f24e242bd47870605a090f80b537c76a789f762aafd7f76388189415339b56"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Autodesk.Fbx.dll",
+    "bytes": 4096,
+    "sha256": "e96fd3f83d981041ac50014c204551ab2b1324bb786b18ebb1084fede7dc3219"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Autodesk.Fbx.pdb",
+    "bytes": 24772,
+    "sha256": "3b3c777d5c371326bc5ef9032f0d73b8a4c0b668587156d45286935de909b4ab"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Game.dll",
+    "bytes": 569856,
+    "sha256": "e836911d8c3fe82746873f12720e97e5f8681d15911be0e1691219ebcf798e31"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Game.pdb",
+    "bytes": 199348,
+    "sha256": "2d894966c99b73c121f1eda201e6ff59ccb7f59a52c13fe727984f4d4ac1c702"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/MassEngine.dll",
+    "bytes": 167936,
+    "sha256": "efce076e3ef0c892674eb8da493c21d70c492a5d5c917906b3f711037c60c62d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/MassEngine.pdb",
+    "bytes": 78544,
+    "sha256": "42a86e479c4cb883024eaa80cb932ad0b092e18721f8e420424ea2a31b666379"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Mono.Security.dll",
+    "bytes": 241152,
+    "sha256": "618009319dbf3ae374f9b5dc0d0522e1e1bdd172200c120a5471747b7991a584"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/mscorlib.dll",
+    "bytes": 4632064,
+    "sha256": "6c76e06e6d44cf0f39bf59e6a90770968b70093ad4c1572dfbc5e46e431c5fbf"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/netstandard.dll",
+    "bytes": 90112,
+    "sha256": "6ae62e082dc494a2433984177f60ca4db5fae69b1f360a8b33754172b310b8c5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.ComponentModel.Composition.dll",
+    "bytes": 257024,
+    "sha256": "0c3e81771a5fe9657bea02887996de72606c3cb247e4fbe413f743f40e2af244"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Configuration.dll",
+    "bytes": 124928,
+    "sha256": "04907729e87a101e62d3a5c93cfa16688bee745d05440d6daa0c541964be27ab"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Core.dll",
+    "bytes": 1113088,
+    "sha256": "a5e7d47313da0eca0b92a901a30498f5e970916faf63b70b74dd62b09760ed72"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Data.DataSetExtensions.dll",
+    "bytes": 29696,
+    "sha256": "498f14c37d83f946a47a79e01de777e62f269ee9c3820f2026b59ab1c1b9222f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Data.dll",
+    "bytes": 2125312,
+    "sha256": "427478545ce66b632414ca838088ea073f250ed16b21c70005f48cb571350e47"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.dll",
+    "bytes": 2641920,
+    "sha256": "7019d6b6dbfa07cf30f62e7d3ccb969f70cbf001fd72112938ffb535c7f75d81"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Drawing.dll",
+    "bytes": 489984,
+    "sha256": "e182e688223acedb8135227e8fbff17d5ed22f47f81141aa9cb96ef1ab9926fc"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.EnterpriseServices.dll",
+    "bytes": 44544,
+    "sha256": "84af394ad863e31407eb2b9555ca7e96a9f1966630f5d7f0eec54f0011f6babc"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.IO.Compression.dll",
+    "bytes": 114688,
+    "sha256": "80421a67b4162a5f1b4aad6a8327c6d1fb4b04dedd39dae14a770b812594fae2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.IO.Compression.FileSystem.dll",
+    "bytes": 18432,
+    "sha256": "2730d2a27f9362259a406ea14727e5f0a71bc21a6825be94f8623a84bd9f9c79"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.IO.Hashing.dll",
+    "bytes": 50488,
+    "sha256": "ac7ac3e83805b0b621c48b90543dc733c9a89106835278618357d6187e3da74e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Memory.dll",
+    "bytes": 4608,
+    "sha256": "c4f030a2cba7da7cdcf493257c24560e203d355904aee490d645a935842f834a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Net.Http.dll",
+    "bytes": 122880,
+    "sha256": "3cd3ac19050d5031c13644cd87958ad8029b79ce16c7747faf3d0542e7fb45a3"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Numerics.dll",
+    "bytes": 119296,
+    "sha256": "ac9224b32355a09f09b706cab568384f64cf8116825c5911cef1e13221c61c38"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Runtime.CompilerServices.Unsafe.dll",
+    "bytes": 18024,
+    "sha256": "01748200f2400c742aa689f1f5101bd6298efdfd92c00c18f4fa473847235ba9"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Runtime.dll",
+    "bytes": 12288,
+    "sha256": "e0a7334b7ba419aaab6bd3bb6992d693e689341a9178172c9bf99c2aa6a085bd"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Runtime.Serialization.dll",
+    "bytes": 934400,
+    "sha256": "1152ef687dbe39e0ccb6b9a68f6501004415a729072df29abab3bc7c66840217"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Security.dll",
+    "bytes": 320000,
+    "sha256": "2101a4dd4475285f96b1ac3ba1715a52aa8067690709e675cc49a9eb8ed901a4"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.ServiceModel.Internals.dll",
+    "bytes": 215040,
+    "sha256": "888ec94a59c127854871b76afa49fdcefdf723c0f0b6fd78e87f73a8495b63b5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Transactions.dll",
+    "bytes": 35328,
+    "sha256": "f65dbc257d26a361dcc01edd58bf3e542d186c8ee492a4f7a62b0dd7d59f7050"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Xml.dll",
+    "bytes": 3160064,
+    "sha256": "79194220adfcf027a334c87b1adcc6d07b9660a4061e04b3d9500c10d30f7d49"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/System.Xml.Linq.dll",
+    "bytes": 136704,
+    "sha256": "4f5d6bf313cbf091e7bff83d07dd03ed93d0ecb3ddb025ae786aadd6b5f477fb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.AI.Navigation.dll",
+    "bytes": 26112,
+    "sha256": "5bd021215f0c2fbd32cf12c8b9cac3d1a65b90bb0421c9cd2aa9ea920a300354"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.AI.Navigation.pdb",
+    "bytes": 26276,
+    "sha256": "3cefccf5d561345f063d056332e89beff008a0737d872ca2100e3b2b8b15b64d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Burst.dll",
+    "bytes": 335360,
+    "sha256": "40055947d6af65f20a4dbf02012bbfefaf1d6ac41d7fae1a64991c310e3e304d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Burst.pdb",
+    "bytes": 221900,
+    "sha256": "c2766f7bb61465665e154cae567aad625ab84b99a776ebbb3159c3768d00d4b5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Burst.Unsafe.dll",
+    "bytes": 5632,
+    "sha256": "9d9c1ff52411decbee5d9f0d1cd61ebeaa222077aa77a52101ea3debafae98e2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Collections.dll",
+    "bytes": 499712,
+    "sha256": "5fa7ef06f9fe4c5ca0ef6623fc28c1a8bc8a0f1f59c675caed6c26ddc71999a2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Collections.LowLevel.ILSupport.dll",
+    "bytes": 5120,
+    "sha256": "ff50383f807f9692e4913b97e47d86fefcb8faa33d6d48cd3e3fd6fc7ffb448d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Collections.pdb",
+    "bytes": 315048,
+    "sha256": "beb9dfa455921de4de57af3996978962c130fd3e21ac60b8f50967a5d0598fc1"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Formats.Fbx.Runtime.dll",
+    "bytes": 7168,
+    "sha256": "7006dd423e4af9ffe91bcff9757599de954c77f8e3d3be9e46b0d0705aa046fd"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Formats.Fbx.Runtime.pdb",
+    "bytes": 17636,
+    "sha256": "d9c50c26aedfefa63d3d7c1a86595ceb8dbffa1e31ccea71ddc7fe225a7afb93"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.InputSystem.dll",
+    "bytes": 1268224,
+    "sha256": "83f65e52e98beb6f41514c7daa5c9d8be08eed377de0e1d6e6a4991e90d906a4"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.InputSystem.ForUI.dll",
+    "bytes": 16896,
+    "sha256": "cd5abd108dc3ce1d403d9d7b59a94bd6323fe3d9d84e985b765f186796fa4710"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.InputSystem.ForUI.pdb",
+    "bytes": 21528,
+    "sha256": "e083e9e08f457827502805dcfcc36953c4c409369be826ec2ad949b452aa7d54"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.InputSystem.pdb",
+    "bytes": 576692,
+    "sha256": "317b65df3d412d7b5bbe057ff9176829ea5da0faebcb9c32b69ab39e12355aec"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.InternalAPIEngineBridge.004.dll",
+    "bytes": 4608,
+    "sha256": "df9568ebc8c58d21e0de664ba23e8d90c50f56692fae36163b796d555100975e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.InternalAPIEngineBridge.004.pdb",
+    "bytes": 16960,
+    "sha256": "f8b588890dd6a8e983545b61f3b4611303268bd33ad91dcb533108c8601d76b2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Mathematics.dll",
+    "bytes": 886784,
+    "sha256": "7897c2cebdfcf752b2a6c90b5f2ae62565b569b9b60fcb67119e1ca9010e1874"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Mathematics.pdb",
+    "bytes": 516304,
+    "sha256": "6fbcd5998207dd5f47135ea2c8477f4b6a8b35baa6fb4bbe1c9e5448dd381bf1"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Multiplayer.Center.Common.dll",
+    "bytes": 10752,
+    "sha256": "589642b2bd18b8ff75a16d8b3476312c0022f994a868b9588cb68249ffecbe59"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Multiplayer.Center.Common.pdb",
+    "bytes": 18628,
+    "sha256": "a344290e23e8c71d2ce4f24f86003b1c4e30c483b8d564f4e6e11ffb21d2da59"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipeline.Universal.ShaderLibrary.dll",
+    "bytes": 9216,
+    "sha256": "18714c456a245a71d1889a96925a15aeae051cd4cf26255a88716a28ac44a06f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipeline.Universal.ShaderLibrary.pdb",
+    "bytes": 17376,
+    "sha256": "228be44dae187e9732283c8d3bb1d88b2463e043cbbf8c599631aa265a6f6d4f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Core.Runtime.dll",
+    "bytes": 1291776,
+    "sha256": "e85837db4a6780c5ac6940d3cb01b1b7e9ca786b2bf3c6cfa99483e12e490427"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Core.Runtime.pdb",
+    "bytes": 480692,
+    "sha256": "5cb48b0e838911c858b3a9bcd7f48ea2784a84024faef96441c2ac50bef1254e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Core.Runtime.Shared.dll",
+    "bytes": 5632,
+    "sha256": "7660337f0839f08a3a61a89abb485d00bb68338e8150ec574259ae9005df3471"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Core.Runtime.Shared.pdb",
+    "bytes": 17136,
+    "sha256": "2b2fed4a6f3c7809f2d488d49d68b31873fb871eca765ae7404aa44596c8219a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Core.ShaderLibrary.dll",
+    "bytes": 4608,
+    "sha256": "f15c1e8ac2d4ba1516138e62d4eb5259c9a68ff6b491764ae54f4bdc217cf55f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Core.ShaderLibrary.pdb",
+    "bytes": 16876,
+    "sha256": "d89afa850e273bd5ca0aa3e560c362c0b6edbc24d25df1c146bc9b4e63fe1452"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.GPUDriven.Runtime.dll",
+    "bytes": 258560,
+    "sha256": "f7140daa5f074dbaca15acc54b58fc98a7021c9c6869735979b0a213ee2233f8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.GPUDriven.Runtime.pdb",
+    "bytes": 130068,
+    "sha256": "36eb11709c917e07dd026b4fc7545a7e76e4edd19ab3a425ecd4d56a48666890"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll",
+    "bytes": 4608,
+    "sha256": "4eaa1136e2a1e94c97a02993febcbffb84c84a83028a70f6fbff256b17a55339"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.pdb",
+    "bytes": 16864,
+    "sha256": "65d388a3898690f9be6c00c250c4828ab2404342fe9c2a34fcbe12609b31a24d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Universal.2D.Runtime.dll",
+    "bytes": 256000,
+    "sha256": "297523c04827e8244ee24356469891662a8c8620c1a78e2b145e7e33ae81494c"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Universal.2D.Runtime.pdb",
+    "bytes": 156920,
+    "sha256": "599664c7bd7cc7c625c2dcb5638f29a101345b1a80ad038ef12758b0bda02487"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Universal.Config.Runtime.dll",
+    "bytes": 5632,
+    "sha256": "56a6e28a9b96f6af54ab7870f9059ed9e95b43cfe688203c97ed3e8c169e8e53"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Universal.Config.Runtime.pdb",
+    "bytes": 17036,
+    "sha256": "da03ed511317e2d83354eeec6a33eca52c41cb7671e188931a7de4f0a9dd39d3"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Universal.Runtime.dll",
+    "bytes": 801792,
+    "sha256": "cd6c31b07492a9c0a05119920d9ce62d4355a31c34534111e32ad31ad41e6722"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Universal.Runtime.pdb",
+    "bytes": 325864,
+    "sha256": "382ab9f3c2138d244dbccac8f75dc51f6bbce1053ebdc823e943f4a8fd64eec7"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Universal.Shaders.dll",
+    "bytes": 4608,
+    "sha256": "3d8329e7e5f7d082e4da47e07dee29228f2029cf5b66200d0d1c1f62cfa7550b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.RenderPipelines.Universal.Shaders.pdb",
+    "bytes": 16872,
+    "sha256": "02c8394e8d8311c87e5c7c1728d10462a29700a2e13e97d81f1125cf01b9fa46"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.TextMeshPro.dll",
+    "bytes": 506880,
+    "sha256": "aa7a59061ef6944bba732a6411d49d645873dc9843e2e80b5a155bfc37fa6f19"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.TextMeshPro.pdb",
+    "bytes": 257596,
+    "sha256": "510a5380b5c648b5686ff642e8c2a47fe1c9423720e70c3775129fc43f9a345f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Timeline.dll",
+    "bytes": 148992,
+    "sha256": "73f705c4aef77054db988a0ff82eba727228debd4d54464894858a36dab3bdcf"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.Timeline.pdb",
+    "bytes": 91376,
+    "sha256": "3a994eb1abcdb6793b6d2858a5ddd22818ad4ae869d182297518c86a9492003b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.UnifiedRayTracing.Runtime.dll",
+    "bytes": 111104,
+    "sha256": "43f324602b6cb076718b8d371e0dad5872ab46548dcdaff88a8252c08abdecb5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.UnifiedRayTracing.Runtime.pdb",
+    "bytes": 60036,
+    "sha256": "efa9d14b9cb98523ff80f59f04876950268a325e0390732ded34e933e686f749"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.Antlr3.Runtime.dll",
+    "bytes": 86016,
+    "sha256": "ed7ce205f66eafe39bbb5d084d42e7fe11cb4b386ff208e5d5110891be0b7b37"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.Core.dll",
+    "bytes": 673280,
+    "sha256": "8764e5e41821eff91ca9b5346e674deeea3f74eac82f8cbc2d2ef24af2530bb2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.Core.pdb",
+    "bytes": 336764,
+    "sha256": "af4ab43170ed7dcd34948b48ba80e3019f60855fcecab885889a9d1f9367e90e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.DocCodeExamples.dll",
+    "bytes": 7168,
+    "sha256": "61e036d850b1b2e102d4e8393e02d7275c3a2e7d8184ab0ab144994f618f1c89"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.DocCodeExamples.pdb",
+    "bytes": 17604,
+    "sha256": "98cb89fb994ccfc15a16af6ca229443a9143874e50b2b6069d8c037d3ce70e9e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.Flow.dll",
+    "bytes": 433152,
+    "sha256": "0600bf06850e7bc739323598a9a1b94ac68072b6f3631533710fdeb4c824b2c8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.Flow.pdb",
+    "bytes": 221544,
+    "sha256": "bc97f5f8854ef6577385cf94a8831dc8e28f778a8852610c4c6f38127b0a2365"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.State.dll",
+    "bytes": 33792,
+    "sha256": "72dd0bedaa9add1fbaefaa0462af7dd310759e4a515a4da73bc98af02b608a1b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/Unity.VisualScripting.State.pdb",
+    "bytes": 29972,
+    "sha256": "41cff91ef4249b973246e212734f0e86f28b153330174de1d22fb99c9584a5b5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AccessibilityModule.dll",
+    "bytes": 50088,
+    "sha256": "6d5aa9cb445ed6ec7c30c42ad9594a1acd3252c809fb16dd278f43803b4a5c93"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AccessibilityModule.pdb",
+    "bytes": 22684,
+    "sha256": "d7ae6c790bcc1f2b46d0e9095a65e56bd8fd11524f12ef7b119b1a4bed00bc9f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AdaptivePerformanceModule.dll",
+    "bytes": 124840,
+    "sha256": "c4ccf9093788233e5805751bbb9cc21b32b1f9d94e1577e7dc305576528015d7"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AdaptivePerformanceModule.pdb",
+    "bytes": 53224,
+    "sha256": "13afd844309cb2ef7a212429a49b2ace57d23168f88f1fd3c5b6c22c26ccac80"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AIModule.dll",
+    "bytes": 77224,
+    "sha256": "2313d9ddfba0d37e9f58e14210cb6511dfdf7173bd6a56df5764a5090ecba443"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AIModule.pdb",
+    "bytes": 20628,
+    "sha256": "5d922552206a79c22845c57b93acd5aecc374fb7ab7a991e5bc9ec200f841452"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AMDModule.dll",
+    "bytes": 21936,
+    "sha256": "f310d34e8ac88e2f6823b38f6503f7459f1f9eb8fe00d4024268bfad94f916c6"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AMDModule.pdb",
+    "bytes": 11996,
+    "sha256": "9db70d5aff4b71406009a254fd7cd845a8efbe8730c59b53a8736d4791944bff"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AndroidJNIModule.dll",
+    "bytes": 121256,
+    "sha256": "37c009f548d7958cb7e29df26623c8ca57510c65e81f7c8c567785913927cd39"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AndroidJNIModule.pdb",
+    "bytes": 50196,
+    "sha256": "5104fcc23f7c9827e2790acafb33717172f2effbe514eb40cbae7219976e53b5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AnimationModule.dll",
+    "bytes": 225200,
+    "sha256": "ba13f6bc5ae170b7839d8d4f2614ed94db9c46090117e92a6761e281229ff51f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AnimationModule.pdb",
+    "bytes": 60740,
+    "sha256": "64efebadae9bc8eeba975c76d216676a5ae51d4425b73b3950ae6d3b80099998"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ARModule.dll",
+    "bytes": 25520,
+    "sha256": "76f8902f5e5db7ffa0941da50eeca6479c826baca58163f924654f1cb6b86a53"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ARModule.pdb",
+    "bytes": 9976,
+    "sha256": "1b8abea4fd50d56e57fa7ed6cb90453b7d9e32a0dbddcc012071296d26a510c1"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AssetBundleModule.dll",
+    "bytes": 41904,
+    "sha256": "aee04c5c675bb7c6a06b843bb82a0c72742c063a007ac79c6501cebea945988f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AssetBundleModule.pdb",
+    "bytes": 14116,
+    "sha256": "7ecadfe1eaece8980e40db00fabd0384bfb10013df51a73f727884ee5463da17"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AudioModule.dll",
+    "bytes": 142768,
+    "sha256": "c58ed7b8cbafb10eb193b1feabb57e2ed224e378de9b2d86db06ab3ed008ab45"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.AudioModule.pdb",
+    "bytes": 35164,
+    "sha256": "32289f095a817887f294461cd4b5589fe44d921915550274eab0b4ac5de17132"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ClothModule.dll",
+    "bytes": 36264,
+    "sha256": "543ab382de959de8765e8be7f70f683da583519e97ff7c863adf6069559c34e4"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ClothModule.pdb",
+    "bytes": 10544,
+    "sha256": "c0b738811f880ce138c5521204bab404c55f8129345acdef122f8ff868d0a15f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ClusterInputModule.dll",
+    "bytes": 28072,
+    "sha256": "22f9cb311e894028c996facb32c1646f27e62dd8f7e65e52a0b393d1b8826e41"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ClusterInputModule.pdb",
+    "bytes": 9360,
+    "sha256": "1a962eb5b566be425581e7c6ca486220a91685671217a1a46b2002cfa5fa2dbd"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ClusterRendererModule.dll",
+    "bytes": 26536,
+    "sha256": "c25e5e2e47a54a53255cadfd33728a3b1a2f2a7df761c79efcb3bc55d2c87b6e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ClusterRendererModule.pdb",
+    "bytes": 9968,
+    "sha256": "7222ac71d808399979976e233b58127ac0a0cb5b8a4cfe805753dfbafd5c992d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ContentLoadModule.dll",
+    "bytes": 32688,
+    "sha256": "1bec811a95b07bef2bdf827163ea9513d0fd44598f4d712539a05f9476f41529"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ContentLoadModule.pdb",
+    "bytes": 11140,
+    "sha256": "a8a3269f247562a2b965a9594410cb124d3429cfd202875bf7bd8acb7820f5cb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.CoreModule.dll",
+    "bytes": 1983920,
+    "sha256": "d589629ecd4971438643c5d3ce5ee78cf7ee26ac0d98522f802923ca6b55bc79"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.CoreModule.pdb",
+    "bytes": 572664,
+    "sha256": "526dbe26fd7e6fa821eca750848e41d3d7f962cd76793bfaca1a05e1790fce18"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.CrashReportingModule.dll",
+    "bytes": 26544,
+    "sha256": "7ef1d566333d55485c349dfc6ae88681c073ad28d2f6ce38137dd6f6e25618e5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.CrashReportingModule.pdb",
+    "bytes": 9972,
+    "sha256": "f99f4577cc3d392b08eaa4d953ed8b2ab916f8f3053a95f3a8e6500fc8542b1b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.DirectorModule.dll",
+    "bytes": 41384,
+    "sha256": "d29c1f8cdeb8b7db0debf1be96606495662690578c402c591d73bea9ee341eea"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.DirectorModule.pdb",
+    "bytes": 13888,
+    "sha256": "cd585c8f25f3535a38a3608f2047b0ce25443bc4827d734eb4e630da5ad54e8b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.dll",
+    "bytes": 197032,
+    "sha256": "79ee5cf77e839b6e0453197853bb22fad371a89a989343ede1a26195b0e35cec"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.DSPGraphModule.dll",
+    "bytes": 31664,
+    "sha256": "0f05a807ef41b7b274ae81a20349b716a4b7190ce08001328f5b88ce87ef33fc"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.DSPGraphModule.pdb",
+    "bytes": 9568,
+    "sha256": "2ea2f348897d659388a04494e4dffac8dc7310df2447d5e3f5f033832e4c8dd3"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.GameCenterModule.dll",
+    "bytes": 45488,
+    "sha256": "14d27c18c0225b1ffcb0324c94f7d17743cbeea822601933e62b9a0dc399621c"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.GameCenterModule.pdb",
+    "bytes": 17452,
+    "sha256": "87ffb762b919f6bdc9862142d577d3dc415dd52ddf874e2f80bfc08a642290a8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.GIModule.dll",
+    "bytes": 24496,
+    "sha256": "39c9b8a9795db02ee130050ed5eeae5687e65e16a06cfb85c523d5d1b2bd3cb6"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.GIModule.pdb",
+    "bytes": 9240,
+    "sha256": "45ae95da14209a446fa857674263015b8f2312835a0ccb00a5942764fec6a7c9"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.GraphicsStateCollectionSerializerModule.dll",
+    "bytes": 14248,
+    "sha256": "154ba58cb366176e13cd5c2ae39f692fb3da222554e65ba0c2199dbd13e963f9"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.GraphicsStateCollectionSerializerModule.pdb",
+    "bytes": 9268,
+    "sha256": "b4f5bd3009b9416506cfde28f51b24d8c6a8372eb865410e79f554044bae8f0a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.GridModule.dll",
+    "bytes": 30120,
+    "sha256": "d094f9dae92c6ef8ae36b5912ed41de101e79ccecc846461903deb464554bb6a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.GridModule.pdb",
+    "bytes": 9996,
+    "sha256": "0d036c56b8520c0848965900779a89789fc0114f817f6bcf57a8668591006474"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.HierarchyCoreModule.dll",
+    "bytes": 109480,
+    "sha256": "c92e06244fe90709c5bb910c7b158420edbe928455a8edd6483d1cee79a0e521"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.HierarchyCoreModule.pdb",
+    "bytes": 36404,
+    "sha256": "eb601915b30f794858c5c2155bef0143b17c62e5884cd6b84ff2fe9574fa47ba"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.HierarchyModule.dll",
+    "bytes": 102320,
+    "sha256": "5d9201a7f194ea110529cf56e4c8468d8342ed70f33d1540dfbc2b4931f14936"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.HierarchyModule.pdb",
+    "bytes": 47624,
+    "sha256": "f347b3d377ba9ff39364968a8f14e523838441a1cec7601ff373ae187913b4a2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.HotReloadModule.dll",
+    "bytes": 24488,
+    "sha256": "5b48118d75f955fd053cb059d13d56fff825d16fdc4c8da0fa8074798f178a99"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.HotReloadModule.pdb",
+    "bytes": 9240,
+    "sha256": "64092834d8552a15f0d3a505cf18d0e05a459b9225482b4bf9020346e4304b18"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.IdentifiersModule.dll",
+    "bytes": 14760,
+    "sha256": "5e9a6e83ee8592d1e6ab9cf272641e67038bd402fe42d4bd95fdff74c5863339"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.IdentifiersModule.pdb",
+    "bytes": 9504,
+    "sha256": "f2817533ebd7c5f3591c2ac93319f531e2f127caac1f0e8fcfd62221e0c91964"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ImageConversionModule.dll",
+    "bytes": 31152,
+    "sha256": "3b1153d5a8521754a4a558b78194057ded69ecfe27e4eff5259787ca3b1deba2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ImageConversionModule.pdb",
+    "bytes": 10580,
+    "sha256": "c2aa4525e45ed22399f48f4aad25c5311b9314a5a61e1e10ffe1e5eb2dafd13b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.IMGUIModule.dll",
+    "bytes": 214448,
+    "sha256": "56647caccd73e7ffa0553028c1183052862475d9d390c85cce281a245139ed62"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.IMGUIModule.pdb",
+    "bytes": 90452,
+    "sha256": "0c8a435b2a7cb0366ddcf4f563956358d157e0f828d2af8b50c79d2923a34924"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.InputForUIModule.dll",
+    "bytes": 57776,
+    "sha256": "c9d94d3b50c107e79b4e1161a685398d563509947058b3957a750f73fcfc5032"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.InputForUIModule.pdb",
+    "bytes": 26072,
+    "sha256": "f7e1b6ad4623607c98b6afbdcb2dcd21d68b0584076a27aa1eaffc05f2a892f5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.InputLegacyModule.dll",
+    "bytes": 45488,
+    "sha256": "55effcd054c1a4dfda360ae4877b8e69efd2099d93b0ede1cd611499309cf325"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.InputLegacyModule.pdb",
+    "bytes": 15348,
+    "sha256": "7aefaecb695f20f39761382c4f3ad7a5b7ebbd02031ae80de08b5939263f4368"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.InputModule.dll",
+    "bytes": 28080,
+    "sha256": "d23a92842b3540828ce324fb1a35fa469a1f2c8d298cf734b313f5839f3da010"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.InputModule.pdb",
+    "bytes": 10612,
+    "sha256": "d3f035ca05cb849f2664d846f8eb7c6dc69202a0c35260a61d048be8ea760900"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.InsightsModule.dll",
+    "bytes": 14248,
+    "sha256": "e8d27b57f2305839b9f2b516893e5dbd0de341f1cb0fba3da2e11f7b096a83f5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.InsightsModule.pdb",
+    "bytes": 9564,
+    "sha256": "3a0251ec316b849aa46c42b9d830dc51723692b075ba33786684e7bf97a4d025"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.JSONSerializeModule.dll",
+    "bytes": 27056,
+    "sha256": "c097f19dfba276be236561eb86264c6b8b6f90da14eb3b4aae0fefeadc4e95ce"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.JSONSerializeModule.pdb",
+    "bytes": 9864,
+    "sha256": "578e3b55c23f74a27846e630475bcfc2f9f8e0e05e76257aadf8d1bc108ed4db"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.LocalizationModule.dll",
+    "bytes": 27056,
+    "sha256": "639f9874fbb278bfc632a0f851c0c80c9bfe9e62b7e0ba12d71451238bb523bf"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.LocalizationModule.pdb",
+    "bytes": 9660,
+    "sha256": "805a06930c08e632244858e2edcbb4594ed8f47871e4729bf5e5dc46ffeb5d14"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.MarshallingModule.dll",
+    "bytes": 83376,
+    "sha256": "653f14fd7f4cc40c9a81081bf9989eb42c04eedddbd390aeb5a82befdb1b57bc"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.MarshallingModule.pdb",
+    "bytes": 14252,
+    "sha256": "66acc5ec2855883974be644b28977ca51932927aafb2879e77443379136ae14a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.MultiplayerModule.dll",
+    "bytes": 17832,
+    "sha256": "516711f5d59b0077d919cf5a624e8e395aee4a0beb0da37ceff062400148629f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.MultiplayerModule.pdb",
+    "bytes": 10332,
+    "sha256": "64b025e406d3b5a97f8a19f11c1c2898f600ec7abb332c4009187f3be2f5f652"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.NVIDIAModule.dll",
+    "bytes": 40360,
+    "sha256": "2cedd5bfd04d04df96f69fc52d9d0fe1f3b3388321842573c08612f07ac41276"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.NVIDIAModule.pdb",
+    "bytes": 16200,
+    "sha256": "e84cfbdd177b7861ba893a054e5d3a6df9774d7e65b5e64fdac7d3134ce43b73"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ParticleSystemModule.dll",
+    "bytes": 171432,
+    "sha256": "e45c66a301975d50ccd76b3086a28c310c0dcc26f6dddf652a5fa9095536374d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ParticleSystemModule.pdb",
+    "bytes": 40428,
+    "sha256": "79f187f25637e3acb122f27a76221c579e21c3b35e9eb76bca5bad60cdde4773"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.pdb",
+    "bytes": 12676,
+    "sha256": "3b314f238a91fe8803fa0b9bb75d4b5d4b2a566af91e9065d88df25db177a36e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.PerformanceReportingModule.dll",
+    "bytes": 25000,
+    "sha256": "0cb42037a822d86adc5eb441be01ec04c66f51208968ac17dc4ee7bee5275da9"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.PerformanceReportingModule.pdb",
+    "bytes": 9448,
+    "sha256": "05b4dba923f70b500a9848220e6821bfb7356dbfef7e1b804fe79a3b8d49663d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.Physics2DModule.dll",
+    "bytes": 584112,
+    "sha256": "c68fd226e5f47e1275117a48b0adedda1a30af109adaf4c059718c3a9a2bb0bf"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.Physics2DModule.pdb",
+    "bytes": 134208,
+    "sha256": "1da2d7d8bef1ed1b23707e9aa3cf10510e95ea760c7c5b9f480d41ae217d22a9"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.PhysicsBackendPhysXModule.dll",
+    "bytes": 14248,
+    "sha256": "fdb1918575ef1bc7302c5a2eee6d98136c6df5e4dcf27ef8054f3acd95f8ac3b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.PhysicsBackendPhysXModule.pdb",
+    "bytes": 9260,
+    "sha256": "6caff62237d4b6abb850db30bc32ef16125bbbc03d698773530938e4db53cbb2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.PhysicsModule.dll",
+    "bytes": 182192,
+    "sha256": "d372f6f5a696871ff2cdfe9f3749e55e4e57e561f3359e53787c0cc3825131db"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.PhysicsModule.pdb",
+    "bytes": 45660,
+    "sha256": "df3feebe71eea1df83e3fd027881944017cfd6bbe06a0fb406085ef5ecfb8fe0"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.PropertiesModule.dll",
+    "bytes": 133032,
+    "sha256": "f4168de65f1b902c443b72b5a341913d71f4093387000d64efb83add00c64743"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.PropertiesModule.pdb",
+    "bytes": 62156,
+    "sha256": "8d95d012c78810093864b9828bece6d01b72eb3c13db2f044437c8aeb20822f8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.RenderAs2DModule.dll",
+    "bytes": 25512,
+    "sha256": "f3a800e69ef062c22e3a78e84ba06f5e8b46d6b9e615dd91fd0e700d2f0b48ff"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.RenderAs2DModule.pdb",
+    "bytes": 9288,
+    "sha256": "9b93fce7e9f2b04991ef85c6f2c3e011c202e2b82e10deaf6b1d2e3ecd548240"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll",
+    "bytes": 24496,
+    "sha256": "a6da189e10da530cda32b887f1b84d67466b5bbedbf224db3604c5fdb055257e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.pdb",
+    "bytes": 9304,
+    "sha256": "bd7432fd46e8890529a9e9628e3d427779051892a30caa5bf776d3c5cfffb21f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ScreenCaptureModule.dll",
+    "bytes": 26032,
+    "sha256": "5ddc9b7ebf63b8ed1a12bfa62a6f2d598e8991c298b80c7a9cac6d76d303ab52"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ScreenCaptureModule.pdb",
+    "bytes": 9844,
+    "sha256": "4b4022de3331e7f524310d3b1fded980fdaedd85cbca050adc236e73c0674a9f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ShaderRuntimeModule.dll",
+    "bytes": 25520,
+    "sha256": "e64ddeea01beded7a35002908e882403ea36f17f420f943bf7a3521349aaddf8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ShaderRuntimeModule.pdb",
+    "bytes": 9280,
+    "sha256": "b50d1964c76a537461084b8749ddd519bd93c64fa13782bf7cbb0dfad036b735"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ShaderVariantAnalyticsModule.dll",
+    "bytes": 24488,
+    "sha256": "5a93dba6711e1b16942a8772f4233474f8f1e466deb3c637a0a0b389b76fee65"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.ShaderVariantAnalyticsModule.pdb",
+    "bytes": 9364,
+    "sha256": "d8d246ceaef276122758b686f79d0c1f8ac538bd031c70d19fef0c57c41f6d55"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SharedInternalsModule.dll",
+    "bytes": 37800,
+    "sha256": "66c090aa5dfc1efd0401aca0cc52da0a2643fda735fd2cbded2f1cd8b8159f86"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SharedInternalsModule.pdb",
+    "bytes": 14252,
+    "sha256": "6e7c17a8cf1e6dab8f8e1f032075f28d5b6667e7facb4cd9198edbdecd6679a5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SpriteMaskModule.dll",
+    "bytes": 28584,
+    "sha256": "1f245c2eb14185f596553f6f6ed0baf01a58a13960bc3e768305a89d1ffa78f7"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SpriteMaskModule.pdb",
+    "bytes": 9572,
+    "sha256": "ebb917d01a7559d33edcd9c6e47fc0538a9a8203ede38c7516e0f52356064adc"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SpriteShapeModule.dll",
+    "bytes": 32176,
+    "sha256": "f2d912e976e9c187427c7e78d9a8b54ec958f5b59dca7dcd1c5bc7ae5d69101e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SpriteShapeModule.pdb",
+    "bytes": 10896,
+    "sha256": "068742a265fdfbc5c9b21a9b996c2d0f91505030c7dff5da19d4f6409e99497f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.StreamingModule.dll",
+    "bytes": 25512,
+    "sha256": "b992c58615ea7a6d537e9699f9a220e95a21bb510eb6aa8371c2f16cc48f5776"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.StreamingModule.pdb",
+    "bytes": 9316,
+    "sha256": "299b6d32d57539ead6b54c1efd71a76b3b80bf2dedf455bb1f6cd98494c341c0"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SubstanceModule.dll",
+    "bytes": 29104,
+    "sha256": "96ec4be1407c3835fb8c2a3561c89d58779a0ae5087547fceb239738e932fd09"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SubstanceModule.pdb",
+    "bytes": 11444,
+    "sha256": "d0edd2787cff8485f50f61a2b4945d0fec221e46d29b62416ba943e83726edad"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SubsystemsModule.dll",
+    "bytes": 41896,
+    "sha256": "5ec74c98a4b1a65137c9a28a310e87a92d2a217828a6b8658a75dc8193b43397"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.SubsystemsModule.pdb",
+    "bytes": 15984,
+    "sha256": "752a8c787b55139cabf569bc427ae4a57e04325622bf83d74565f2aebbfa032b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TerrainModule.dll",
+    "bytes": 133552,
+    "sha256": "da90310d0c6d3c617b7f1ec0b7d258d3a20e4d1606e24e2d87f37809ec408cd2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TerrainModule.pdb",
+    "bytes": 33936,
+    "sha256": "40507bc085189e69aac3f5e16cc52f0187331fb54b39b6b0eb897c427cadba5f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TerrainPhysicsModule.dll",
+    "bytes": 25520,
+    "sha256": "5f8909575e6ed76727acce499a1c57c14e03fd661626944b630b7df57e4792b9"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TerrainPhysicsModule.pdb",
+    "bytes": 9704,
+    "sha256": "6249653e60915854470ffb276c1a883bb4d52c38508041ca506ebfde7e8f09da"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TextCoreFontEngineModule.dll",
+    "bytes": 81840,
+    "sha256": "3fda10f00b9a71eb7563fbcce17f518a2757f924b509bcc240492ad279ff0857"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TextCoreFontEngineModule.pdb",
+    "bytes": 29276,
+    "sha256": "c1bcc4afaa6e5a57bb1c04a894b226f8a7cb2b7f303c551140ed654f4cf30353"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TextCoreTextEngineModule.dll",
+    "bytes": 332712,
+    "sha256": "7a46e1e8cc81697b18aa3f9dba1a89d7b341cdc5881a568af398006cdf4f6ac6"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TextCoreTextEngineModule.pdb",
+    "bytes": 152496,
+    "sha256": "c5b80db48f623ae97172adf86298e39657f875f408429076429cb95ca0ac526e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TextRenderingModule.dll",
+    "bytes": 39336,
+    "sha256": "197e500615c12b7c0276b348b7c50908aa94a45c33a00e8299ac9b9c00b091bc"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TextRenderingModule.pdb",
+    "bytes": 15344,
+    "sha256": "4bb5f3ebd6452678104041a9eac7795199039ce4d732905c45cc8577cafb797b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TilemapModule.dll",
+    "bytes": 58800,
+    "sha256": "df80b8b8075d5e05a186fd09cad3254bde2b89deb5ddd4d4ffe66dd254d788d8"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TilemapModule.pdb",
+    "bytes": 19068,
+    "sha256": "9157fa6f501bc8a2637f923fe455e0c31e86eb22bb101020271b83f9dab55bbb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TLSModule.dll",
+    "bytes": 31152,
+    "sha256": "375395a15fdf3732dd8b18a3b58881491a8986807cf6f958b197c521e195ef09"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.TLSModule.pdb",
+    "bytes": 9260,
+    "sha256": "8f9b0e5a6a42dd17053e188f6caeb45afe30c9824cd050f5f451329b6f5f74a2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UI.dll",
+    "bytes": 309760,
+    "sha256": "8d9f4dc8496d84f9e09a9af2463032b93e3a2baab7106962dbc019a4a66f7aad"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UI.pdb",
+    "bytes": 188128,
+    "sha256": "c9d81becf913d10117eb542686cf7cc1dab9d3d64ecc8d262daa7e40df036875"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UIElementsModule.dll",
+    "bytes": 2448808,
+    "sha256": "bb02b62767ee32d653e8dbb450e7db5d695e947ad47ba4f96d205ae6cbc879bb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UIElementsModule.pdb",
+    "bytes": 1097172,
+    "sha256": "10a0695c8f8f00d85c9fbda98cad1d993e54ec5ba5037bca29ea6df09c25428b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UIModule.dll",
+    "bytes": 49576,
+    "sha256": "88f95e40c5d59a7f6625d328d46d33d1037544800aca65e53d81b5f9b3de8eae"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UIModule.pdb",
+    "bytes": 13832,
+    "sha256": "e1080062cc070bea9de3e2fbe695b04bde50340fb116d5701490b22ee655b2eb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UmbraModule.dll",
+    "bytes": 24488,
+    "sha256": "4e3c9160e56a26e0d46fbd482c7bfa6bdef1b446d518fb9965f3f0e82f007095"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UmbraModule.pdb",
+    "bytes": 9240,
+    "sha256": "71dadedd4d2434707f8f9a1ca6dfa24d5c65efe23090ed4d7007328444acfc63"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityAnalyticsCommonModule.dll",
+    "bytes": 35760,
+    "sha256": "b95f1bd385ea6a92582a09ad0e472d0ca639725b3d5327d24c8a11f81ec3d70f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityAnalyticsCommonModule.pdb",
+    "bytes": 13720,
+    "sha256": "4f6ae51ef97a54841e2cc86b1b78c5343dc1b4c0d34c9463c9642975e07407f7"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityAnalyticsModule.dll",
+    "bytes": 60848,
+    "sha256": "f92fc9e146cbc72254e7ac5aa944b60b789de8c34434dfa8050216f676e9ff7f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityAnalyticsModule.pdb",
+    "bytes": 17964,
+    "sha256": "874aeb5c5a973b1e1c2adb8a3c70df31e4e482f692ca88319fd91e788683df83"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityConnectModule.dll",
+    "bytes": 27568,
+    "sha256": "e67850bed2be5b71ac1d75c7de5315960117de33306f5b6b22e86f264a82f002"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityConnectModule.pdb",
+    "bytes": 9836,
+    "sha256": "89cd87a76d7c5a8eb448bc4dd832bc50f075bc1bee423fae7b900e039a493d2a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityConsentModule.dll",
+    "bytes": 16296,
+    "sha256": "f81ebdea250f96d074966de70b7c7e0d6e67daebbac4d26f401da64cd6c7eafd"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityConsentModule.pdb",
+    "bytes": 9868,
+    "sha256": "a919462bf3f386f9a384f3406c133849e14188ba4476b4a3f9cfb4073540deee"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityCurlModule.dll",
+    "bytes": 26024,
+    "sha256": "0dd49c20ff0cef0ed0667a83bbee0caf460847513d3a13cb0b5c5b73b4757b57"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityCurlModule.pdb",
+    "bytes": 9632,
+    "sha256": "0122c461c694959f64437bb4cca6107b3a6ba058f0ece0d8179d455c095cd25a"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestAssetBundleModule.dll",
+    "bytes": 28584,
+    "sha256": "ed7e4c2cc02f3d243abc2357991a897a4a4647c9e9f8a39cf04ce7f4ba2aa781"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestAssetBundleModule.pdb",
+    "bytes": 10812,
+    "sha256": "6d9b3b3a7ad9b9fde099ee9efa337b8d30f736c6a44ea4c2ca83cd5267244052"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestAudioModule.dll",
+    "bytes": 28072,
+    "sha256": "031c8b5f4a951c5846a4d5c4f30ec1d5343ec8d676e4adb99546b9c9c0cbd607"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestAudioModule.pdb",
+    "bytes": 10616,
+    "sha256": "108ca25bba723d5e4b15d0ffb1a86e2c539459c31895a14a4fcc0eac8292aaec"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestModule.dll",
+    "bytes": 70056,
+    "sha256": "2f5d573fa134f0d883bd8b0005436bea101a9bf2b21211d2f93f08a75f0b2807"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestModule.pdb",
+    "bytes": 28448,
+    "sha256": "201a2c8ca518618359d0e01bcf95866f82aec201d8b5e0ce0a4233c60489a3e6"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestTextureModule.dll",
+    "bytes": 27568,
+    "sha256": "ee1e13dc787eceb2175920f1f45277154c748636fe89b9430f76d7a4671c6cd5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestTextureModule.pdb",
+    "bytes": 10780,
+    "sha256": "175cbd16f01978adc27f1f7be66425bdc901a2b28cf2a0166f01d07dc4a1baa9"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestWWWModule.dll",
+    "bytes": 36272,
+    "sha256": "941a570b9d82a723aed81260479a0539ac97a57618c8178983958d17ffe44ac9"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.UnityWebRequestWWWModule.pdb",
+    "bytes": 13684,
+    "sha256": "ee95e8cf57f46494ce3ce3093e094f2127c140a0fab44ba2515d83f738d7cc73"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VectorGraphicsModule.dll",
+    "bytes": 253360,
+    "sha256": "497b54dfd3b9beddfbd69c7b98db3a3d6c652bb7e24695b5a80c4b54b78b3527"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VectorGraphicsModule.pdb",
+    "bytes": 143472,
+    "sha256": "6c4f8cbe30cc4aaaaa51643f086863c8e4566a5e0e843a4f09c11dabc8f12c3c"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VehiclesModule.dll",
+    "bytes": 31152,
+    "sha256": "8777e125eb8682f929c82c84072ff06d534914945a4e27071c80b7b221f7d140"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VehiclesModule.pdb",
+    "bytes": 10484,
+    "sha256": "556e6046017cb48aa2df7fe14efad9c7a4310a7e828570124f983c9550512914"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VFXModule.dll",
+    "bytes": 78256,
+    "sha256": "77e93b441dd0fc69b929ec7b21f08339203f0efc9199a3f64dcec26b477c0e79"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VFXModule.pdb",
+    "bytes": 18748,
+    "sha256": "c8a27d8dc631b0c32b1126dd557d1a8e854c2ce4f5c0f136ebe129abd1d0c61f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VideoModule.dll",
+    "bytes": 49064,
+    "sha256": "3103a45d0f29baf3be85ebf20333d4463a69d92930697bf7bd29ac8bcf172160"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VideoModule.pdb",
+    "bytes": 14128,
+    "sha256": "b0c45594e2ac02b0f7ea2650aa6891507d1bca3f5524a81235c8c423cb7b02d3"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VirtualTexturingModule.dll",
+    "bytes": 42928,
+    "sha256": "405eb116ee7878f4462bfcf37153f67aa4f32585aa3d8dce679b804744fe8f1d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VirtualTexturingModule.pdb",
+    "bytes": 13488,
+    "sha256": "ed044dfd675c6759da7e86eed58fe9866d529e81cad9e523a6e6d84b3f5bed44"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VRModule.dll",
+    "bytes": 31664,
+    "sha256": "03786822a71d2a57b68819a52e2e5a709913323f058c2254aedbf53d35c9db2c"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.VRModule.pdb",
+    "bytes": 10368,
+    "sha256": "02498f73838aa5046548f30e75f9cff9590efc91ae8890f77a5bfa4e0bb32998"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.WindModule.dll",
+    "bytes": 26544,
+    "sha256": "8ab77400fc6be901ad172bb160096b353f01107c47b5d7c6af7a0e1f1b904651"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.WindModule.pdb",
+    "bytes": 9376,
+    "sha256": "7c808b5954df477c0e895c47db2f43975f508c05041db1d30fb3c8cb1f0b3c00"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.XRModule.dll",
+    "bytes": 88488,
+    "sha256": "453a9841a5ec112e64dd8958395a54a61195b58647b0c33a635e05a8aa0a34e7"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Managed/UnityEngine.XRModule.pdb",
+    "bytes": 24256,
+    "sha256": "1942c7f7d0a82a61c02d9f3b38108c4637c70b7fb5f0bcdd8db3e47cdcf1f3f5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Plugins/x86_64/lib_burst_generated.dll",
+    "bytes": 483328,
+    "sha256": "3a19a456cbafddd33398de9b126953c65c5194934fd0e17fe79a7e8055d05686"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Plugins/x86_64/lib_burst_generated.pdb",
+    "bytes": 2936832,
+    "sha256": "fc35114c165d3df58a89f8ada3f1efa918f1cba1d8f83ff882d215d79ae16744"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Plugins/x86_64/libonigwrap.dll",
+    "bytes": 551336,
+    "sha256": "6d539f2ad6e1b58d3c8836b9c3a1d50c97cbd7a6ca0c5de25d994a7c4b1ecf42"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Resources/unity default resources",
+    "bytes": 5923140,
+    "sha256": "fb2492cd1ad7c38dda8a4ce5f1a1fb57edcff44e3ae250b263e44beae3660ec4"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/Resources/unity_builtin_extra",
+    "bytes": 397816,
+    "sha256": "056536db2b0cb075bf6ea468f12eecac4e02090d94180974e9d520f42c71efcf"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/resources.assets",
+    "bytes": 349032,
+    "sha256": "ffbb50c42f01ce26ca1297b337cfa70380571293fbc01136da01e7edfce0e79c"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/resources.assets.resS",
+    "bytes": 7232,
+    "sha256": "f12f30b4c1648273e460dab9f8ec974e616980f7a3027d54ac4ca0f19ba89cd3"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/RuntimeInitializeOnLoads.json",
+    "bytes": 5251,
+    "sha256": "3dad58512705ab64619600f2401c88e384b5965d3b86253a07b2e8eac5edc4d5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/ScriptingAssemblies.json",
+    "bytes": 4523,
+    "sha256": "464bb49c920602f860b90e1e4c216f9e917bccb23623127eaceb2dbad5fe8705"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets0.assets",
+    "bytes": 541252984,
+    "sha256": "9277cbc2a993adfdf34d4c416348860370cae02c9feaddde9c6c81d08cf59a5b"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets0.assets.resS",
+    "bytes": 200306064,
+    "sha256": "ffdfa44afe2735ef6b2e2cfef1cc54253c43d0eefdcc34e49540cede287663d2"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets1.assets",
+    "bytes": 1711368,
+    "sha256": "f70f6edfed6df6df7675cd12f0e9357b7ef1bf51dae410d2b343ba279da9fefd"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets10.assets",
+    "bytes": 3768,
+    "sha256": "2a44439c92391aaf9f4c7062b41f2708c050393fdf1ea0ea610cd80c2896e174"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets11.assets",
+    "bytes": 4064,
+    "sha256": "56b5bae448116f3f9d7bb1d548d1d611806cf976811ad2d7e39e1d6fca3678cc"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets12.assets",
+    "bytes": 3612,
+    "sha256": "b06a5c9a91fc1ac347866bec87fa09ea5370cfc73591bc91fa9e50fe8d19ddcd"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets13.assets",
+    "bytes": 4284,
+    "sha256": "88305a0be04cfd90c955599803a6da5ef227f27066e96b15cb73e9908df70b84"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets14.assets",
+    "bytes": 4756,
+    "sha256": "c94c94117b610f8ee982448be66caadc2cca5c1d53ae8be8ab032f0bfa71165c"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets15.assets",
+    "bytes": 4192,
+    "sha256": "f369d850bc4055e344b275118a9300c3c162a03652443e9b4e9a57fb2ff90829"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets16.assets",
+    "bytes": 5196,
+    "sha256": "ea2f3b88fd7097c766d3fff161d86fecff184f577d4bed52c42c0aef6a3e3dbb"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets17.assets",
+    "bytes": 4364,
+    "sha256": "dd515d07a147f499e04a2500a88acab3070d842fddf23a69d6baf4f4cc207822"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets18.assets",
+    "bytes": 4364,
+    "sha256": "1ff3820d0efc2c5b95ca5792bfd5c9af6172e0b970f261971e12c277f58fbb4e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets19.assets",
+    "bytes": 5580,
+    "sha256": "45433ff8441308b82ca7dc629d0183ae69380c556d4a014bd01309c0a7568200"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets2.assets",
+    "bytes": 3428788,
+    "sha256": "f1b1e65ac73a0b7255ab0eb9197280771cbc5d39b49b795005d63e2aca2e5dd5"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets20.assets",
+    "bytes": 4968,
+    "sha256": "2d1e02d8ae1f568a149745067ffad999112787715381bd08a4c25a42acb67896"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets21.assets",
+    "bytes": 4976,
+    "sha256": "ef04e3393b8fd1a8440403a2ae4a1c8a462ee6a852070c07cd6a1646c807cd0f"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets22.assets",
+    "bytes": 6312,
+    "sha256": "166c8b4b5e85913cb02dc20d84da906ac4664ae862a2c2808f1aca367beed548"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets23.assets",
+    "bytes": 5580,
+    "sha256": "e7c93cede32dc519e809abcded3d7856d0b1994414bc8bf50646544772f7ca3e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets24.assets",
+    "bytes": 5580,
+    "sha256": "8ebdd04551933fc4e0c649f44338dc54ab15d700468404988bcf443c18b086ef"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets25.assets",
+    "bytes": 2880,
+    "sha256": "74e397bedbf1ceb569e503b546b8abddce017dee0c9cc447f48373588fecc5de"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets26.assets",
+    "bytes": 2848,
+    "sha256": "480d5bad7be06c811a3b155e378dd404e3620a6cdd17dbda60110289ac81a05d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets27.assets",
+    "bytes": 2840,
+    "sha256": "60ae592b26e422d14678c5e8971e8f510e348b96e70bbd6f12c661bddc3dfb58"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets28.assets",
+    "bytes": 4124,
+    "sha256": "5744a9063feb26fc9669a0a4abea07e4b229305516d8cfa20cbd3e57f0c4d903"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets29.assets",
+    "bytes": 4140,
+    "sha256": "6fcd209910c196799dcb5be16aa24970b70dc51d7f356997b23fabe3afcef66d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets3.assets",
+    "bytes": 1708,
+    "sha256": "7f95ff125e2bb1cfc807f765a7ee41710400e994a5620850211aa2758a48d23e"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets30.assets",
+    "bytes": 2524,
+    "sha256": "94f0562016807db607b1989aaf44bf6833e0acc1d77e468cf2d23385f928b9bf"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets31.assets",
+    "bytes": 10880,
+    "sha256": "93254ca0de2bfb1d784640f89f05e35fa049ad7a4ed5af59051085cee6bd5617"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets4.assets",
+    "bytes": 1844,
+    "sha256": "9f0e965c5bfd7532889d8a25783f2beac2abfa0a8534705c2866003dc54c7e71"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets5.assets",
+    "bytes": 1708,
+    "sha256": "fb2f150ae2715da4619b30cecd97d944bd69f04151c2c86553bee7a9285dd6a1"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets6.assets",
+    "bytes": 2320,
+    "sha256": "dffaff06abbf871f91219213c5dfb3bd10b4a840e065199c284a1f00e8a5ea77"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets7.assets",
+    "bytes": 13384,
+    "sha256": "c8efc9ec52f77c0646047a890b80fdf7b5d49a437d36eba4633558ee3be71d86"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets8.assets",
+    "bytes": 4240,
+    "sha256": "8673bf111379ca36121c19581096cf5bb3a3bb2e6185e1ce20b65c512bc1dd31"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WarSandbox_Data/sharedassets9.assets",
+    "bytes": 3536,
+    "sha256": "f40512d7bdf1884e6a57b35483b73b42e4191e089d8d6c06ed19a05613a0e7cf"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/WinPixEventRuntime.dll",
+    "bytes": 58368,
+    "sha256": "81adcfd8253c3489be720da7e30f16004dc9a1f02a8b418c6c3aef4993032e6d"
+  },
+  {
+    "path": "Builds/Version08-Synced-20261003-01/\u8bf4\u660e.txt",
+    "bytes": 326,
+    "sha256": "6b810da1ad4bc6731511c1c81ac21e06764302590a90a279ca3cbd2bac873446"
+  }
+]

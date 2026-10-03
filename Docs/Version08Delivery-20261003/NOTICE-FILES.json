@@ -1,0 +1,342 @@
+[
+  {
+    "source": "Assets/CharacterPilotSource/Cavalry01/Animals-License.txt",
+    "file": "ThirdPartyNotices/Models/Cavalry01/Animals-License.txt",
+    "sha256": "83d8959f9fc56353ed571fbe2dc52e4bcd64508e2399501cd45ac2ce3df0bf8c"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/KayKitKnight/Animations-License.txt",
+    "file": "ThirdPartyNotices/Models/KayKitKnight/Animations-License.txt",
+    "sha256": "373b159044d1a886ed15f57ca5a7673ba14e2623c460283452705f2056912ed9"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/KayKitKnight/Characters-License.txt",
+    "file": "ThirdPartyNotices/Models/KayKitKnight/Characters-License.txt",
+    "sha256": "d4adc31660d1db22eb60eba648e01db41577548f6fa1a3576cb4a6283dae0a58"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/KayKitRanger/Adventurers-License.txt",
+    "file": "ThirdPartyNotices/Models/KayKitRanger/Adventurers-License.txt",
+    "sha256": "d4adc31660d1db22eb60eba648e01db41577548f6fa1a3576cb4a6283dae0a58"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/KayKitRanger/Animations-License.txt",
+    "file": "ThirdPartyNotices/Models/KayKitRanger/Animations-License.txt",
+    "sha256": "373b159044d1a886ed15f57ca5a7673ba14e2623c460283452705f2056912ed9"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/KayKitSkeletons/License.txt",
+    "file": "ThirdPartyNotices/Models/KayKitSkeletons/License.txt",
+    "sha256": "327a1aac6e6ff1259d82d0024cdaf088bcef302f8d7a116b5142538ac2b5cf8d"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/LargeBeasts/Animals-License.txt",
+    "file": "ThirdPartyNotices/Models/LargeBeasts/Animals-License.txt",
+    "sha256": "83d8959f9fc56353ed571fbe2dc52e4bcd64508e2399501cd45ac2ce3df0bf8c"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/NonhumanBatch2/License.txt",
+    "file": "ThirdPartyNotices/Models/NonhumanBatch2/License.txt",
+    "sha256": "83d8959f9fc56353ed571fbe2dc52e4bcd64508e2399501cd45ac2ce3df0bf8c"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/QuaterniusDragons/License.txt",
+    "file": "ThirdPartyNotices/Models/QuaterniusDragons/License.txt",
+    "sha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/QuaterniusGiants/License.txt",
+    "file": "ThirdPartyNotices/Models/QuaterniusGiants/License.txt",
+    "sha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/QuaterniusGiants3/License.txt",
+    "file": "ThirdPartyNotices/Models/QuaterniusGiants3/License.txt",
+    "sha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/QuaterniusMonsters/License.txt",
+    "file": "ThirdPartyNotices/Models/QuaterniusMonsters/License.txt",
+    "sha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/QuaterniusPlatformerBatch6/License.txt",
+    "file": "ThirdPartyNotices/Models/QuaterniusPlatformerBatch6/License.txt",
+    "sha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/QuaterniusPlatformerBatch6/SourceProvenance.json",
+    "file": "ThirdPartyNotices/Models/QuaterniusPlatformerBatch6/SourceProvenance.json",
+    "sha256": "d788ffac88fa8955d85ce8513b2a29841f78a53cfe6c8f4e7b393d0364a6eb9a"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/QuaterniusTroops4/License.txt",
+    "file": "ThirdPartyNotices/Models/QuaterniusTroops4/License.txt",
+    "sha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/QuaterniusTroops5/License.txt",
+    "file": "ThirdPartyNotices/Models/QuaterniusTroops5/License.txt",
+    "sha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/TowerDefenseRobotExpressive01/License-and-Credits.txt",
+    "file": "ThirdPartyNotices/Models/TowerDefenseRobotExpressive01/License-and-Credits.txt",
+    "sha256": "f018dcd613b3b08cffc87b90a27b88b779548ee9ede7c05ab486f36a90b1c29f"
+  },
+  {
+    "source": "Assets/CharacterPilotSource/TowerDefenseRobotExpressive01/SourceProvenance.json",
+    "file": "ThirdPartyNotices/Models/TowerDefenseRobotExpressive01/SourceProvenance.json",
+    "sha256": "43baa0a2e6dc10d5daa3b53c8568f1e488e5fea04e1dfb2380584eb11902ea31"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/English/01Unity-Chan License Terms and Condition_EN_UCL2.02.pdf",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/English/01Unity-Chan License Terms and Condition_EN_UCL2.02.pdf",
+    "sha256": "f77430122a9896f46205a313bb65e1e7e5b2c4c8973445eed2b776ee6893c61c"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/English/02Unity-Chan License Terms and Condition_Summary_EN_UCL2.02.pdf",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/English/02Unity-Chan License Terms and Condition_Summary_EN_UCL2.02.pdf",
+    "sha256": "7926100d3ddb2bc3531320709bd858d1417b299c219c443e603e96c1799daf87"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/English/03Indication of License_EN_UCL2.02.pdf",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/English/03Indication of License_EN_UCL2.02.pdf",
+    "sha256": "82abd0f4c1f008fcd7e2b1892082eed7163170521673566cc25555593b1f8e3d"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/Japanese/01Unity-Chan License Terms and Condition_JP_UCL2.02.pdf",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/Japanese/01Unity-Chan License Terms and Condition_JP_UCL2.02.pdf",
+    "sha256": "71cf3b86f74e6aa493a8da6cdfacfbd8f0c139491091855ccaaa72746f668f31"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/Japanese/02Unity-Chan License Terms and Condition_Summary_JP_UCL2.02.pdf",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/Japanese/02Unity-Chan License Terms and Condition_Summary_JP_UCL2.02.pdf",
+    "sha256": "9a47a2bd07b5caf8e942b7149179b65d15da863eacc0a03805e521e3dd85550b"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/Japanese/03Indication of License_JP_UCL2.02.pdf",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/Japanese/03Indication of License_JP_UCL2.02.pdf",
+    "sha256": "1cb2223789eb396119062843af2a20cd222ce302c9cf5b4fad0d16720193ad55"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/License Logo/LUUL_logo-guideline.pdf",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/License Logo/LUUL_logo-guideline.pdf",
+    "sha256": "3ff94c47d633f8b8b13ec34633c90570b014b2a25f32bef79449ebd6c04b24dd"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/License Logo/LUUL_logo-guideline_en.pdf",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/License Logo/LUUL_logo-guideline_en.pdf",
+    "sha256": "670599e9287b3b325ae177e7b82f4d1a792dd239fb065c27acbb430222f96281"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/License Logo/Others/png/Dark_Silhouette.png",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/License Logo/Others/png/Dark_Silhouette.png",
+    "sha256": "a6553d5a928b34067f40a7775218c88c26d61df750974c165cac873599697b80"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/License Logo/Others/png/Light_Frame.png",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/License Logo/Others/png/Light_Frame.png",
+    "sha256": "e347a9f3d48a61a42a2b1d24da81cfe604a0595187c128f930ba1bc43618768d"
+  },
+  {
+    "source": "Assets/ModelTrialSource/UnityChan/License/UCL2.02/License Logo/Others/png/Light_Silhouette.png",
+    "file": "ThirdPartyNotices/UnityChan/UCL2.02/License Logo/Others/png/Light_Silhouette.png",
+    "sha256": "e8d36c6c34c264a14a4bef08580b363ef0b2a12f0c69d28f9081ca065629e00c"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/Microsoft-DirectX-1.618.1-LICENSE.txt",
+    "file": "ThirdPartyNotices/RuntimeEvidence/Microsoft-DirectX-1.618.1-LICENSE.txt",
+    "sha256": "5239850894610071566f7ecee0b751fde43c862032d92b99d7d0f596b3433ebd"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/Onigwrap-1.0.10-LICENSE.txt",
+    "file": "ThirdPartyNotices/RuntimeEvidence/Onigwrap-1.0.10-LICENSE.txt",
+    "sha256": "36de9002877e620b16353c8734e95d31c9e795271598c89818fc60899356f4d3"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/Onigwrap-1.0.10-THIRD-PARTY-NOTICES.txt",
+    "file": "ThirdPartyNotices/RuntimeEvidence/Onigwrap-1.0.10-THIRD-PARTY-NOTICES.txt",
+    "sha256": "68fece3ea58bc308f9fce6afa403983cc68c5ac1ae2dd3ac7d8a945faac3aa6e"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/PerfectDOSVGA437-Author-Permission.md",
+    "file": "ThirdPartyNotices/RuntimeEvidence/PerfectDOSVGA437-Author-Permission.md",
+    "sha256": "05ef865f5e2dba4e7ffa9332e6e4bf8bf2fc6082c79ff2a7c8025272b7ce35ef"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/README.md",
+    "file": "ThirdPartyNotices/RuntimeEvidence/README.md",
+    "sha256": "336443d899a4d97d943b9195e20d465582d0cf36db4b7ba7f80457b80bd8b1be"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/Unity-Collab-Proxy-2.12.4-LICENSE.md",
+    "file": "ThirdPartyNotices/RuntimeEvidence/Unity-Collab-Proxy-2.12.4-LICENSE.md",
+    "sha256": "1d4a7d58a5297984b4028c628380ba30f6f0853a37a258fb8f944a9d6f8b5a35"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/Unity-Collab-Proxy-2.12.4-Third-Party-Notices.md",
+    "file": "ThirdPartyNotices/RuntimeEvidence/Unity-Collab-Proxy-2.12.4-Third-Party-Notices.md",
+    "sha256": "a86df3236b0e9d9e17df4807ad5074701ab445bbae94e0bbe76859d7e58f963b"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/Unity-Companion-License-v1.4.txt",
+    "file": "ThirdPartyNotices/RuntimeEvidence/Unity-Companion-License-v1.4.txt",
+    "sha256": "09a3909b5b7105545ad4aaa1f586a0fa8e61a04127d2836313d78ef8fb6d915c"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/Unity-Package-Distribution-License-v2.1.txt",
+    "file": "ThirdPartyNotices/RuntimeEvidence/Unity-Package-Distribution-License-v2.1.txt",
+    "sha256": "43a011bf91d8dc368564fca6367b4f6067288e89e284934903d4efd4e5355577"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/Unity-Player-Windows-Mono-6000.3.14f1.pdf",
+    "file": "ThirdPartyNotices/RuntimeEvidence/Unity-Player-Windows-Mono-6000.3.14f1.pdf",
+    "sha256": "01873aebf38649d5acfdb00fad17b1aa17f21401fe08c9aaabbeb2751228e6a6"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/WinPix-1.0.240308001-LICENSE.txt",
+    "file": "ThirdPartyNotices/RuntimeEvidence/WinPix-1.0.240308001-LICENSE.txt",
+    "sha256": "903df5512f7d02609fed0c780a9b704f5a3eeb6e4d84ebe42a29845c81899a3c"
+  },
+  {
+    "source": "Docs/V1Candidate-20260930/LicenseEvidence/WinPix-1.0.240308001-ThirdPartyNotices.txt",
+    "file": "ThirdPartyNotices/RuntimeEvidence/WinPix-1.0.240308001-ThirdPartyNotices.txt",
+    "sha256": "3f06560bbbf286c149c6fd4427f2a5d4e79824591fcba835fffab42b6950967c"
+  },
+  {
+    "source": "Library/PackageCache/com.autodesk.fbx@90432ec06ab5/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.autodesk.fbx@5.1.3/LICENSE.md",
+    "sha256": "598b8fbbfea0be57fc23fd9c242cbde1d05f7f6c1ba5523ff7f7d79a66d6a46d"
+  },
+  {
+    "source": "Library/PackageCache/com.autodesk.fbx@90432ec06ab5/Third Party Notices.md",
+    "file": "ThirdPartyNotices/Packages/com.autodesk.fbx@5.1.3/Third Party Notices.md",
+    "sha256": "f5692a68add686a280184b30e505b8824b7304b2bc4bf9dd5c992337e0dfc3d5"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.ai.navigation@734c2c4c5591/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.ai.navigation@2.0.12/LICENSE.md",
+    "sha256": "2b2113e0522b3eaa9e701d70956f9affaccac7e79d99b6029903bcec7139590e"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.burst@6bb9aca3ef38/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.burst@1.8.29/LICENSE.md",
+    "sha256": "9bd567d6de754ab7396a8e3022758c617b78d7115bf1585bdb29ae0de464d059"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.burst@6bb9aca3ef38/Third Party Notices.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.burst@1.8.29/Third Party Notices.md",
+    "sha256": "01b366462da89d104fc7db01309b69de07cee05400ec429e2ea9e4c23fa5f085"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.collections@12999e356c23/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.collections@2.6.5/LICENSE.md",
+    "sha256": "4947f647c031b0fec440237f8136386a606dd998089bb1df67316ee693f568f5"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.formats.fbx@9f10493e557a/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.formats.fbx@5.1.6/LICENSE.md",
+    "sha256": "2007e5ce400d2676dc173e21bbcac0338d0db84a9444c9556ae5152229b12a6b"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.inputsystem@21a28c3a6c83/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.inputsystem@1.19.0/LICENSE.md",
+    "sha256": "419718e59cd6c1f9c3ed80bd004394504bed368c23ad8665cce1792a33c8a02c"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.mathematics@19a9377c4ffa/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.mathematics@1.3.3/LICENSE.md",
+    "sha256": "5b1a26ff2ca6e6e7d9fd2b6df151e1a43c671fdf49c05dcee1227f20dcf25fde"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.mathematics@19a9377c4ffa/Unity.Mathematics/Noise/LICENSE",
+    "file": "ThirdPartyNotices/Packages/com.unity.mathematics@1.3.3/Unity.Mathematics/Noise/LICENSE",
+    "sha256": "bdafce1bb01517c9ae6c4f3620c01340790b5e9d039ae9e356347d1174250916"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.multiplayer.center@f01f4ba8d00a/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.multiplayer.center@1.0.1/LICENSE.md",
+    "sha256": "e6522fc3e87017b4950060c58fac8478ecc96ba84ce48f4678b73dc1289d6c03"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.multiplayer.center@f01f4ba8d00a/Third Party Notices.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.multiplayer.center@1.0.1/Third Party Notices.md",
+    "sha256": "85105d078ca8cdcd75fbb5e7ddb75d5b569f0e20270d3b9f387f37c30130b720"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.render-pipelines.core@02dfbe8e43de/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.render-pipelines.core@17.3.0/LICENSE.md",
+    "sha256": "39691adc5fdaf614d951f53637e22501baf46fcc535a69ab8a21ebaa8b9e9cb4"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.render-pipelines.core@02dfbe8e43de/THIRD PARTY NOTICES.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.render-pipelines.core@17.3.0/THIRD PARTY NOTICES.md",
+    "sha256": "fdfacc9a242bda05b26eace324033b467b7d70e83a2761cd03337b612affc339"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.render-pipelines.core@02dfbe8e43de/Samples~/Common/TextMesh Pro/Resources/Fonts & Materials/Inter-LICENSE.txt",
+    "file": "ThirdPartyNotices/Packages/com.unity.render-pipelines.core@17.3.0/Samples~/Common/TextMesh Pro/Resources/Fonts & Materials/Inter-LICENSE.txt",
+    "sha256": "d2980aaf435e639dc3b69b1a3de220da96c3dd3d580bcae2ba94f09c6a708f54"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.render-pipelines.universal@3b809f23691d/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.render-pipelines.universal@17.3.0/LICENSE.md",
+    "sha256": "4be520a425e06c8de56fa8aee1ce957cfe610406456278172a2d18b7c388c2cf"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.render-pipelines.universal@3b809f23691d/Third Party Notices.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.render-pipelines.universal@17.3.0/Third Party Notices.md",
+    "sha256": "0652509dfc81a1a3d9e037e59bd047b305155fc5c4abeef69e2fc078488035fd"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.render-pipelines.universal-config@8dc1aab4af1d/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.render-pipelines.universal-config@17.0.3/LICENSE.md",
+    "sha256": "fa2dcbc8ff967f49342c6c61854909ba4bbcc70b27f07d25538b8eaf7be5be3c"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.shadergraph@28ee1cc75774/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.shadergraph@17.3.0/LICENSE.md",
+    "sha256": "364b0c08b7fe15b70c4777dccb26fc21d02ae831c2f707dbe29879ac15ece353"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.timeline@8cd8509afae5/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.timeline@1.8.12/LICENSE.md",
+    "sha256": "73111ef76bd8a502c29b167865620de787af612b5f0ba6b3a517ade3b9519853"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.ugui@8ccc29d23a79/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.ugui@2.0.0/LICENSE.md",
+    "sha256": "a8e0cae87b2edb8c205ae6c308f20b89a09f32d62bd4a3ff0343bb4724a4201e"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.visualscripting@8bed5ad90189/LICENSE.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.visualscripting@1.9.11/LICENSE.md",
+    "sha256": "38110f8f09a9b7828467d10ba992c3ffb8e3819feb23bd37d8bd342cc78a478f"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.visualscripting@8bed5ad90189/Third Party Notices.md",
+    "file": "ThirdPartyNotices/Packages/com.unity.visualscripting@1.9.11/Third Party Notices.md",
+    "sha256": "76dadc7d5862b0c6a3a8741658c2667a535877a73dcf76db2ab03a9915adfc7d"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.visualscripting@8bed5ad90189/Editor/VisualScripting.Core/Interface/Licenses/License.CCA3.cs",
+    "file": "ThirdPartyNotices/Packages/com.unity.visualscripting@1.9.11/Editor/VisualScripting.Core/Interface/Licenses/License.CCA3.cs",
+    "sha256": "3f1a9a641a5627741723ee226b0650f65dc30a0582010d7c3fc52f3b4cb4f4b3"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.visualscripting@8bed5ad90189/Editor/VisualScripting.Core/Interface/Licenses/License.Iconmonstr.cs",
+    "file": "ThirdPartyNotices/Packages/com.unity.visualscripting@1.9.11/Editor/VisualScripting.Core/Interface/Licenses/License.Iconmonstr.cs",
+    "sha256": "0e9f24e2d2c9c6fa8184ad17edb9c61a4ac980936beb3b7ad3ff45ebf5369744"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.visualscripting@8bed5ad90189/Editor/VisualScripting.Core/Interface/Licenses/License.MIT.cs",
+    "file": "ThirdPartyNotices/Packages/com.unity.visualscripting@1.9.11/Editor/VisualScripting.Core/Interface/Licenses/License.MIT.cs",
+    "sha256": "7e08713bf33ff783b1eecd4e7e472bbb65c13c9a8983944f39a6baec8676d970"
+  },
+  {
+    "source": "Library/PackageCache/com.unity.visualscripting@8bed5ad90189/Editor/VisualScripting.Core/Interface/Licenses/License.MSPL.cs",
+    "file": "ThirdPartyNotices/Packages/com.unity.visualscripting@1.9.11/Editor/VisualScripting.Core/Interface/Licenses/License.MSPL.cs",
+    "sha256": "2337fa3c79ef4244bbadf67332e4a3e2af781916bf99f208ec86cebde338b677"
+  }
+]

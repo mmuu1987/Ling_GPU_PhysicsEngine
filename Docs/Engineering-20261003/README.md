@@ -2,22 +2,24 @@
 
 当前工作是 M7 内容收口。最新有效内容为 **Version08**，机器人模型表现及正式入列已获用户认可；人工试玩仍暂停，其他模型转换未授权，M6/M7/V1 整体验收未由本次入列代签。
 
+**迁移后接续（2026-10-03）：** PR #25 已合入，母工程已同步并完成迁移验证与空间清理。剩余工作顺序与验收条件见[Version08 剩余工作](REMAINING-WORK.md)；当前版本交付资料已补齐，见 [Version08 交付资料](../Version08Delivery-20261003/README.md)；四进程定向补测通过，但 E2 残余覆盖、H1/H2 与 V1 冻结仍待完成。历史“未提交/待 PR”不再作为待办。
+
 ## 当前入口与依据
 
 | 用途 | 位置 / 状态 |
 |---|---|
-| 普通游戏 | [Start-WarSandbox.cmd](../../Builds/OfficialRoster-20261002-04/Start-WarSandbox.cmd)，本机已有包 |
+| 普通游戏 | [Start-WarSandbox.cmd](../../Builds/Version08-Synced-20261003-01/Start-WarSandbox.cmd)，本机已同步的验证包 |
 | Unity 工程 | 仓库根目录；Unity 6000.3.14f1 |
 | Unity 首场景 | [Version08/LaunchMenu.unity](../../Assets/Game/OfficialRoster/Version08/LaunchMenu.unity) |
 | 内容目录 | [Version08/Catalog.asset](../../Assets/Game/OfficialRoster/Version08/Catalog.asset) |
 | 当前交付与验收范围 | [机器人正式入列](../RobotFormal-20261002/README.md) |
 | 当前工作交接 | [NEXT_TASK.md](../../NEXT_TASK.md)，仅当前状态 |
-| 原交接全文 | [历史归档说明](../HandoffHistory-20261003/README.md) |
-| 未提交增量 | [改动与提交清单](CHANGE-PLAN.md) |
+| 原交接全文 | [历史归档说明](../../Logs/RetiredWorktree-20261003-01/Docs/HandoffHistory-20261003/README.md)，本机迁移归档 |
+| 历史整合增量 | [改动与提交清单](CHANGE-PLAN.md)，已随 PR #25 合入 |
 
-**工程整合已接续：** 误忽略的 1,176 个资源文件/meta、原工作增量与文档已组成完整暂存候选。从 Git index 导出到全新隔离目录，未复制旧 Library/Logs/Builds；验证结果与候选树见[整合验证](INTEGRATION.md)。[资源纳管恢复](ASSET-TRACKING.md)及[原漏报清单](IGNORED-ASSETS.tsv)保留发现时证据。
+**工程整合已完成：** 误忽略的 1,176 个资源文件/meta、原工作增量与文档已随 PR #25 合入。此前从 Git index 导出到全新隔离目录，未复制旧 Library/Logs/Builds；验证结果与实测候选树见[整合验证](INTEGRATION.md)，该页“尚未提交”等文字保留当时状态。[资源纳管恢复](ASSET-TRACKING.md)及[原漏报清单](IGNORED-ASSETS.tsv)保留发现时证据。
 
-包 GUID：`c9915b6a69974ad0ab3edeb66c846fdf`。可选战场 **29**、可选模板 **66**；兼容身份分别 **31 / 68**。模板数包含复用模型的不同配置，不等于独立身体模型数。绿皮头、骷髅头隐藏于新选择，旧 ID/revision、资源和方案解析保留。
+当前同步包 GUID：`eea0c353522542919393aa8b05eaaea0`，与隔离验证包逐文件一致；原正式包 GUID `c9915b6a69974ad0ab3edeb66c846fdf` 属于历史入列证据。可选战场 **29**、可选模板 **66**；兼容身份分别 **31 / 68**。模板数包含复用模型的不同配置，不等于独立身体模型数。绿皮头、骷髅头隐藏于新选择，旧 ID/revision、资源和方案解析保留。
 
 文档分工：`GAME_DESIGN.md` 定产品范围，`ROADMAP.md` 定阶段；本页集中入口，专题文档保留各次实施证据。旧文档的“当前”“下一步”按其日期理解，不覆盖最新用户决定。历史性能和全量测试成绩不能移作 Version08 成绩。
 
@@ -46,7 +48,7 @@ Version07 负责内容筛选和真实全身预览；Version08 复用它并加入
 
 ## 验证入口与证据
 
-文档整理阶段只核对既有证据；随后开展的隔离导入、构建与运行回归见[整合验证](INTEGRATION.md)。原 Version08 的 [final-release.json](../../Logs/AgentRobotFormal20261002/final-release.json)、`edit-03`（10/10）、`regression-01`（53/53）、`ui-02`（1/1）及 `robot-seed-02 / robot-reload-01 / official-all-01` 回执相互一致；三个玩家报告同 GUID、退出 0、完成且零错误。29 场是进入/开战/重置/返回冒烟，不是 29 场自然结算。机器人 seed/reload 才包含自然结算与跨进程方案恢复。
+文档整理阶段只核对既有证据；随后开展的隔离导入、构建与运行回归见[整合验证](INTEGRATION.md)。原 Version08 的 [final-release.json](../../Logs/RetiredWorktree-20261003-01/Logs/AgentRobotFormal20261002/final-release.json)、`edit-03`（10/10）、`regression-01`（53/53）、`ui-02`（1/1）及 `robot-seed-02 / robot-reload-01 / official-all-01` 回执相互一致；三个玩家报告同 GUID、退出 0、完成且零错误。29 场是进入/开战/重置/返回冒烟，不是 29 场自然结算。机器人 seed/reload 才包含自然结算与跨进程方案恢复。旧证据根现为本机 `Logs/RetiredWorktree-20261003-01/Logs`，其中原绝对路径只记录历史运行位置。
 
 测试程序集：EditMode 为 `MassEngine.Tests`、`Game.Tests`；PlayMode 为 `MassEngine.PlayModeTests`、`Game.PlayModeTests`。需要复测时，使用**本次待验证的工程目录**作 `-projectPath`（本次为隔离导出目录），串行、低负载、图形设备开启；不加 `-nographics`，`-runTests` 不加 `-quit`。先检查测试的资源和输出副作用，再用全新证据目录与隔离玩家数据运行。
 

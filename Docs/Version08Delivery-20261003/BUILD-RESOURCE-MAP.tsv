@@ -1,0 +1,97 @@
+build_asset	source_family	license_basis
+Assets/Game/M54TrialPlayable/Prepared/UnityChanAtlas.png	ModelTrialSource/UnityChan	UCL2.02
+Assets/Game/CharacterPipeline/Generated/MountedKnight04/Full.asset	Cavalry01 + KayKitKnight	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Ranger02/Full.asset	KayKitRanger	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/LegacySkeleton01/Full.asset	LegacySkeleton01 (SazenGames)	Asset Store EULA
+Assets/Game/CharacterPipeline/Generated/LargeSpider04/Full.asset	LargeBeasts	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Stegosaurus01/Full.asset	NonhumanBatch2	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/LargeBull02/Full.asset	LargeBeasts	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/TowerDefenseRobot01/Full.asset	TowerDefenseRobotExpressive01	CC0 1.0
+Assets/Game/M54TrialPlayable/UnityChanVAT.asset	ModelTrialSource/UnityChan	UCL2.02
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Full.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Knight04/Full.asset	KayKitKnight	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Dragon_EvolvedYoung03/Full.asset	QuaterniusDragons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Dragon_Evolved02/Full.asset	QuaterniusDragons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonRogue01/Full.asset	KayKitSkeletons	CC0 1.0
+Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Pos.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Norm.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/Game/CharacterPipeline/Generated/SkeletonMage03/Full.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Alien01/Full.asset	QuaterniusGiants3	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Demon01/Full.asset	QuaterniusGiants	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Tribal01/Full.asset	QuaterniusTroops4	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/OrcSkull01/Full.asset	QuaterniusTroops4	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Orc01/Full.asset	QuaterniusMonsters	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/LargeWolf02/Full.asset	LargeBeasts	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/MountedKnight04/FinalVAT.asset	Cavalry01 + KayKitKnight	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Triceratops01/Full.asset	NonhumanBatch2	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/LargeSpider04/FinalVAT.asset	LargeBeasts	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/LargeWolf02/FinalVAT.asset	LargeBeasts	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Stegosaurus01/FinalVAT.asset	NonhumanBatch2	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/LargeBull02/FinalVAT.asset	LargeBeasts	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Cactoro01/Full.asset	QuaterniusTroops5	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/GiantYeti01/Full.asset	QuaterniusMonsters	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Ninja01/Full.asset	QuaterniusTroops4	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/TowerDefenseRobot01/FinalVAT.asset	TowerDefenseRobotExpressive01	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Ranger02/FinalVAT.asset	KayKitRanger	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/BlueDemon01/Full.asset	QuaterniusGiants3	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/LegacySkeleton01/FinalVAT.asset	LegacySkeleton01 (SazenGames)	Asset Store EULA
+Assets/Game/CharacterPipeline/Generated/Monkroose01/Full.asset	QuaterniusTroops5	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/MushroomKing01/Full.asset	QuaterniusMonsters	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Yeti01/Full.asset	QuaterniusMonsters	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/PlatformerCrab01/Full.asset	QuaterniusPlatformerBatch6	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Dino01/Full.asset	QuaterniusGiants	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Knight04/FinalVAT.asset	KayKitKnight	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Dragon_Evolved02/FinalVAT.asset	QuaterniusDragons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Dragon_EvolvedYoung03/FinalVAT.asset	QuaterniusDragons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Frog01/Full.asset	QuaterniusTroops5	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/PlatformerCrab01/FinalVAT.asset	QuaterniusPlatformerBatch6	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonRogue01/FinalVAT.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/FinalVAT.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonMage03/FinalVAT.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/GiantYeti01/FinalVAT.asset	QuaterniusMonsters	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/BlueDemon01/FinalVAT.asset	QuaterniusGiants3	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Demon01/FinalVAT.asset	QuaterniusGiants	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Alien01/FinalVAT.asset	QuaterniusGiants3	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Dino01/FinalVAT.asset	QuaterniusGiants	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Yeti01/FinalVAT.asset	QuaterniusMonsters	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Ninja01/FinalVAT.asset	QuaterniusTroops4	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Cactoro01/FinalVAT.asset	QuaterniusTroops5	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/MushroomKing01/FinalVAT.asset	QuaterniusMonsters	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Frog01/FinalVAT.asset	QuaterniusTroops5	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Monkroose01/FinalVAT.asset	QuaterniusTroops5	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Tribal01/FinalVAT.asset	QuaterniusTroops4	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/OrcSkull01/FinalVAT.asset	QuaterniusTroops4	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Orc01/FinalVAT.asset	QuaterniusMonsters	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/PlatformerEnemy01/Full.asset	QuaterniusPlatformerBatch6	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/Triceratops01/FinalVAT.asset	NonhumanBatch2	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/PlatformerSkull01/Full.asset	QuaterniusPlatformerBatch6	CC0 1.0
+Assets/VAT_Data/FemaleCharacterPBR_Stage5_MultiClip_Pos.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/FemaleCharacterPBR_Stage5_MultiClip_Norm.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/Game/CharacterPipeline/Generated/PlatformerEnemy01/FinalVAT.asset	QuaterniusPlatformerBatch6	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/PlatformerSkull01/FinalVAT.asset	QuaterniusPlatformerBatch6	CC0 1.0
+Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_LowLOD_Pos.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_LowLOD_Norm.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/FemaleCharacterPBR_Stage5_MultiClip_MidLOD_Pos.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/FemaleCharacterPBR_Stage5_MultiClip_MidLOD_Norm.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/RPG Tiny Hero Duo/Texture/Albedo.png	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/MaleCharacter_CleanMesh.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/FemaleCharacterPBR_CleanMesh.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/FemaleCharacterPBR_MidLOD_Mesh.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Packages/com.unity.render-pipelines.core/Runtime/Debugging/Prefabs/Fonts/PerfectDOSVGA437.ttf	Zeh Fernando	Author direct permission; not OFL/MIT
+Assets/VAT_Data/MaleCharacter_LowLOD_Mesh.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/FemaleCharacterPBR_Stage5_MultiClip_LowLOD_Pos.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/FemaleCharacterPBR_Stage5_MultiClip_LowLOD_Norm.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/FemaleCharacterPBR_LowLOD_Mesh.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/Game/M54TrialPlayable/Settings/UnityChanNear.mat	ModelTrialSource/UnityChan	UCL2.02
+Assets/Game/M54TrialPlayable/Settings/UnityChanMid.mat	ModelTrialSource/UnityChan	UCL2.02
+Assets/VAT_Data/FemaleCharacterPBR_Stage5_MultiClip_Profile.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Profile.asset	RPG Tiny Hero Duo / verify exact original VAT binding	Asset Store EULA
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Unit.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Unit_Render.asset	KayKitSkeletons	CC0 1.0
+Assets/SazenGames/Skeleton/Scripts/SimpleCameraController.cs	SazenGames Skeleton	Asset Store EULA
+Assets/SazenGames/Skeleton/Scripts/AnimationReplayer.cs	SazenGames Skeleton	Asset Store EULA
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Unit_Combat.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Unit_Movement.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Unit_Flocking.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Unit_Spawn.asset	KayKitSkeletons	CC0 1.0
+Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01/Unit_Animation.asset	KayKitSkeletons	CC0 1.0

@@ -1,0 +1,46 @@
+{
+  "sourceURL": "https://raw.githubusercontent.com/mmuu1987/tower-defense/8019f9267749ec7b9bb87b472b92e04a2dde4761/assets/models/enemies/robot.dat",
+  "sourceRepository": "mmuu1987/tower-defense",
+  "commit": "8019f9267749ec7b9bb87b472b92e04a2dde4761",
+  "sourceSha256": "047f5e5fb3bb6d378bd1df16ca6137f2a596c99b3a1b5690b4020c05aaf6f319",
+  "sourceBytes": 463988,
+  "bundleSha256": "302c00fbeada8857e8614d6d759e23da7f02daaffe3c82194506e860c8918b95",
+  "license": "CC0-1.0",
+  "licenseURL": "https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/models/gltf/RobotExpressive/README.md",
+  "licenseSha256": "14687ac4a51d5e013b0fbc5486dabc743f76c1e37b7ca872af74cfb93115b4b2",
+  "date": "2026-10-02T12:38:16.724Z",
+  "derivation": "Same GLB bytes, restored .glb suffix. RobotData.json is a verified accessor expansion for a bounded one-model Unity adapter, not a generic glTF importer. Original GLB including all three face morph targets is retained.",
+  "selectedClips": [
+    "Idle",
+    "Walking",
+    "Punch",
+    "Death"
+  ],
+  "selectedClipMorphEvidence": [
+    {
+      "clip": "Idle",
+      "node": 13,
+      "maximumAbsoluteWeight": 0,
+      "keys": 81
+    },
+    {
+      "clip": "Walking",
+      "node": 13,
+      "maximumAbsoluteWeight": 0,
+      "keys": 24
+    },
+    {
+      "clip": "Punch",
+      "node": 13,
+      "maximumAbsoluteWeight": 0,
+      "keys": 21
+    },
+    {
+      "clip": "Death",
+      "node": 13,
+      "maximumAbsoluteWeight": 0,
+      "keys": 24
+    }
+  ],
+  "formalRosterChanged": false
+}

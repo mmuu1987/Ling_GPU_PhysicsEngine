@@ -1,0 +1,34 @@
+[
+  {
+    "phase": "seed",
+    "pid": 25184,
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 135.16862177848816,
+    "passed": true
+  },
+  {
+    "phase": "reload",
+    "pid": 23948,
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 118.24817252159119,
+    "passed": true
+  },
+  {
+    "phase": "playability-seed",
+    "pid": 22188,
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 144.79700994491577,
+    "passed": true
+  },
+  {
+    "phase": "playability-reload",
+    "pid": 26260,
+    "exitCode": 0,
+    "timedOut": false,
+    "elapsedSeconds": 11.8848557472229,
+    "passed": true
+  }
+]
