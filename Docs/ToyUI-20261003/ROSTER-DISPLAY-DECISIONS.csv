@@ -1,0 +1,69 @@
+﻿模板编号,名称,图鉴展示,代表模板,原因
+launch-open-unit-0,Attacker Swordsman,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-open-unit-1,Attacker Archer,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-open-unit-2,Defender Swordsman,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-open-unit-3,Defender Caster,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-mountain-unit-0,Attacker Swordsman,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-mountain-unit-1,Attacker Archer,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-mountain-unit-2,Defender Swordsman,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-mountain-unit-3,Defender Caster,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-mountain-unit-4,Third Army Swordsman,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-mountain-unit-5,Third Army Caster,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-point-unit-0,Attacker Swordsman,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-point-unit-1,Attacker Archer,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-point-unit-2,Defender Swordsman,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-point-unit-3,Defender Caster,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-three-unit-0,Attacker Swordsman,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-three-unit-1,Attacker Archer,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-three-unit-2,Defender Swordsman,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-three-unit-3,Defender Caster,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-three-unit-4,Third Army Swordsman,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-three-unit-5,Third Army Caster,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-standard-unit-0,Attacker Swordsman,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-standard-unit-1,Attacker Archer,隐藏重复展示,roster-male,同近景模型与材质；只清理展示，不替换旧配置
+launch-standard-unit-2,Defender Swordsman,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+launch-standard-unit-3,Defender Caster,隐藏重复展示,roster-female,同近景模型与材质；只清理展示，不替换旧配置
+roster-male,原有·男战士,保留,roster-male,模型代表
+roster-female,原有·女角色,保留,roster-female,模型代表
+roster-unitychan,UnityChan（UCL）,保留,roster-unitychan,模型代表
+roster-legacy-skeleton,原有·Sazen骷髅,保留,roster-legacy-skeleton,模型代表
+roster-knight,剑盾骑士,保留,roster-knight,模型代表
+roster-ranger,持弓游侠,保留,roster-ranger,模型代表
+roster-skeleton-warrior,斧盾骷髅,保留,roster-skeleton-warrior,模型代表
+roster-skeleton-rogue,双刃骷髅,保留,roster-skeleton-rogue,模型代表
+roster-skeleton-mage,持杖骷髅,保留,roster-skeleton-mage,模型代表
+roster-orc,兽人,保留,roster-orc,模型代表
+roster-yeti,雪怪,保留,roster-yeti,模型代表
+roster-mushroom,蘑菇怪,保留,roster-mushroom,模型代表
+roster-large-wolf,大型·巨狼,保留,roster-large-wolf,模型代表
+roster-large-bull,大型·公牛,保留,roster-large-bull,模型代表
+roster-large-knight-control,大型对照·骑士,隐藏重复展示,roster-knight,同近景模型与材质；只清理展示，不替换旧配置
+skeleton-warrior,斧盾骷髅,隐藏重复展示,roster-skeleton-warrior,同近景模型与材质；只清理展示，不替换旧配置
+enemy-collection-knight-control,骑士（对照）,隐藏重复展示,roster-knight,同近景模型与材质；只清理展示，不替换旧配置
+nonhuman2-knight-control,大型对照·骑士,隐藏重复展示,roster-knight,同近景模型与材质；只清理展示，不替换旧配置
+roster-triceratops,三角龙,保留,roster-triceratops,模型代表
+roster-stegosaurus,剑龙,保留,roster-stegosaurus,模型代表
+roster-spider,巨型蜘蛛,保留,roster-spider,模型代表
+roster-mounted-knight,剑盾骑兵（派生骑乘）,保留,roster-mounted-knight,模型代表
+cavalry-knight-control,骑兵对照·骑士,隐藏重复展示,roster-knight,同近景模型与材质；只清理展示，不替换旧配置
+dragons-knight-control,大型对照·骑士,隐藏重复展示,roster-knight,同近景模型与材质；只清理展示，不替换旧配置
+roster-dragon,飞龙（超大）,保留,roster-dragon,模型代表
+roster-dragon-evolved,进化巨龙（超大）,保留,roster-dragon-evolved,模型代表
+dragons-phalanx-knight-90,密集方阵骑士（90）,隐藏重复展示,roster-knight,同近景模型与材质；只清理展示，不替换旧配置
+dragons-phalanx-knight-150,密集方阵骑士（150）,隐藏重复展示,roster-knight,同近景模型与材质；只清理展示，不替换旧配置
+roster-giant-demon,巨型恶魔（超大）,保留,roster-giant-demon,模型代表
+roster-giant-dino,巨型暴龙（超大）,保留,roster-giant-dino,模型代表
+roster-giant-yeti,巨型雪人（超大）,保留,roster-giant-yeti,模型代表
+roster-giant-bluedemon,巨型蓝魔（超大）,保留,roster-giant-bluedemon,模型代表
+roster-giant-alien,巨型外星人（超大）,保留,roster-giant-alien,模型代表
+roster-orcskull,骷髅兽人,保留,roster-orcskull,模型代表
+roster-ninja,忍者,保留,roster-ninja,模型代表
+roster-tribal,部落战士,保留,roster-tribal,模型代表
+roster-knight-legion,剑盾骑士军团,隐藏重复展示,roster-knight,同近景模型与材质；只清理展示，不替换旧配置
+roster-cactoro,仙人掌枪手,保留,roster-cactoro,模型代表
+roster-frog,毒蛙,保留,roster-frog,模型代表
+roster-monkroose,猴獴战士,保留,roster-monkroose,模型代表
+roster-platformer-crab,蟹怪,保留,roster-platformer-crab,模型代表
+roster-platformer-enemy,绿皮小怪,继续隐藏,,原先已隐藏，不恢复
+roster-platformer-skull,骷髅头,继续隐藏,,原先已隐藏，不恢复
+roster-robot-expressive,机器人 · 近战,保留,roster-robot-expressive,模型代表

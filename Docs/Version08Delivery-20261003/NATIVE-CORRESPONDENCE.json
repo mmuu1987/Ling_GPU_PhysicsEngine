@@ -1,0 +1,68 @@
+[
+  {
+    "path": "UnityPlayer.dll",
+    "sha256": "20257dcf8c19acef1cfce59862bc556003430392d280c64a0003646fa626b7c2",
+    "oldSha256": "20257dcf8c19acef1cfce59862bc556003430392d280c64a0003646fa626b7c2",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "WinPixEventRuntime.dll",
+    "sha256": "81adcfd8253c3489be720da7e30f16004dc9a1f02a8b418c6c3aef4993032e6d",
+    "oldSha256": "81adcfd8253c3489be720da7e30f16004dc9a1f02a8b418c6c3aef4993032e6d",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "D3D12/D3D12Core.dll",
+    "sha256": "625bd40005b1c3708695d5256ecf230d278e6b8edba5a88af70f3d91324f3052",
+    "oldSha256": "625bd40005b1c3708695d5256ecf230d278e6b8edba5a88af70f3d91324f3052",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "D3D12/d3d12SDKLayers.dll",
+    "sha256": "c0730cc70d3250d3de19c04c17845ba9e70eecaf502d684d1409195ebc5b5959",
+    "oldSha256": "c0730cc70d3250d3de19c04c17845ba9e70eecaf502d684d1409195ebc5b5959",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "MonoBleedingEdge/EmbedRuntime/mono-2.0-bdwgc.dll",
+    "sha256": "6852053ba5b18962a55f3e1dff5ac73d3a734528b2ec757468f392eb469e97cf",
+    "oldSha256": "6852053ba5b18962a55f3e1dff5ac73d3a734528b2ec757468f392eb469e97cf",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "MonoBleedingEdge/EmbedRuntime/MonoPosixHelper.dll",
+    "sha256": "01fddd116596029bdb8c4dc8a4c73a989177886996be52eb5079fe8f59513c8d",
+    "oldSha256": "01fddd116596029bdb8c4dc8a4c73a989177886996be52eb5079fe8f59513c8d",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "WarSandbox_Data/Plugins/x86_64/lib_burst_generated.dll",
+    "sha256": "3a19a456cbafddd33398de9b126953c65c5194934fd0e17fe79a7e8055d05686",
+    "oldSha256": "797aae26c6ac47e847ee804e659646492bfc5e86f6f219b4f501d461dfc77db0",
+    "matchesPriorEvidence": false
+  },
+  {
+    "path": "WarSandbox_Data/Plugins/x86_64/libonigwrap.dll",
+    "sha256": "6d539f2ad6e1b58d3c8836b9c3a1d50c97cbd7a6ca0c5de25d994a7c4b1ecf42",
+    "oldSha256": "6d539f2ad6e1b58d3c8836b9c3a1d50c97cbd7a6ca0c5de25d994a7c4b1ecf42",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "WarSandbox_Data/Managed/Autodesk.Fbx.dll",
+    "sha256": "e96fd3f83d981041ac50014c204551ab2b1324bb786b18ebb1084fede7dc3219",
+    "oldSha256": "e96fd3f83d981041ac50014c204551ab2b1324bb786b18ebb1084fede7dc3219",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "WarSandbox_Data/Managed/Autodesk.Fbx.BuildTestAssets.dll",
+    "sha256": "a487f4617fefc3dbc96bd42d0c706d0f1ed1cd3f29a97637ddc71927ae5ff6e5",
+    "oldSha256": "a487f4617fefc3dbc96bd42d0c706d0f1ed1cd3f29a97637ddc71927ae5ff6e5",
+    "matchesPriorEvidence": true
+  },
+  {
+    "path": "WarSandbox_Data/Managed/Unity.Formats.Fbx.Runtime.dll",
+    "sha256": "7006dd423e4af9ffe91bcff9757599de954c77f8e3d3be9e46b0d0705aa046fd",
+    "oldSha256": "7006dd423e4af9ffe91bcff9757599de954c77f8e3d3be9e46b0d0705aa046fd",
+    "matchesPriorEvidence": true
+  }
+]

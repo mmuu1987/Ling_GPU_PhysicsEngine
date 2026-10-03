@@ -8,7 +8,7 @@ namespace MassEngine.Game
     {
         private WarSandboxUGUI runtimeUi;
         private float nextUiRefresh;
-        private void RefreshUGUI()
+        private void RefreshLegacyUGUI()
         {
             if (runtimeUi == null) runtimeUi = new WarSandboxUGUI(transform, "Deployment Canvas", 100);
             if (clearFocusRequested)
@@ -143,10 +143,10 @@ namespace MassEngine.Game
         private void DrawUGUIMap(WarSandboxUGUI ui, Rect area)
         {
             ui.Panel("map-card", area); ui.Brackets("map-card-br", area, null, 10);
-            ui.Code("map-code", new Rect(area.x + 22, area.y + 6, area.width - 160, 16), "RECON // DEPLOYMENT", 10, WarSandboxUGUI.Muted);
+            ui.Code("map-code", new Rect(area.x + 22, area.y + 6, area.width - 160, 16), "战前位置与阵型", 10, WarSandboxUGUI.Muted);
             ui.Label("map-title", new Rect(area.x + 12, area.y + 16, area.width - 144, 34), "部署预览", 21, null, true);
-            ui.Button("map-place", new Rect(area.xMax - 124, area.y + 10, 110, 32), placing ? "取消放置" : "点击放置", () => placing = !placing, false, deployment.Draft.Count > 0, placing);
-            string note = placing ? "在下方点击，放置选中的编成" : "色块对应军团 · 点击色块选择编成";
+            ui.Button("map-place", new Rect(area.xMax - 124, area.y + 10, 110, 32), placing ? "取消放置" : "点击放置", () => { placing = !placing; spatialSelection = true; }, false, deployment.Draft.Count > 0, placing);
+            string note = placing ? "在下方点击，放置选中的编成" : "点击色块选择编成 · 小编成也可用左侧的布阵按钮选中";
             if (deployment.controller.manager.terrainSurfaceAsset != null && deployment.Draft.Count > 0 &&
                 deployment.controller.TryResolveGroundPoint(deployment.Draft[selected].center, out var ground, out _))
                 note = "地表高程 " + ground.y.ToString("F1") + "m · 完整脚印须可通行";
@@ -157,8 +157,8 @@ namespace MassEngine.Game
             ui.Panel("deployment-map-surface", map, WarSandboxUGUI.FieldFill, false, WarSandboxUGUI.Line);
             for (int i = 1; i < 8; i++)
             {
-                ui.Panel("map-grid-x-" + i, new Rect(map.x + map.width * i / 8, map.y, 1, map.height), new Color32(20, 38, 50, 255), false);
-                ui.Panel("map-grid-y-" + i, new Rect(map.x, map.y + map.height * i / 8, map.width, 1), new Color32(20, 38, 50, 255), false);
+                ui.Panel("map-grid-x-" + i, new Rect(map.x + map.width * i / 8, map.y, 1, map.height), WarSandboxUGUI.Line, false);
+                ui.Panel("map-grid-y-" + i, new Rect(map.x, map.y + map.height * i / 8, map.width, 1), WarSandboxUGUI.Line, false);
             }
             var rules = deployment.Draft.Rules;
             if (rules.staticObstaclesEnabled && rules.staticObstacles != null)
@@ -178,7 +178,7 @@ namespace MassEngine.Game
                 rect = Rect.MinMaxRect(Mathf.Max(map.xMin, rect.xMin), Mathf.Max(map.yMin, rect.yMin), Mathf.Min(map.xMax, rect.xMax), Mathf.Min(map.yMax, rect.yMax));
                 if (rect.width <= 0 || rect.height <= 0) continue;
                 ui.Panel("map-unit-" + i, rect, WarSandboxTeamPalette.Resolve(entry.teamId), false);
-                if (i == selected)
+                if (spatialSelection && i == selected)
                 {
                     ui.Panel("map-selected-top", new Rect(rect.x, rect.y, rect.width, 2), WarSandboxUGUI.Accent, false);
                     ui.Panel("map-selected-bottom", new Rect(rect.x, rect.yMax - 2, rect.width, 2), WarSandboxUGUI.Accent, false);
@@ -198,8 +198,13 @@ namespace MassEngine.Game
                     // Authoring Y is not a terrain height array; the runtime presentation samples it on apply.
                     entry.center = new Vector3(center.x, entry.center.y, center.z); draft.Set(selected, entry); placing = false; RefreshAfterUiChange();
                 }
-                else for (int i = draft.Count - 1; i >= 0; i--)
-                    if (MapBounds(draft[i].Bounds, world, map).Contains(point)) { selected = i; RefreshAfterUiChange(); break; }
+                else
+                {
+                    spatialSelection = false;
+                    for (int i = draft.Count - 1; i >= 0; i--)
+                        if (MapBounds(draft[i].Bounds, world, map).Contains(point)) { selected = i; spatialSelection = true; RefreshAfterUiChange(); break; }
+                    nextUiRefresh = 0;
+                }
             });
         }
         private void DrawUGUIPlans(WarSandboxUGUI ui)

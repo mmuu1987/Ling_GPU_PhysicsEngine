@@ -1,0 +1,181 @@
+{
+  "source": {
+    "baselineFiles": 7492,
+    "changedOrMissing": [],
+    "added": []
+  },
+  "package": {
+    "baselineFiles": 364,
+    "changedOrMissing": [],
+    "added": []
+  },
+  "tests": [
+    {
+      "phase": "seed",
+      "passed": true,
+      "completed": true,
+      "buildGuid": "eea0c353522542919393aa8b05eaaea0",
+      "crossProcess": false,
+      "error": "",
+      "battles": [
+        {
+          "slot": "terrain-a",
+          "initial": [
+            144,
+            128,
+            128
+          ],
+          "survivors": [
+            0,
+            0,
+            121
+          ],
+          "restart": [
+            144,
+            128,
+            128
+          ],
+          "seconds": 89.21707153320312,
+          "peakGridOverflow": 12
+        }
+      ]
+    },
+    {
+      "phase": "reload",
+      "passed": true,
+      "completed": true,
+      "buildGuid": "eea0c353522542919393aa8b05eaaea0",
+      "crossProcess": true,
+      "error": "",
+      "battles": [
+        {
+          "slot": "terrain-b",
+          "initial": [
+            112,
+            128,
+            128
+          ],
+          "survivors": [
+            0,
+            0,
+            96
+          ],
+          "restart": [
+            112,
+            128,
+            128
+          ],
+          "seconds": 95.65834045410156,
+          "peakGridOverflow": 14
+        }
+      ]
+    },
+    {
+      "phase": "playability-seed",
+      "passed": true,
+      "completed": true,
+      "buildGuid": "eea0c353522542919393aa8b05eaaea0",
+      "crossProcess": false,
+      "error": "",
+      "battles": [
+        {
+          "slot": "three-armies",
+          "initial": [
+            256,
+            256,
+            256
+          ],
+          "survivors": [
+            0,
+            0,
+            177
+          ],
+          "restart": [
+            256,
+            256,
+            256
+          ],
+          "seconds": 46.7662467956543,
+          "peakGridOverflow": 38
+        },
+        {
+          "slot": "four-armies",
+          "initial": [
+            256,
+            256,
+            256,
+            128
+          ],
+          "survivors": [
+            0,
+            0,
+            137,
+            0
+          ],
+          "restart": [
+            256,
+            256,
+            256,
+            128
+          ],
+          "seconds": 53.5544319152832,
+          "peakGridOverflow": 45
+        },
+        {
+          "slot": "control-point",
+          "initial": [
+            256,
+            256
+          ],
+          "survivors": [
+            256,
+            256
+          ],
+          "restart": [
+            256,
+            256
+          ],
+          "seconds": 21.6043701171875,
+          "peakGridOverflow": 0
+        }
+      ]
+    },
+    {
+      "phase": "playability-reload",
+      "passed": true,
+      "completed": true,
+      "buildGuid": "eea0c353522542919393aa8b05eaaea0",
+      "crossProcess": true,
+      "error": "",
+      "battles": []
+    }
+  ],
+  "images": [
+    {
+      "path": "Logs/Version08Delivery-20261003-01/test-seed/report/terrain-a-setup.png",
+      "width": 1280,
+      "height": 720,
+      "bytes": 106879,
+      "sha256": "a9debcab74baa285b7a7c7756b43ae63d01c973fa1ee5069950623337b687e27"
+    },
+    {
+      "path": "Logs/Version08Delivery-20261003-01/test-playability-seed/report/control-point-settled-ui.png",
+      "width": 1280,
+      "height": 720,
+      "bytes": 124657,
+      "sha256": "0463abef629a58c29cd6c2afdf9795798e9ace0ff2d9732be0a8c992c7251513"
+    },
+    {
+      "path": "Logs/Version08Delivery-20261003-01/test-playability-reload/report/manual-four-armies-ui.png",
+      "width": 1920,
+      "height": 1080,
+      "bytes": 260245,
+      "sha256": "66a9069d8200d4d6e7ee7a61808a7d217a23bc058912ea01432ee10ae93f46f2"
+    }
+  ],
+  "humanAcceptance": "paused",
+  "v1Frozen": false,
+  "newBuild": false,
+  "commitOrPush": false,
+  "protectionPassed": true
+}

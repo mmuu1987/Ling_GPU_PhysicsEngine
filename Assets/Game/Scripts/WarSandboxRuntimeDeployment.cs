@@ -16,12 +16,15 @@ namespace MassEngine.Game
         public WarSandboxDeploymentDraft Draft { get; private set; }
         public string Error { get; private set; }
         public IReadOnlyList<UnitTypeConfig> Templates => templates;
+        /// <summary>Deduplicated NEW-choice presentation only. Templates remains the full compatibility/validation set.</summary>
+        public IReadOnlyList<UnitTypeConfig> ChoiceTemplates => choiceTemplates;
         public ScenarioConfig SourceScenario => sourceScenario;
         public Vector2 WorldSize => controller != null && controller.manager != null && controller.manager.systemConfig != null &&
             controller.manager.systemConfig.simulationConfig != null
             ? controller.manager.systemConfig.simulationConfig.simulationWorldSize : Vector2.zero;
 
         private readonly List<UnitTypeConfig> templates = new List<UnitTypeConfig>();
+        private readonly List<UnitTypeConfig> choiceTemplates = new List<UnitTypeConfig>();
         private ScenarioConfig sourceScenario;
         private WarSandboxDeploymentEntry[] committed;
         private WarSandboxDeploymentInstance active;
@@ -97,6 +100,7 @@ namespace MassEngine.Game
             foreach (var entry in committed) if (Selectable(entry.template) && !templates.Contains(entry.template)) templates.Add(entry.template);
             if (rosterPolicy != null) foreach (var template in rosterPolicy.templates)
                 if (Selectable(template) && !templates.Contains(template)) templates.Add(template);
+            choiceTemplates.Clear(); choiceTemplates.AddRange(WarSandboxRosterChoices.Local(battlefieldCatalog, templates));
             return true;
         }
 

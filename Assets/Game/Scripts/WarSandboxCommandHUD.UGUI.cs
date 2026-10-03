@@ -13,7 +13,7 @@ namespace MassEngine.Game
         private FlowFieldPreviewHUD flowHud;
         private bool telemetryWasEnabled, flowWasEnabled, diagnosticsCaptured;
         private const float ColumnWidth = 300, RightWidth = 300;
-        private static readonly Color CardFill = new Color32(14, 27, 37, 255);
+        private static readonly Color CardFill = WarSandboxUGUI.Raised;
         private bool CustomStatsActive()
         {
             var deployment = controller != null ? controller.GetComponent<WarSandboxRuntimeDeployment>() : null;
@@ -40,7 +40,7 @@ namespace MassEngine.Game
             if (IsTerminalPhase(controller.Phase)) return "再来一局";
             return controller.Phase == WarSandboxBattlePhase.Running ? "暂停" : "继续";
         }
-        private void RefreshRuntimeUI()
+        private void RefreshLegacyRuntimeUI()
         {
             ResolveReferences();
             bool visible = controller != null && !WarSandboxDeploymentHUD.BlocksInput(controller) &&
@@ -287,7 +287,7 @@ namespace MassEngine.Game
             int count = result.ArmyCount, rows = (count + 1) / 2, visibleRows = Mathf.Min(rows, 2);
             float w = Mathf.Min(640, ui.Width - 40), x = (ui.Width - w) / 2, cellH = 88;
             float height = Mathf.Min(ui.Height - 40, 130 + visibleRows * (cellH + 8) + 64), y = (ui.Height - height) / 2;
-            ui.Panel("result-shade", new Rect(0, 0, ui.Width, ui.Height), new Color(0.01f, 0.03f, 0.05f, 0.62f), false);
+            ui.Panel("result-shade", new Rect(0, 0, ui.Width, ui.Height), WarSandboxUGUI.Shade, true);
             var card = new Rect(x, y, w, height);
             ui.Panel("result-card", card); ui.Brackets("result-card-br", card);
             ui.Code("result-code", new Rect(x + 24, y + 16, w - 48, 20), "AFTER-ACTION // 战后报告", 12, WarSandboxUGUI.Accent);
