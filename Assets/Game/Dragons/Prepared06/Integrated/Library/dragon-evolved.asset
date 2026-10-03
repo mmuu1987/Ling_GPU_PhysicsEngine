@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: dragon-evolved
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u8FDB\u5316\u5DE8\u9F99\uFF08\u8D85\u5927\uFF09"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 08214ebf1a21d964b94fe494b9583c28, type: 2}
+  movementConfig: {fileID: 11400000, guid: 9975fc5d22911e14f9ea635101b974e5, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 03fa14ff2f00a204b9177fa96beab9b3, type: 2}
+  animationConfig: {fileID: 11400000, guid: 0064e3c9dd8fe5c44ba22cdebfa42fc4, type: 2}
+  combatConfig: {fileID: 11400000, guid: a9832eda31139fb4e9be22362650064e, type: 2}
+  renderConfig: {fileID: 11400000, guid: 611257ba9fc38844eac50f74e19d00c9, type: 2}

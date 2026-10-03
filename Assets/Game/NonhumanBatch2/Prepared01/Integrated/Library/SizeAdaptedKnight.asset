@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: SizeAdaptedKnight
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5927\u578B\u5BF9\u7167\xB7\u9A91\u58EB"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 1
+  spawnConfig: {fileID: 11400000, guid: fa2c2cedc3b86054fb279087e685537e, type: 2}
+  movementConfig: {fileID: 11400000, guid: 5dd2af58b18c42f47bf1e698c26b75fd, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 7f45c994501597c468736f064a1ccdf0, type: 2}
+  animationConfig: {fileID: 11400000, guid: 6d4c949b8dee9c24db5518ff86d71b8c, type: 2}
+  combatConfig: {fileID: 11400000, guid: 31c4c71ba76da314d8fd8b2a3db5c58c, type: 2}
+  renderConfig: {fileID: 11400000, guid: 06ba0f2e007721b4c94c0034ffb4870b, type: 2}

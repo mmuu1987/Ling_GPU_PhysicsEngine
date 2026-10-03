@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: MountedKnight
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5251\u76FE\u9A91\u5175\uFF08\u6D3E\u751F\u9A91\u4E58\uFF09"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: d17211587f2f6d542bc9814d3a86b9e8, type: 2}
+  movementConfig: {fileID: 11400000, guid: 1e4cbb7cb89c84f4fa4ce5747eb6ad68, type: 2}
+  flockingConfig: {fileID: 11400000, guid: a69fb6fc1f629ba43980503b61e27dc4, type: 2}
+  animationConfig: {fileID: 11400000, guid: 67618db3be2fded4dba5fff295347930, type: 2}
+  combatConfig: {fileID: 11400000, guid: 0a2971f458a2f8a44894d40e5e671bd8, type: 2}
+  renderConfig: {fileID: 11400000, guid: 51ca52f28c3673f4c86da58fda9386df, type: 2}

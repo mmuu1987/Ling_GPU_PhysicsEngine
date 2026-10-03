@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: GiantYeti01
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 67650184756339735, guid: 5a80b5da9a0064c46a74a5f673fa05ac, type: 3}
+  sizeRootPath: 
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: 4d120cc3a8728f2429d36d9947a487b5, type: 2}
+  move: {fileID: 7400000, guid: bcac5d3dba102184c8f1b1a8a5fdce41, type: 2}
+  attack: {fileID: 7400000, guid: c17edec2f3e4c5d44b59d8cf90a4e79c, type: 2}
+  death: {fileID: 7400000, guid: c6424a5120b683041a44170dd15e605f, type: 2}
+  frameRate: 24
+  targetBodyHeight: 4.4722414
+  groundBindFeet: 0
+  agentRadius: 4.1
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 32
+  paletteRows: 32
+  fullVertexBudget: 20000
+  maxTextureMiB: 48
+  maximumPositionError: 0.0025
+  outputName: GiantYeti01
+  unitTemplate: {fileID: 11400000, guid: e0e2447c96db07140bab00c635748902, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

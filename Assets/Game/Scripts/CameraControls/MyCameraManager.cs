@@ -13,6 +13,7 @@ public class MyCameraManager : MonoBehaviour
     [Header("Camera")]
     public Camera ControlledCamera;
     public bool CreateCameraIfMissing = true;
+    [System.NonSerialized] public MassEngine.MassEngineManager TerrainManager;
 
     [Header("Input")]
     [Tooltip("When enabled, input only works while the mouse is inside the Game view screen rectangle.")]
@@ -139,6 +140,7 @@ public class MyCameraManager : MonoBehaviour
     private void LateUpdate()
     {
         RecoverInvalidTransform();
+        KeepCameraAboveTerrain();
         CaptureSafeTransform();
     }
 
@@ -147,7 +149,7 @@ public class MyCameraManager : MonoBehaviour
         if (ControlledCamera == null || _lockInput)
             return;
 
-        bool canUseInput = IsMouseInsideInputArea();
+        bool canUseInput = IsMouseInsideInputArea() && !MassEngine.Game.WarSandboxUGUI.PointerOverUI() && !MassEngine.Game.WarSandboxUGUI.IsTyping;
 
         if (Input.GetMouseButtonUp(0) || Input.GetMouseButtonUp(1) || Input.GetMouseButtonUp(2))
         {
@@ -274,6 +276,8 @@ public class MyCameraManager : MonoBehaviour
 
     private void StartOrbit()
     {
+        if (TerrainManager != null && TerrainManager.terrainSurfaceAsset != null &&
+            !TryAnchorTerrain(ControlledCamera.ScreenPointToRay(Input.mousePosition))) return;
         _orbiting = true;
         _mouseOrbit.Target = _point;
         _mouseOrbit.Distance = _distance;
@@ -304,6 +308,8 @@ public class MyCameraManager : MonoBehaviour
         if (Mathf.Approximately(mouseWheel, 0f))
             return;
 
+        if (TerrainManager != null && TerrainManager.terrainSurfaceAsset != null)
+            TryAnchorTerrain(new Ray(ControlledCamera.transform.position, ControlledCamera.transform.forward));
         float newDistance = CameraMotionSafety.ResolveZoomDistance(
             _distance, mouseWheel, ZoomSensitivity, MinZoomDistance, MaxZoomDistance);
         Vector3 nextPosition = _point.position - ControlledCamera.transform.forward * newDistance;
@@ -389,6 +395,15 @@ public class MyCameraManager : MonoBehaviour
         if (ControlledCamera == null || _point == null || !CameraMotionSafety.IsFinite(point))
             return;
 
+        if (TerrainManager != null)
+        {
+            if (!TerrainManager.TryGetTerrainContext(out var surface, out _, out _)) return;
+            if (surface != null)
+            {
+                if (!surface.TrySample(new Vector2(point.x, point.z), out var sample)) return;
+                point = sample.Position;
+            }
+        }
         Vector3 target = CameraMotionSafety.ClampWorldPosition(point, MaxWorldCoordinate);
         Vector3 offset = target - _point.position;
         ControlledCamera.transform.position = CameraMotionSafety.ClampWorldPosition(
@@ -396,6 +411,26 @@ public class MyCameraManager : MonoBehaviour
             MaxWorldCoordinate);
         _point.position = target;
         CaptureSafeTransform();
+    }
+
+    private bool TryAnchorTerrain(Ray ray)
+    {
+        if (_point == null || TerrainManager == null ||
+            !TerrainManager.TryGetTerrainContext(out var surface, out _, out _) || surface == null ||
+            !MassEngine.Game.TerrainSurfaceQueries.Raycast(surface, ray, MaxZoomDistance * 2, out var point)) return false;
+        _point.position = point;
+        _distance = Mathf.Clamp(Vector3.Distance(ControlledCamera.transform.position, point), MinZoomDistance, MaxZoomDistance);
+        return true;
+    }
+
+    private void KeepCameraAboveTerrain()
+    {
+        if (ControlledCamera == null || TerrainManager == null ||
+            !TerrainManager.TryGetTerrainContext(out var surface, out _, out _) || surface == null) return;
+        Vector3 position = ControlledCamera.transform.position;
+        if (!surface.TrySample(new Vector2(position.x, position.z), out var sample)) return;
+        float minimum = sample.Position.y + MinZoomDistance;
+        if (position.y < minimum) { position.y = minimum; ControlledCamera.transform.position = position; }
     }
 
     private bool IsMouseInsideInputArea()

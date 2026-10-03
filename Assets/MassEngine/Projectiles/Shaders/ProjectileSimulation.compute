@@ -1,27 +1,57 @@
 #pragma kernel SimulateProjectiles
 #pragma kernel ClearProjectiles
 #pragma kernel CollectActiveProjectiles
+#pragma kernel SnapshotProjectilePool
+#pragma kernel ApplyProjectileSpawns
+#pragma multi_compile __ MASS_TERRAIN_ENABLED
+#pragma multi_compile __ MASS_PROJECTILE_UNITS
+// Opt-in splash impact effect ring (ProjectileImpactFx). Off = legacy kernel, no extra buffers.
+#pragma multi_compile_local __ MASS_PROJECTILE_IMPACT_FX
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
+#ifdef MASS_TERRAIN_ENABLED
+#include "../../Terrain/Shaders/TerrainSurface.hlsl"
+#include "../../Terrain/Shaders/TerrainCollision.hlsl"
+#endif
 
-// 弹道数据结构（与 C# ProjectileGpuData 对齐，64 字节）
-struct ProjectileData
+#include "ProjectileGeometry.hlsl"
+
+#ifdef MASS_PROJECTILE_UNITS
+#include "ProjectileUnitCollision.hlsl"
+#endif
+
+#ifdef MASS_PROJECTILE_IMPACT_FX
+// Mirrors ProjectileImpactFx.ImpactData (32 bytes). Render-only; never read back by the simulation.
+struct ProjectileImpactData
 {
-    float3 position;        // 当前位置 (12 bytes)
-    float launchTime;       // 发射时间 (4 bytes)
-
-    float3 velocity;        // 当前速度 (12 bytes)
-    float damage;           // 伤害值 (4 bytes)
-
-    int targetAgentIndex;   // 目标索引（-1 = 空闲槽位）(4 bytes)
-    int sourceTeamId;       // 发射方队伍 (4 bytes)
-    float hitRadius;        // 命中半径 (4 bytes)
-    float gravity;          // 重力加速度 (4 bytes)
-
-    float maxLifetime;      // 最大飞行时间 (4 bytes)
-    float trailLength;      // 曳光长度 (4 bytes)
-    float2 padding;         // 对齐填充 (8 bytes)
+    float3 position;
+    float radius;
+    float time;
+    float groundY;
+    float2 padding;
 };
+RWStructuredBuffer<ProjectileImpactData> projectileImpactRing;
+RWStructuredBuffer<uint> projectileImpactCounter;
+uint projectileImpactCapacity;
+
+void RecordProjectileImpact(float3 impact, float radius)
+{
+    uint ticket;
+    InterlockedAdd(projectileImpactCounter[0], 1u, ticket);
+    ProjectileImpactData fx;
+    fx.position = impact;
+    fx.radius = radius;
+    fx.time = currentTime;
+#ifdef MASS_TERRAIN_ENABLED
+    float4 ground = SampleTerrainSurface(impact.xz);
+    fx.groundY = ground.w >= 0.0 ? ground.x : impact.y;
+#else
+    fx.groundY = 0.0;
+#endif
+    fx.padding = float2(0.0, 0.0);
+    projectileImpactRing[ticket % max(1u, projectileImpactCapacity)] = fx;
+}
+#endif
 
 // 缓冲区：使用引擎标准命名（与 MassGpuShaderPropertyIds 一致）
 RWStructuredBuffer<ProjectileData> projectileBuffer;
@@ -92,7 +122,9 @@ void SimulateProjectiles(uint3 id : SV_DispatchThreadID)
         return;
     }
 
-    // 目标死亡或变为友军，销毁弹道
+#ifndef MASS_PROJECTILE_UNITS
+    // Compatibility target-only probe path. Runtime shots are not guided and keep
+    // flying if the original target dies or changes team.
     if (hpReadBuffer[targetIdx] <= 0 || teamIdReadBuffer[targetIdx] == proj.sourceTeamId)
     {
         proj.targetAgentIndex = -1;
@@ -100,17 +132,70 @@ void SimulateProjectiles(uint3 id : SV_DispatchThreadID)
         return;
     }
 
+#endif
     // ========================================
     // 3. 物理积分（重力 + 速度 + 位置）
     // ========================================
     float3 previousPosition = proj.position;
-    proj.velocity.y += proj.gravity * deltaTime;  // 重力加速度
-    proj.position += proj.velocity * deltaTime;   // 位移积分
+    // Exact constant-acceleration integration matches the CPU launch solver.
+    proj.position += proj.velocity * deltaTime + float3(0, 0.5 * proj.gravity * deltaTime * deltaTime, 0);
+    proj.velocity.y += proj.gravity * deltaTime;
 
     // ========================================
     // 4. 碰撞检测
     // ========================================
+#ifdef MASS_PROJECTILE_UNITS
+    float nearestT = 2.0;
+    int hitIndex = -1;
+#ifdef MASS_TERRAIN_ENABLED
+    float terrainT;
+    if (SweepTerrainSurface(previousPosition, proj.position, terrainT)) nearestT = terrainT;
+#else
+    // Flat world's floor is y=0; unit spawn height may still be above this plane.
+    if (previousPosition.y <= 0.0) nearestT = 0.0;
+    else if (proj.position.y <= 0.0)
+        nearestT = previousPosition.y / max(1e-8, previousPosition.y - proj.position.y);
+#endif
+    SweepProjectileUnits(proj, previousPosition, proj.position, agentCount, nearestT, hitIndex);
+    if (nearestT <= 1.0)
+    {
+        proj.position = lerp(previousPosition, proj.position, nearestT);
+        if (hitIndex >= 0 && teamIdReadBuffer[hitIndex] != proj.sourceTeamId)
+            InterlockedAdd(pendingDamageBuffer[hitIndex], (int)proj.damage);
+        // Opt-in area damage at the impact point (unit or ground); no-op when splashRadius == 0.
+        ApplyProjectileSplash(proj, proj.position, hitIndex, agentCount);
+#ifdef MASS_PROJECTILE_IMPACT_FX
+        if (proj.splashRadius > 0.0)
+            RecordProjectileImpact(proj.position, proj.splashRadius);
+#endif
+        // Allies are solid but never receive friendly-fire damage.
+        proj.targetAgentIndex = -1;
+    }
+#else
     float2 targetPos2D = agentPositionReadBuffer[targetIdx];
+#ifdef MASS_TERRAIN_ENABLED
+    float4 targetSurface = SampleTerrainSurface(targetPos2D);
+    if (targetSurface.w < 0.0)
+    {
+        // Invalid terrain targets do not silently become flat-ground targets.
+        proj.targetAgentIndex = -1;
+        projectileBuffer[id.x] = proj;
+        return;
+    }
+    float3 targetPos3D = float3(targetPos2D.x, targetSurface.x + 1.0, targetPos2D.y);
+    float targetT, terrainT;
+    bool targetHit = ProjectileSphereEntry(previousPosition, proj.position - previousPosition,
+        targetPos3D, proj.hitRadius, targetT);
+    bool terrainHit = SweepTerrainSurface(previousPosition, proj.position, terrainT);
+    if (terrainHit && (!targetHit || terrainT <= targetT))
+    {
+        proj.position = lerp(previousPosition, proj.position, terrainT);
+        proj.targetAgentIndex = -1;
+        projectileBuffer[id.x] = proj;
+        return;
+    }
+#else
+    // Keep the legacy flat-ground variant (including its original closest-point test).
     float3 targetPos3D = float3(targetPos2D.x, 0.0, targetPos2D.y);
 
     // Swept segment-vs-sphere test prevents fast projectiles from tunnelling through
@@ -124,8 +209,10 @@ void SimulateProjectiles(uint3 id : SV_DispatchThreadID)
     float3 diff = closestPoint - targetPos3D;
     float distSqr = dot(diff, diff);
     float hitRadiusSqr = proj.hitRadius * proj.hitRadius;
+    bool targetHit = distSqr <= hitRadiusSqr;
+#endif
 
-    if (distSqr <= hitRadiusSqr)
+    if (targetHit)
     {
         // ========================================
         // 5. 命中：伤害累积
@@ -137,6 +224,7 @@ void SimulateProjectiles(uint3 id : SV_DispatchThreadID)
         proj.targetAgentIndex = -1;
     }
 
+#endif
     // 写回弹道数据
     projectileBuffer[id.x] = proj;
 }
@@ -158,4 +246,26 @@ void CollectActiveProjectiles(uint3 id : SV_DispatchThreadID)
         return;
 
     activeProjectileIndices.Append(id.x);
+}
+
+// Small ownership snapshot, not a readback of the 64-byte projectile records.
+RWStructuredBuffer<int> projectileSlotOccupancy;
+StructuredBuffer<ProjectileData> projectileSpawnData;
+StructuredBuffer<int> projectileSpawnSlots;
+int projectileSpawnCount;
+
+[numthreads(64, 1, 1)]
+void SnapshotProjectilePool(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)maxProjectiles) return;
+    projectileSlotOccupancy[id.x] = projectileBuffer[id.x].targetAgentIndex >= 0 ? 1 : 0;
+}
+
+[numthreads(64, 1, 1)]
+void ApplyProjectileSpawns(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)projectileSpawnCount) return;
+    int slot = projectileSpawnSlots[id.x];
+    if (slot < 0 || slot >= maxProjectiles) return;
+    projectileBuffer[slot] = projectileSpawnData[id.x];
 }

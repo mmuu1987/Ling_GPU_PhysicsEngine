@@ -32,6 +32,14 @@ namespace MassEngine.Projectiles
         [Tooltip("Floor on tracer length in metres, so slow or freshly launched shots stay visible.")]
         public float trailMinLength = 0.8f;
 
+        [Header("Splash Impact (opt-in)")]
+        [Tooltip("Optional ProjectileImpact.mat. When set AND a unit type has projectileSplashRadius > 0, splash impacts draw a ground " +
+                 "fire ring sized to the splash radius plus a short flash. Null = legacy: no impact buffer, no kernel variant, no draw.")]
+        public Material impactMaterial;
+
+        [Tooltip("Seconds an impact ring stays visible (the flash lasts half of this).")]
+        public float impactDuration = 0.6f;
+
         /// <summary>
         /// Palette length uploaded to the tracer shader. Matches ConfigValidator.MaxTeamId + 1,
         /// so every team a scenario may legally field has a slot.

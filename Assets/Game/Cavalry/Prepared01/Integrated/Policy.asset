@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4834c3cb884f2ad4cb3269bda41e58cb, type: 3}
+  m_Name: Policy
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxRosterPolicy
+  templates:
+  - {fileID: 11400000, guid: ba3d8aa5e62d8504ba85005f88eab1e9, type: 2}
+  - {fileID: 11400000, guid: af14931012c34694a8992e6102bcb8e6, type: 2}
+  - {fileID: 11400000, guid: e479a92458964df4f917d8d0e04ec059, type: 2}
+  - {fileID: 11400000, guid: 1b5fb98e6fdb92c4493ce5ef27497dce, type: 2}
+  - {fileID: 11400000, guid: a889200539954184d905ec2dc784ac72, type: 2}
+  - {fileID: 11400000, guid: 382cd1a14ae2c8d428214c4af5287cf0, type: 2}
+  - {fileID: 11400000, guid: b4af75183b259944fbf93cfe0b2933a8, type: 2}
+  maximumUnits: 64
+  maximumRadius: 4.9
+  useTemplateSpawnDefaults: 1
+  restrictLargeToTeamZero: 1
+  explanation: "\u9A91\u4E58/\u5927\u578B\u89D2\u8272\u5E93 \xB7 \u7EC4\u5408\u5355\u4F4D\u4EC5\u653B\u65B9\uFF0C\u5B88\u65B9\u7528\u9002\u914D\u9A91\u58EB\u3002\u9A91\u624B\u548C\u9A6C\u4F5C\u4E3A\u4E00\u4E2A\u5355\u4F4D\uFF0C\u4E0D\u542B\u4E0A\u4E0B\u9A6C\u3001\u51B2\u950B\u6216\u51FB\u98DE\u673A\u5236\u3002"

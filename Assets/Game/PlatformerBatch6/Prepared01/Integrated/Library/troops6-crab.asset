@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: troops6-crab
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u87F9\u602A"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 18fa2437749b20c4cb0eada7aad25f68, type: 2}
+  movementConfig: {fileID: 11400000, guid: ea1088a06e5d6cf4d9231a2cd722c705, type: 2}
+  flockingConfig: {fileID: 11400000, guid: ed30a22e635ead34dba8ed463c269312, type: 2}
+  animationConfig: {fileID: 11400000, guid: 84ecc0731164dc34a8cda64d5e4ff68a, type: 2}
+  combatConfig: {fileID: 11400000, guid: 7d5c50549bcb48441b79f4a55410e0d7, type: 2}
+  renderConfig: {fileID: 11400000, guid: 858ba630130ffc04c88cec8d80c4c7d7, type: 2}

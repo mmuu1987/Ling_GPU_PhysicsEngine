@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: Demon01
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 1106228327156864219, guid: 053f37d5c39ff2942a99fe6157f9113a, type: 3}
+  sizeRootPath: 
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: eed117905690f7348a3cd7af1e71a3ee, type: 2}
+  move: {fileID: 7400000, guid: 5944d919243d8704ea9695cfa6c2b74f, type: 2}
+  attack: {fileID: 7400000, guid: 37f64de37d36cf24f88492cb42a96e58, type: 2}
+  death: {fileID: 7400000, guid: 81d14135db2f54842a6621f03a0b2062, type: 2}
+  frameRate: 24
+  targetBodyHeight: 4.655223
+  groundBindFeet: 0
+  agentRadius: 4.2
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 32
+  paletteRows: 32
+  fullVertexBudget: 20000
+  maxTextureMiB: 48
+  maximumPositionError: 0.0025
+  outputName: Demon01
+  unitTemplate: {fileID: 11400000, guid: 1b5bd37396a25234fbb03ff8124b08d7, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

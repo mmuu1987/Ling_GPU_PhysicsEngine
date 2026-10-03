@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: troops6-skull
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u9AB7\u9AC5\u5934"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 9c8de9ff4882cce41912fba9904a112d, type: 2}
+  movementConfig: {fileID: 11400000, guid: 769347e6eb65d8a48ade593a33c8b63a, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 1cd1cf72a6f231b46b87777b11ca75c2, type: 2}
+  animationConfig: {fileID: 11400000, guid: f1ffcaf88ed7bae44a54ef9867644c00, type: 2}
+  combatConfig: {fileID: 11400000, guid: e7e667bf4828c634fb3db3c678f0b006, type: 2}
+  renderConfig: {fileID: 11400000, guid: 7cbe070fa68dd604dafceac41cda298a, type: 2}

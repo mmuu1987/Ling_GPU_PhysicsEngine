@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 6486376760999038452, guid: 6dbd5ade0f01f7740b1d909e2d0be753, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: cde6cde8b07dbbd41826b0254b887346, type: 2}
+  move: {fileID: 7400000, guid: f2f07e4a0c6e9ae44b2455188c64ed7a, type: 2}
+  attack: {fileID: 7400000, guid: 575517a636542d043a85bf4760dec9f2, type: 2}
+  death: {fileID: 7400000, guid: d1fb9baf7ee5af240aaeca15cc60011d, type: 2}
+  frameRate: 24
+  targetBodyHeight: 1
+  groundBindFeet: 1
+  agentRadius: 0.75
+  lowPolicy: 2
+  lowVertexBudget: 1000
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: PlatformerEnemy01
+  unitTemplate: {fileID: 11400000, guid: 66db14ccad36d49418d3b22ec7577fb4, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

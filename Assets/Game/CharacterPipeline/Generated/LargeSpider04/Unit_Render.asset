@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
+  m_Name: Unit_Render
+  m_EditorClassIdentifier: 
+  vatProfile: {fileID: 11400000, guid: faf8457db01bfb94e9dce606ea12ec91, type: 2}
+  nearMesh: {fileID: -2210349113395260720, guid: 2406f53c71bc5da43b240baef3035c10, type: 2}
+  midMesh: {fileID: -330595006209030768, guid: faf8457db01bfb94e9dce606ea12ec91, type: 2}
+  farMesh: {fileID: -330595006209030768, guid: faf8457db01bfb94e9dce606ea12ec91, type: 2}
+  nearMaterial: {fileID: 2100000, guid: a1a02c3023557a54294c8f103ccb9671, type: 2}
+  midMaterial: {fileID: 2100000, guid: fe8611403b4852b41a8decd44c454258, type: 2}
+  farMaterial: {fileID: 2100000, guid: fe8611403b4852b41a8decd44c454258, type: 2}
+  nearShadowCasting: 1
+  nearReceiveShadows: 1
+  midShadowCasting: 0
+  midReceiveShadows: 0
+  farShadowCasting: 0
+  farReceiveShadows: 0

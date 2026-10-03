@@ -117,6 +117,7 @@ namespace MassEngine
         public static readonly int DefenderDensityMapId = Shader.PropertyToID("defenderDensityMap");
         public static readonly int AttackerDensityMapWriteId = Shader.PropertyToID("attackerDensityMapWrite");
         public static readonly int DefenderDensityMapWriteId = Shader.PropertyToID("defenderDensityMapWrite");
+        public static readonly int MovementCommandRevisionBufferId = Shader.PropertyToID("movementCommandRevisionBuffer");
         public static readonly int EngagementSlotAssignmentBufferId = Shader.PropertyToID("engagementSlotAssignmentBuffer");
         public static readonly int EngagementSlotOccupancyBufferId = Shader.PropertyToID("engagementSlotOccupancyBuffer");
         public static readonly int EngagementSlotOccupancyReadBufferId = Shader.PropertyToID("engagementSlotOccupancyReadBuffer");

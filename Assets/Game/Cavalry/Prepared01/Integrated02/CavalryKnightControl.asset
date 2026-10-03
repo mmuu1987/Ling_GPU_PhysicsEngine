@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: CavalryKnightControl
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u9A91\u5175\u5BF9\u7167\xB7\u9A91\u58EB"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 1
+  spawnConfig: {fileID: 11400000, guid: 8fd50d83a9919534cbe181e73cb0cbdf, type: 2}
+  movementConfig: {fileID: 11400000, guid: d52de20f4a0b0fa44818f7cfef94f74c, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 2824c99c9b0b6784095032ccdba682c1, type: 2}
+  animationConfig: {fileID: 11400000, guid: 1182c04a5618ca941a6cd11772441e7a, type: 2}
+  combatConfig: {fileID: 11400000, guid: 4449af742bbbac54aba3b38d77ecf868, type: 2}
+  renderConfig: {fileID: 11400000, guid: 09eea490630cb1f4a88bd18cd679c40f, type: 2}

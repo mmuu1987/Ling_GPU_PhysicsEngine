@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 8671712098912288641, guid: bf09c95a46eb80246abc9abaf6ff49d9, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths:
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/head/Skeleton_Mage_Hat
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/upperarm.r/lowerarm.r/wrist.r/hand.r/handslot.r/Staff
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: aec929b1341b3134db3669ca2c758a9d, type: 2}
+  move: {fileID: 7400000, guid: 2893ddf8e53f4e446aff1035988a00b1, type: 2}
+  attack: {fileID: 7400000, guid: da5b89cf73f50d04f8e6917ba5dba6e3, type: 2}
+  death: {fileID: 7400000, guid: 9bfdf96c8b8caac4da1998943cc71287, type: 2}
+  frameRate: 24
+  targetBodyHeight: 1.8
+  groundBindFeet: 1
+  agentRadius: 0.45
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: SkeletonMage03
+  unitTemplate: {fileID: 11400000, guid: b6dd0afc53c186b408fd6e7053faf466, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

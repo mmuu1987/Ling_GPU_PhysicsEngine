@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: Dragon
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 8135725087900960046, guid: 481cd955bb8951a438cf7c7410affa40, type: 3}
+  sizeRootPath: 
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: f43374de5e2a75f40b09cb3d9e5d90d5, type: 2}
+  move: {fileID: 7400000, guid: 63f5f253d916db641b2aec2397e3b4a8, type: 2}
+  attack: {fileID: 7400000, guid: 266bbeea1f3a3c54ca6de2385cef7d44, type: 2}
+  death: {fileID: 7400000, guid: 6779d5f57d738c74ab6b0e3b831d2716, type: 2}
+  frameRate: 24
+  targetBodyHeight: 4.325985
+  groundBindFeet: 0
+  agentRadius: 7.8
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 32
+  paletteRows: 32
+  fullVertexBudget: 20000
+  maxTextureMiB: 48
+  maximumPositionError: 0.0025
+  outputName: Dragon01
+  unitTemplate: {fileID: 11400000, guid: 624ceedcf958d9947ba385653d14e09c, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

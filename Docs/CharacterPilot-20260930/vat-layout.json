@@ -1,0 +1,12 @@
+{
+  "textureWidth": 4096,
+  "textureHeight": 228,
+  "rowsPerFrame": 2,
+  "totalFrameCount": 114,
+  "frameRate": 30,
+  "lowLodTextureWidth": 2048,
+  "lowLodTextureHeight": 114,
+  "lowLodRowsPerFrame": 1,
+  "fullVatBytes": 14942208,
+  "lowVatBytes": 3735552
+}

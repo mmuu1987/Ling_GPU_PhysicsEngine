@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 1834230386657381338, guid: e82d9bf92f1cac84aaf17f00e38d65e4, type: 3}
+  sizeRootPath: 
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: d5b63f629a036a9439b6145dfc434775, type: 2}
+  move: {fileID: 7400000, guid: 868e733c0615743429e6251c584507e3, type: 2}
+  attack: {fileID: 7400000, guid: 436456ea5c6b3b145ac65699551ff219, type: 2}
+  death: {fileID: 7400000, guid: 50f85772c7af1c642b1e64e691d21d4d, type: 2}
+  frameRate: 24
+  targetBodyHeight: 3.6814651
+  groundBindFeet: 0
+  agentRadius: 4.5
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: Stegosaurus01
+  unitTemplate: {fileID: 11400000, guid: 54ba3e265a5586d4fbab089bb226397a, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

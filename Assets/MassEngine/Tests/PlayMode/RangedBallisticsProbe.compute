@@ -1,0 +1,11 @@
+#pragma kernel Probe
+#include "../../Core/Shaders/AgentDataCommon.hlsl"
+#include "../../Simulation/Shaders/CongestionWaiting.hlsl"
+#include "../../Simulation/Shaders/RangedClearance.hlsl"
+RWStructuredBuffer<float> result;
+float4 originInput, aimInput, parametersInput;
+[numthreads(1,1,1)] void Probe(uint3 id : SV_DispatchThreadID)
+{
+    float clearance=RangedClearance(1,originInput.w,1,aimInput.w,parametersInput.w);
+    result[0]=RangedFlightTime(originInput.xyz,aimInput.xyz,parametersInput.x,parametersInput.y,parametersInput.z,clearance);
+}

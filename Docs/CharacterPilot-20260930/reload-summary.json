@@ -1,0 +1,74 @@
+{
+  "completed": true,
+  "passed": true,
+  "humanAcceptance": false,
+  "phase": "reload",
+  "buildGuid": "e4214860d91f447d886e80be0d42c0b1",
+  "processId": 788,
+  "seedProcessId": 19544,
+  "templateId": "kaykit-knight-v1",
+  "templateRevision": 2,
+  "battlefieldId": "kaykit-knight-pilot",
+  "planSha256": "71c067e46d78aee5e67ed4d1c597deefdabb5950bb4b9bbe1b3ea0a1d8f13c2b",
+  "sourceJsonUnchanged": true,
+  "gpuReleased": true,
+  "runtimeCopiesReleased": true,
+  "planUnchanged": true,
+  "battle": {
+    "mode": "Annihilation",
+    "phase": "AttackerVictory",
+    "victoryReason": "Annihilation",
+    "naturalSettlement": true,
+    "winnerTeamId": 0,
+    "simulationSeconds": 16.060710906982422,
+    "realSeconds": 16.107267379760742,
+    "initial": [
+      96,
+      64
+    ],
+    "survivors": [
+      60,
+      0
+    ],
+    "restartAlive": [
+      96,
+      64
+    ]
+  },
+  "checks": [
+    "New stable-ID template is selectable in the real roster UI; source Scenario supplies available templates.",
+    "Saved plan loaded/applied via uGUI; distinct runtime Scenario/UnitType/Spawn copies, count, stable ID and live VAT mesh binding verified.",
+    "Normal-speed default orders produced a real natural settlement; winner/time/all-army initial and survivor counts recorded.",
+    "UI restart restored full counts, fresh orders and the same trial model binding; normal start works again.",
+    "Returned through real navigation/confirmation UI; all runtime copies and scene GPU allocation released; source JSON and plan bytes unchanged."
+  ],
+  "models": [
+    {
+      "stage": "applied",
+      "templateId": "kaykit-knight-v1",
+      "unitName": "KayKit 剑盾骑士",
+      "renderConfig": "KayKitKnightTrial_Render",
+      "profile": "KnightPaletteSafeVAT",
+      "nearMesh": "KayKitKnightPrepared_CleanMesh",
+      "nearMaterial": "KayKitKnightNear",
+      "formation": 0,
+      "teamId": 0,
+      "count": 96,
+      "nearVertices": 6666
+    },
+    {
+      "stage": "restart",
+      "templateId": "kaykit-knight-v1",
+      "unitName": "KayKit 剑盾骑士",
+      "renderConfig": "KayKitKnightTrial_Render",
+      "profile": "KnightPaletteSafeVAT",
+      "nearMesh": "KayKitKnightPrepared_CleanMesh",
+      "nearMaterial": "KayKitKnightNear",
+      "formation": 0,
+      "teamId": 0,
+      "count": 96,
+      "nearVertices": 6666
+    }
+  ],
+  "errors": []
+}

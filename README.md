@@ -1,36 +1,37 @@
-# Ling GPU Physics Engine
+# Ling GPU Physics Engine / War Sandbox
 
-Unity 6 GPU 海量单位战争模拟实验工程。单位的空间哈希、流场导航、群体运动、战斗、弹道、LOD 分类和 VAT 渲染主要在 GPU 上完成，C# 负责配置、资源生命周期、调度与诊断。
+Unity 6 GPU 战争沙盒。Windows 离线单机；玩家在游戏内布阵、保存方案、指挥或观战，完成结算、重开与换场。
 
-## 当前能力
+## 当前版本（2026-10-03）
 
-- 多兵种、双阵营的大规模 Agent 模拟
-- GPU 空间哈希、动态/静态流场与密度避让
-- 近战、远程弹道、伤害和状态机
-- VAT 动画、三级 LOD、视锥裁剪与间接绘制
-- 战争沙盒编辑器、运行时命令和异步遥测
+**Version08：机器人正式入列。** 当前为 66 个可选兵种模板、29 个可选战场；保留 68 个模板身份、31 个战场身份用于兼容。模板数不等于独立模型数。
 
-## 打开与验证
+- 本机游戏入口：[Start-WarSandbox.cmd](Builds/OfficialRoster-20261002-04/Start-WarSandbox.cmd)。保留完整包目录；Builds 不在 Git 中，其他机器需另取得构建包。
+- Unity：使用 `6000.3.14f1` 打开仓库根目录，入口为 [Version08/LaunchMenu.unity](Assets/Game/OfficialRoster/Version08/LaunchMenu.unity)。
+- 构建 GUID：`c9915b6a69974ad0ab3edeb66c846fdf`。首次仍进入 512 人准备战场。
+- [最新交付记录](Docs/RobotFormal-20261002/README.md)：机器人表现与入列获认可；人工试玩仍暂停，其他模型转换未授权，V1 尚未签收。
 
-使用 Unity `6000.3.14f1` 打开本目录。测试程序集：
+## 从哪里接手
 
-- EditMode：`MassEngine.Tests`、`Game.Tests`
-- PlayMode：`MassEngine.PlayModeTests`
+| 要了解的内容 | 文档 |
+|---|---|
+| 当前工程、内容依赖、制作与验证入口 | [工程导航](Docs/Engineering-20261003/README.md) |
+| 本地当前任务与限制 | [NEXT_TASK.md](NEXT_TASK.md) |
+| 未提交增量、共享文件与提交边界 | [改动清单](Docs/Engineering-20261003/CHANGE-PLAN.md) |
+| 产品范围与阶段 | [GAME_DESIGN.md](GAME_DESIGN.md)、[ROADMAP.md](ROADMAP.md) |
+| 模型适配与真实预览要求 | [内容门禁](Docs/ContentQuality-20261002/CONTENT-SUITABILITY.md) |
+| 历史交接 | [归档说明](Docs/HandoffHistory-20261003/README.md)（本地） |
 
-GPU PlayMode 测试需要支持 Compute Shader 的图形设备。
+当前工作服务 M7 内容收口。旧专题的“当前入口 / 下一步”按其日期理解；M73FarLod、RangedPlaytest、Version01–07 等不是当前发布入口，旧性能与测试结果不移作 Version08 成绩。
 
-## 目录
+## 代码与验证
 
-- `Assets/MassEngine/`：引擎实现与模块文档
-- `Assets/Game/`：战争沙盒玩法层
-- `Assets/方案设计/流场三维扩展方案.md`：仍未实施的三维导航方向
-- `ArchivedStages/`：旧阶段完整快照，仅供历史追溯
+- [引擎层](Assets/MassEngine/README.md)：GPU 模拟、导航、近远程战斗、弹道、VAT/LOD 与资源生命周期；具体行为以模块 README 和代码为准。
+- [游戏层](Assets/Game/README.md)：战场、军团命令、玩家布阵、方案库、三层数值覆盖与运行时 uGUI。
+- `Assets/Game/Editor/CharacterPipeline`：内部角色制作；源件在 `Assets/CharacterPilotSource`，生成产物在 `Assets/Game/CharacterPipeline/Generated`。
+- `ArchivedStages`：不参与编译的历史快照，保留工具移植来源。
+- [性能历史](Assets/Game/PerformanceBaseline.md)：区分人数、硬件、构建 GUID 和测量方式，不代表当前版本已重新测量。
 
-## 文档入口
+EditMode 程序集：`MassEngine.Tests`、`Game.Tests`；PlayMode：`MassEngine.PlayModeTests`、`Game.PlayModeTests`。GPU 测试需要图形设备，绝不使用 `-nographics`。测试前先读[入口与夹具风险](Docs/Engineering-20261003/README.md)。仅文档改动不启动 Unity 回归。
 
-- [引擎总览](Assets/MassEngine/README.md)
-- [游戏层](Assets/Game/README.md)
-- [性能基线](Assets/Game/PerformanceBaseline.md)
-- [弹道系统](Assets/MassEngine/Projectiles/README.md)
-
-模块细节以对应目录的 `README.md` 和当前代码为准。阶段计划、一次性审计报告和完成日志不再保留在主文档区。
+工作边界见 [AGENTS.md](AGENTS.md)：保护 pelican SVG 及 meta，显式路径暂存，通过 PR 整合。NEXT_TASK 按约定不列入新提交，但本工作树已经跟踪它；本轮保留现状。

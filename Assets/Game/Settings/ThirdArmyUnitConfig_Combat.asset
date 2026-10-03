@@ -18,8 +18,11 @@ MonoBehaviour:
   attackInterval: 0.8
   maxHp: 100
   projectileRange: 20
-  projectileSpeed: 15
-  projectileGravity: 0
-  projectileHitRadius: 0.5
+  projectileSpeed: 12
+  projectileGravity: -9.8
+  projectileHitRadius: 0.08
   projectileMaxLifetime: 5
   projectileTrailLength: 1.25
+  attackReleasePhase: 0.55
+  projectileOriginHeight: 1.3
+  projectileTargetHeight: 1

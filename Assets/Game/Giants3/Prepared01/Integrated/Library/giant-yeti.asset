@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: giant-yeti
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5DE8\u578B\u96EA\u4EBA\uFF08\u8D85\u5927\uFF09"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 7f2ea0562de96884d8bcbe172039dddc, type: 2}
+  movementConfig: {fileID: 11400000, guid: 2dae28e2ab709414e86a86f9764b16e0, type: 2}
+  flockingConfig: {fileID: 11400000, guid: a69d400706b78a744864e93364f77215, type: 2}
+  animationConfig: {fileID: 11400000, guid: f20c8845b9c27374c98c6ff30ba20363, type: 2}
+  combatConfig: {fileID: 11400000, guid: 6e19f46236c9fac478b19d1cfc139f01, type: 2}
+  renderConfig: {fileID: 11400000, guid: 127e03a48e88129448f40f1f356670e4, type: 2}

@@ -1,0 +1,32 @@
+{
+  "published": true,
+  "sourceMode": "author_itch_free_archive",
+  "officialPage": "https://quaternius.itch.io/ultimate-platformer-pack",
+  "uploadId": "4975456",
+  "archiveSha256": "2d0cac0f3cb58f6845f779a4c6b4a92be6fa27d118ee0b976ead55c6834a53d4",
+  "licenseSha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e",
+  "files": [
+    {
+      "name": "Crab.fbx",
+      "archiveEntry": "Ultimate Platformer Pack - Dec 2021/Enemies/FBX/Crab.fbx",
+      "bytes": 559036,
+      "sha256": "edc99b2dc232e2b96a571b9d182fa8de38e269efa18d551efcfc86f4ff0ae49b",
+      "accepted": true
+    },
+    {
+      "name": "Enemy.fbx",
+      "archiveEntry": "Ultimate Platformer Pack - Dec 2021/Enemies/FBX/Enemy.fbx",
+      "bytes": 530588,
+      "sha256": "ac2d8fb64dedde1c21e674096fe905a3ceaa7c39b25cc70326cc79beecad7867",
+      "accepted": true
+    },
+    {
+      "name": "Skull.fbx",
+      "archiveEntry": "Ultimate Platformer Pack - Dec 2021/Enemies/FBX/Skull.fbx",
+      "bytes": 401500,
+      "sha256": "05007750febc24323f400b7e7cdada6d124b6646831e07884323cc10cd1f6daa",
+      "accepted": true
+    }
+  ],
+  "note": "Downloaded anonymously through the author-provided no-payment download. These are Platformer Pack models, not the quota-blocked Ultimate Monsters Birb/Bunny/Fish files. No Google Drive identity is claimed."
+}

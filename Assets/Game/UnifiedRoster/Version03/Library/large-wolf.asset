@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: large-wolf
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5927\u578B\xB7\u5DE8\u72FC"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: d09400dce0beda845babc8abce67433b, type: 2}
+  movementConfig: {fileID: 11400000, guid: 3e36834a3fcfebe4f882e7d5c637c2d1, type: 2}
+  flockingConfig: {fileID: 11400000, guid: a8823c7a37f2bde4d93eca49cfc7f209, type: 2}
+  animationConfig: {fileID: 11400000, guid: 9e9d1762744fd6f4289c909074b0c188, type: 2}
+  combatConfig: {fileID: 11400000, guid: 0aed2baa5e49d8640964473c3336a412, type: 2}
+  renderConfig: {fileID: 11400000, guid: 42707d507bf76054d9619c4f4498d458, type: 2}

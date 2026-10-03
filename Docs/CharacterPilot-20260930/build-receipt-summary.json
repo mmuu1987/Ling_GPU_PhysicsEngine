@@ -1,0 +1,10 @@
+{
+  "exitCode": 0,
+  "buildGuid": "e4214860d91f447d886e80be0d42c0b1",
+  "sourceBuild": "Builds/CharacterPilot-Knight-20260930-02",
+  "log": "Logs/AgentCharacterPilot/build-02.log",
+  "changedSourceFiles": [],
+  "exeSha256": "f66f7c51e430cae07717f7c68f9bc4e86f04ee9652c5fb9f00b24b0c1547fb69",
+  "utc": "2026-09-30T04:00:21.854Z",
+  "sourceHashesEvidence": "Logs/AgentCharacterPilot/build-source-before-02.json"
+}

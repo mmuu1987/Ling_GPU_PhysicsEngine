@@ -1,0 +1,58 @@
+{
+  "buildGuid": "3d6f7918074743de81660dead2658cb2",
+  "output": "Assets/Game/CharacterPipeline/Generated/Knight04",
+  "evidence": "Logs/CharacterPipeline/Knight04-94132e16",
+  "fullVertices": 6666,
+  "lowVertices": 1336,
+  "frames": 114,
+  "positionComparisons": 759924,
+  "maximumPositionErrorMeters": 0.0011937612434849143,
+  "versus03MaximumPositionDifferenceMeters": 3.0517578125e-05,
+  "gpuSnapshots": 48,
+  "sourcePositionReferenceSnapshots": 16,
+  "initialBadCountAssertionRetained": true,
+  "humanAcceptance": false,
+  "v1Released": false,
+  "seed": {
+    "passed": true,
+    "exitCode": 0,
+    "timedOut": false,
+    "phase": "seed",
+    "buildGuid": "3d6f7918074743de81660dead2658cb2",
+    "pid": 4172,
+    "elapsedSeconds": 35.899,
+    "frameCapConfigured": true,
+    "checks": 6,
+    "report": "Logs\\AgentCharacterPipeline\\player-seed-04\\report.json",
+    "settingsFileUntouched": true,
+    "humanAcceptance": false,
+    "finishedUtc": "2026-09-30T05:14:37.319Z"
+  },
+  "reload": {
+    "passed": true,
+    "exitCode": 0,
+    "timedOut": false,
+    "phase": "reload",
+    "buildGuid": "3d6f7918074743de81660dead2658cb2",
+    "pid": 5012,
+    "elapsedSeconds": 28.299,
+    "frameCapConfigured": true,
+    "checks": 5,
+    "report": "Logs\\AgentCharacterPipeline\\player-reload-04\\report.json",
+    "settingsFileUntouched": true,
+    "humanAcceptance": false,
+    "finishedUtc": "2026-09-30T05:15:24.136Z"
+  },
+  "protectionAudit": {
+    "passed": true,
+    "watchedOriginalSources": 1611,
+    "protectedOldPackageFiles": 3470,
+    "personalFilesUnchanged": 3,
+    "changedOnlyPriorDocumentation": [
+      "Assets/方案设计/兵种模型制作管线.md",
+      "Assets/Game/README.md",
+      "NEXT_TASK.md"
+    ],
+    "errors": []
+  }
+}

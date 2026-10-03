@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: Knight
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 5142326938268735049, guid: 3cf293845a748e44d9c77ad2daac5ae5, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths:
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/upperarm.l/lowerarm.l/wrist.l/hand.l/handslot.l/PilotShield
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/upperarm.r/lowerarm.r/wrist.r/hand.r/handslot.r/PilotSword
+  idle: {fileID: 7400000, guid: f8123c7fe5c17d14c9ae6f20af365699, type: 2}
+  move: {fileID: 7400000, guid: b5c7374580de8214db1308bbdc2838cb, type: 2}
+  attack: {fileID: 7400000, guid: 49fc90508d29f044ab8de76da89300d4, type: 2}
+  death: {fileID: 7400000, guid: 3f9c14518852baa47a5da729b3f26fd5, type: 2}
+  frameRate: 30
+  targetBodyHeight: 1.8
+  groundBindFeet: 1
+  agentRadius: 0.55
+  lowPolicy: 2
+  lowVertexBudget: 1400
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: Knight04
+  unitTemplate: {fileID: 11400000, guid: b57972855a0520d408be409a7cf7fbf3, type: 2}
+  createTrial: 1
+  trialMenu: {fileID: 102900000, guid: 06c894c692aebe841b25caafa943311f, type: 3}
+  trialBattlefield: {fileID: 102900000, guid: 986ded70772703f4f9d0aae3f416b06c, type: 3}
+  trialCatalog: {fileID: 11400000, guid: 93141630ceaead344a57a24e7cb34879, type: 2}
+  battlefieldId: character-pipeline-knight
+  templateId: pipeline-knight

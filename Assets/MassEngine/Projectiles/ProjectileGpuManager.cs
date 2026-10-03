@@ -9,7 +9,7 @@ namespace MassEngine.Projectiles
     /// GPU 弹道管理器：负责弹道池分配、槽位搜索、发射请求处理、GPU 模拟调度
     /// 参考 TowerDefense ProjectileGpuManager 实现
     /// </summary>
-    public sealed class ProjectileGpuManager : IDisposable
+    public sealed partial class ProjectileGpuManager : IDisposable
     {
         private ComputeShader _projectileShader;
         private ComputeShader _combatSimulationShader;
@@ -23,24 +23,30 @@ namespace MassEngine.Projectiles
         private int _kernelClear;
         private int _kernelClearLaunchRequests = -1;
 
-        // 槽位搜索游标（循环复用）
-        private int _searchCursor = 0;
-
         // 遥测计数器
         private int _overflowCount = 0;
         public int TotalLaunched { get; private set; }
 
-        // §3.3 修复：基于时间窗口的发射历史追踪
-        private readonly Queue<float> _launchTimestamps = new Queue<float>(1024);
-        private float _estimatedMaxLifetime = 3f; // 默认弹道生命周期
-        private float _simulationTime;
+        /// <summary>
+        /// Optional immutable terrain snapshot, injected after Initialize by the owner.
+        /// Null preserves the legacy y=0 launch path; this manager does not own the surface.
+        /// </summary>
+        public TerrainSurface Surface { get; set; }
+
+        /// <summary>
+        /// Optional CPU-side per-unit-type impact splash radius (index = unit type index), filled by the owner.
+        /// Null or 0 keeps the single-target shot. Not uploaded in UnitTypeGpuSettings (its 144-byte layout is unchanged).
+        /// </summary>
+        public float[] UnitTypeSplashRadii { get; set; }
+        // Spawn scale metadata is supplied by the manager; never read a full AgentData
+        // array back each frame just to resolve a fixed-size launch offset.
 
         // 发射请求处理 - 多阶段 AsyncGPUReadback
         private readonly List<ProjectileGpuData> _pendingSpawnList = new List<ProjectileGpuData>(4096);
-        private AsyncGPUReadbackRequest _launchRequestReadback;
-        private AsyncGPUReadbackRequest _positionReadback;
-        private AsyncGPUReadbackRequest _targetIndexReadback;
         private bool _readbackPending = false;
+        private int _launchAgentCursor; // Retain a completed snapshot until its bounded drain finishes.
+        private int _readbackGeneration, _readbacksRemaining;
+        private bool _readbackFailed;
         private int _readbackFrameIndex = 0;
 
         // 预分配接收缓冲（避免每帧 GetData 分配）
@@ -106,6 +112,8 @@ namespace MassEngine.Projectiles
             if (agentCount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(agentCount));
 
+            CancelReadbacks();
+            ReleasePoolStorage();
             _projectileShader = projectileShader;
             _combatSimulationShader = combatSimulationShader;
             _projectileBuffer = projectileBuffer;
@@ -119,13 +127,11 @@ namespace MassEngine.Projectiles
                 ? _combatSimulationShader.FindKernel("ClearLaunchRequests")
                 : -1;
 
-            _searchCursor = 0;
             _overflowCount = 0;
             TotalLaunched = 0;
 
-            // §3.3 修复：清空发射历史
-            _launchTimestamps.Clear();
-            _simulationTime = 0f;
+            TotalRequested = 0;
+            ResetPoolStorage();
 
             // 预分配接收缓冲
             _lastAgentCount = agentCount;
@@ -141,6 +147,8 @@ namespace MassEngine.Projectiles
         /// </summary>
         public void ClearAllProjectiles()
         {
+            CancelReadbacks();
+            _pendingSpawnList.Clear();
             if (_projectileBuffer == null || _projectileShader == null)
                 return;
 
@@ -150,11 +158,9 @@ namespace MassEngine.Projectiles
             int threadGroups = Mathf.Max(1, Mathf.CeilToInt(_maxProjectiles / 64f));
             _projectileShader.Dispatch(_kernelClear, threadGroups, 1, 1);
 
-            _searchCursor = 0;
             _overflowCount = 0;
 
-            // §3.3 修复：清空发射历史
-            _launchTimestamps.Clear();
+            ResetPoolStorage();
         }
 
         /// <summary>
@@ -172,7 +178,10 @@ namespace MassEngine.Projectiles
             float hitRadius,
             float maxLifetime,
             float trailLength = 1f,
-            float launchTime = -1f)
+            float launchTime = -1f,
+            int sourceAgentIndex = -1,
+            float arcClearance = 0f,
+            float splashRadius = 0f)
         {
             if (_projectileBuffer == null || _maxProjectiles <= 0 || projectileSpeed <= 0f)
                 return;
@@ -183,17 +192,24 @@ namespace MassEngine.Projectiles
             if (horizontalDistance < 0.001f)
                 return; // 拒绝零距离发射
 
-            // CPU does not synchronously know which GPU slots have hit. Use the maximum
-            // configured lifetime as a conservative ownership window and drop new shots
-            // rather than silently overwriting a projectile that may still be active.
+            float timeToTarget = arcClearance > 0f
+                ? ProjectileBallistics.FlightTime(sourcePos, targetPos, projectileSpeed, gravity, maxLifetime, arcClearance)
+                : horizontalDistance / projectileSpeed;
+            if (timeToTarget <= 0) return;
+
+            // Reuse only slots confirmed empty by a generation/watermark guarded GPU snapshot.
             float resolvedLaunchTime = launchTime >= 0f ? launchTime : Time.time;
-            _simulationTime = resolvedLaunchTime;
-            int estimatedActive = EstimateActiveProjectiles();
-            if (estimatedActive >= _maxProjectiles)
+            if (_freeSlots.Count == 0)
             {
-                _overflowCount++;
+                _overflowCount++; // Direct API rejection; production request draining defers instead.
                 return;
             }
+            int slot = _freeSlots.Pop();
+            _poolHighWater = Mathf.Max(_poolHighWater, slot + 1);
+            _slotInUse[slot] = true;
+            _slotLease[slot] = ++_leaseSerial;
+            _reservedSlots++;
+            _pendingSpawnSlots.Add(slot);
 
             // 计算初速度方向
             Vector3 velocity = delta.normalized * projectileSpeed + sourceVelocity;
@@ -201,12 +217,11 @@ namespace MassEngine.Projectiles
             // 抛物线弹道：计算垂直初速度补偿重力
             if (gravity < -0.01f)
             {
-                float timeToTarget = horizontalDistance / projectileSpeed;
                 float heightDiff = targetPos.y - sourcePos.y;
 
                 // 垂直分量：v_y = (Δh / t) - 0.5 * g * t
-                velocity.x = delta.x / horizontalDistance * projectileSpeed + sourceVelocity.x;
-                velocity.z = delta.z / horizontalDistance * projectileSpeed + sourceVelocity.z;
+                velocity.x = delta.x / timeToTarget + sourceVelocity.x;
+                velocity.z = delta.z / timeToTarget + sourceVelocity.z;
                 velocity.y = sourceVelocity.y + (heightDiff / timeToTarget) - 0.5f * gravity * timeToTarget;
             }
 
@@ -223,14 +238,12 @@ namespace MassEngine.Projectiles
                 gravity = gravity,
                 maxLifetime = maxLifetime,
                 trailLength = trailLength,
-                padding = Vector2.zero
+                sourceAgentIndexPlusOne = sourceAgentIndex + 1,
+                splashRadius = float.IsNaN(splashRadius) || float.IsInfinity(splashRadius) ? 0f : Mathf.Max(0f, splashRadius)
             };
 
             // 加入待发射列表（批量上传优化）
             _pendingSpawnList.Add(projectile);
-
-            // §3.3 修复：记录发射时间戳用于活跃数估算
-            _launchTimestamps.Enqueue(projectile.launchTime);
 
             TotalLaunched++;
         }
@@ -238,25 +251,6 @@ namespace MassEngine.Projectiles
         /// <summary>
         /// 批量上传待发射弹道到 GPU（减少 SetData 调用次数）
         /// </summary>
-        private void FlushPendingProjectiles()
-        {
-            if (_pendingSpawnList.Count == 0)
-                return;
-
-            // Upload at most two contiguous ranges when the ring wraps. Keeping the slot
-            // cursor here (and only here) avoids double-advancing it while queuing shots.
-            int startSlot = _searchCursor;
-            int writeCount = Mathf.Min(_pendingSpawnList.Count, _maxProjectiles);
-            int firstCount = Mathf.Min(writeCount, _maxProjectiles - startSlot);
-            _projectileBuffer.SetData(_pendingSpawnList, 0, startSlot, firstCount);
-            int wrappedCount = writeCount - firstCount;
-            if (wrappedCount > 0)
-                _projectileBuffer.SetData(_pendingSpawnList, firstCount, 0, wrappedCount);
-
-            _searchCursor = (startSlot + writeCount) % _maxProjectiles;
-            _pendingSpawnList.Clear();
-        }
-
         /// <summary>
         /// 处理发射请求（从 launchRequestBuffer 读取 GPU 请求）
         /// 阶段 2/3 完整实现：真实位置 + 多兵种参数 + GC 优化
@@ -268,21 +262,21 @@ namespace MassEngine.Projectiles
             int[] unitTypeIndices,
             UnitTypeGpuSettings[] unitTypeSettings,
             int agentCount,
-            float simulationTime)
+            float simulationTime,
+            Vector3[] agentScales = null,
+            float[] flatGroundHeights = null)
         {
             if (launchRequestBuffer == null || agentPositionBuffer == null ||
                 targetAgentIndexBuffer == null || unitTypeIndices == null ||
                 unitTypeIndices.Length < agentCount || unitTypeSettings == null || agentCount <= 0)
                 return;
 
-            _simulationTime = Mathf.Max(_simulationTime, simulationTime);
-
-            // §3.3 修复：更新最大生命周期估算（用于活跃数计算）
-            UpdateMaxLifetimeEstimate(unitTypeSettings);
+            RequestPoolSnapshot();
 
             // 重新分配缓冲（如果 agent 数量变化）
             if (agentCount != _lastAgentCount)
             {
+                CancelReadbacks();
                 _lastAgentCount = agentCount;
                 _launchCountsCache = new int[agentCount];
                 _positionsCache = new Vector2[agentCount];
@@ -292,46 +286,47 @@ namespace MassEngine.Projectiles
             // 启动多个异步 GPU 回读（阶段 2/3）
             if (!_readbackPending)
             {
-                _launchRequestReadback = AsyncGPUReadback.Request(launchRequestBuffer);
-                _positionReadback = AsyncGPUReadback.Request(agentPositionBuffer);
-                _targetIndexReadback = AsyncGPUReadback.Request(targetAgentIndexBuffer);
+                _readbackPending = true;
+                _readbackFailed = false;
+                _readbacksRemaining = 3;
+                _launchAgentCursor = 0;
+                int generation = ++_readbackGeneration;
+                // A completed request's native data expires after one frame. Copy each
+                // part in its completion callback; polling three handles together can
+                // observe an already-expired first part while waiting for the last.
+                AsyncGPUReadback.Request(launchRequestBuffer, request => CaptureReadback(request, generation, 0));
+                AsyncGPUReadback.Request(agentPositionBuffer, request => CaptureReadback(request, generation, 1));
+                AsyncGPUReadback.Request(targetAgentIndexBuffer, request => CaptureReadback(request, generation, 2));
 
                 // The readback commands above snapshot the counters before this clear in
                 // the same GPU command stream. Clearing immediately gives subsequent
                 // combat frames a fresh buffer instead of erasing requests accumulated
                 // while the asynchronous copies are in flight.
                 ClearLaunchRequestsGpu(launchRequestBuffer, agentCount);
-                _readbackPending = true;
                 _readbackFrameIndex = Time.frameCount;
             }
 
             // 检查所有回读是否完成
-            if (_readbackPending &&
-                _launchRequestReadback.done &&
-                _positionReadback.done &&
-                _targetIndexReadback.done)
+            if (_readbackPending && _readbacksRemaining == 0)
             {
-                _readbackPending = false;
-
+                // Keep ownership of this snapshot across frames; the GPU counters
+                // were already cleared when the asynchronous snapshot was issued.
                 // 检查回读错误
-                if (_launchRequestReadback.hasError || _positionReadback.hasError ||
-                    _targetIndexReadback.hasError)
+                if (_readbackFailed)
                 {
+                    _readbackPending = false;
+                    _launchAgentCursor = 0;
                     Debug.LogWarning("ProjectileGpuManager: AsyncGPUReadback failed for launch requests.");
                     return;
                 }
-
-                // 读取所有数据到预分配缓冲（避免每次 GetData 分配）
-                _launchRequestReadback.GetData<int>().CopyTo(_launchCountsCache);
-                _positionReadback.GetData<Vector2>().CopyTo(_positionsCache);
-                _targetIndexReadback.GetData<int>().CopyTo(_targetIndicesCache);
 
                 // 遍历请求（限流：最多 4096 个/帧）
                 int processedCount = 0;
                 const int MaxLaunchesPerFrame = 4096;
 
-                for (int agentIdx = 0; agentIdx < agentCount && processedCount < MaxLaunchesPerFrame; agentIdx++)
+                for (int agentIdx = _launchAgentCursor; agentIdx < agentCount && processedCount < MaxLaunchesPerFrame; agentIdx++)
                 {
+                    _launchAgentCursor = agentIdx + 1;
                     int launchCount = _launchCountsCache[agentIdx];
                     if (launchCount <= 0)
                         continue;
@@ -346,6 +341,16 @@ namespace MassEngine.Projectiles
                     // 读取目标位置
                     Vector2 targetPos2D = _positionsCache[targetIdx];
                     Vector3 targetPos = new Vector3(targetPos2D.x, 0f, targetPos2D.y);
+                    if (Surface != null)
+                    {
+                        // Never silently fall back to flat ground for an invalid terrain query.
+                        // Positions are the same XZ snapshot as the request; only Y is reconstructed.
+                        if (!Surface.TrySample(sourcePos2D, out TerrainSurfaceSample sourceSample) ||
+                            !Surface.TrySample(targetPos2D, out TerrainSurfaceSample targetSample))
+                            continue;
+                        sourcePos.y = sourceSample.Position.y;
+                        targetPos.y = targetSample.Position.y;
+                    }
 
                     // 读取兵种参数（阶段 3）
                     int unitTypeIdx = unitTypeIndices[agentIdx];
@@ -353,6 +358,23 @@ namespace MassEngine.Projectiles
                         continue; // 无效兵种索引
 
                     UnitTypeGpuSettings settings = unitTypeSettings[unitTypeIdx];
+                    int targetType = unitTypeIndices[targetIdx];
+                    if (targetType < 0 || targetType >= unitTypeSettings.Length) continue;
+                    UnitTypeGpuSettings targetSettings = unitTypeSettings[targetType];
+                    Vector3 sourceScale = agentScales != null && agentIdx < agentScales.Length ? agentScales[agentIdx] : Vector3.one;
+                    Vector3 targetScale = agentScales != null && targetIdx < agentScales.Length ? agentScales[targetIdx] : Vector3.one;
+                    if (Surface == null && flatGroundHeights != null)
+                    {
+                        if (agentIdx < flatGroundHeights.Length) sourcePos.y = flatGroundHeights[agentIdx];
+                        if (targetIdx < flatGroundHeights.Length) targetPos.y = flatGroundHeights[targetIdx];
+                    }
+                    sourcePos.y += Mathf.Max(0.05f, settings.projectileOriginHeight) * Mathf.Max(0.01f, Mathf.Abs(sourceScale.y));
+                    targetPos.y += Mathf.Max(0.05f, targetSettings.projectileTargetHeight) * Mathf.Max(0.01f, Mathf.Abs(targetScale.y));
+                    // Approximate facing by shot direction; no per-frame bone/rotation readback.
+                    Vector3 forward = new Vector3(targetPos.x - sourcePos.x, 0f, targetPos.z - sourcePos.z);
+                    float offset = Mathf.Max(0.05f, settings.agentRadius) * Mathf.Max(Mathf.Abs(sourceScale.x), Mathf.Abs(sourceScale.z));
+                    // Do not move the muzzle beyond a very close target.
+                    sourcePos += forward.normalized * Mathf.Min(offset, forward.magnitude * 0.25f);
                     int sourceTeamId = settings.teamId;
 
                     // 验证是远程单位（projectileRange > 0）
@@ -362,6 +384,11 @@ namespace MassEngine.Projectiles
                     // 批量发射（LOD 降频补偿）
                     for (int shot = 0; shot < launchCount && processedCount < MaxLaunchesPerFrame; shot++)
                     {
+                        if (_freeSlots.Count == 0)
+                        {
+                            CapacityDeferralCount++;
+                            break; // Keep this shot and the snapshot tail; never count it as consumed.
+                        }
                         LaunchProjectile(
                             sourcePos: sourcePos,
                             sourceVelocity: Vector3.zero,
@@ -374,12 +401,23 @@ namespace MassEngine.Projectiles
                             hitRadius: settings.projectileHitRadius,
                             maxLifetime: settings.projectileMaxLifetime,
                             trailLength: settings.projectileTrailLength,
-                            launchTime: simulationTime
+                            launchTime: simulationTime,
+                            sourceAgentIndex: agentIdx,
+                            arcClearance: ProjectileBallistics.Clearance(settings.projectileTargetHeight, sourceScale.y,
+                                targetSettings.projectileTargetHeight, targetScale.y, forward.magnitude),
+                            splashRadius: UnitTypeSplashRadii != null && unitTypeIdx < UnitTypeSplashRadii.Length ? UnitTypeSplashRadii[unitTypeIdx] : 0f
                         );
 
                         processedCount++;
+                        _launchCountsCache[agentIdx]--;
+                    }
+                    if (_launchCountsCache[agentIdx] > 0)
+                    {
+                        _launchAgentCursor = agentIdx;
+                        break;
                     }
                 }
+                if (_launchAgentCursor >= agentCount) _readbackPending = false;
 
                 // 批量上传所有待发射弹道
                 FlushPendingProjectiles();
@@ -397,6 +435,28 @@ namespace MassEngine.Projectiles
                 }
 
             }
+        }
+
+        private void CaptureReadback(AsyncGPUReadbackRequest request, int generation, int part)
+        {
+            if (!_readbackPending || generation != _readbackGeneration) return;
+            if (request.hasError) _readbackFailed = true;
+            else if (part == 0)
+            {
+                request.GetData<int>().CopyTo(_launchCountsCache);
+                for (int i = 0; i < _launchCountsCache.Length; i++) TotalRequested += Mathf.Max(0, _launchCountsCache[i]);
+            }
+            else if (part == 1) request.GetData<Vector2>().CopyTo(_positionsCache);
+            else request.GetData<int>().CopyTo(_targetIndicesCache);
+            _readbacksRemaining--;
+        }
+
+        private void CancelReadbacks()
+        {
+            _readbackGeneration++;
+            _readbackPending = false;
+            _readbacksRemaining = 0;
+            _launchAgentCursor = 0;
         }
 
         /// <summary>
@@ -425,56 +485,8 @@ namespace MassEngine.Projectiles
             // 保留此方法以保持 API 兼容性
         }
 
-        /// <summary>
-        /// 获取当前活跃弹道数量（targetIndex >= 0 的槽位）
-        /// </summary>
-        public int ActiveCount
-        {
-            get
-            {
-                // §3.3 修复：基于时间窗口的活跃数估算
-                return EstimateActiveProjectiles();
-            }
-        }
-
-        /// <summary>
-        /// §3.3 修复：估算当前活跃弹道数
-        /// 原理：统计时间窗口内的发射次数（窗口大小 = 最大弹道生命周期）
-        /// </summary>
-        private int EstimateActiveProjectiles()
-        {
-            float expirationThreshold = _simulationTime - _estimatedMaxLifetime;
-
-            // 移除已过期的时间戳
-            while (_launchTimestamps.Count > 0 && _launchTimestamps.Peek() < expirationThreshold)
-            {
-                _launchTimestamps.Dequeue();
-            }
-
-            // 活跃数 = min(时间窗口内发射数, 池容量)
-            return Mathf.Min(_launchTimestamps.Count, _maxProjectiles);
-        }
-
-        /// <summary>
-        /// §3.3 修复：更新最大弹道生命周期估算
-        /// 从所有兵种配置中取最大值，用于活跃数时间窗口计算
-        /// </summary>
-        private void UpdateMaxLifetimeEstimate(UnitTypeGpuSettings[] unitTypeSettings)
-        {
-            if (unitTypeSettings == null || unitTypeSettings.Length == 0)
-                return;
-
-            float maxLifetime = 3f; // 默认值
-            for (int i = 0; i < unitTypeSettings.Length; i++)
-            {
-                if (unitTypeSettings[i].projectileRange > 0f)
-                {
-                    maxLifetime = Mathf.Max(maxLifetime, unitTypeSettings[i].projectileMaxLifetime);
-                }
-            }
-
-            _estimatedMaxLifetime = maxLifetime;
-        }
+        /// <summary>CPU leases, including pending uploads and asynchronous recycling delay; not draw count.</summary>
+        public int ActiveCount => _reservedSlots;
 
         /// <summary>
         /// 获取槽位溢出次数
@@ -498,10 +510,11 @@ namespace MassEngine.Projectiles
 
             _projectileBuffer = null;
             _launchRequestBuffer = null;
+            Surface = null;
             _kernelClearLaunchRequests = -1;
-            _readbackPending = false;
+            CancelReadbacks();
             _pendingSpawnList.Clear();
-            _launchTimestamps.Clear();
+            ReleasePoolStorage();
         }
     }
 }

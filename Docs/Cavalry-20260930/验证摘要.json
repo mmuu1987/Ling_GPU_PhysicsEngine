@@ -1,0 +1,617 @@
+{
+  "buildGuid": "af554201e4844a8da1739eec95309906",
+  "newMountedComposite": 1,
+  "previousModelsPreserved": 17,
+  "humanAcceptance": false,
+  "authoredMountedAdaptation": true,
+  "shareAlikeAssetsImported": false,
+  "geometry": {
+    "status": "ready-for-human-review",
+    "output": "Assets/Game/CharacterPipeline/Generated/MountedKnight01",
+    "evidence": "Logs/CharacterPipeline/MountedKnight01-3e63ac7b",
+    "sourceModel": "Assets/Game/Cavalry/Prepared01/MountedKnight.prefab",
+    "sourceGuid": "67fa54fbf1102f249842e801fa6df7d9",
+    "sourceDependencyHash": "18012bc84534eba723965b16bb56c3ac",
+    "unityVersion": "6000.3.14f1",
+    "createdUtc": "2026-09-30T13:41:45.2726253Z",
+    "sourceBodyHeight": 3.0183475017547607,
+    "targetBodyHeight": 3.0183475017547607,
+    "bodyScaleFactor": 1.0,
+    "agentRadius": 1.7999999523162842,
+    "maxPositionError": 0.001087335986085236,
+    "allowedPositionError": 0.0024999999441206455,
+    "fullVertices": 10872,
+    "lowVertices": 2106,
+    "totalFrames": 145,
+    "gpuSnapshots": 48,
+    "sourceReferenceSnapshots": 16,
+    "positionComparisons": 1576440,
+    "textureBytes": 38010880,
+    "automatedPassed": true,
+    "humanAcceptance": false,
+    "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+    "actions": [
+      {
+        "action": "Idle",
+        "frames": 80,
+        "maximumPositionError": 0.001009246683679521
+      },
+      {
+        "action": "Move",
+        "frames": 15,
+        "maximumPositionError": 0.000998087925836444
+      },
+      {
+        "action": "Attack",
+        "frames": 26,
+        "maximumPositionError": 0.0010494883172214031
+      },
+      {
+        "action": "Death",
+        "frames": 24,
+        "maximumPositionError": 0.001087335986085236
+      }
+    ],
+    "warnings": [
+      "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+      "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+      "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+      "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+    ]
+  },
+  "mountedPose": {
+    "method": "Derived CC0 mounted animation: original horse clips, original Knight upper-body actions, authored saddle-frame following and two-bone seated-leg constraints. No acquired paired cavalry pack, no runtime mounting/charge mechanic.",
+    "passed": true,
+    "horseHeight": 1.7999999523162842,
+    "riderHeight": 1.9500000476837158,
+    "backHalfWidth": 0.21783387660980225,
+    "maximumFootTargetError": 2.528810796320613e-07,
+    "maximumPelvisSeatError": 1.3328003944934608e-07,
+    "minimumKneeAngle": 109.30286407470703,
+    "maximumKneeAngle": 126.47846984863281,
+    "maximumClipReproductionError": 7.633119025740598e-07,
+    "radius": 1.7999999523162842,
+    "overallHeight": 3.0183475017547607,
+    "checkedPositions": 1576440,
+    "frames": 145,
+    "seatRest": {
+      "x": -2.3447910280083306e-13,
+      "y": 1.3700227737426758,
+      "z": -0.4972487688064575
+    },
+    "footLeft": {
+      "x": -0.25058886408805847,
+      "y": -0.12026382237672806,
+      "z": 0.05999999865889549
+    },
+    "footRight": {
+      "x": 0.25058886408805847,
+      "y": -0.12026376277208328,
+      "z": 0.05999999865889549
+    },
+    "geometryEvidence": "Logs/CharacterPipeline/MountedKnight01-3e63ac7b"
+  },
+  "runtime": [
+    {
+      "case": "cavalry",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "cavalry",
+        "buildGuid": "af554201e4844a8da1739eec95309906",
+        "pid": 8448,
+        "elapsedSeconds": 67.796,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentCavalry\\player-cavalry-seed-02\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 2,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T13:51:51.243Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "DefenderVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 1,
+        "simulationSeconds": 48.12921905517578,
+        "realSeconds": 48.18123245239258,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          0,
+          3
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 2,
+        "liveTypes": 2,
+        "mode": "cavalry",
+        "uiSelected": [
+          "剑盾骑兵（派生骑乘）",
+          "骑兵对照·骑士"
+        ],
+        "bindings": [
+          {
+            "name": "剑盾骑兵（派生骑乘）",
+            "profile": "FinalVAT",
+            "mesh": "MountedKnight01_CleanMesh",
+            "material": "MountedNear",
+            "vertices": 10872,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "骑兵对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "case": "cavalry",
+      "phase": "reload",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "reload",
+        "kind": "cavalry",
+        "buildGuid": "af554201e4844a8da1739eec95309906",
+        "pid": 8548,
+        "elapsedSeconds": 63.723,
+        "frameCapConfigured": true,
+        "checks": 6,
+        "report": "Logs\\AgentCavalry\\player-cavalry-reload-02\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 2,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T13:52:55.091Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "DefenderVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 1,
+        "simulationSeconds": 48.19068908691406,
+        "realSeconds": 48.245208740234375,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          0,
+          3
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 2,
+        "liveTypes": 2,
+        "mode": "cavalry",
+        "uiSelected": [
+          "剑盾骑兵（派生骑乘）",
+          "骑兵对照·骑士"
+        ],
+        "bindings": [
+          {
+            "name": "剑盾骑兵（派生骑乘）",
+            "profile": "FinalVAT",
+            "mesh": "MountedKnight01_CleanMesh",
+            "material": "MountedNear",
+            "vertices": 10872,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "骑兵对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "case": "spider",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "spider",
+        "buildGuid": "af554201e4844a8da1739eec95309906",
+        "pid": 9792,
+        "elapsedSeconds": 71.881,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentCavalry\\player-spider-seed-02\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T13:54:07.045Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 51.63044357299805,
+        "realSeconds": 51.68299102783203,
+        "initial": [
+          3,
+          16
+        ],
+        "survivors": [
+          2,
+          0
+        ],
+        "restartAlive": [
+          3,
+          16
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 6,
+        "liveTypes": 2,
+        "mode": "spider",
+        "uiSelected": [
+          "巨型蜘蛛",
+          "大型对照·骑士",
+          "大型·巨狼",
+          "大型·公牛",
+          "三角龙",
+          "剑龙"
+        ],
+        "bindings": [
+          {
+            "name": "巨型蜘蛛",
+            "profile": "FinalVAT",
+            "mesh": "LargeSpider04_CleanMesh",
+            "material": "SpiderNear",
+            "vertices": 5318,
+            "count": 3,
+            "team": 0
+          },
+          {
+            "name": "大型对照·骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 16,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "case": "regular",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "regular",
+        "buildGuid": "af554201e4844a8da1739eec95309906",
+        "pid": 17352,
+        "elapsedSeconds": 38.302,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentCavalry\\player-regular-seed-02\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 12,
+        "liveTypes": 2,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T13:54:45.433Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 15.637327194213867,
+        "realSeconds": 15.689908981323242,
+        "initial": [
+          8,
+          6
+        ],
+        "survivors": [
+          8,
+          0
+        ],
+        "restartAlive": [
+          8,
+          6
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 2,
+        "selectableTemplates": 12,
+        "liveTypes": 2,
+        "mode": "regular",
+        "uiSelected": [
+          "原有·男战士",
+          "原有·女角色",
+          "UnityChan（UCL）",
+          "原有·Sazen骷髅",
+          "剑盾骑士",
+          "持弓游侠",
+          "斧盾骷髅",
+          "双刃骷髅",
+          "持杖骷髅",
+          "兽人",
+          "雪怪",
+          "蘑菇怪"
+        ],
+        "bindings": [
+          {
+            "name": "原有·男战士",
+            "profile": "MaleCharacter_Stage5_MultiClip_Profile",
+            "mesh": "MaleCharacter_CleanMesh",
+            "material": "LitInstancedAgent",
+            "vertices": 4112,
+            "count": 8,
+            "team": 0
+          },
+          {
+            "name": "原有·女角色",
+            "profile": "FemaleCharacterPBR_Stage5_MultiClip_Profile",
+            "mesh": "FemaleCharacterPBR_CleanMesh",
+            "material": "LitInstancedAgent_Defender",
+            "vertices": 4066,
+            "count": 6,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    },
+    {
+      "case": "all",
+      "phase": "seed",
+      "audit": {
+        "passed": true,
+        "exitCode": 0,
+        "timedOut": false,
+        "phase": "seed",
+        "kind": "all",
+        "buildGuid": "af554201e4844a8da1739eec95309906",
+        "pid": 21140,
+        "elapsedSeconds": 53.02,
+        "frameCapConfigured": true,
+        "checks": 7,
+        "report": "Logs\\AgentCavalry\\player-all-seed-02\\report.json",
+        "settingsFileUntouched": true,
+        "rosterEvidencePassed": true,
+        "selectableTemplates": 12,
+        "liveTypes": 12,
+        "humanAcceptance": false,
+        "finishedUtc": "2026-09-30T13:55:38.533Z"
+      },
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 30.14434814453125,
+        "realSeconds": 30.194658279418945,
+        "initial": [
+          38,
+          36
+        ],
+        "survivors": [
+          25,
+          0
+        ],
+        "restartAlive": [
+          38,
+          36
+        ]
+      },
+      "roster": {
+        "passed": true,
+        "policyUnchanged": true,
+        "rejectedUnsafeDraftWithoutGpuChange": true,
+        "cancelRestoredCommitted": true,
+        "sourceScenarioTemplates": 12,
+        "selectableTemplates": 12,
+        "liveTypes": 12,
+        "mode": "all",
+        "uiSelected": [
+          "原有·男战士",
+          "原有·女角色",
+          "UnityChan（UCL）",
+          "原有·Sazen骷髅",
+          "剑盾骑士",
+          "持弓游侠",
+          "斧盾骷髅",
+          "双刃骷髅",
+          "持杖骷髅",
+          "兽人",
+          "雪怪",
+          "蘑菇怪"
+        ],
+        "bindings": [
+          {
+            "name": "原有·男战士",
+            "profile": "MaleCharacter_Stage5_MultiClip_Profile",
+            "mesh": "MaleCharacter_CleanMesh",
+            "material": "LitInstancedAgent",
+            "vertices": 4112,
+            "count": 8,
+            "team": 0
+          },
+          {
+            "name": "原有·女角色",
+            "profile": "FemaleCharacterPBR_Stage5_MultiClip_Profile",
+            "mesh": "FemaleCharacterPBR_CleanMesh",
+            "material": "LitInstancedAgent_Defender",
+            "vertices": 4066,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "UnityChan（UCL）",
+            "profile": "UnityChanVAT",
+            "mesh": "UnityChanPrepared_CleanMesh",
+            "material": "UnityChanNear",
+            "vertices": 13369,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "原有·Sazen骷髅",
+            "profile": "FinalVAT",
+            "mesh": "LegacySkeleton01_CleanMesh",
+            "material": "LegacySkeletonNear",
+            "vertices": 11987,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "剑盾骑士",
+            "profile": "FinalVAT",
+            "mesh": "Knight04_CleanMesh",
+            "material": "KayKitKnightNear",
+            "vertices": 6666,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "持弓游侠",
+            "profile": "FinalVAT",
+            "mesh": "Ranger02_CleanMesh",
+            "material": "RangerNear",
+            "vertices": 9521,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "斧盾骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonWarrior01_CleanMesh",
+            "material": "SkeletonWarriorNear",
+            "vertices": 8695,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "双刃骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonRogue01_CleanMesh",
+            "material": "SkeletonRogueNear",
+            "vertices": 7109,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "持杖骷髅",
+            "profile": "FinalVAT",
+            "mesh": "SkeletonMage03_CleanMesh",
+            "material": "SkeletonMageNear",
+            "vertices": 6835,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "兽人",
+            "profile": "FinalVAT",
+            "mesh": "Orc01_CleanMesh",
+            "material": "OrcNear",
+            "vertices": 4382,
+            "count": 6,
+            "team": 1
+          },
+          {
+            "name": "雪怪",
+            "profile": "FinalVAT",
+            "mesh": "Yeti01_CleanMesh",
+            "material": "YetiNear",
+            "vertices": 3349,
+            "count": 6,
+            "team": 0
+          },
+          {
+            "name": "蘑菇怪",
+            "profile": "FinalVAT",
+            "mesh": "MushroomKing01_CleanMesh",
+            "material": "MushroomKingNear",
+            "vertices": 3369,
+            "count": 6,
+            "team": 1
+          }
+        ],
+        "method": "Actual uGUI template/add/undo/cancel callbacks plus runtime renderer bindings. Unsafe candidate API must reject without touching GPU/source/committed deployment. Does not inject battle results."
+      }
+    }
+  ],
+  "protectionAudit": {
+    "auditPassed": true,
+    "watchedOriginalSources": 3046,
+    "protectedOldPackageFiles": 7539,
+    "personalFilesUnchanged": 3,
+    "changedSources": [
+      "Assets/方案设计/兵种模型制作管线.md",
+      "Assets/Game/README.md",
+      "NEXT_TASK.md"
+    ],
+    "errors": []
+  }
+}

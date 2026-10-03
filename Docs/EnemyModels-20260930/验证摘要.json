@@ -1,0 +1,429 @@
+{
+  "buildGuid": "267619ea33a54ae5a6fca43fd4467f3f",
+  "humanAcceptance": false,
+  "priorFeedback": {
+    "Knight04": "完全ok",
+    "Ranger02": "挺满意"
+  },
+  "oldCodeChanged": false,
+  "newModelCount": 3,
+  "models": [
+    {
+      "status": "ready-for-human-review",
+      "output": "Assets/Game/CharacterPipeline/Generated/SkeletonWarrior01",
+      "evidence": "Logs/CharacterPipeline/SkeletonWarrior01-232ceef2",
+      "sourceModel": "Assets/Game/EnemyModelsBatch/Warrior/Prepared.prefab",
+      "sourceGuid": "e3fe751891e190146987375a918413cf",
+      "sourceDependencyHash": "dede106618c0da883949e64ecc410faf",
+      "unityVersion": "6000.3.14f1",
+      "createdUtc": "2026-09-30T07:25:18.1896950Z",
+      "sourceBodyHeight": 2.16611385345459,
+      "targetBodyHeight": 1.899999976158142,
+      "bodyScaleFactor": 0.87714684009552,
+      "agentRadius": 0.5,
+      "maxPositionError": 0.0018325909040868282,
+      "allowedPositionError": 0.0024999999441206455,
+      "fullVertices": 8695,
+      "lowVertices": 1942,
+      "totalFrames": 92,
+      "gpuSnapshots": 48,
+      "sourceReferenceSnapshots": 16,
+      "positionComparisons": 799940,
+      "textureBytes": 21102592,
+      "automatedPassed": true,
+      "humanAcceptance": false,
+      "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+      "actions": [
+        {
+          "action": "Idle",
+          "frames": 26,
+          "maximumPositionError": 0.001788439927622676
+        },
+        {
+          "action": "Move",
+          "frames": 20,
+          "maximumPositionError": 0.0017734287539497018
+        },
+        {
+          "action": "Attack",
+          "frames": 26,
+          "maximumPositionError": 0.001806445885449648
+        },
+        {
+          "action": "Death",
+          "frames": 20,
+          "maximumPositionError": 0.0018325909040868282
+        }
+      ],
+      "warnings": [
+        "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+        "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+        "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+        "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+      ]
+    },
+    {
+      "status": "ready-for-human-review",
+      "output": "Assets/Game/CharacterPipeline/Generated/SkeletonRogue01",
+      "evidence": "Logs/CharacterPipeline/SkeletonRogue01-13b07266",
+      "sourceModel": "Assets/Game/EnemyModelsBatch/Rogue/Prepared.prefab",
+      "sourceGuid": "8537674f1c3e0454483e8632a857cdcd",
+      "sourceDependencyHash": "ff51609b6cc05ce5b9c35ab18daaf34c",
+      "unityVersion": "6000.3.14f1",
+      "createdUtc": "2026-09-30T07:25:24.6931634Z",
+      "sourceBodyHeight": 2.16611385345459,
+      "targetBodyHeight": 1.7999999523162842,
+      "bodyScaleFactor": 0.8309812545776367,
+      "agentRadius": 0.44999998807907104,
+      "maxPositionError": 0.0012888982892036438,
+      "allowedPositionError": 0.0024999999441206455,
+      "fullVertices": 7109,
+      "lowVertices": 1996,
+      "totalFrames": 95,
+      "gpuSnapshots": 48,
+      "sourceReferenceSnapshots": 16,
+      "positionComparisons": 675355,
+      "textureBytes": 15564800,
+      "automatedPassed": true,
+      "humanAcceptance": false,
+      "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+      "actions": [
+        {
+          "action": "Idle",
+          "frames": 26,
+          "maximumPositionError": 0.0012776801595464349
+        },
+        {
+          "action": "Move",
+          "frames": 20,
+          "maximumPositionError": 0.0012822813587263227
+        },
+        {
+          "action": "Attack",
+          "frames": 29,
+          "maximumPositionError": 0.0012833460932597518
+        },
+        {
+          "action": "Death",
+          "frames": 20,
+          "maximumPositionError": 0.0012888982892036438
+        }
+      ],
+      "warnings": [
+        "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+        "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+        "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+        "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+      ]
+    },
+    {
+      "status": "ready-for-human-review",
+      "output": "Assets/Game/CharacterPipeline/Generated/SkeletonMage03",
+      "evidence": "Logs/CharacterPipeline/SkeletonMage03-86616103",
+      "sourceModel": "Assets/Game/EnemyModelsBatch/Mage/Corrected03/Prepared.prefab",
+      "sourceGuid": "bf09c95a46eb80246abc9abaf6ff49d9",
+      "sourceDependencyHash": "40ec1d03f1d0515c28c38c97b91f1fd6",
+      "unityVersion": "6000.3.14f1",
+      "createdUtc": "2026-09-30T07:33:09.2040069Z",
+      "sourceBodyHeight": 2.16611385345459,
+      "targetBodyHeight": 1.7999999523162842,
+      "bodyScaleFactor": 0.8309812545776367,
+      "agentRadius": 0.44999998807907104,
+      "maxPositionError": 0.0017004653345793486,
+      "allowedPositionError": 0.0024999999441206455,
+      "fullVertices": 6835,
+      "lowVertices": 1960,
+      "totalFrames": 89,
+      "gpuSnapshots": 48,
+      "sourceReferenceSnapshots": 16,
+      "positionComparisons": 608315,
+      "textureBytes": 14581760,
+      "automatedPassed": true,
+      "humanAcceptance": false,
+      "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+      "actions": [
+        {
+          "action": "Idle",
+          "frames": 26,
+          "maximumPositionError": 0.0016983298119157553
+        },
+        {
+          "action": "Move",
+          "frames": 20,
+          "maximumPositionError": 0.001620312687009573
+        },
+        {
+          "action": "Attack",
+          "frames": 23,
+          "maximumPositionError": 0.001662028837017715
+        },
+        {
+          "action": "Death",
+          "frames": 20,
+          "maximumPositionError": 0.0017004653345793486
+        }
+      ],
+      "warnings": [
+        "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+        "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+        "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+        "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+      ]
+    }
+  ],
+  "runtime": [
+    {
+      "model": "warrior",
+      "title": "斧盾骷髅",
+      "phase": "seed",
+      "passed": true,
+      "pid": 22016,
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 12.513527870178223,
+        "realSeconds": 12.565457344055176,
+        "initial": [
+          96,
+          64
+        ],
+        "survivors": [
+          75,
+          0
+        ],
+        "restartAlive": [
+          96,
+          64
+        ]
+      },
+      "checks": [
+        "New stable-ID template is selectable in the real roster UI; source Scenario supplies available templates.",
+        "Invalid count rejected without GPU rebuild or partial Scenario replacement: 编成 1：人数必须为 1 到 400000。",
+        "Saved plan loaded/applied via uGUI; distinct runtime Scenario/UnitType/Spawn copies, count, stable ID and live VAT mesh binding verified.",
+        "Normal-speed default orders produced a real natural settlement; winner/time/all-army initial and survivor counts recorded.",
+        "UI restart restored full counts, fresh orders and the same trial model binding; normal start works again.",
+        "Returned through real navigation/confirmation UI; all runtime copies and scene GPU allocation released; source JSON and plan bytes unchanged."
+      ]
+    },
+    {
+      "model": "warrior",
+      "title": "斧盾骷髅",
+      "phase": "reload",
+      "passed": true,
+      "pid": 14880,
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 12.558980941772461,
+        "realSeconds": 12.610302925109863,
+        "initial": [
+          96,
+          64
+        ],
+        "survivors": [
+          74,
+          0
+        ],
+        "restartAlive": [
+          96,
+          64
+        ]
+      },
+      "checks": [
+        "New stable-ID template is selectable in the real roster UI; source Scenario supplies available templates.",
+        "Saved plan loaded/applied via uGUI; distinct runtime Scenario/UnitType/Spawn copies, count, stable ID and live VAT mesh binding verified.",
+        "Normal-speed default orders produced a real natural settlement; winner/time/all-army initial and survivor counts recorded.",
+        "UI restart restored full counts, fresh orders and the same trial model binding; normal start works again.",
+        "Returned through real navigation/confirmation UI; all runtime copies and scene GPU allocation released; source JSON and plan bytes unchanged."
+      ]
+    },
+    {
+      "model": "rogue",
+      "title": "双刃骷髅",
+      "phase": "seed",
+      "passed": true,
+      "pid": 15228,
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 13.032376289367676,
+        "realSeconds": 13.080567359924316,
+        "initial": [
+          96,
+          64
+        ],
+        "survivors": [
+          75,
+          0
+        ],
+        "restartAlive": [
+          96,
+          64
+        ]
+      },
+      "checks": [
+        "New stable-ID template is selectable in the real roster UI; source Scenario supplies available templates.",
+        "Invalid count rejected without GPU rebuild or partial Scenario replacement: 编成 1：人数必须为 1 到 400000。",
+        "Saved plan loaded/applied via uGUI; distinct runtime Scenario/UnitType/Spawn copies, count, stable ID and live VAT mesh binding verified.",
+        "Normal-speed default orders produced a real natural settlement; winner/time/all-army initial and survivor counts recorded.",
+        "UI restart restored full counts, fresh orders and the same trial model binding; normal start works again.",
+        "Returned through real navigation/confirmation UI; all runtime copies and scene GPU allocation released; source JSON and plan bytes unchanged."
+      ]
+    },
+    {
+      "model": "rogue",
+      "title": "双刃骷髅",
+      "phase": "reload",
+      "passed": true,
+      "pid": 6052,
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 13.041372299194336,
+        "realSeconds": 13.089693069458008,
+        "initial": [
+          96,
+          64
+        ],
+        "survivors": [
+          74,
+          0
+        ],
+        "restartAlive": [
+          96,
+          64
+        ]
+      },
+      "checks": [
+        "New stable-ID template is selectable in the real roster UI; source Scenario supplies available templates.",
+        "Saved plan loaded/applied via uGUI; distinct runtime Scenario/UnitType/Spawn copies, count, stable ID and live VAT mesh binding verified.",
+        "Normal-speed default orders produced a real natural settlement; winner/time/all-army initial and survivor counts recorded.",
+        "UI restart restored full counts, fresh orders and the same trial model binding; normal start works again.",
+        "Returned through real navigation/confirmation UI; all runtime copies and scene GPU allocation released; source JSON and plan bytes unchanged."
+      ]
+    },
+    {
+      "model": "mage",
+      "title": "持杖骷髅",
+      "phase": "seed",
+      "passed": true,
+      "pid": 15244,
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 21.554325103759766,
+        "realSeconds": 21.600210189819336,
+        "initial": [
+          96,
+          64
+        ],
+        "survivors": [
+          50,
+          0
+        ],
+        "restartAlive": [
+          96,
+          64
+        ]
+      },
+      "checks": [
+        "New stable-ID template is selectable in the real roster UI; source Scenario supplies available templates.",
+        "Invalid count rejected without GPU rebuild or partial Scenario replacement: 编成 1：人数必须为 1 到 400000。",
+        "Saved plan loaded/applied via uGUI; distinct runtime Scenario/UnitType/Spawn copies, count, stable ID and live VAT mesh binding verified.",
+        "Normal-speed default orders produced a real natural settlement; winner/time/all-army initial and survivor counts recorded.",
+        "UI restart restored full counts, fresh orders and the same trial model binding; normal start works again.",
+        "Returned through real navigation/confirmation UI; all runtime copies and scene GPU allocation released; source JSON and plan bytes unchanged."
+      ],
+      "ranged": {
+        "method": "Passive reads of real projectile pool/source IDs/draw args/HP and animation phase. No injected requests/damage/volley. Approximate timing, not bone-socket/frame-perfect firing.",
+        "passed": true,
+        "maximumLaunched": 1000,
+        "maximumInFlight": 83,
+        "maximumDraw": 77,
+        "negativeGravitySamples": 6900,
+        "enemyDamage": 6400,
+        "uniqueRangerShooters": 91,
+        "epochs": 2,
+        "errors": 0,
+        "maximumHeight": 5.294474124908447,
+        "maximumVerticalVelocityChange": 1.8131248950958252
+      }
+    },
+    {
+      "model": "mage",
+      "title": "持杖骷髅",
+      "phase": "reload",
+      "passed": true,
+      "pid": 9972,
+      "battle": {
+        "mode": "Annihilation",
+        "phase": "AttackerVictory",
+        "victoryReason": "Annihilation",
+        "naturalSettlement": true,
+        "winnerTeamId": 0,
+        "simulationSeconds": 21.99474334716797,
+        "realSeconds": 22.056928634643555,
+        "initial": [
+          96,
+          64
+        ],
+        "survivors": [
+          43,
+          0
+        ],
+        "restartAlive": [
+          96,
+          64
+        ]
+      },
+      "checks": [
+        "New stable-ID template is selectable in the real roster UI; source Scenario supplies available templates.",
+        "Saved plan loaded/applied via uGUI; distinct runtime Scenario/UnitType/Spawn copies, count, stable ID and live VAT mesh binding verified.",
+        "Normal-speed default orders produced a real natural settlement; winner/time/all-army initial and survivor counts recorded.",
+        "UI restart restored full counts, fresh orders and the same trial model binding; normal start works again.",
+        "Returned through real navigation/confirmation UI; all runtime copies and scene GPU allocation released; source JSON and plan bytes unchanged."
+      ],
+      "ranged": {
+        "method": "Passive reads of real projectile pool/source IDs/draw args/HP and animation phase. No injected requests/damage/volley. Approximate timing, not bone-socket/frame-perfect firing.",
+        "passed": true,
+        "maximumLaunched": 950,
+        "maximumInFlight": 80,
+        "maximumDraw": 76,
+        "negativeGravitySamples": 6577,
+        "enemyDamage": 6400,
+        "uniqueRangerShooters": 94,
+        "epochs": 2,
+        "errors": 0,
+        "maximumHeight": 5.24586296081543,
+        "maximumVerticalVelocityChange": 1.751366376876831
+      }
+    }
+  ],
+  "protectionAudit": {
+    "auditPassed": true,
+    "watchedOriginalSources": 1868,
+    "protectedOldPackageFiles": 4647,
+    "personalFilesUnchanged": 3,
+    "changedSources": [
+      "Assets/方案设计/兵种模型制作管线.md",
+      "Assets/Game/README.md",
+      "NEXT_TASK.md"
+    ],
+    "errors": []
+  }
+}

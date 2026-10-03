@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: Ranger
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 9156074099117928217, guid: 9ea4dd62ae3c37e4299682a32dbca011, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths: []
+  blendshapeAttachmentPaths:
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/upperarm.l/lowerarm.l/wrist.l/hand.l/handslot.l/Bow
+  - ScalePivot/Body/Rig_Medium/root/hips/spine/chest/upperarm.r/lowerarm.r/wrist.r/hand.r/handslot.r/NockedArrow
+  idle: {fileID: 7400000, guid: 0c5969889deacfb4480b0c5cfd24f903, type: 2}
+  move: {fileID: 7400000, guid: 44041ec9560cea74c97aa09441801d5f, type: 2}
+  attack: {fileID: 7400000, guid: 00b745e5c5bc623499821834b483fba2, type: 2}
+  death: {fileID: 7400000, guid: f215edcb2c1540d45bfb64fd419a5a83, type: 2}
+  frameRate: 24
+  targetBodyHeight: 1.8
+  groundBindFeet: 1
+  agentRadius: 0.45
+  lowPolicy: 2
+  lowVertexBudget: 1400
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: Ranger01
+  unitTemplate: {fileID: 11400000, guid: 3cfe41d8b4f6727499f771d52ee634fe, type: 2}
+  createTrial: 1
+  trialMenu: {fileID: 102900000, guid: 038d6dd89f90a314c9ffbc921a646c6e, type: 3}
+  trialBattlefield: {fileID: 102900000, guid: 366a1b2dad0b5e440847129007c2a421, type: 3}
+  trialCatalog: {fileID: 11400000, guid: 67711ef9a0c7daa4db916ecb6cf53bd6, type: 2}
+  battlefieldId: ranger-pilot
+  templateId: kaykit-ranger

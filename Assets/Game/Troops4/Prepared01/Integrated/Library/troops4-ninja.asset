@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: troops4-ninja
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u5FCD\u8005"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 54d2f44ca0e81554cb6d66f39d4bd686, type: 2}
+  movementConfig: {fileID: 11400000, guid: 9f92ae17cf5ee644c9ffd721ed70bbf3, type: 2}
+  flockingConfig: {fileID: 11400000, guid: b613c3d59bdc24e408649d2813b7fcaf, type: 2}
+  animationConfig: {fileID: 11400000, guid: 2bff6210603cc724fa2338015f618d8d, type: 2}
+  combatConfig: {fileID: 11400000, guid: 2b438f261902e1945b4248bb202fcfa3, type: 2}
+  renderConfig: {fileID: 11400000, guid: 7cae1bb2b208bdb4dbf86a8a34ef5eb5, type: 2}

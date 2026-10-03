@@ -8,6 +8,8 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
         _ProjectileTrailWidth ("Trail Width", Float) = 0.15
         _ProjectileTrailLengthScale ("Trail Length Scale", Float) = 2
         _ProjectileTrailMinLength ("Trail Min Length", Float) = 0.8
+        // Splash shots (splashRadius > 0, e.g. dragon fireballs) render as a wider fire streak.
+        _SplashTrailWidth ("Splash Trail Width", Float) = 0.8
     }
 
     SubShader
@@ -41,6 +43,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 float _ProjectileTrailWidth;
                 float _ProjectileTrailLengthScale;
                 float _ProjectileTrailMinLength;
+                float _SplashTrailWidth;
             CBUFFER_END
 
             // Keep in sync with ProjectileRenderConfig.MaxTeamColors: the dispatcher always
@@ -66,7 +69,8 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 float gravity;
                 float maxLifetime;
                 float trailLength;
-                float2 padding;
+                int sourceAgentIndexPlusOne;
+                float splashRadius; // former padding; > 0 = splash shot (fire streak)
             };
 
             #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
@@ -75,6 +79,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 // a live slot; idle slots never reach the vertex stage at all.
                 StructuredBuffer<uint> activeProjectileIndices;
                 static half4 _TracerColor;
+                static half _TracerFire;
             #endif
 
             void setup()
@@ -87,6 +92,9 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                     float3 dir = speed > 1e-4 ? data.velocity / speed : float3(0, 0, 1);
                     float len = max(_ProjectileTrailMinLength, data.trailLength * _ProjectileTrailLengthScale);
                     float width = max(1e-3, _ProjectileTrailWidth);
+                    _TracerFire = data.splashRadius > 0.0 ? 1.0h : 0.0h;
+                    if (data.splashRadius > 0.0)
+                        width = max(width, _SplashTrailWidth);
 
                     // Billboard around the flight axis: the quad keeps its length along the
                     // velocity and rolls to face the camera, so a tracer never degenerates
@@ -153,6 +161,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 float2 uv : TEXCOORD0;
                 half4 color : TEXCOORD1;
                 half fogFactor : TEXCOORD2;
+                half fire : TEXCOORD3;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -166,6 +175,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 output.uv = input.uv;
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                     output.color = _TracerColor;
+                    output.fire = _TracerFire;
                 #else
                     // No procedural instancing means no projectile data to read a team from.
                     output.color = (half4)_ProjectileTeamColors[0];
@@ -181,6 +191,15 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 // uv.x runs 0 at the tail to 1 at the head; uv.y softens the long edges.
                 half head = (half)input.uv.x;
                 half across = 1.0h - abs((half)input.uv.y * 2.0h - 1.0h);
+                if (input.fire > 0.5h)
+                {
+                    // Fire streak: saturated orange-red body (LDR, so it stays orange without bloom) with a short
+                    // hot core at the head; the body keeps most of its opacity so the whole streak reads as a thick line.
+                    half3 fireRgb = lerp(half3(0.85h, 0.14h, 0.02h), half3(1.0h, 0.45h, 0.06h), head);
+                    fireRgb = lerp(fireRgb, half3(1.0h, 0.78h, 0.32h), saturate((head - 0.85h) * 6.0h) * across);
+                    half fireAlpha = saturate((0.3h + 0.7h * head) * sqrt(across) * 1.25h);
+                    return half4(MixFog(fireRgb, input.fogFactor), fireAlpha);
+                }
                 half alpha = input.color.a * head * head * across;
                 half3 rgb = MixFog(input.color.rgb, input.fogFactor);
                 return half4(rgb, alpha);

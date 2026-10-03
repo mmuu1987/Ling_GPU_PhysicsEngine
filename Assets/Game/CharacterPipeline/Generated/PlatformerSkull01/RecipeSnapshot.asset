@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 8333889900195828552, guid: a7de05b4fabe1024e9f6b9847e85ef6f, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: d7ecbc7d491df304d999b2def40232ac, type: 2}
+  move: {fileID: 7400000, guid: 1b89634c8905cea4aaa55a543fdc5699, type: 2}
+  attack: {fileID: 7400000, guid: 31057894a749dac4ebe8627f8f3cc8ac, type: 2}
+  death: {fileID: 7400000, guid: 88f114d94dccc634fbea19f912739ff6, type: 2}
+  frameRate: 24
+  targetBodyHeight: 1.05
+  groundBindFeet: 1
+  agentRadius: 0.75
+  lowPolicy: 2
+  lowVertexBudget: 1000
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: PlatformerSkull01
+  unitTemplate: {fileID: 11400000, guid: ebb0b68c3a81f6642961d80b9c383fc5, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

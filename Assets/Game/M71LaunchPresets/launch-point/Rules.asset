@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 997bf10481ae4780954c7f4ee02c7617, type: 3}
+  m_Name: Rules
+  m_EditorClassIdentifier: 
+  rules:
+    gameMode: 1
+    controlPointCenter: {x: 0, y: 0, z: 0}
+    controlPointRadius: 24
+    controlPointCaptureSeconds: 15
+    staticObstaclesEnabled: 1
+    staticObstacleClearance: 2
+    staticObstacles:
+    - center: {x: 0, y: -90}
+      size: {x: 18, y: 90}
+    - center: {x: 0, y: 90}
+      size: {x: 18, y: 90}

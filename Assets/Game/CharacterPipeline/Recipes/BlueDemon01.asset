@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: BlueDemon01
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 5283321555768922936, guid: 526d4d8e041072b4a81f87be9e693605, type: 3}
+  sizeRootPath: 
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: 8db7ba2e8f605aa4d85f6af409027178, type: 2}
+  move: {fileID: 7400000, guid: 30b49ef0b0d868f488298eacdf9245b0, type: 2}
+  attack: {fileID: 7400000, guid: 0b8c01b1dd750b54bbddf05da76f5eed, type: 2}
+  death: {fileID: 7400000, guid: 6f40a959a63fa954bb4651978e409415, type: 2}
+  frameRate: 24
+  targetBodyHeight: 3.2449055
+  groundBindFeet: 0
+  agentRadius: 3.2
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 32
+  paletteRows: 32
+  fullVertexBudget: 20000
+  maxTextureMiB: 48
+  maximumPositionError: 0.0025
+  outputName: BlueDemon01
+  unitTemplate: {fileID: 11400000, guid: b83f4f33f46289047a5e27440b1fcb7b, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

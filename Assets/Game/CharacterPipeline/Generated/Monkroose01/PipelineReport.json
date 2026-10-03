@@ -1,0 +1,54 @@
+{
+    "status": "ready-for-human-review",
+    "output": "Assets/Game/CharacterPipeline/Generated/Monkroose01",
+    "evidence": "Logs/CharacterPipeline/Monkroose01-d05de3dd",
+    "sourceModel": "Assets/Game/Troops5/Prepared01/Monkroose/Prepared.prefab",
+    "sourceGuid": "09147ebb85c7ca640b04cd04ee6bae14",
+    "sourceDependencyHash": "59402c58f4fa88c67653d9d1135b4d81",
+    "unityVersion": "6000.3.14f1",
+    "createdUtc": "2026-10-01T13:18:34.8871507Z",
+    "sourceBodyHeight": 2.7925682067871095,
+    "targetBodyHeight": 2.0,
+    "bodyScaleFactor": 0.7161866426467896,
+    "agentRadius": 0.550000011920929,
+    "maxPositionError": 0.0016484444495290518,
+    "allowedPositionError": 0.0024999999441206457,
+    "fullVertices": 3402,
+    "lowVertices": 1539,
+    "totalFrames": 78,
+    "gpuSnapshots": 48,
+    "sourceReferenceSnapshots": 16,
+    "positionComparisons": 265356,
+    "textureBytes": 6801600,
+    "automatedPassed": true,
+    "humanAcceptance": false,
+    "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+    "actions": [
+        {
+            "action": "Idle",
+            "frames": 24,
+            "maximumPositionError": 0.001624542404897511
+        },
+        {
+            "action": "Move",
+            "frames": 14,
+            "maximumPositionError": 0.0015862280270084739
+        },
+        {
+            "action": "Attack",
+            "frames": 21,
+            "maximumPositionError": 0.0016484444495290518
+        },
+        {
+            "action": "Death",
+            "frames": 19,
+            "maximumPositionError": 0.0016126657137647272
+        }
+    ],
+    "warnings": [
+        "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+        "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+        "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+        "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+    ]
+}

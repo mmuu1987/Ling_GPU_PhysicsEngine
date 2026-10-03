@@ -1,0 +1,1 @@
+Palette-safe recipe-only reduction; budget=1400; vertices=1337; triangles=2299; frames=114; cross-palette clusters=0; nonfinite VAT samples=0; full samples shared unchanged.

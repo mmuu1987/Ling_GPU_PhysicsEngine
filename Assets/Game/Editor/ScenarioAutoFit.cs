@@ -32,7 +32,14 @@ namespace MassEngine.Game.Editor
 
         public static void AutoFit(float engagementGap)
         {
-            MassEngineManager manager = Object.FindFirstObjectByType<MassEngineManager>();
+            AutoFit(Object.FindFirstObjectByType<MassEngineManager>(), engagementGap);
+        }
+
+        public static void AutoFit(MassEngineManager manager, float engagementGap)
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
             if (manager == null)
             {
                 Debug.LogError("Auto-Fit: no MassEngineManager in the open scene.");

@@ -1,0 +1,11 @@
+#pragma kernel Probe
+#include "../../Core/Shaders/AgentDataCommon.hlsl"
+float3 previousPosition;
+[numthreads(1,1,1)]
+void Probe(uint3 id : SV_DispatchThreadID)
+{
+    AgentData agent = agentBuffer[0];
+    UpdateLocomotionPresentation(agent, previousPosition, GetUnitSettings(0));
+    UpdateAnimationTime(0, agent, 1);
+    agentBuffer[0] = agent;
+}

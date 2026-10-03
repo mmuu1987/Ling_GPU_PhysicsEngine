@@ -1,0 +1,49 @@
+{
+  "buildGuid": "37bb596ded554f60b4ddd8d0a77331d8",
+  "fullVertices": 6666,
+  "lowVertices": 1337,
+  "frames": 114,
+  "positionComparisons": 759924,
+  "maximumPositionErrorMeters": 0.0011936512310057878,
+  "gpuSnapshots": 48,
+  "beforeAfterSnapshots": 6,
+  "humanAcceptance": false,
+  "v1Released": false,
+  "seed": {
+    "passed": true,
+    "exitCode": 0,
+    "timedOut": false,
+    "phase": "seed",
+    "buildGuid": "37bb596ded554f60b4ddd8d0a77331d8",
+    "pid": 18484,
+    "elapsedSeconds": 33.644,
+    "frameCapConfigured": true,
+    "checks": 6,
+    "report": "Logs\\AgentKnightNeck\\player-seed-03\\report.json",
+    "settingsFileUntouched": true,
+    "humanAcceptance": false,
+    "finishedUtc": "2026-09-30T04:35:47.739Z"
+  },
+  "reload": {
+    "passed": true,
+    "exitCode": 0,
+    "timedOut": false,
+    "phase": "reload",
+    "buildGuid": "37bb596ded554f60b4ddd8d0a77331d8",
+    "pid": 14192,
+    "elapsedSeconds": 29.298,
+    "frameCapConfigured": true,
+    "checks": 5,
+    "report": "Logs\\AgentKnightNeck\\player-reload-03\\report.json",
+    "settingsFileUntouched": true,
+    "humanAcceptance": false,
+    "finishedUtc": "2026-09-30T04:37:47.102Z"
+  },
+  "protectionAudit": {
+    "passed": true,
+    "watchedOriginalSources": 1597,
+    "protectedOldPackageFiles": 3041,
+    "personalFilesUnchanged": 3,
+    "errors": []
+  }
+}

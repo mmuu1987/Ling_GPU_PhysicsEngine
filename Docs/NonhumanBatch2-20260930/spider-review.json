@@ -1,0 +1,25 @@
+{
+    "method": "One bounded read-only full bake plus independent expected positions; no output asset/old recipe edits.",
+    "maxError": 0.002388562774285674,
+    "maxAbsCoordinate": 7.53587532043457,
+    "maxMathHalfError": 0.002388562774285674,
+    "action": "Death",
+    "frame": 9,
+    "vertex": 1668,
+    "expected": {
+        "x": 4.099730968475342,
+        "y": 6.326606273651123,
+        "z": -0.6901516318321228
+    },
+    "encoded": {
+        "x": 4.1015625,
+        "y": 6.328125,
+        "z": -0.68994140625
+    },
+    "mathHalf": {
+        "x": 4.1015625,
+        "y": 6.328125,
+        "z": -0.68994140625
+    },
+    "encodedMatchesMathHalf": true
+}

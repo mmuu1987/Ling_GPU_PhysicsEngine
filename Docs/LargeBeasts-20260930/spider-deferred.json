@@ -1,0 +1,19 @@
+{
+    "accepted": false,
+    "nativeBakeVsLbsMaximum": 0.0000019660499219753548,
+    "largestWeightSumError": 9.685754776000977e-8,
+    "expected": {
+        "x": 0.3265896439552307,
+        "y": 6.474282741546631,
+        "z": 1.6132336854934693
+    },
+    "native": {
+        "x": 0.3265896439552307,
+        "y": 6.474280834197998,
+        "z": 1.613233208656311
+    },
+    "action": "Death",
+    "frame": 11,
+    "vertex": 1178,
+    "note": "Spider excluded from this delivery:3.78mm VAT position gate failed. Native unquantized diagnostic only; do not fabricate a passed profile or blame Half without evidence."
+}

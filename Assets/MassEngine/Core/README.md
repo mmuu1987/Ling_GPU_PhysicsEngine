@@ -6,8 +6,8 @@
 
 | 文件 | 职责 |
 |---|---|
-| `AgentData.cs` | Agent 主结构体（**56 字节**，Sequential）：position/rotation/scale/velocity/state/animTime。与 Stage6 布局二进制兼容，测试锁定 stride |
-| `UnitTypeGpuSettings.cs` | 按兵种 GPU 参数记录（**112 字节**），与 `Shaders/AgentDataCommon.hlsl` 的 `UnitTypeSettings` 逐字段一致。这是兵种参数进入 GPU 的**唯一通道** |
+| `AgentData.cs` | Agent 主结构体（**64 字节**，Sequential）：原有 position/rotation/scale/velocity/state/animTime + presentationState/locomotionSpeed；本轮由 56B 扩至 64B，不再与 Stage6 二进制兼容，C#/Compute/两份VAT shader同步，测试锁定stride |
+| `UnitTypeGpuSettings.cs` | 按兵种 GPU 参数记录（**144 字节**），与 `Shaders/AgentDataCommon.hlsl` 的 `UnitTypeSettings` 逐字段一致。这是兵种参数进入 GPU 的**唯一通道** |
 | `PipelineContexts.cs` | 每帧上下文：`PipelineFrameContext` + 嵌套的 Grid/TeamFlow/Lod 设置结构（组合式，单类型公共字段 ≤30） |
 | `AgentStateMachine.cs` | GPU 状态语义的 C# 镜像规格（Dead 终态、优先级重推导），供测试/工具，不参与运行时 |
 | `MassGpuBufferManager.cs` | **所有** ComputeBuffer/RenderTexture 的所有权：分配、零初始化、按兵种×LOD 分桶、三组双缓冲交换、统一释放 |
@@ -70,5 +70,26 @@ cadence  = dirty（目标变更/初始化/StartBattle）立即重建
 ## 性能特征
 
 - uniform 上传与缓冲绑定每帧全量执行（安全优先；如需进一步优化可做绑定缓存）
-- settings 上传 = 兵种数 × 112B，可忽略
+- settings 上传 = 兵种数 × 144B，可忽略
 - frustum 平面数组为字段缓存，Update 路径零 GC 分配
+
+## 2026-09-29 表现与弹道契约
+
+- 战术 `currentState` 保持原枚举；`presentationState` 仅选 Idle/Move/Attack/Death，`locomotionSpeed` 来自最终位移。
+- AgentData 56→64B，每10万单位增加约0.8MB GPU记录；不增加逐帧整表回读。
+- UnitTypeGpuSettings 仍144B：六个预留槽改为移动参考速度/停走阈值/出手进度/发射与瞄准高度。只对该GPU契约允许36个数据字段，其余类型预算仍30。
+- ProjectileGpuData 仍64B：预留8B中4B改为 sourceAgentIndexPlusOne（0未知，正数为索引+1）。
+- Manager缓存出生scale和无地形时的脚底高度，用于CPU发射；运行中动态缩放/飞行不是本轮支持范围，改变这些数据需重建场景。
+- 暂停保留目标、冷却、姿态与速度缓存；初始单位本来就是Idle，重置由ResetScenario执行，暂停不再冒充重置。
+
+## 拥堵等待状态的存储契约（2026-09-29）
+
+保持AgentData=64B、UnitTypeGpuSettings=144B、VAT布局和attackCooldownBuffer不变。DX11战斗kernel已有8个UAV，不再加第9个。
+
+`CombatBufferSet.engagementSlotAssignmentBuffer`现在有`N * (1 + 12)`个32位word：前N项仍是原交战槽位int，后面每单位12项保存拥堵观察/等待与远程射界记录（浮点按位存入int）。尾部仅对应单位的战斗线程读写，不做双缓冲；初始上传清零尾部，死亡/重开清理，Release随原buffer释放。不要把该buffer.count当作兵力数，应使用AgentCount。
+
+尾部顺序：anchor.xz、pathForward.xz、observedSeconds、remainingSeconds、commandRevision（原0～6偏移不变）；rangedStatus（占原reserved）、rangedAnchor.xz、rangedSeconds、rangedTargetPlusOne（最后一项原生int）。C# `CongestionWordsPerAgent=12`与HLSL步长同步，偏移`N + index*12`。相对原8word增加16B/单位，十万人另增约1.6MB；总尾部约4.8MB。这只是容量算术，不是FPS结论。
+
+另有每军团一个int的只读`movementCommandRevisionBuffer`，由接受新命令时增量上传；版本循环于1～16777215，以便在GPU浮点记录中精确保存。常规运行不添加CPU逐单位回读，回读仅在测试探针中启用。
+
+2026-09-30：正式Manager将兵种/寿命/间隔的有界弹道容量传入Allocate；默认底层API仍兼容N/4。详见Projectiles README。Agent64B、UnitType144B、弹体64B均未变；战斗kernel没有新增第9个UAV。

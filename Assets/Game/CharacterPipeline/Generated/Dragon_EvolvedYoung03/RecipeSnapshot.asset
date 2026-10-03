@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 4412685705146340694, guid: 79a3ad09771302a42899b7e7be89ebd0, type: 3}
+  sizeRootPath: 
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: df561d9c991165a4086b74bdf74e46e2, type: 2}
+  move: {fileID: 7400000, guid: a8ff219b00e0e1c4a9866ca699b7ea9a, type: 2}
+  attack: {fileID: 7400000, guid: 75fb60cb47834cb45b49fcbeb19ec410, type: 2}
+  death: {fileID: 7400000, guid: a7fb971242cb64e48b48c6f732aece11, type: 2}
+  frameRate: 24
+  targetBodyHeight: 3.2999997
+  groundBindFeet: 0
+  agentRadius: 3.4
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 32
+  paletteRows: 32
+  fullVertexBudget: 20000
+  maxTextureMiB: 48
+  maximumPositionError: 0.0025
+  outputName: Dragon_EvolvedYoung03
+  unitTemplate: {fileID: 11400000, guid: b51d786eb1b872a44918b3d8dcbce642, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

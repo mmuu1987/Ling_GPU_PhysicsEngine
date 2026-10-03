@@ -1,0 +1,18 @@
+[
+  {
+    "name": "Horse.fbx",
+    "driveId": "14S-I3jZTcwivD9W3mMuJw7OBbEEMba3v",
+    "bytes": 3768844,
+    "sha256": "babb40391b8c3e217be2bb9c1f7c4d21910e943c28840363509dde7e88b54cba",
+    "officialPage": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+    "path": "Assets/CharacterPilotSource/Cavalry01/Horse.fbx"
+  },
+  {
+    "name": "Animals-License.txt",
+    "driveId": "1F2uy8T2fRpdc6gZ4mnS02_C2E63WvKtn",
+    "bytes": 364,
+    "sha256": "83d8959f9fc56353ed571fbe2dc52e4bcd64508e2399501cd45ac2ce3df0bf8c",
+    "officialPage": "https://quaternius.com/packs/ultimateanimatedanimals.html",
+    "path": "Assets/CharacterPilotSource/Cavalry01/Animals-License.txt"
+  }
+]

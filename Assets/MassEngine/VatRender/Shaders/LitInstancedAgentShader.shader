@@ -111,6 +111,8 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             float3 velocity;
             int currentState;
             float currentAnimationTime;
+            int presentationState;
+            float locomotionSpeed;
         };
 
         #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
@@ -235,7 +237,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
 
                 // 记录当前实例的动画时间。后面的 vertex shader 会用它采 VAT。
                 _GlobalAnimationTime = data.currentAnimationTime;
-                _GlobalCurrentState = data.currentState;
+                _GlobalCurrentState = data.currentState >= 3 ? data.currentState : data.presentationState;
             #endif
         }
         ENDHLSL

@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4834c3cb884f2ad4cb3269bda41e58cb, type: 3}
+  m_Name: Policy
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxRosterPolicy
+  templates:
+  - {fileID: 11400000, guid: 67f8c695e623a1a42922b19ae5652bf0, type: 2}
+  - {fileID: 11400000, guid: aa6cd84280669e147b3a30e954dc60c3, type: 2}
+  maximumUnits: 64
+  maximumRadius: 3.3999999
+  useTemplateSpawnDefaults: 1
+  restrictLargeToTeamZero: 1
+  explanation: "\u9A91\u4E58\u9002\u914D\u573A \xB7 \u9A91\u5175\u4EC5\u653B\u65B9\uFF0C\u5BF9\u9762\u4F7F\u7528\u5339\u914D\u8DDD\u79BB\u7684\u9A91\u58EB\u3002\u65E7\u5DE8\u517D\u573A\u5355\u72EC\u4FDD\u7559\uFF1B\u4E0D\u542B\u4E0A\u4E0B\u9A6C\u3001\u51B2\u950B\u6216\u51FB\u98DE\u3002"

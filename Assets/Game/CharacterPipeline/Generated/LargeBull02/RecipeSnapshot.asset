@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 7471505740897414676, guid: 85d4106bc1017064589edc185e147103, type: 3}
+  sizeRootPath: ScalePivot
+  attachmentPaths: []
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: 64e3bdb4378de444e84388d1845b566e, type: 2}
+  move: {fileID: 7400000, guid: 7e9d8fba75e074b409c1e8480a6847bb, type: 2}
+  attack: {fileID: 7400000, guid: efdad895fc7edf8469378657d781fffb, type: 2}
+  death: {fileID: 7400000, guid: 84b83952da6545149bfa2dc8bd4b7a0d, type: 2}
+  frameRate: 24
+  targetBodyHeight: 3.4114406
+  groundBindFeet: 1
+  agentRadius: 4
+  lowPolicy: 2
+  lowVertexBudget: 2000
+  paletteColumns: 4
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 32
+  maximumPositionError: 0.0025
+  outputName: LargeBull02
+  unitTemplate: {fileID: 11400000, guid: 7f354d642233c4141a6d34acb0fdf6eb, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

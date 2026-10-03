@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eba0d73f2f554964a3dc6fd4563ccccf, type: 3}
+  m_Name: BattlefieldCatalog
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxBattlefieldCatalog
+  defaultEntryId: open-battle
+  entries:
+  - id: open-battle
+    displayName: "\u5F00\u9614\u4F1A\u6218"
+    scenePath: Assets/Game/Scenes/WarSandbox.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 8fa877d194112fd4d820540051426d46, type: 3}
+  - id: walled-point
+    displayName: "\u53CC\u5899\u636E\u70B9"
+    scenePath: Assets/Game/Scenes/WarSandbox.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    rules: {fileID: 11400000, guid: 897f8188facb461b84ffab0e750c9e8e, type: 2}
+    preview: {fileID: 2800000, guid: 04a4617432642df4fbd319a5fb08c59c, type: 3}
+  templates:
+  - templateId: attacker-melee
+    revision: 1
+    config: {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e11, type: 2}
+  - templateId: attacker-ranged
+    revision: 1
+    config: {fileID: 11400000, guid: 36995f38277f0664e9acfc908c78a479, type: 2}
+  - templateId: defender-melee
+    revision: 1
+    config: {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e21, type: 2}
+  - templateId: defender-ranged
+    revision: 1
+    config: {fileID: 11400000, guid: 32b2073c876649843b9080f65c8db217, type: 2}
+  - templateId: third-melee
+    revision: 1
+    config: {fileID: 11400000, guid: 3a5c1f0e7b2d4c8a9e6f1b3d5a7c9e31, type: 2}
+  - templateId: third-ranged
+    revision: 1
+    config: {fileID: 11400000, guid: f4ca1f42eb4e5620bb754451c92bfb0b, type: 2}

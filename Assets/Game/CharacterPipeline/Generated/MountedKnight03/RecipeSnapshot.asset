@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1b481234f28288458a19dafa80765f3, type: 3}
+  m_Name: RecipeSnapshot
+  m_EditorClassIdentifier: Game.Editor::MassEngine.Game.Editor.CharacterRecipe
+  model: {fileID: 6185222322532302764, guid: 99485dd87c80c864bb070e37714a365c, type: 3}
+  sizeRootPath: 
+  attachmentPaths:
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/SaddleBlanket
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/SaddleSeat
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/SaddlePommel
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/SaddleCantle
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/StirrupLeft
+  - Horse/Body/AnimalArmature/Body/Back/Torso/SaddleFrame/StirrupRight
+  - Rider/Body/Rig_Medium/root/hips/spine/chest/upperarm.l/lowerarm.l/wrist.l/hand.l/handslot.l/Shield
+  - Rider/Body/Rig_Medium/root/hips/spine/chest/upperarm.r/lowerarm.r/wrist.r/hand.r/handslot.r/Sword
+  blendshapeAttachmentPaths: []
+  idle: {fileID: 7400000, guid: 5b8fdc5df698249408dbe5e2e697c17f, type: 2}
+  move: {fileID: 7400000, guid: 5c780d444dfb9b64abf6df74c87ee927, type: 2}
+  attack: {fileID: 7400000, guid: 04f629167f878f2428fde01609885bdb, type: 2}
+  death: {fileID: 7400000, guid: 9e0d78b9a8bb1484bbbcdfe3618ca98f, type: 2}
+  frameRate: 24
+  targetBodyHeight: 4.2188735
+  groundBindFeet: 0
+  agentRadius: 3.3
+  lowPolicy: 2
+  lowVertexBudget: 2200
+  paletteColumns: 8
+  paletteRows: 4
+  fullVertexBudget: 20000
+  maxTextureMiB: 48
+  maximumPositionError: 0.0025
+  outputName: MountedKnight03
+  unitTemplate: {fileID: 11400000, guid: 8fe00cf762ee49749a2c8500864ab5b9, type: 2}
+  createTrial: 0
+  trialMenu: {fileID: 0}
+  trialBattlefield: {fileID: 0}
+  trialCatalog: {fileID: 0}
+  battlefieldId: character-pipeline-trial
+  templateId: character-pipeline-unit

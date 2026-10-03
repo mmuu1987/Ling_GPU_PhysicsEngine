@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
+  m_Name: troops4-orcskull_Render
+  m_EditorClassIdentifier: 
+  vatProfile: {fileID: 11400000, guid: 408088c5a5440254c9b241ffd34674af, type: 2}
+  nearMesh: {fileID: -2494900559326569183, guid: e94898a71e89f204c95791be71eca3fc, type: 2}
+  midMesh: {fileID: -9140388545997311971, guid: 408088c5a5440254c9b241ffd34674af, type: 2}
+  farMesh: {fileID: -9140388545997311971, guid: 408088c5a5440254c9b241ffd34674af, type: 2}
+  nearMaterial: {fileID: 2100000, guid: be92babc6a9747b4c83e4c9354165b71, type: 2}
+  midMaterial: {fileID: 2100000, guid: e135a99ee2e97394c8fd493285cf4591, type: 2}
+  farMaterial: {fileID: 2100000, guid: e135a99ee2e97394c8fd493285cf4591, type: 2}
+  nearShadowCasting: 1
+  nearReceiveShadows: 1
+  midShadowCasting: 0
+  midReceiveShadows: 0
+  farShadowCasting: 0
+  farReceiveShadows: 0

@@ -1,0 +1,47 @@
+[
+  {
+    "name": "Orc.fbx",
+    "driveId": "1qK7tiH8cDHQKC3mHd7baTQYOI7tzt2fF",
+    "bytes": 3476844,
+    "sha256": "571811f39af3741a8bdc299f6022f0e3136ecd95891aad5f0945479e149c5981",
+    "officialPage": "https://quaternius.com/packs/ultimatemonsters.html",
+    "route": "Public official-linked Google Drive, normal download",
+    "path": "Assets/CharacterPilotSource/QuaterniusMonsters/Orc.fbx"
+  },
+  {
+    "name": "Yeti.fbx",
+    "driveId": "1mxDJESd4TqxjXJ-d9Zj83c7tZRWKen_4",
+    "bytes": 3390716,
+    "sha256": "4a8cac621c9595f4ccb19c16e4bb590014c01b4b2994674122b0caf2b74de58d",
+    "officialPage": "https://quaternius.com/packs/ultimatemonsters.html",
+    "route": "Public official-linked Google Drive, normal download",
+    "path": "Assets/CharacterPilotSource/QuaterniusMonsters/Yeti.fbx"
+  },
+  {
+    "name": "MushroomKing.fbx",
+    "driveId": "1fy2AKSeWcRywngNN9gUUxZNsy__UgFrs",
+    "bytes": 3432236,
+    "sha256": "a7b6b869d696e1ad0d01d5294a4d92e271858b04175408ff76fb05d946669555",
+    "officialPage": "https://quaternius.com/packs/ultimatemonsters.html",
+    "route": "Public official-linked Google Drive, normal download",
+    "path": "Assets/CharacterPilotSource/QuaterniusMonsters/MushroomKing.fbx"
+  },
+  {
+    "name": "Atlas_Monsters.png",
+    "driveId": "1CtLGgAKj-6a6GGNVNQT7GRPM7uyo9Fj8",
+    "bytes": 9007,
+    "sha256": "b970ed1359ce749fd81a8395d58ff5f3044d843213e17fb94b97892d417c0af9",
+    "officialPage": "https://quaternius.com/packs/ultimatemonsters.html",
+    "route": "Public official-linked Google Drive, normal download",
+    "path": "Assets/CharacterPilotSource/QuaterniusMonsters/Atlas_Monsters.png"
+  },
+  {
+    "name": "License.txt",
+    "driveId": "16GqsDGESyEOfRbc4dS7EqAwkIUSIW4_y",
+    "bytes": 374,
+    "sha256": "de990ef6fc68cffd7fd1ae342c4d0c823b541b8848d8f76bca5d3339f4de6f6e",
+    "officialPage": "https://quaternius.com/packs/ultimatemonsters.html",
+    "route": "Public official-linked Google Drive, normal download",
+    "path": "Assets/CharacterPilotSource/QuaterniusMonsters/License.txt"
+  }
+]
