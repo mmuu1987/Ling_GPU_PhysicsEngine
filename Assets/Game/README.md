@@ -1,6 +1,19 @@
 # Game — 战争沙盒（游戏层）
 
-> **当前入口（2026-10-03）：** 使用 `Assets/Game/OfficialRoster/Version08/LaunchMenu.unity` 与 `Builds/OfficialRoster-20261002-04/Start-WarSandbox.cmd`。本页积累了多阶段实现记录；旧入口、旧待办与“尚未实现”描述按各节日期理解，当前依赖与制作/测试边界见[工程导航](../../Docs/Engineering-20261003/README.md)。人工试玩仍暂停，V1 未签收。
+> **当前（2026-10-03）：初级可玩产品基本完成，进入已有功能与产品细节打磨。** 试玩入口 `Builds/ToyUI-20261003-02/Start-ToyUI.cmd`（1920×1080全屏），GUID `726fdd6090014c2f97ec2c4e7f913ee5`。Unity入口仍为 `Assets/Game/OfficialRoster/Version08/LaunchMenu.unity`。阶段目标见[产品打磨说明](../../Docs/ProductPolish-20261003/README.md)，代码/证据入口见[工程导航](../../Docs/Engineering-20261003/README.md)。用户已试玩，未决专项验收与V1门禁未自动关闭。
+
+## 当前游戏层与展示契约
+
+- 普通启动：主菜单→目录→布阵⇄军团详情→战斗→结算；显式自动化启动参数不代表普通玩家入口。
+- 军团详情编辑组成、人数、归属与属性；布阵编辑位置/阵型。返回只保留草稿和镜头/选择，不自动应用、保存或开战；方案与属性页按需打开。
+- 当前Q版浅色呈现入口：`WarSandboxFrontEnd.Toy.cs`、`WarSandboxDeploymentHUD.Legion.cs`、`WarSandboxCommandHUD.Toy.cs`；共享控件为 `WarSandboxUGUI`。部分旧方法只作非活动参考，不将其布局当作现役界面。
+- 图鉴通过 `WarSandboxRosterChoices.Library` 将66条未撤回配置展示为33个代表；目录68个模板身份不删除。29个可选战场/31个身份保留。
+- `WarSandboxRuntimeDeployment.ChoiceTemplates` 只用于新选兵呈现，按当前合法集合去重并保留近战/远程用途；完整 `Templates` 继续用于配置与方案校验，不以图鉴可见性改写旧军团或存档。
+- 三层数值仍按模板身份生效。代表模型的全局修改不自动传播到同外观旧变体；不要隐式迁移编号、归属或参数。
+- 最近验证为62/62定向EditMode、1/1 UI PlayMode及新EXE按钮回调检查；不是全场景自然结算、OS输入或全分辨率验收。细节见[去重记录](../../Docs/ToyUI-20261003/ROSTER-DEDUP.md)。
+
+以下按日期保留实现历史；旧入口、旧“下一步”和旧包成绩不覆盖上述现状。
+
 
 
 ## 第一套派生骑兵（2026-09-30）
