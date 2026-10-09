@@ -1,0 +1,70 @@
+#if UNITY_EDITOR
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using NUnit.Framework;
+using UnityEditor;
+using UnityEngine;
+namespace MassEngine.Tests
+{
+ public sealed partial class MassEngineGpuKernelTests
+ {
+  const string P9PrototypePath="Assets/MassEngine/Tests/PlayMode/P9SpecializedAttackMelee.compute";
+  sealed class P9LocalBinder:IDispatchListener,IDisposable
+  {
+   readonly MassGpuShaderSet shader; readonly ComputeBuffer orders,flow,mask; readonly bool prototype; readonly ComputeBuffer poisonHp;
+   public P9LocalBinder(MassGpuShaderSet s,LocalAgentOrder[] o,Vector2[] f,uint[] w,bool p,ComputeBuffer hp=null){shader=s;prototype=p;poisonHp=hp;orders=new ComputeBuffer(o.Length,32);flow=new ComputeBuffer(f.Length,8);mask=new ComputeBuffer(w.Length,4);orders.SetData(o);flow.SetData(f);mask.SetData(w);}
+   public void OnDispatch(string label){if(label!="SimulateCombatAndAccumulateDamage")return;var s=shader.CombatSimulationShader;int k=shader.SimulateCombatAndAccumulateDamage;if(!prototype)s.EnableKeyword(LocalOrderChannel.Keyword);s.SetInt("_LocalOrderEpoch",1);s.SetInt("_LocalOrderCellCount",256);s.SetBuffer(k,"_LocalOrders",orders);s.SetBuffer(k,"_LocalOrderFlow",flow);s.SetBuffer(k,"_LocalOrderMask",mask);if(poisonHp!=null)poisonHp.SetData(Enumerable.Repeat(-777,poisonHp.count).ToArray());}
+   public void Dispose(){orders.Release();flow.Release();mask.Release();shader.CombatSimulationShader.DisableKeyword(LocalOrderChannel.Keyword);}
+  }
+  sealed class P9Snapshot {public AgentData[] agents; public int[] hp,damage,targets,launch,assignment;public float[] cooldown;}
+  static T[] P9Read<T>(ComputeBuffer b) where T:struct {var x=new T[b.count];b.GetData(x);return x;}
+  P9Snapshot P9RunSpecialization(bool prototype,int scenarioId,int reject=0)
+  {
+   bool wall=scenarioId==3||scenarioId==9;float slope=scenarioId==2||scenarioId==8?.5f:0;
+   ConfigureTerrain(slope,wall);bool far=wall||scenarioId==1||scenarioId==7||scenarioId==8||scenarioId==10;
+   UploadTerrainAgents(i=>new Vector2((initialTeamIds[i]==0?-1:1)*(far?3.5f:.5f),-3.5f+(i%4)*1.5f));
+   if(scenarioId==6){initialHp[0]=0;initialHp[4]=0;}
+   if(scenarioId==4||scenarioId==7||scenarioId==10){for(int i=0;i<initialAgents.Length;i++){var a=initialAgents[i];a.velocity=new Vector3(initialTeamIds[i]==0?.3f:-.3f,0,.1f);a.currentState=1;initialAgents[i]=a;}}
+   buffers.UploadInitialData(initialAgents,initialTeamIds,initialHp,initialUnitTypeIndices);
+   if(scenarioId==4||scenarioId==10){lodNearRadius=.01f;lodMidRadius=.02f;simFarInterval=4;}
+   if(reject==4)foreach(var unit in scenario.unitTypes)unit.combatConfig.projectileRange=20;
+   var o=new LocalAgentOrder[initialAgents.Length];for(int i=0;i<o.Length;i++)o[i]=new LocalAgentOrder{slotPlusOne=reject==1?0:initialTeamIds[i]+1,epoch=reject==2?2:1,sequence=1,stance=reject==3?4:1,arrival=new Vector2(initialAgents[i].position.x,initialAgents[i].position.z),stopRadius=.25f};
+   var f=new Vector2[512];var w=new uint[512];var nav=fixtureTerrain.Navigation;
+   for(int team=0;team<2;team++){var goals=initialAgents.Where((a,i)=>initialTeamIds[i]!=team).Select(a=>new Vector2(a.position.x,a.position.z)).ToArray();Array.Copy(nav.CreateFlowField(goals,0),0,f,team*256,256);Array.Copy(nav.CopyWalkable(),0,w,team*256,256);}
+   if(scenarioId==9){w[8*16+8]=0;w[256+9*16+9]=0;}
+   var assignment=P9Read<int>(buffers.combatBuffers.engagementSlotAssignmentBuffer);
+   for(int i=0;i<initialAgents.Length;i++){
+    int b=initialAgents.Length+i*12;
+    assignment[b+6]=BitConverter.SingleToInt32Bits(-1f);
+    if(scenarioId==7){assignment[b+5]=BitConverter.SingleToInt32Bits(1f);assignment[b+4]=BitConverter.SingleToInt32Bits(.6f);}
+   }
+   buffers.combatBuffers.engagementSlotAssignmentBuffer.SetData(assignment);
+   ComputeShader owned=null;
+   try{
+    if(prototype){var asset=AssetDatabase.LoadAssetAtPath<ComputeShader>(P9PrototypePath);Assert.NotNull(asset);owned=UnityEngine.Object.Instantiate(asset);shaderSet=MassGpuShaderSet.Find(shaderSet.SpatialHashShader,shaderSet.RuntimeFlowShader,owned,shaderSet.LodClassificationShader,shaderSet.ProjectileShader);}
+    using(var binder=new P9LocalBinder(shaderSet,o,f,w,prototype,reject>0?buffers.combatBuffers.hpWriteBuffer:null)){
+     orchestrator=new ComputePipelineOrchestrator(shaderSet,buffers,binder);dispatchedFrames=scenarioId==11?23:(scenarioId==4||scenarioId==10?0:3);
+     DispatchOneFrame(scenarioId!=5,scenarioId==11?.05f:FrameDt);
+     return new P9Snapshot{agents=P9Read<AgentData>(buffers.agentBuffer),hp=P9Read<int>(buffers.combatBuffers.hpReadBuffer),damage=P9Read<int>(buffers.combatBuffers.pendingDamageReadBuffer),targets=P9Read<int>(buffers.combatBuffers.targetAgentIndexBuffer),launch=P9Read<int>(buffers.combatBuffers.launchRequestBuffer),assignment=P9Read<int>(buffers.combatBuffers.engagementSlotAssignmentBuffer),cooldown=P9Read<float>(buffers.combatBuffers.attackCooldownBuffer)};
+    }
+   }finally{if(owned!=null)UnityEngine.Object.DestroyImmediate(owned);}
+  }
+  [TestCase(0),TestCase(1),TestCase(2),TestCase(3),TestCase(4),TestCase(5),TestCase(6),TestCase(7),TestCase(8),TestCase(9),TestCase(10),TestCase(11)]
+  public void P9SpecializedAttackMeleeMatchesReference(int scenarioId)
+  {
+   var expected=P9RunSpecialization(false,scenarioId);TearDown();SetUp();var actual=P9RunSpecialization(true,scenarioId);
+   CollectionAssert.AreEqual(expected.hp,actual.hp,"hp");CollectionAssert.AreEqual(expected.damage,actual.damage,"pending damage");CollectionAssert.AreEqual(expected.targets,actual.targets,"targets");CollectionAssert.AreEqual(expected.launch,actual.launch,"launches");
+   for(int i=0;i<expected.agents.Length;i++){
+    var a=expected.agents[i];var b=actual.agents[i];Assert.LessOrEqual(Vector3.Distance(a.position,b.position),.0001f,"position "+i);Assert.LessOrEqual(Vector3.Distance(a.velocity,b.velocity),.0001f,"velocity "+i);Assert.LessOrEqual(Vector3.Distance(a.rotation,b.rotation),.0001f,"rotation "+i);Assert.AreEqual(a.scale,b.scale);Assert.AreEqual(a.currentState,b.currentState);Assert.AreEqual(a.presentationState,b.presentationState);Assert.AreEqual(a.currentAnimationTime,b.currentAnimationTime,.0001f);Assert.AreEqual(a.locomotionSpeed,b.locomotionSpeed,.0001f);Assert.AreEqual(expected.cooldown[i],actual.cooldown[i],.0001f);Assert.AreEqual(expected.assignment[i],actual.assignment[i]);
+    int start=expected.agents.Length+i*12;for(int j=0;j<12;j++){if(j==11)Assert.AreEqual(expected.assignment[start+j],actual.assignment[start+j]);else Assert.AreEqual(BitConverter.Int32BitsToSingle(expected.assignment[start+j]),BitConverter.Int32BitsToSingle(actual.assignment[start+j]),.0001f,"congestion "+i+"/"+j);}
+   }
+  }
+  [TestCase(1),TestCase(2),TestCase(3),TestCase(4)]
+  public void P9SpecializedAttackMeleeRejectsOutsidePartition(int reject)
+  {
+   var actual=P9RunSpecialization(true,0,reject);Assert.True(actual.hp.All(h=>h==-777),"A rejected invocation must not write hp. This is a dispatch-partition contract, not a gameplay rejection.");
+  }
+ }
+}
+#endif

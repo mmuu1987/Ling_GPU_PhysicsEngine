@@ -43,6 +43,7 @@ namespace MassEngine
         private readonly double maximumX;
         private readonly double maximumZ;
         private int heapCount;
+        private Vector2[] uniformOutputDirections;
 
         public TerrainNavigationGrid(TerrainSurface surface, Vector2 origin, float cellSize,
             int resolutionX, int resolutionZ, float clearance, float boundaryPadding,
@@ -92,9 +93,47 @@ namespace MassEngine
                         obstacleSnapshot, obstaclePadding) ? 1u : 0u;
             BuildEdges();
             BuildComponents();
+            PrepareUniformOutputDirections();
+        }
+
+        /// <summary>
+        /// Shares only the immutable navigation topology. Each returned grid owns its
+        /// Dijkstra scratch arrays, so separate grids may solve concurrently.
+        /// Does not rebuild terrain coverage, edges, or connectivity; no prewarming.
+        /// </summary>
+        public TerrainNavigationGrid CreateIndependentSolver() => new TerrainNavigationGrid(this);
+
+        private TerrainNavigationGrid(TerrainNavigationGrid source)
+        {
+            Surface = source.Surface; Origin = source.Origin; CellSize = source.CellSize;
+            ResolutionX = source.ResolutionX; ResolutionZ = source.ResolutionZ;
+            CellCount = source.CellCount; Clearance = source.Clearance;
+            maximumX = source.maximumX; maximumZ = source.maximumZ;
+            walkable = source.walkable; components = source.components;
+            neighbours = source.neighbours; edgeCosts = source.edgeCosts;
+            uniformOutputDirections = source.uniformOutputDirections;
+            distances = new double[CellCount]; nextCells = new int[CellCount];
+            heap = new int[CellCount]; heapPositions = new int[CellCount];
+        }
+
+        /// <summary>Every step must be an existing legal cardinal graph edge, including terrain/obstacle clearance.</summary>
+        public bool HasClearCardinalRoute33(int from,int to)
+        {
+            if(from<0||to<0||from>=CellCount||to>=CellCount||walkable[from]==0||walkable[to]==0)return false;
+            if(from==to)return true;
+            int step,bit;
+            if(from/ResolutionX==to/ResolutionX){step=to>from?1:-1;bit=step>0?0:4;}
+            else if(from%ResolutionX==to%ResolutionX){step=to>from?ResolutionX:-ResolutionX;bit=step>0?1:5;}
+            else return false;
+            for(int cell=from;cell!=to;cell+=step)if((neighbours[cell]&(1<<bit))==0)return false;
+            return true;
         }
 
         public uint[] CopyWalkable() => (uint[])walkable.Clone();
+
+        // Runtime owns/disposes the native snapshot; the managed grid remains independently usable.
+        internal TerrainNavigationBurstWorkspace CreateBurstWorkspace() =>
+            new TerrainNavigationBurstWorkspace(this, walkable, neighbours, edgeCosts, uniformOutputDirections);
 
         /// <summary>Range only, including blocked cells. Positive grid edges are exclusive.</summary>
         public bool TryGetCell(Vector2 position, out int cell)
@@ -192,11 +231,48 @@ namespace MassEngine
             {
                 int next = nextCells[cell];
                 if (next < 0 || next == cell || distances[cell] <= stopRadius) continue;
-                Vector2 delta = CellCenter(next) - CellCenter(cell);
-                double length = Math.Sqrt((double)delta.x * delta.x + (double)delta.y * delta.y);
-                result[cell] = new Vector2((float)(delta.x / length), (float)(delta.y / length));
+                if (uniformOutputDirections != null)
+                {
+                    int dx = next % ResolutionX - cell % ResolutionX;
+                    int dz = next / ResolutionX - cell / ResolutionX;
+                    result[cell] = uniformOutputDirections[(dz + 1) * 3 + dx + 1];
+                }
+                else
+                {
+                    Vector2 delta = CellCenter(next) - CellCenter(cell);
+                    double length = Math.Sqrt((double)delta.x * delta.x + (double)delta.y * delta.y);
+                    result[cell] = new Vector2((float)(delta.x / length), (float)(delta.y / length));
+                }
             }
             return result;
+        }
+
+        // Cell centers are rounded to float. Only use a nine-entry direction table
+        // when EVERY adjacent center spacing is identical on each axis. Large origins
+        // and fractional cell sizes can violate that condition; retain exact old math then.
+        private void PrepareUniformOutputDirections()
+        {
+            uniformOutputDirections = null;
+            float spacingX = ResolutionX > 1 ? CellCenter(1).x - CellCenter(0).x : CellSize;
+            float spacingZ = ResolutionZ > 1 ? CellCenter(ResolutionX).y - CellCenter(0).y : CellSize;
+            if (!(spacingX > 0) || !(spacingZ > 0)) return;
+            for (int x = 1; x < ResolutionX; x++)
+                if (CellCenter(x).x - CellCenter(x - 1).x != spacingX) return;
+            for (int z = 1; z < ResolutionZ; z++)
+                if (CellCenter(z * ResolutionX).y - CellCenter((z - 1) * ResolutionX).y != spacingZ) return;
+            var directions = new Vector2[9];
+            for (int dz = -1; dz <= 1; dz++)
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    if (dx == 0 && dz == 0) continue;
+                    // Same float subtraction result and double normalization as the old loop.
+                    // Explicit positive zero matches subtraction of identical finite centers.
+                    float x = dx == 0 ? 0f : dx > 0 ? spacingX : -spacingX;
+                    float z = dz == 0 ? 0f : dz > 0 ? spacingZ : -spacingZ;
+                    double length = Math.Sqrt((double)x * x + (double)z * z);
+                    directions[(dz + 1) * 3 + dx + 1] = new Vector2((float)(x / length), (float)(z / length));
+                }
+            uniformOutputDirections = directions;
         }
 
         private bool CoversUsableSurface(int x, int z, float boundaryPadding,
@@ -325,11 +401,15 @@ namespace MassEngine
         {
             int position = heapPositions[cell];
             if (position < 0) position = heapCount++;
+            // Priorities do not change during one sift. Keep the same distance/id order,
+            // but load the moving node's priority once instead of at each comparison.
+            double cellDistance = distances[cell];
             while (position > 0)
             {
                 int parent = (position - 1) / 2;
                 int parentCell = heap[parent];
-                if (!Before(cell, parentCell)) break;
+                double parentDistance = distances[parentCell];
+                if (!(cellDistance < parentDistance || (cellDistance == parentDistance && cell < parentCell))) break;
                 heap[position] = parentCell;
                 heapPositions[parentCell] = position;
                 position = parent;
@@ -344,14 +424,27 @@ namespace MassEngine
             int last = heap[--heapCount];
             heapPositions[minimum] = -2;
             if (heapCount == 0) return minimum;
+            double lastDistance = distances[last];
             int position = 0;
             while (position * 2 + 1 < heapCount)
             {
                 int child = position * 2 + 1;
-                if (child + 1 < heapCount && Before(heap[child + 1], heap[child])) child++;
-                if (!Before(heap[child], last)) break;
-                heap[position] = heap[child];
-                heapPositions[heap[position]] = position;
+                int childCell = heap[child];
+                double childDistance = distances[childCell];
+                if (child + 1 < heapCount)
+                {
+                    int rightCell = heap[child + 1];
+                    double rightDistance = distances[rightCell];
+                    if (rightDistance < childDistance || (rightDistance == childDistance && rightCell < childCell))
+                    {
+                        child++;
+                        childCell = rightCell;
+                        childDistance = rightDistance;
+                    }
+                }
+                if (!(childDistance < lastDistance || (childDistance == lastDistance && childCell < last))) break;
+                heap[position] = childCell;
+                heapPositions[childCell] = position;
                 position = child;
             }
             heap[position] = last;
@@ -377,3 +470,4 @@ namespace MassEngine
         }
     }
 }
+

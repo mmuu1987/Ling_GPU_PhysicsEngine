@@ -24,11 +24,35 @@ namespace MassEngine
         public readonly int ClearPendingDamage;
         public readonly int SimulateCombatAndAccumulateDamage;
         public readonly int ClearLaunchRequests;
+        public readonly int LocalAttackMelee;
+        public readonly int LocalAttackRanged;
+        public readonly int LocalMoveMelee;
+        public readonly int LocalMoveRanged;
+        public readonly int LocalHoldMelee;
+        public readonly int LocalHoldRanged;
+
         public readonly int ClassifyVisibleAgentsForUnitType;
         public readonly int SimulateProjectiles;
         public readonly int ClearProjectiles;
         /// <summary>Render-only kernel: a shader without it still simulates, it just draws no trails.</summary>
         public readonly int CollectActiveProjectiles;
+
+        private MassGpuShaderSet(MassGpuShaderSet source,int simulate) { this=source;SimulateCombatAndAccumulateDamage=simulate; }
+        internal MassGpuShaderSet ForSimulationKernel(int kernel) => new MassGpuShaderSet(this,kernel);
+        internal int LocalKernel(int role) {
+            switch(role) {
+                case 0: return LocalAttackMelee;
+                case 1: return LocalAttackRanged;
+                case 2: return LocalMoveMelee;
+                case 3: return LocalMoveRanged;
+                case 4: return LocalHoldMelee;
+                case 5: return LocalHoldRanged;
+                default:return -1;
+            }
+        }
+        internal bool HasLocalPartitions {
+            get { if(CombatSimulationShader==null)return false;for(int i=0;i<6;i++)if(LocalKernel(i)<0)return false;return true; }
+        }
 
         public bool IsValid
         {
@@ -91,6 +115,13 @@ namespace MassEngine
             ClearPendingDamage = FindKernelOrInvalid(combatSimulationShader, "ClearPendingDamage");
             SimulateCombatAndAccumulateDamage = FindKernelOrInvalid(combatSimulationShader, "SimulateCombatAndAccumulateDamage");
             ClearLaunchRequests = FindKernelOrInvalid(combatSimulationShader, "ClearLaunchRequests");
+            LocalAttackMelee = FindKernelOrInvalid(combatSimulationShader, "SimulateLocalAttackMelee");
+            LocalAttackRanged = FindKernelOrInvalid(combatSimulationShader, "SimulateLocalAttackRanged");
+            LocalMoveMelee = FindKernelOrInvalid(combatSimulationShader, "SimulateLocalMoveMelee");
+            LocalMoveRanged = FindKernelOrInvalid(combatSimulationShader, "SimulateLocalMoveRanged");
+            LocalHoldMelee = FindKernelOrInvalid(combatSimulationShader, "SimulateLocalHoldMelee");
+            LocalHoldRanged = FindKernelOrInvalid(combatSimulationShader, "SimulateLocalHoldRanged");
+
             ClassifyVisibleAgentsForUnitType = FindKernelOrInvalid(lodClassificationShader, "ClassifyVisibleAgentsForUnitType");
 
             ProjectileShader = projectileShader;
@@ -198,3 +229,4 @@ namespace MassEngine
         }
     }
 }
+

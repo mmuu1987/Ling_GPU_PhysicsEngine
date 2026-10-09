@@ -119,6 +119,42 @@ bool ResolveRangedClearance(uint index, AgentData agent, int target, UnitTypeSet
     bool refresh = ((frameIndex / (uint)max(1,simInterval) + (index * 17u)) % period) == 0u;
     if (state.rangedStatus == 0.0 || refresh)
     {
+#if defined(LP_STANCE) && LP_RANGED
+        // One rolled call site keeps the expensive trajectory/terrain sweep from
+        // being inlined three times. Preserve centre-first, then left/right order,
+        // all original admission conditions, and the maximum of three probes.
+        bool clear = false, leftClear = false, rightClear = false;
+        float2 side = 0.0;
+        [loop] for (int probe = 0; probe < 3; ++probe)
+        {
+            AgentData candidate = agent;
+            bool navigable = true;
+            if (probe > 0)
+            {
+                candidate.position.xz += probe == 1 ? side : -side;
+#ifdef MASS_TERRAIN_ENABLED
+                navigable = TerrainSegmentClear(agent.position.xz, candidate.position.xz);
+#endif
+            }
+            bool candidateClear = false;
+            if (navigable) candidateClear = RangedPathClear(index, candidate, target, settings);
+            if (probe == 0)
+            {
+                clear = candidateClear;
+                if (clear || !(state.rangedStatus >= 0.0) || !allowReposition) break;
+                float2 toTarget = agentPositionReadBuffer[target] - agent.position.xz;
+                if (!(dot(toTarget, toTarget) > 0.0001)) break;
+                side = normalize(float2(-toTarget.y, toTarget.x)) * (RangedSideBudget(agent, settings) * 0.6);
+            }
+            else if (probe == 1) leftClear = candidateClear;
+            else rightClear = candidateClear;
+        }
+        if (clear) state.rangedStatus = 1.0;
+        else if (state.rangedStatus >= 0.0)
+        {
+            state.rangedStatus = (Hash01(index ^ 0xB5297A4Du) < 0.5) ? -1.0 : -2.0;
+            if (leftClear != rightClear) state.rangedStatus = leftClear ? -1.0 : -2.0;
+#else
         bool clear = RangedPathClear(index, agent, target, settings);
         if (clear) state.rangedStatus = 1.0;
         else if (state.rangedStatus >= 0.0)
@@ -142,6 +178,7 @@ bool ResolveRangedClearance(uint index, AgentData agent, int target, UnitTypeSet
                     if (leftClear != rightClear) state.rangedStatus=leftClear ? -1.0 : -2.0;
                 }
             }
+#endif
             state.rangedAnchor = agent.position.xz; state.rangedSeconds = 0.0;
         }
     }
@@ -174,3 +211,4 @@ void LimitRangedReposition(inout AgentData agent, UnitTypeSettings settings, Con
     if (actual > speed) agent.velocity.xz *= speed / max(actual,0.0001);
 }
 #endif
+
