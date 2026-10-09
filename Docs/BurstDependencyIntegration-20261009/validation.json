@@ -1,0 +1,281 @@
+{
+  "codeCommit": "6da7797ec01377e30434792461cc5305cf07dca0",
+  "parentCommit": "085957ba7e838d23379cbc8fe6249540c86f31d9",
+  "proposedTargetLocalHead": "aea369904b87aca537a2d2ba32c2d449167df6ac",
+  "localBranch": "p3/burst-nav-dependency-fix-20261009",
+  "defaultBurstEnabled": false,
+  "scope": "Unity Editor only; synchronous IJob.Run; source-content identity to previously tested full-project candidate, not a new test execution after commit",
+  "finalSuiteStatus": "all_six_editor_runs_passed",
+  "executions": 162,
+  "distinctTests": 79,
+  "sourceProjectFilesChecked": 7508,
+  "repairFiles": {
+    "Assets/MassEngine/Terrain/TerrainLaneApproach33.cs": {
+      "oldSha": null,
+      "newSha": "0cb5e6f990b4ff1d9963365e3a593c0acc4dd62041199e0e7e1df7fbc41e7997",
+      "source": "existing adopted mother file; exact bytes",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Terrain/TerrainLaneApproach33.cs.meta": {
+      "oldSha": null,
+      "newSha": "2dc758448870d1ea7415a5f64b91ac1e124db3569592e1f4a313c3e49d59e349",
+      "source": "existing adopted mother file; exact bytes",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Tests/EditMode/TerrainCardinalRouteCacheTests.cs": {
+      "oldSha": null,
+      "newSha": "0cf575b87187df4673879c90f59fe4da17309bf1e71198b32b60dfa4d9058ba9",
+      "source": "existing adopted mother file; exact bytes",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Tests/EditMode/TerrainCardinalRouteCacheTests.cs.meta": {
+      "oldSha": null,
+      "newSha": "82b2eae48a425c607383bf550c5809dad54aff893245ddc020a7f9f89e5d965a",
+      "source": "existing adopted mother file; exact bytes",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/MassEngine.asmdef": {
+      "oldSha": "34e8b266f8aa3aff8b205c3f910fe6774750b888bee7e65da47ac9afbaeed322",
+      "newSha": "f3c75ef8e7754c6fb13ba51e3e4bade8e17d2a745ebe651f66bce4b3910c046f",
+      "source": "explicit dependencies, existing package versions unchanged",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Tests/EditMode/MassEngine.Tests.asmdef": {
+      "oldSha": "1467b4a32628f885f37f0f627cdba0ba165ff1805591bc5103bf676718b05429",
+      "newSha": "a2324d5bd8cc6cc2a69179698272e59975934a46c2005bfbd7b6f21956d5d268",
+      "source": "explicit dependencies, existing package versions unchanged",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Terrain/TerrainNavigationRuntime.cs": {
+      "oldSha": "392cd4c221806dc384f98a8f23f074f5d2f1350708b97d14f61060dadfa6f0ac",
+      "newSha": "2551df81ba3df8744b1dfbc1141fd48e3a5fd751e947d0c210668efdb16e3e6c",
+      "source": "comment correction only; no algorithm or default change",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Tests/EditMode/BurstDependencyRepairRuntimeTests.cs": {
+      "oldSha": null,
+      "newSha": "e53e62b0926a83a2698ade4732f1dfda7042cf72d6baba42273b5de16211ffd7",
+      "source": "Historical actual Runtime/GPU fixture promoted; bounded recreated readiness wait; optional diagnostic output so standard Test Runner requires no custom CLI arguments",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Tests/EditMode/BurstDependencyRepairRuntimeTests.cs.meta": {
+      "oldSha": null,
+      "newSha": "3b9eafe51eae940db1daec6e62fce4e06400d1bd92b3ee204d5fad1107ec8bab",
+      "source": "new unique Unity GUID",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Tests/EditMode/BurstDependencyRepairPolicyTests.cs": {
+      "oldSha": null,
+      "newSha": "c99763632a74cff388c24eb41c3ef2392dc2997af311e1dbf7840ed91c3ce22e",
+      "source": "Only the second independent state-machine block; first block historical capture/benchmark fixture excluded",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    },
+    "Assets/MassEngine/Tests/EditMode/BurstDependencyRepairPolicyTests.cs.meta": {
+      "oldSha": null,
+      "newSha": "5132da36f8fc7e0135b9227ef236479bf2feff1ee02cd1b8122f8a2225a6d081",
+      "source": "new unique Unity GUID",
+      "normalization": "UTF-8 without BOM, LF; code unchanged except described edits"
+    }
+  },
+  "patchApplication": {
+    "passed": true,
+    "files": 11,
+    "patchSha256": "d7907e5ccacfe3d468cd2f4d9a97b5c3e4f863316e176b002bda479ca849af23",
+    "scope": "git apply --check then apply in disposable non-repository directory from exact base blobs; all repaired bytes match validated manifest. No mother index or branch writes.",
+    "priorFailure": "difflib text concatenation did not encode an EOF-without-newline boundary; regenerated by git diff --no-index. Source code and validated hashes unchanged. Per-command core.autocrlf=false avoids changing package bytes under user Git CRLF preferences; no global config changes."
+  },
+  "bundleSha256": "8ecbcb604da5e69f0032912848930e83df0a39866fd9c1b7e09d86ae785abc16",
+  "runs": [
+    {
+      "configuration": "default",
+      "result": "Passed",
+      "passed": 79,
+      "total": 79,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeEvidence": {
+        "blocked": true,
+        "forced": false,
+        "observedPending": false,
+        "exactBits": true,
+        "disposedPendingReadback": true,
+        "recreatedUnstarted": true,
+        "managedSolves": 6,
+        "nativeSolves": 0,
+        "managedNativeSolves": 0,
+        "probes": 0,
+        "created": 0,
+        "disposed": 0,
+        "active": 0,
+        "waitMs": 2.3672,
+        "maxTickMs": 0.921,
+        "maxProbeMs": 0.0,
+        "finalState": "Unavailable",
+        "blockReason": "DefaultOff",
+        "requested": false
+      },
+      "sourceAndPackagesUnchanged": true
+    },
+    {
+      "configuration": "optin",
+      "result": "Passed",
+      "passed": 79,
+      "total": 79,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeEvidence": {
+        "blocked": false,
+        "forced": false,
+        "observedPending": false,
+        "exactBits": true,
+        "disposedPendingReadback": true,
+        "recreatedUnstarted": true,
+        "managedSolves": 1,
+        "nativeSolves": 5,
+        "managedNativeSolves": 0,
+        "probes": 1,
+        "created": 2,
+        "disposed": 2,
+        "active": 0,
+        "waitMs": 19.4244,
+        "maxTickMs": 16.195,
+        "maxProbeMs": 7.7461,
+        "finalState": "Ready",
+        "blockReason": "",
+        "requested": true
+      },
+      "sourceAndPackagesUnchanged": true
+    },
+    {
+      "configuration": "managed-override",
+      "result": "Passed",
+      "passed": 1,
+      "total": 1,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeEvidence": {
+        "blocked": true,
+        "forced": false,
+        "observedPending": false,
+        "exactBits": true,
+        "disposedPendingReadback": true,
+        "recreatedUnstarted": true,
+        "managedSolves": 6,
+        "nativeSolves": 0,
+        "managedNativeSolves": 0,
+        "probes": 0,
+        "created": 0,
+        "disposed": 0,
+        "active": 0,
+        "waitMs": 5.3552,
+        "maxTickMs": 1.4317,
+        "maxProbeMs": 0.0,
+        "finalState": "Unavailable",
+        "blockReason": "ManagedOverride",
+        "requested": false
+      },
+      "sourceAndPackagesUnchanged": true
+    },
+    {
+      "configuration": "compiler-disabled",
+      "result": "Passed",
+      "passed": 1,
+      "total": 1,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeEvidence": {
+        "blocked": true,
+        "forced": false,
+        "observedPending": false,
+        "exactBits": true,
+        "disposedPendingReadback": true,
+        "recreatedUnstarted": true,
+        "managedSolves": 6,
+        "nativeSolves": 0,
+        "managedNativeSolves": 0,
+        "probes": 0,
+        "created": 0,
+        "disposed": 0,
+        "active": 0,
+        "waitMs": 7.3366,
+        "maxTickMs": 1.0167,
+        "maxProbeMs": 0.0,
+        "finalState": "Unavailable",
+        "blockReason": "CompilerDisabled",
+        "requested": true
+      },
+      "sourceAndPackagesUnchanged": true
+    },
+    {
+      "configuration": "force-sync-refused",
+      "result": "Passed",
+      "passed": 1,
+      "total": 1,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeEvidence": {
+        "blocked": true,
+        "forced": true,
+        "observedPending": false,
+        "exactBits": true,
+        "disposedPendingReadback": true,
+        "recreatedUnstarted": true,
+        "managedSolves": 6,
+        "nativeSolves": 0,
+        "managedNativeSolves": 0,
+        "probes": 0,
+        "created": 0,
+        "disposed": 0,
+        "active": 0,
+        "waitMs": 2.7962,
+        "maxTickMs": 1.0415,
+        "maxProbeMs": 0.0,
+        "finalState": "Unavailable",
+        "blockReason": "ForceSyncRefused",
+        "requested": true
+      },
+      "sourceAndPackagesUnchanged": true
+    },
+    {
+      "configuration": "test-runner-compatible",
+      "result": "Passed",
+      "passed": 1,
+      "total": 1,
+      "failed": 0,
+      "skipped": 0,
+      "runtimeEvidence": null,
+      "sourceAndPackagesUnchanged": true
+    }
+  ],
+  "notQualified": [
+    "Player/AOT",
+    "new performance ABBA",
+    "real input or UI error recovery",
+    "P9 end-to-end/manual acceptance"
+  ],
+  "isolatedImporterOnlyChanges": [
+    {
+      "path": "Assets/Game/RobotExpressivePilot/Version01/Native/Material0.mat",
+      "reason": "bytes_changed",
+      "sourceCode": false
+    },
+    {
+      "path": "Assets/Game/RobotExpressivePilot/Version01/Native/Material1.mat",
+      "reason": "bytes_changed",
+      "sourceCode": false
+    },
+    {
+      "path": "Assets/Game/RobotExpressivePilot/Version01/Native/Material2.mat",
+      "reason": "bytes_changed",
+      "sourceCode": false
+    }
+  ],
+  "integrationAssertions": {
+    "repairCommitFiles": 11,
+    "sourceFilesChangedVsMotherHead": 12,
+    "committedRepairBlobsEqualValidatedManifest": true,
+    "motherHeadAndIndexUnchanged": true,
+    "pushed": false,
+    "merged": false
+  }
+}
