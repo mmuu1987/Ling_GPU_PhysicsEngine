@@ -443,7 +443,7 @@ if(job.walkable.IsCreated)job.walkable.Dispose();if(job.neighbours.IsCreated)job
 #endif
 #if UNITY_EDITOR
 namespace MassEngine {
- // Temporary independent diagnostic only. Not called by TerrainNavigationRuntime.Upload or scene code.
+ // Editor-only preparation policy owned by TerrainNavigationRuntime; normal solves do not probe compilation.
  public sealed class P3PreparationUnavailableException : System.Exception { public P3PreparationUnavailableException(string message):base(message){} }
  public sealed class P3PreparationGate : System.IDisposable {
   public enum Phase { Waiting, Ready, Unavailable, Faulted, Disposed }

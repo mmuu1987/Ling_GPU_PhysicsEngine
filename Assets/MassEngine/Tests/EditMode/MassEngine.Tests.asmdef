@@ -3,7 +3,9 @@
     "rootNamespace": "MassEngine.Tests",
     "references": [
         "MassEngine",
-        "MassEngine.Editor"
+        "MassEngine.Editor",
+        "Unity.Burst",
+        "Unity.Collections"
     ],
     "includePlatforms": [
         "Editor"
