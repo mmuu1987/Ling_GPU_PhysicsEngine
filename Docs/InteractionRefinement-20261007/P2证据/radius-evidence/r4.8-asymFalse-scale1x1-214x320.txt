@@ -1,0 +1,4 @@
+expectedWorldRadius=4.8
+agentAnchor=(0,0,0)
+goldPixels=232
+relativeErrorP95=0.01130313

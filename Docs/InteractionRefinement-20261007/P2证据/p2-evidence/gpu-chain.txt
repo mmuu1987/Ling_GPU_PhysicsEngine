@@ -1,0 +1,12 @@
+P2_GPU_CHAIN actual-ui-saved-file-new-battle radius=0.6 count=2048 clearance=0.6 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN global-load radius=0.6 count=2048 clearance=0.6 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN running-no-hot-apply radius=0.6 count=2048 clearance=0.6 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN reset-keeps-applied radius=0.6 count=2048 clearance=0.6 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN rejected-grid-density-keeps-gpu radius=0.6 count=2048 clearance=0.6 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN cancel-keeps-applied radius=0.6 count=2048 clearance=0.6 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN local-beats-global radius=0.7 count=2048 clearance=0.7 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN clear-local-follows-global radius=0.65 count=2048 clearance=0.65 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN restore-official radius=0.55 count=2048 clearance=0.55 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN reset-after-restoration radius=0.55 count=2048 clearance=0.55 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN reenter-official radius=0.55 count=2048 clearance=0.55 unrelatedSettingsEqual=true scaleOne=true
+P2_GPU_CHAIN reenter-saved radius=0.6 count=2048 clearance=0.6 unrelatedSettingsEqual=true scaleOne=true

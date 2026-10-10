@@ -1,0 +1,375 @@
+===== managed-src/Assembly-CSharp/Selectionrender.cs（共 72 行，显示 72 行）=====
+    1 | using UnityEngine;
+    2 | using UnityEngine.Rendering;
+    3 | 
+    4 | public class Selectionrender : MonoBehaviour
+    5 | {
+    6 | 	public int RenderAmount = 1000;
+    7 | 
+    8 | 	public static ComputeBuffer IdBuff;
+    9 | 
+   10 | 	private ComputeBuffer ArgBuff;
+   11 | 
+   12 | 	private Mesh mesh;
+   13 | 
+   14 | 	private Material mat;
+   15 | 
+   16 | 	private int cnt;
+   17 | 
+   18 | 	private uint[] args;
+   19 | 
+   20 | 	private void OnDestroy()
+   21 | 	{
+   22 | 		if (IdBuff != null)
+   23 | 		{
+   24 | 			IdBuff.Dispose();
+   25 | 		}
+   26 | 		if (ArgBuff != null)
+   27 | 		{
+   28 | 			ArgBuff.Dispose();
+   29 | 		}
+   30 | 		IdBuff = null;
+   31 | 		ArgBuff = null;
+   32 | 	}
+   33 | 
+   34 | 	private void Start()
+   35 | 	{
+   36 | 		if (IdBuff != null)
+   37 | 		{
+   38 | 			IdBuff.Dispose();
+   39 | 		}
+   40 | 		IdBuff = new ComputeBuffer(RenderAmount, 4);
+   41 | 		mesh = base.gameObject.GetComponent<MeshFilter>().sharedMesh;
+   42 | 		mat = base.gameObject.GetComponent<Renderer>().sharedMaterial;
+   43 | 		args = new uint[5];
+   44 | 		args[0] = mesh.GetIndexCount(0);
+   45 | 		args[1] = (uint)RenderAmount;
+   46 | 		args[2] = mesh.GetIndexStart(0);
+   47 | 		args[3] = mesh.GetBaseVertex(0);
+   48 | 		if (ArgBuff != null)
+   49 | 		{
+   50 | 			ArgBuff.Dispose();
+   51 | 		}
+   52 | 		ArgBuff = new ComputeBuffer(1, args.Length * 4, ComputeBufferType.DrawIndirect);
+   53 | 		ArgBuff.SetData(args);
+   54 | 	}
+   55 | 
+   56 | 	private void Update()
+   57 | 	{
+   58 | 		if (Army.AllAi != null && Army.SelectionState > 0)
+   59 | 		{
+   60 | 			cnt++;
+   61 | 			if (cnt >= 2)
+   62 | 			{
+   63 | 				args[1] = (uint)Army.SelectionState;
+   64 | 				ArgBuff.SetData(args);
+   65 | 				mat.SetBuffer("ai", Army.AllAi);
+   66 | 				mat.SetBuffer("SelectRender", IdBuff);
+   67 | 				Graphics.DrawMeshInstancedIndirect(mesh, 0, mat, InstanceIndirectManage.bnd, ArgBuff, 0, null, ShadowCastingMode.Off, receiveShadows: true, 0);
+   68 | 			}
+   69 | 		}
+   70 | 	}
+   71 | }
+   72 | 
+
+===== managed-src/Assembly-CSharp/Target.cs（共 192 行，显示 192 行）=====
+    1 | using UnityEngine;
+    2 | 
+    3 | public class Target : MonoBehaviour
+    4 | {
+    5 | 	public int Team;
+    6 | 
+    7 | 	public int TargetsTeam;
+    8 | 
+    9 | 	public int SearchGrid;
+   10 | 
+   11 | 	public int FormationLength = 1;
+   12 | 
+   13 | 	public int targetSearchAmount = 1000;
+   14 | 
+   15 | 	public int RangeSearchAmount = 3000;
+   16 | 
+   17 | 	public int SlowSearchIterations = 10;
+   18 | 
+   19 | 	public bool AvoidEnemies;
+   20 | 
+   21 | 	public Vector3 Position;
+   22 | 
+   23 | 	public Vector3 LastPosition;
+   24 | 
+   25 | 	public bool TestCamera;
+   26 | 
+   27 | 	public int itcount;
+   28 | 
+   29 | 	[HideInInspector]
+   30 | 	public bool searchnow;
+   31 | 
+   32 | 	private bool spawntarg;
+   33 | 
+   34 | 	[HideInInspector]
+   35 | 	public bool startsearch;
+   36 | 
+   37 | 	public static int LatestTarg;
+   38 | 
+   39 | 	private int strtsrch;
+   40 | 
+   41 | 	private bool next;
+   42 | 
+   43 | 	private Vector3 rt;
+   44 | 
+   45 | 	public GameObject arrow;
+   46 | 
+   47 | 	private bool calcpos;
+   48 | 
+   49 | 	private Vector3 dr;
+   50 | 
+   51 | 	public bool Active;
+   52 | 
+   53 | 	private float actimer;
+   54 | 
+   55 | 	private void Start()
+   56 | 	{
+   57 | 		spawntarg = true;
+   58 | 		NavGrid.AddTarget(this);
+   59 | 		if (!TestCamera)
+   60 | 		{
+   61 | 			base.enabled = false;
+   62 | 		}
+   63 | 		LatestTarg = Team;
+   64 | 		LastPosition = FlyCam.SelectCenter;
+   65 | 		actimer = 0f;
+   66 | 		Active = false;
+   67 | 	}
+   68 | 
+   69 | 	private void Update()
+   70 | 	{
+   71 | 		if (Active)
+   72 | 		{
+   73 | 			actimer += Time.deltaTime;
+   74 | 			if (actimer > 240f)
+   75 | 			{
+   76 | 				Active = false;
+   77 | 				actimer = 0f;
+   78 | 			}
+   79 | 		}
+   80 | 		if (!TestCamera || !FlyCam.Rts)
+   81 | 		{
+   82 | 			return;
+   83 | 		}
+   84 | 		rt = Camera.main.transform.eulerAngles;
+   85 | 		base.transform.eulerAngles = rt;
+   86 | 		Vector3 one = Vector3.one;
+   87 | 		one *= 1f + Mathf.Min(10f, Vector3.Distance(Camera.main.transform.position, base.transform.position) * 0.05f);
+   88 | 		base.transform.localScale = one;
+   89 | 		if (spawntarg)
+   90 | 		{
+   91 | 			if (!next)
+   92 | 			{
+   93 | 				FormationLength = (int)Mathf.Sqrt((float)Army.SelectionState * 0.75f) + 1;
+   94 | 				TargetsTeam = FlyCam.currentTeamSelect;
+   95 | 				if (Army.AttackState == 0)
+   96 | 				{
+   97 | 					AvoidEnemies = true;
+   98 | 				}
+   99 | 				if (Army.AttackState == 1)
+  100 | 				{
+  101 | 					AvoidEnemies = false;
+  102 | 				}
+  103 | 				if (Army.AttackState > 0)
+  104 | 				{
+  105 | 					arrow.GetComponent<Renderer>().sharedMaterial.SetColor("_EmissionColor", Color.red);
+  106 | 				}
+  107 | 				else
+  108 | 				{
+  109 | 					arrow.GetComponent<Renderer>().sharedMaterial.SetColor("_EmissionColor", Color.green);
+  110 | 				}
+  111 | 			}
+  112 | 			if (Input.GetKeyUp(KeyCode.Mouse0))
+  113 | 			{
+  114 | 				next = true;
+  115 | 			}
+  116 | 			if (Input.GetKeyUp(KeyCode.Mouse1) && next)
+  117 | 			{
+  118 | 				RaycastHit hitInfo = default(RaycastHit);
+  119 | 				if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward * 1000f, out hitInfo))
+  120 | 				{
+  121 | 					spawntarg = false;
+  122 | 					GameObject obj = Object.Instantiate(base.gameObject);
+  123 | 					obj.transform.position = hitInfo.point;
+  124 | 					obj.GetComponent<Target>().startsearch = true;
+  125 | 					TestCamera = false;
+  126 | 					if (arrow != null)
+  127 | 					{
+  128 | 						arrow.SetActive(value: false);
+  129 | 					}
+  130 | 				}
+  131 | 			}
+  132 | 		}
+  133 | 		if ((Input.GetKeyUp(KeyCode.Mouse1) || startsearch) && !next)
+  134 | 		{
+  135 | 			if (Input.GetKeyUp(KeyCode.Mouse1))
+  136 | 			{
+  137 | 				calcpos = true;
+  138 | 				dr = (LastPosition - Position).normalized;
+  139 | 				LastPosition = Position;
+  140 | 			}
+  141 | 			startsearch = false;
+  142 | 			StartSearch();
+  143 | 		}
+  144 | 		else if (searchnow)
+  145 | 		{
+  146 | 			strtsrch++;
+  147 | 			if (strtsrch < 1500 && SearchGrid >= 0)
+  148 | 			{
+  149 | 				if (strtsrch < 100)
+  150 | 				{
+  151 | 					for (int i = 0; i < 5; i++)
+  152 | 					{
+  153 | 						NavGrid.FullSearch(base.transform.position, Team, RangeSearchAmount, OrderGrid: true, FormationLength, SearchGrid, LastPosition, TargetsTeam, AvoidEnemies);
+  154 | 					}
+  155 | 				}
+  156 | 				else
+  157 | 				{
+  158 | 					NavGrid.FullSearch(base.transform.position, Team, RangeSearchAmount, OrderGrid: true, FormationLength, SearchGrid, LastPosition, TargetsTeam, AvoidEnemies);
+  159 | 				}
+  160 | 			}
+  161 | 		}
+  162 | 		if (Input.GetKeyUp(KeyCode.Mouse1) && next)
+  163 | 		{
+  164 | 			next = false;
+  165 | 		}
+  166 | 	}
+  167 | 
+  168 | 	public void StartSearch()
+  169 | 	{
+  170 | 		RaycastHit hitInfo = default(RaycastHit);
+  171 | 		Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+  172 | 		Active = true;
+  173 | 		actimer = 0f;
+  174 | 		if (Physics.Raycast(ray, out hitInfo))
+  175 | 		{
+  176 | 			if (arrow != null)
+  177 | 			{
+  178 | 				arrow.SetActive(value: true);
+  179 | 			}
+  180 | 			strtsrch = 0;
+  181 | 			base.transform.position = hitInfo.point;
+  182 | 			Position = hitInfo.point;
+  183 | 			if (calcpos)
+  184 | 			{
+  185 | 				calcpos = false;
+  186 | 			}
+  187 | 			NavGrid.TargetSearch(Position, Team, targetSearchAmount, OrderGrid: true, FormationLength, 0, targetSearchAmount, SearchGrid, LastPosition, TargetsTeam, AvoidEnemies);
+  188 | 			searchnow = true;
+  189 | 		}
+  190 | 	}
+  191 | }
+  192 | 
+
+===== compute-shaders/reconstructed/GPUAI_UnitSelect.hlsl（共 106 行，显示 106 行）=====
+    1 | #include "UEBSComputeLayouts.hlsli"
+    2 | 
+    3 | cbuffer Globals : register(b0)
+    4 | {
+    5 |     float3 CamPos : packoffset(c12);
+    6 |     int TotalAi : packoffset(c26.z);
+    7 |     int XResArmy : packoffset(c27.y);
+    8 |     int Order : packoffset(c54.x);
+    9 |     float2 boxpos : packoffset(c67.x);
+   10 |     float2 boxscale : packoffset(c67.z);
+   11 |     float3 CamForward : packoffset(c68);
+   12 |     float3 CamRight : packoffset(c69);
+   13 |     float3 CamUp : packoffset(c70);
+   14 |     float CamFov : packoffset(c70.w);
+   15 |     float2 Dimension : packoffset(c71.y);
+   16 |     int TeamSelected : packoffset(c71.w);
+   17 |     bool CancelOrder : packoffset(c72.x);
+   18 |     int OrderCancel : packoffset(c72.y);
+   19 |     int selectid : packoffset(c72.z);
+   20 |     int AverageHpIndex : packoffset(c72.w);
+   21 | };
+   22 | 
+   23 | StructuredBuffer<GPUArmy> army : register(t0);
+   24 | RWTexture2DArray<float4> HalfProps : register(u0);
+   25 | RWStructuredBuffer<int> KillCounts : register(u1);
+   26 | RWStructuredBuffer<GPUAi> ai : register(u2);
+   27 | RWStructuredBuffer<uint> SelectRender : register(u3);
+   28 | 
+   29 | [numthreads(32, 1, 1)]
+   30 | void UnitSelect(uint3 dispatchThreadId : SV_DispatchThreadID)
+   31 | {
+   32 |     uint id = dispatchThreadId.x;
+   33 |     if (id < (uint)TotalAi)
+   34 |     {
+   35 |         if (ai[id].Health > 0)
+   36 |         {
+   37 |             if (CancelOrder)
+   38 |             {
+   39 |                 float rowPosition = ((float)(int)id + 0.4) / (float)XResArmy;
+   40 |                 float wholeRow = trunc(rowPosition);
+   41 |                 float rowFraction = rowPosition - wholeRow;
+   42 |                 uint3 pixel = uint3(
+   43 |                     (int)(rowFraction * (float)XResArmy),
+   44 |                     (uint)rowPosition,
+   45 |                     Order);
+   46 | 
+   47 |                 if ((int)(HalfProps[pixel].x + 0.1) == OrderCancel)
+   48 |                 {
+   49 |                     HalfProps[pixel] = -1.0;
+   50 |                 }
+   51 |             }
+   52 |             else
+   53 |             {
+   54 |                 int armyIndex = ai[id].Army;
+   55 |                 bool selected = false;
+   56 |                 if (army[armyIndex].Team == TeamSelected && army[armyIndex].NoRts < 1)
+   57 |                 {
+   58 |                     float3 relativePosition = float3(
+   59 |                         ai[id].Position.x,
+   60 |                         ai[id].Height + 1.0,
+   61 |                         ai[id].Position.y) - CamPos;
+   62 | 
+   63 |                     float depth = dot(CamForward, relativePosition);
+   64 |                     float horizontal = dot(relativePosition, CamRight);
+   65 |                     float vertical = dot(relativePosition, CamUp);
+   66 |                     float halfFov = CamFov * 0.5;
+   67 |                     float sineHalfFov;
+   68 |                     float cosineHalfFov;
+   69 |                     sincos(halfFov, sineHalfFov, cosineHalfFov);
+   70 |                     float tangentHalfFov = sineHalfFov / cosineHalfFov;
+   71 |                     float projectionScale = dot(
+   72 |                         float2(tangentHalfFov, tangentHalfFov),
+   73 |                         float2(depth, depth));
+   74 |                     float horizontalDenominator =
+   75 |                         (projectionScale * Dimension.x) / Dimension.y;
+   76 |                     float horizontalNumerator = horizontal * Dimension.x;
+   77 |                     float2 projected;
+   78 |                     projected.x = horizontalNumerator / horizontalDenominator;
+   79 |                     float verticalNumerator = Dimension.y * vertical;
+   80 |                     projected.y = verticalNumerator / projectionScale;
+   81 |                     float2 screenPosition = projected + Dimension * 0.5;
+   82 |                     selected = all(abs(screenPosition - boxpos) < boxscale);
+   83 | 
+   84 |                     if (selected)
+   85 |                     {
+   86 |                         ai[id].SendState = 1142;
+   87 | 
+   88 |                         uint selectionIndex;
+   89 |                         InterlockedAdd(KillCounts[selectid], 1, selectionIndex);
+   90 |                         SelectRender[selectionIndex] = id;
+   91 | 
+   92 |                         int healthPercent =
+   93 |                             (ai[id].Health / army[ai[id].Army].MaxHealth) * 100;
+   94 |                         InterlockedAdd(KillCounts[AverageHpIndex], healthPercent);
+   95 |                     }
+   96 |                 }
+   97 | 
+   98 |                 if (!selected)
+   99 |                 {
+  100 |                     ai[id].SendState = 1141;
+  101 |                 }
+  102 |             }
+  103 |         }
+  104 |     }
+  105 | }
+  106 | 

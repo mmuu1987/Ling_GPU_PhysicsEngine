@@ -1,0 +1,341 @@
+文件 rts-gpu-selection-command-system.md（共 432 行，本次显示 340 行，行号起于 91）
+   91 | {
+   92 |     num  = Input.mousePosition.x - mousestart.x;
+   93 |     num2 = mousestart.y - Input.mousePosition.y;
+   94 |     if (Mathf.Abs(num) > 4f || Mathf.Abs(num2) > 4f)
+   95 |         GUI.Box(new Rect(mousestart.x, 0f - mousestart.y + Screen.height, num, num2), "");
+   96 | }
+   97 | ```
+   98 | 
+   99 | 松开左键时，把选框编码成 **中心点 + 半宽半高** 两个 Vector2（这是关键设计，见 3.3）：
+  100 | 
+  101 | ```csharp
+  102 | // FlyCam.cs:886-902
+  103 | if (Input.GetKeyUp(KeyCode.Mouse0) || ...)
+  104 | {
+  105 |     Army.AiCompute.SetInt("suborder", 1);   // 框选后默认回到 Defend 副命令
+  106 |     DefaultButtonColors();
+  107 |     Army.SelectAi(
+  108 |         CurrentTeamSelect,                  // 当前控制队伍
+  109 |         Target.LatestTarg,                  // 当前命令 id（用作保留/清理）
+  110 |         (mousestart + new Vector2(Input.mousePosition.x, Input.mousePosition.y)) * 0.5f,  // boxPos = 选框中心
+  111 |         new Vector2(Mathf.Abs(num * 0.5f), Mathf.Abs(num2 * 0.5f)));                      // boxScale = 半宽半高
+  112 |     // 同时用两次射线求交估算选中区域的世界中心 SelectCenter（供阵型朝向用）
+  113 |     ...
+  114 | }
+  115 | ```
+  116 | 
+  117 | 注意两个防御细节：
+  118 | 
+  119 | - `NoDragSelect` 标志（FlyCam.cs:966-977）：鼠标在 UI 面板上按下时禁止框选，避免点按钮时误选；
+  120 | - 框选条件要求 `RtsControls && !DisableRts`，第三人称/附身模式下整套逻辑直接 return。
+  121 | 
+  122 | ### 3.2 派发阶段（CPU → GPU，Army.SelectAi）
+  123 | 
+  124 | ```csharp
+  125 | // Army.cs:1601-1624
+  126 | public static void SelectAi(int team, int orderid, Vector2 BoxPos, Vector2 BoxScale)
+  127 | {
+  128 |     AiCompute.SetBuffer(4, "SelectRender", Selectionrender.IdBuff);
+  129 |     AiCompute.SetBuffer(4, "KillCounts", KillCounts);
+  130 |     AiCompute.SetBuffer(5, "KillCounts", KillCounts);
+  131 |     AiCompute.SetInt("selectid", selectid);
+  132 |     AiCompute.SetInt("AverageHpIndex", AvHpIndex);
+  133 |     AiCompute.Dispatch(5, 1, 1, 1);          // k05 ClearSelect：1 线程清零计数器
+  134 | 
+  135 |     AiCompute.SetBool("CancelOrder", false);
+  136 |     AiCompute.SetBuffer(4, "ai", AllAi);
+  137 |     AiCompute.SetInt("TeamSelected", team);
+  138 |     AiCompute.SetBuffer(4, "army", AllArmies);
+  139 |     AiCompute.SetTexture(4, "HalfProps", AiHalfProps);
+  140 |     AiCompute.SetInt("CurrentOrder", orderid);
+  141 |     AiCompute.SetVector("CamForward", Camera.main.transform.forward);
+  142 |     AiCompute.SetVector("CamRight",   Camera.main.transform.right);
+  143 |     AiCompute.SetVector("CamUp",      Camera.main.transform.up);
+  144 |     AiCompute.SetFloat("CamFov", Camera.main.fieldOfView * (Mathf.PI / 180f));
+  145 |     AiCompute.SetVector("boxpos",   BoxPos);
+  146 |     AiCompute.SetVector("boxscale", BoxScale);
+  147 |     AiCompute.SetVector("Dimension", new Vector2(Screen.width, Screen.height));
+  148 |     AiCompute.SetFloat("nearrend", Camera.main.nearClipPlane);
+  149 |     AiCompute.Dispatch(4, Mathf.CeilToInt(GlobalTotalAi / 32), 1, 1);  // k04 UnitSelect：每单位 1 线程
+  150 | }
+  151 | ```
+  152 | 
+  153 | 要点：
+  154 | 
+  155 | - **两次 Dispatch**：先 1 线程的 `ClearSelect` 清零 `KillCounts[selectid]` 和 `KillCounts[AvHpIndex]`，
+  156 |   再全单位并行的 `UnitSelect`。不清零的话上次框选的原子计数会累积。
+  157 | - 传的是**相机基向量 + FOV**，不是 MVP 矩阵。这是手写的屏幕投影（见 3.3）。
+  158 | - 线程组 `numthreads(32,1,1)`，dispatch 组数 = `ceil(TotalAi/32)`。10 万单位 ≈ 3125 个组，一次 dispatch 搞定。
+  159 | 
+  160 | ### 3.3 GPU 框选判定（UnitSelect kernel）
+  161 | 
+  162 | 重建版全文在 `compute-shaders/reconstructed/GPUAI_UnitSelect.hlsl`，核心逻辑：
+  163 | 
+  164 | ```hlsl
+  165 | [numthreads(32, 1, 1)]
+  166 | void UnitSelect(uint3 dispatchThreadId : SV_DispatchThreadID)
+  167 | {
+  168 |     uint id = dispatchThreadId.x;
+  169 |     if (id < (uint)TotalAi && ai[id].Health > 0)
+  170 |     {
+  171 |         if (CancelOrder) { /* 命令取消分支，见 §5.3 */ }
+  172 |         else
+  173 |         {
+  174 |             int armyIndex = ai[id].Army;
+  175 |             bool selected = false;
+  176 |             // 过滤：只选当前队伍，且军队允许 RTS 控制
+  177 |             if (army[armyIndex].Team == TeamSelected && army[armyIndex].NoRts < 1)
+  178 |             {
+  179 |                 // 1) 世界坐标 → 相机空间（手动投影，无矩阵乘法）
+  180 |                 float3 rel = float3(ai[id].Position.x, ai[id].Height + 1.0, ai[id].Position.y) - CamPos;
+  181 |                 float depth      = dot(CamForward, rel);   // 视线方向深度
+  182 |                 float horizontal = dot(rel, CamRight);
+  183 |                 float vertical   = dot(rel, CamUp);
+  184 | 
+  185 |                 // 2) 透视除法 → 屏幕像素坐标
+  186 |                 float halfFov = CamFov * 0.5;
+  187 |                 float s, c; sincos(halfFov, s, c);
+  188 |                 float tanHalfFov = s / c;
+  189 |                 float projectionScale = tanHalfFov * depth;
+  190 |                 float2 projected;
+  191 |                 projected.x = (horizontal * Dimension.x) / ((projectionScale * Dimension.x) / Dimension.y); // 横向带纵横比修正
+  192 |                 projected.y = (Dimension.y * vertical) / projectionScale;
+  193 |                 float2 screenPosition = projected + Dimension * 0.5;   // NDC 中心 → 像素中心
+  194 | 
+  195 |                 // 3) 框内判定：中心+半宽表示法，一条 all() 搞定
+  196 |                 selected = all(abs(screenPosition - boxpos) < boxscale);
+  197 | 
+  198 |                 if (selected)
+  199 |                 {
+  200 |                     ai[id].SendState = 1142;                      // 持久选中标记（留在单位结构体里！）
+  201 |                     uint idx;
+  202 |                     InterlockedAdd(KillCounts[selectid], 1, idx); // 原子计数 + 拿到紧凑下标
+  203 |                     SelectRender[idx] = id;                       // 写入选中名单（供渲染选中圈）
+  204 |                     int hpPct = (ai[id].Health / army[ai[id].Army].MaxHealth) * 100;
+  205 |                     InterlockedAdd(KillCounts[AverageHpIndex], hpPct);  // 累加血量百分比
+  206 |                 }
+  207 |             }
+  208 |             if (!selected)
+  209 |                 ai[id].SendState = 1141;                          // 未选中标记（清除旧框选）
+  210 |         }
+  211 |     }
+  212 | }
+  213 | ```
+  214 | 
+  215 | 这个 kernel 有 6 个值得抄的设计点：
+  216 | 
+  217 | 1. **框选判定零 CPU 参与**。10 万单位也是 GPU 一次 dispatch，耗时与单位数线性且并行度极高。
+  218 | 2. **手动投影代替矩阵**。只用相机的 forward/right/up/fov/aspect，3 个点积 + 2 次除法完成投影，
+  219 |    不需要传和存 4×4 矩阵，常量缓冲更省。
+  220 | 3. **中心 + 半宽矩形表示**。`all(abs(p - center) < halfSize)` 一次比较完成框内测试，
+  221 |    CPU 端也不用处理拖拽方向（往左拖/往右拖/往上拖都一样，因为存的是绝对值半宽）。
+  222 | 4. **选中状态双写**：
+  223 |    - `ai[id].SendState = 1142/1141` —— 持久化在**单位自己的结构体**里，后续 Behave kernel、
+  224 |      命令分发都能直接读，不需要再传一份「选中名单」；
+  225 |    - `SelectRender[idx] = id` —— 紧凑数组，只用于渲染选中圈和统计。
+  226 | 5. **`InterlockedAdd` 的返回值就是紧凑下标**。原子加 1 的同时拿到写入位置，
+  227 |    一步完成「计数 + 压缩存储」，无 append buffer 的额外开销。
+  228 | 6. **平均血量顺手算**：选中时把血量百分比原子累加到另一个槽位，CPU 回读后
+  229 |    `SelectionHp / SelectionState` 就是平均血量（FlyCam.cs:859），零额外遍历。
+  230 | 
+  231 | > 局限：`SelectRender` 缓冲固定 1000 槽（Selectionrender.cs:6 `RenderAmount = 1000`），
+  232 | > 超过 1000 个选中单位时选中**圈**画不下（计数不受影响）。如果照搬，建议把缓冲做大
+  233 | > 或改用「SendState 标记 + 间接参数」的方式渲染。
+  234 | 
+  235 | ### 3.4 结果回读（异步，不阻塞）
+  236 | 
+  237 | ```csharp
+  238 | // Army.cs:2440-2450 —— AsyncGPUReadback 完成回调
+  239 | private static void OnCompleteReadback(AsyncGPUReadbackRequest request)
+  240 | {
+  241 |     if (ThreadManager.cnter <= 12 || !request.done || request.hasError || GameClosed)
+  242 |         return;                       // 前 12 帧不回读（等 GPU 管线稳定）
+  243 |     data = request.GetData<int>();
+  244 |     ThreadManager.armydata = data.ToArray();
+  245 |     SelectionState = data[selectid];        // 选中数量
+  246 |     SelectionHp    = data[AvHpIndex];       // 血量百分比总和
+  247 |     AttackState    = data[AttackStateIndex];
+  248 |     ...
+  249 | }
+  250 | ```
+  251 | 
+  252 | - 回读对象是**整个 KillCounts 小缓冲**（几十个字节），不是 88 字节×N 的单位缓冲；
+  253 | - 用 `AsyncGPUReadback` 而非 `GetData`，**不产生 CPU-GPU 同步点**；
+  254 | - 数据晚几帧到达完全无所谓（只是 UI 上的 "Units Selected: N"）。
+  255 | 
+  256 | UI 显示（FlyCam.cs:852-864）：`SelectionState > 0` 时显示命令面板、选中数量、平均血量。
+  257 | 
+  258 | ---
+  259 | 
+  260 | ## 4. 选中圈渲染（Selectionrender.cs）
+  261 | 
+  262 | ```csharp
+  263 | // Selectionrender.cs:56-70
+  264 | private void Update()
+  265 | {
+  266 |     if (Army.AllAi != null && Army.SelectionState > 0)
+  267 |     {
+  268 |         if (++cnt >= 2)   // 每 2 帧更新一次间接参数（降低 SetData 频率）
+  269 |         {
+  270 |             cnt = 0;      // （反编译代码里 cnt 未清零，此处为语义说明）
+  271 |             args[1] = (uint)Army.SelectionState;      // 实例数 = 选中数量
+  272 |             ArgBuff.SetData(args);                    // 只写 20 字节间接参数
+  273 |             mat.SetBuffer("ai", Army.AllAi);
+  274 |             mat.SetBuffer("SelectRender", IdBuff);
+  275 |             Graphics.DrawMeshInstancedIndirect(mesh, 0, mat, bounds, ArgBuff, ...);
+  276 |         }
+  277 |     }
+  278 | }
+  279 | ```
+  280 | 
+  281 | - 选中圈的网格（一个 quad/圆环）用 **DrawMeshInstancedIndirect** 绘制，实例数来自
+  282 |   `ArgBuff`（DrawIndirect 类型的 ComputeBuffer）；
+  283 | - 顶点 shader 里用 `SV_InstanceID` 索引 `SelectRender` 拿到单位 id，再读 `AllAi` 拿位置 ——
+  284 |   **CPU 不知道也不关心哪些单位被选中**；
+  285 | - 每帧只 `SetData` 20 字节的 args，没有大规模上传。
+  286 | 
+  287 | ---
+  288 | 
+  289 | ## 5. 命令系统
+  290 | 
+  291 | ### 5.1 命令的存储位置：HalfProps 纹理 + AllOrders 缓冲 + 流场纹理
+  292 | 
+  293 | UEBS2 的命令不是存在 CPU 列表里的，而是分三层：
+  294 | 
+  295 | 1. **每单位命令槽**（`HalfProps` Texture2DArray）：每个单位一行像素，第 `Order` 层存
+  296 |    「该单位当前挂的是哪条命令」；
+  297 | 2. **命令参数**（`AllOrders` 结构化缓冲，12 字节/条）：命令 id → 目标点等参数；
+  298 | 3. **命令流场**（`NavTexOrder` / `NavOrderDirection` Texture2DArray）：由 GridNav 的
+  299 |    `AddTargets` + `Navigation` kernel 从目标点做波前扩展生成，每个格子存移动方向。
+  300 |    Behave kernel（k00）里单位每帧 `NavTexOrder.Load(...)` 采样自己脚下格子的方向 ——
+  301 |    **这就是"寻路"：全军队共享一张流场，而不是每单位一条路径**。
+  302 | 
+  303 | ### 5.2 右键移动/攻击命令（Target.cs + FlyCam.cs + NavGrid.cs）
+  304 | 
+  305 | 流程：
+  306 | 
+  307 | ```text
+  308 | 右键松开 (FlyCam.cs:904)
+  309 |   → CheckOrder = true
+  310 |   → 下一帧 FlyCam.Update (FlyCam.cs:480-497):
+  311 |       chkcount==1 时 Army.CancelOrder(Target.LatestTarg)   ← 先清旧命令
+  312 |       chkcount>2  时 SetBool("CheckOrder", true) + SetInt("CurrentOrder", LatestTarg)
+  313 |       chkcount>10 时 CheckOrder=false（命令广播窗口约 10 帧）
+  314 |   → Target.StartSearch (Target.cs:168-190):
+  315 |       射线求落点 → NavGrid.TargetSearch(...)
+  316 |   → NavGrid GPU 搜索 (NavGrid.cs:1426+):
+  317 |       Dispatch(AddTargets) 写目标点 → 多轮 Dispatch(Navigation) 波前扩展生成流场
+  318 |   → Behave kernel：SendState==1142（选中）的单位接受 CurrentOrder，采样流场移动
+  319 | ```
+  320 | 
+  321 | `Target.cs` 里几个设计点：
+  322 | 
+  323 | - **阵型长度按选中数量自适应**：`FormationLength = sqrt(SelectionState * 0.75) + 1`（Target.cs:93），
+  324 |   选 100 人 → 约 9 列方阵；选 10000 人 → 约 87 列。流场搜索按这个阵型铺目标格。
+  325 | - **移动 vs 攻击由 AttackState 决定**（Target.cs:95-110）：`Army.AttackState == 0` 时
+  326 |   `AvoidEnemies = true`（移动命令，绕开敌人），否则不绕（攻击命令，箭头变红）。
+  327 | - **阵型朝向来自拖拽方向**：`FormationForward = (TargPos - TargFrom).normalized`
+  328 |   （NavGrid.cs:1378-1380），`TargFrom` 就是框选时的 `FlyCam.SelectCenter` ——
+  329 |   部队会面向「从选中中心指向目标」的方向列阵。
+  330 | - **流场搜索是摊销的**：`Target.Update` 里 `searchnow` 状态每次只跑 1~5 次 `FullSearch`
+  331 |   （Target.cs:144-160），分多帧把流场扩完，避免单帧大 dispatch 造成尖刺。
+  332 | 
+  333 | ### 5.3 命令取消（Army.CancelOrder → UnitSelect 的另一半分支）
+  334 | 
+  335 | ```csharp
+  336 | // Army.cs:1590-1599
+  337 | public static void CancelOrder(int order)
+  338 | {
+  339 |     ...
+  340 |     AiCompute.SetInt("OrderCancel", order);
+  341 |     AiCompute.SetBool("CancelOrder", true);
+  342 |     AiCompute.Dispatch(4, Mathf.CeilToInt(GlobalTotalAi / 32), 1, 1);   // 还是 k04
+  343 | }
+  344 | ```
+  345 | 
+  346 | `UnitSelect` kernel 里 `CancelOrder == true` 时走另一个分支：把每个单位 `HalfProps` 第
+  347 | `Order` 层中等于 `OrderCancel` 的槽写为 -1。即**取消命令也是一次全单位 GPU 并行清理**，
+  348 | 没有 CPU 遍历。
+  349 | 
+  350 | ### 5.4 命令按钮与副命令状态机（FlyCam.cs）
+  351 | 
+  352 | ```csharp
+  353 | [Serializable] public class Buttons {
+  354 |     public Image HoldGround; public Image Defend; public Image Charge;
+  355 |     public Image Goto;       public Image GotoAttack;
+  356 | }
+  357 | ```
+  358 | 
+  359 | - 主命令 `PrimaryOrder`：0 = Goto（移动），1 = GotoAttack（攻击移动）；
+  360 | - 副命令 `SecondaryOrder` / `suborder`：-1 取消、1 Defend、2 Charge、3 HoldGround；
+  361 | - 按钮只是 `Army.AiCompute.SetInt("suborder", n)` + `SetBool("CheckSubOrder", true)`，
+  362 |   然后**保持广播约 10 帧**（FlyCam.cs:466-479 的 `chkscount` 计数窗口），让 Behave kernel
+  363 |   在下一批 AI tick 里读到并应用；
+  364 | - 这种「设标志位 → 广播 N 帧 → 自动清除」的模式，避免了 CPU 与 GPU 命令执行的精确同步问题
+  365 |   （GPU 哪一帧消费都行，只要在窗口内）。
+  366 | 
+  367 | ---
+  368 | 
+  369 | ## 6. 性能设计要点总结（给卡顿项目的对照清单）
+  370 | 
+  371 | | # | UEBS2 的做法 | 避免的卡顿来源 |
+  372 | |---|---|---|
+  373 | | 1 | 框选判定在 GPU，每单位 1 线程，一次 dispatch | CPU O(N) 遍历、逐单位射线/投影 |
+  374 | | 2 | 只传相机基向量 + 选框中心/半宽（几十个浮点） | 每帧上传大数组、MVP 矩阵 |
+  375 | | 3 | 选中结果 = 原子计数 + 紧凑 id 数组，写进单位自身 SendState | CPU 收集选中列表、每帧重建选择集 |
+  376 | | 4 | 统计回读走 `AsyncGPUReadback`，且只读几十字节的计数缓冲 | `GetData` 同步回读大缓冲造成管线停等 |
+  377 | | 5 | 选中圈用 DrawMeshInstancedIndirect，实例数在 GPU 缓冲里 | CPU 逐个摆选中圈 GameObject |
+  378 | | 6 | 命令 = 常量缓冲几个 int + 流场纹理，GPU 广播 10 帧 | 逐单位下发命令、每单位独立寻路 |
+  379 | | 7 | 寻路 = 全军队共享流场（波前扩展），单位自采样 | 每单位 A*、路径数组回传 |
+  380 | | 8 | 流场搜索分帧摊销（每次 1~5 次 FullSearch） | 单帧大 dispatch 尖刺 |
+  381 | | 9 | 计数器槽位复用（选中/血量/击杀共用一个 KillCounts） | 每种统计一次回读、多次同步 |
+  382 | | 10 | UI 面板内禁止框选（NoDragSelect） | 误触发的多余 GPU dispatch |
+  383 | 
+  384 | ### 卡顿排查的常见嫌疑（如果你的实现"类似但卡"）
+  385 | 
+  386 | 按经验从高到低排查：
+  387 | 
+  388 | 1. **有没有在每帧 `ComputeBuffer.GetData()` 回读单位大缓冲？** 这是最常见的杀手。
+  389 |    UEBS2 自己也踩了这个坑：`Army.Update()` 里存在 `AllAi.GetData(...)` 的同步回读路径
+  390 |    （用于少量 CPU 侧逻辑），规模一大就卡。凡是回读，先问能不能改成 `AsyncGPUReadback`，
+  391 |    能不能只读计数器/小缓冲。
+  392 | 2. **框选是不是在 CPU 上 `for` 循环 + `WorldToScreenPoint`？** 10 万单位 × 每帧 = 必卡。
+  393 |    应改为把选框传给 compute shader。
+  394 | 3. **选中圈/血条是不是每单位一个 GameObject/OnGUI 调用？** 改 Indirect 实例化。
+  395 | 4. **命令下发是不是逐单位写数据？** 改常量缓冲广播 + GPU 端按 SendState 过滤。
+  396 | 5. **寻路是不是每单位一条路径？** 改流场/势场，一次搜索全军受益。
+  397 | 6. **ComputeBuffer 是不是在频繁销毁重建？** UEBS2 的 `Army.RunGpuAi()` 在单位数变化时
+  398 |    销毁重建缓冲（已知性能弱点），应改为容量翻倍的池化策略。
+  399 | 7. **OnGUI 每帧多次调用？** UEBS2 用 `OnGUI` 画选框（每帧 2+ 次调用），单位多界面复杂时
+  400 |    IMGUI 本身也有开销，可换 UGUI 一个 RawImage/边框 Image。
+  401 | 
+  402 | ---
+  403 | 
+  404 | ## 7. 已知局限（照搬前请注意）
+  405 | 
+  406 | - `SelectRender` 固定 1000 槽，选中圈渲染有上限；
+  407 | - 一次只能框选**一个队伍**（`CurrentTeamSelect`，Tab/滚轮切换），不支持跨队多选；
+  408 | - 框选是纯屏幕矩形，没有按兵种过滤、没有 Shift 加选/减选（SendState 每次全量重写
+  409 |   1141/1142），要支持加选需要给 kernel 加"保持已选"模式；
+  410 | - 投影判定用的是单位锚点（Position + Height+1），大型单位只有中心点在框内才算选中；
+  411 | - `Behave` kernel 消费命令依赖「广播 10 帧」的时序窗口，极高帧率下窗口会缩短，
+  412 |   若改成固定 tick 率的模拟需要重新设计这个握手。
+  413 | 
+  414 | ---
+  415 | 
+  416 | ## 8. 关键代码位置速查
+  417 | 
+  418 | | 功能 | 文件 | 位置 |
+  419 | |---|---|---|
+  420 | | 选框绘制 / 框选触发 | `managed-src/Assembly-CSharp/FlyCam.cs` | OnGUI ~L873-903 |
+  421 | | 框选 GPU 派发 | `managed-src/Assembly-CSharp/Army.cs` | `SelectAi` L1601-1624 |
+  422 | | 命令取消派发 | `managed-src/Assembly-CSharp/Army.cs` | `CancelOrder` L1590-1599 |
+  423 | | 框选/取消 kernel | `compute-shaders/reconstructed/GPUAI_UnitSelect.hlsl` | 全文 |
+  424 | | 计数器清零 kernel | `compute-shaders/reconstructed-all/510_GPUAI/v00__k05__ClearSelect.hlsl.txt` | 全文 |
+  425 | | 常量缓冲映射 | `compute-shaders/reconstructed-all/510_GPUAI/BINDINGS.md` | boxpos/boxscale/TeamSelected/CheckOrder/suborder 等 |
+  426 | | 统计异步回读 | `managed-src/Assembly-CSharp/Army.cs` | `OnCompleteReadback` L2440-2459 |
+  427 | | 选中圈渲染 | `managed-src/Assembly-CSharp/Selectionrender.cs` | 全文（71 行） |
+  428 | | 右键目标/阵型 | `managed-src/Assembly-CSharp/Target.cs` | 全文（191 行） |
+  429 | | 流场搜索派发 | `managed-src/Assembly-CSharp/NavGrid.cs` | `FullSearch` L1374 / `TargetSearch` L1426 |
+  430 | | 命令按钮/状态机 | `managed-src/Assembly-CSharp/FlyCam.cs` | L455-501, L928-1024 |

@@ -1,0 +1,637 @@
+{
+  "phase": "P1",
+  "checkedAt": "2026-10-07T14:21:28.976389",
+  "project": {
+    "phase": "P1",
+    "full": true,
+    "baselineFiles": 9609,
+    "approvedChanges": 16,
+    "changed": [],
+    "unexpectedNew": [],
+    "passed": true
+  },
+  "newBuildProduced": false,
+  "p2Started": false,
+  "humanMouseTest": false,
+  "userData": {
+    "before": 4,
+    "after": 4,
+    "deltas": [],
+    "passed": true
+  },
+  "current37": {
+    "files": 387,
+    "deltas": [],
+    "passed": true,
+    "mode": "fresh-full-sha256"
+  },
+  "git": {
+    "git-head-unchanged": true,
+    "git-staged-names-unchanged": true
+  },
+  "duplicateGuids": [],
+  "changes": {
+    "Assets/Game/Scripts/UnitPreviewRadius.cs": {
+      "originalSha256": null,
+      "expectedSha256": "ca95dba3eb2fe78d517439664e81c2e069a71c42cac62276d77ef0a2ba0740e4",
+      "change": "04-readable-ink"
+    },
+    "Assets/Game/Scripts/UnitPreviewRadius.cs.meta": {
+      "originalSha256": null,
+      "expectedSha256": "4cd84f188fd424d891fc6f6ed7379acaaf74e4a91cdaf87181c6f8e87f5bee8e",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Resources/UnitPreviewRadiusRing.shader": {
+      "originalSha256": null,
+      "expectedSha256": "8a594bf129a3da826266c093147bbafa423ad48d10f159a8d0b9d05a9bd4c7ef",
+      "change": "04-readable-ink"
+    },
+    "Assets/Game/Resources/UnitPreviewRadiusRing.shader.meta": {
+      "originalSha256": null,
+      "expectedSha256": "b38792849b117d852090e33533a25e4e8c4a494969211686ef845b9890fbac78",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Scripts/UnitModelPreviewRenderer.cs": {
+      "originalSha256": "c649a823bfbea11ddfa913cf4b7df2f1be705c9153cd8194fcd96f9b83e04af5",
+      "expectedSha256": "ce3fcb0469fa2cbcb950a5924a5c239ca099b6e04493c5d8e545614e56d88f7f",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Scripts/UnitModelPreviewWidget.cs": {
+      "originalSha256": "9db1d2067250caf619124286a214af1fbf5f378320ae5d090242c54dfbc2c36c",
+      "expectedSha256": "bb458bc284c009ed621ced32dd213f0265edb874f684cae1ef5d96a71a8d1121",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Scripts/WarSandboxFrontEnd.UnitLibrary.cs": {
+      "originalSha256": "0f1b3a8332f4044831f62e302a878da36f96348e2f390a6b499d3c9959a68861",
+      "expectedSha256": "8e736780468234b9b83409355f47da9c5f1e9bfa219f1ad0ee5538f164fd4785",
+      "change": "04-readable-ink"
+    },
+    "Assets/Game/Scripts/WarSandboxFrontEnd.UnitPreview.cs": {
+      "originalSha256": "88232f4f67a448e8c0a5c20628271b81af0daa13e4a18553b4761b4f60d787d5",
+      "expectedSha256": "a94cdd02cefae305c6b33fdca2c850f30779928c987c156c1fec51251320833c",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Tests/PlayMode/UnitModelPreviewPlayModeTests.cs": {
+      "originalSha256": "5314790f6e16cff8148b73926c7b60a676711ca09f078f0690355769c7793632",
+      "expectedSha256": "7f4b3fa2c9d5d7e2f2e751e7f04840f77edb217cca84f0cebf55e144a550fc95",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Tests/PlayMode/UnitPreviewCameraParityTests.cs": {
+      "originalSha256": "1720123c1bc5f81c09e02f9af56247ddec89c666aafccd997beb1f95b55030ab",
+      "expectedSha256": "651715cb493472fc070869f3dabb12e34844d0dbdf4c9ebf2df6ad3e0dbd12cf",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Tests/EditMode/UnitPreviewRadiusTests.cs": {
+      "originalSha256": null,
+      "expectedSha256": "3cd94bb78d2e4983ea7957a74cc089d56b0f41e06fc0b0df999ea5b051cb61ae",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Tests/EditMode/UnitPreviewRadiusTests.cs.meta": {
+      "originalSha256": null,
+      "expectedSha256": "86dd52b5ba34a0d4a4381132ef8b33b6bd87cfd3128df867a9d767685d89e141",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Tests/PlayMode/UnitPreviewRadiusPlayModeTests.cs": {
+      "originalSha256": null,
+      "expectedSha256": "8415ddb1aa2869ab499a25d19b3525126bcc267e21130807c9f3095b815a18e9",
+      "change": "04-readable-ink"
+    },
+    "Assets/Game/Tests/PlayMode/UnitPreviewRadiusPlayModeTests.cs.meta": {
+      "originalSha256": null,
+      "expectedSha256": "bd5fa675e7ca6194a8ec67c5e2ff9a9049d4d19eb7d3e157fbedc359b16d27f8",
+      "change": "01-display-ring"
+    },
+    "Assets/Game/Editor/InteractionRefinementP1.cs": {
+      "originalSha256": null,
+      "expectedSha256": "474d94e406e5ca2a2c41d47ebc2bf14390247c557f68bd0713bdd9d2ab0512d6",
+      "change": "02-isolation-and-ui-tests"
+    },
+    "Assets/Game/Editor/InteractionRefinementP1.cs.meta": {
+      "originalSha256": null,
+      "expectedSha256": "608795265dfa0cebefb78df802b6bb561922693913179dfbde84a817410e080c",
+      "change": "02-isolation-and-ui-tests"
+    }
+  },
+  "battleAndAssetInvariant": true,
+  "runs": {
+    "editmode-01": {
+      "passed": false,
+      "exitCode": 1,
+      "compileErrors": [],
+      "restoredAutoFiles": [],
+      "isolationMarkerSeen": false,
+      "noAudioListenerWarnings": 0,
+      "compilerWarnings": [
+        "Assets\\Game\\Scripts\\Contact35Probe.cs(6,161): warning CS0108: 'Contact35Probe.camera' hides inherited member 'Component.camera'. Use the new keyword if hiding was intended.",
+        "Assets\\Game\\Scripts\\UnitModelPreviewWidget.cs(15,42): warning CS0108: 'UnitModelPreviewWidget.renderer' hides inherited member 'Component.renderer'. Use the new keyword if hiding was intended."
+      ],
+      "worldRuler": [],
+      "uiPixels": [],
+      "realSubjects": []
+    },
+    "editmode-02": {
+      "passed": true,
+      "exitCode": 0,
+      "compileErrors": [],
+      "tests": {
+        "id": "2",
+        "testcasecount": "631",
+        "result": "Passed",
+        "total": "631",
+        "passed": "631",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-10-07 06:01:10Z",
+        "end-time": "2026-10-07 06:03:56Z",
+        "duration": "165.3931853"
+      },
+      "failedTests": [],
+      "restoredAutoFiles": [],
+      "isolationMarkerSeen": true,
+      "noAudioListenerWarnings": 0,
+      "compilerWarnings": [],
+      "worldRuler": [],
+      "uiPixels": [],
+      "realSubjects": []
+    },
+    "editmode-03": {
+      "passed": true,
+      "exitCode": 0,
+      "compileErrors": [],
+      "tests": {
+        "id": "2",
+        "testcasecount": "631",
+        "result": "Passed",
+        "total": "631",
+        "passed": "631",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-10-07 06:17:50Z",
+        "end-time": "2026-10-07 06:20:11Z",
+        "duration": "140.7475519"
+      },
+      "failedTests": [],
+      "restoredAutoFiles": [],
+      "isolationMarkerSeen": true,
+      "noAudioListenerWarnings": 0,
+      "compilerWarnings": [
+        "Assets\\Game\\Scripts\\Contact35Probe.cs(6,161): warning CS0108: 'Contact35Probe.camera' hides inherited member 'Component.camera'. Use the new keyword if hiding was intended.",
+        "Assets\\Game\\Scripts\\UnitModelPreviewWidget.cs(15,42): warning CS0108: 'UnitModelPreviewWidget.renderer' hides inherited member 'Component.renderer'. Use the new keyword if hiding was intended."
+      ],
+      "worldRuler": [],
+      "uiPixels": [],
+      "realSubjects": []
+    },
+    "preview-02": {
+      "passed": true,
+      "exitCode": 0,
+      "compileErrors": [],
+      "tests": {
+        "id": "2",
+        "testcasecount": "22",
+        "result": "Passed",
+        "total": "22",
+        "passed": "22",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-10-07 06:08:14Z",
+        "end-time": "2026-10-07 06:08:27Z",
+        "duration": "12.9116698"
+      },
+      "failedTests": [],
+      "restoredAutoFiles": [],
+      "isolationMarkerSeen": true,
+      "noAudioListenerWarnings": 0,
+      "compilerWarnings": [],
+      "worldRuler": [
+        "P1_WORLD_RULER r1-asymFalse-scale1x1-214x320 expected=1 goldPixels=232 relativeErrorP95=0.0113517",
+        "P1_WORLD_RULER r1-asymFalse-scale1x1-512x512 expected=1 goldPixels=934 relativeErrorP95=0.0112474",
+        "P1_WORLD_RULER r0.45-asymFalse-scale1x1-214x320 expected=0.45 goldPixels=232 relativeErrorP95=0.01146005",
+        "P1_WORLD_RULER r0.45-asymFalse-scale1x1-512x512 expected=0.45 goldPixels=934 relativeErrorP95=0.01137555",
+        "P1_WORLD_RULER r4.8-asymFalse-scale1x1-214x320 expected=4.8 goldPixels=232 relativeErrorP95=0.01130313",
+        "P1_WORLD_RULER r4.8-asymFalse-scale1x1-512x512 expected=4.8 goldPixels=934 relativeErrorP95=0.01128733",
+        "P1_WORLD_RULER r0.55-asymTrue-scale1x1-214x320 expected=0.55 goldPixels=184 relativeErrorP95=0.0114675",
+        "P1_WORLD_RULER r0.55-asymTrue-scale1x1-512x512 expected=0.55 goldPixels=835 relativeErrorP95=0.0113652",
+        "P1_WORLD_RULER r0.55-asymTrue-scale2x0.5-214x320 expected=1.1 goldPixels=173 relativeErrorP95=0.01164707",
+        "P1_WORLD_RULER r0.55-asymTrue-scale2x0.5-512x512 expected=1.1 goldPixels=946 relativeErrorP95=0.01143434",
+        "P1_WORLD_RULER r0.55-asymFalse-scale0.5x1.5-214x320 expected=0.825 goldPixels=230 relativeErrorP95=0.01107483",
+        "P1_WORLD_RULER r0.55-asymFalse-scale0.5x1.5-512x512 expected=0.825 goldPixels=1204 relativeErrorP95=0.01136281"
+      ],
+      "uiPixels": [
+        "P1_UI_PIXELS library-1280x720 goldInModelViewport=242 colors=4065",
+        "P1_UI_PIXELS expanded-1280x720 goldInModelViewport=487 colors=3298",
+        "P1_UI_PIXELS library-1920x1080 goldInModelViewport=388 colors=6678",
+        "P1_UI_PIXELS expanded-1920x1080 goldInModelViewport=892 colors=5303"
+      ],
+      "realSubjects": [
+        "P1_REAL_SUBJECT roster-male radius=0.55 anchor=(0.00, 0.00, 0.00) frame=Center: (-0.05, 0.77, 0.00), Extents: (0.61, 0.78, 0.56)",
+        "P1_REAL_SUBJECT roster-ranger radius=0.45 anchor=(0.00, 0.00, 0.00) frame=Center: (-0.01, 0.81, 0.09), Extents: (0.46, 0.96, 0.61)",
+        "P1_REAL_SUBJECT roster-spider radius=4.8 anchor=(0.00, 0.00, 0.00) frame=Center: (0.00, 1.20, 0.00), Extents: (4.86, 1.20, 4.86)",
+        "P1_REAL_SUBJECT roster-dragon radius=3.4 anchor=(0.00, 0.00, 0.00) frame=Center: (0.00, 1.99, 0.00), Extents: (3.44, 1.99, 3.44)"
+      ]
+    },
+    "preview-03": {
+      "passed": true,
+      "exitCode": 0,
+      "compileErrors": [],
+      "tests": {
+        "id": "2",
+        "testcasecount": "22",
+        "result": "Passed",
+        "total": "22",
+        "passed": "22",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-10-07 06:21:06Z",
+        "end-time": "2026-10-07 06:21:19Z",
+        "duration": "13.4072301"
+      },
+      "failedTests": [],
+      "restoredAutoFiles": [],
+      "isolationMarkerSeen": true,
+      "noAudioListenerWarnings": 0,
+      "compilerWarnings": [],
+      "worldRuler": [
+        "P1_WORLD_RULER r1-asymFalse-scale1x1-214x320 expected=1 goldPixels=232 relativeErrorP95=0.0113517",
+        "P1_WORLD_RULER r1-asymFalse-scale1x1-512x512 expected=1 goldPixels=934 relativeErrorP95=0.0112474",
+        "P1_WORLD_RULER r0.45-asymFalse-scale1x1-214x320 expected=0.45 goldPixels=232 relativeErrorP95=0.01146005",
+        "P1_WORLD_RULER r0.45-asymFalse-scale1x1-512x512 expected=0.45 goldPixels=934 relativeErrorP95=0.01137555",
+        "P1_WORLD_RULER r4.8-asymFalse-scale1x1-214x320 expected=4.8 goldPixels=232 relativeErrorP95=0.01130313",
+        "P1_WORLD_RULER r4.8-asymFalse-scale1x1-512x512 expected=4.8 goldPixels=934 relativeErrorP95=0.01128733",
+        "P1_WORLD_RULER r0.55-asymTrue-scale1x1-214x320 expected=0.55 goldPixels=184 relativeErrorP95=0.0114675",
+        "P1_WORLD_RULER r0.55-asymTrue-scale1x1-512x512 expected=0.55 goldPixels=835 relativeErrorP95=0.0113652",
+        "P1_WORLD_RULER r0.55-asymTrue-scale2x0.5-214x320 expected=1.1 goldPixels=173 relativeErrorP95=0.01164707",
+        "P1_WORLD_RULER r0.55-asymTrue-scale2x0.5-512x512 expected=1.1 goldPixels=946 relativeErrorP95=0.01143434",
+        "P1_WORLD_RULER r0.55-asymFalse-scale0.5x1.5-214x320 expected=0.825 goldPixels=230 relativeErrorP95=0.01107483",
+        "P1_WORLD_RULER r0.55-asymFalse-scale0.5x1.5-512x512 expected=0.825 goldPixels=1204 relativeErrorP95=0.01136281"
+      ],
+      "uiPixels": [
+        "P1_UI_PIXELS library-1280x720 goldInModelViewport=3430 colors=4062",
+        "P1_UI_PIXELS expanded-1280x720 goldInModelViewport=7084 colors=3310",
+        "P1_UI_PIXELS library-1920x1080 goldInModelViewport=7428 colors=6682",
+        "P1_UI_PIXELS expanded-1920x1080 goldInModelViewport=15516 colors=5302"
+      ],
+      "realSubjects": [
+        "P1_REAL_SUBJECT roster-male radius=0.55 anchor=(0.00, 0.00, 0.00) frame=Center: (-0.05, 0.77, 0.00), Extents: (0.61, 0.78, 0.56)",
+        "P1_REAL_SUBJECT roster-ranger radius=0.45 anchor=(0.00, 0.00, 0.00) frame=Center: (-0.01, 0.81, 0.09), Extents: (0.46, 0.96, 0.61)",
+        "P1_REAL_SUBJECT roster-spider radius=4.8 anchor=(0.00, 0.00, 0.00) frame=Center: (0.00, 1.20, 0.00), Extents: (4.86, 1.20, 4.86)",
+        "P1_REAL_SUBJECT roster-dragon radius=3.4 anchor=(0.00, 0.00, 0.00) frame=Center: (0.00, 1.99, 0.00), Extents: (3.44, 1.99, 3.44)"
+      ]
+    },
+    "radius-01": {
+      "passed": true,
+      "exitCode": 0,
+      "compileErrors": [],
+      "tests": {
+        "id": "2",
+        "testcasecount": "8",
+        "result": "Passed",
+        "total": "8",
+        "passed": "8",
+        "failed": "0",
+        "inconclusive": "0",
+        "skipped": "0",
+        "asserts": "0",
+        "engine-version": "3.5.0.0",
+        "clr-version": "4.0.30319.42000",
+        "start-time": "2026-10-07 06:04:58Z",
+        "end-time": "2026-10-07 06:05:05Z",
+        "duration": "6.864978"
+      },
+      "failedTests": [],
+      "restoredAutoFiles": [],
+      "isolationMarkerSeen": true,
+      "noAudioListenerWarnings": 0,
+      "compilerWarnings": [],
+      "worldRuler": [
+        "P1_WORLD_RULER r1-asymFalse-scale1x1-214x320 expected=1 goldPixels=232 relativeErrorP95=0.0113517",
+        "P1_WORLD_RULER r1-asymFalse-scale1x1-512x512 expected=1 goldPixels=934 relativeErrorP95=0.0112474",
+        "P1_WORLD_RULER r0.45-asymFalse-scale1x1-214x320 expected=0.45 goldPixels=232 relativeErrorP95=0.01146005",
+        "P1_WORLD_RULER r0.45-asymFalse-scale1x1-512x512 expected=0.45 goldPixels=934 relativeErrorP95=0.01137555",
+        "P1_WORLD_RULER r4.8-asymFalse-scale1x1-214x320 expected=4.8 goldPixels=232 relativeErrorP95=0.01130313",
+        "P1_WORLD_RULER r4.8-asymFalse-scale1x1-512x512 expected=4.8 goldPixels=934 relativeErrorP95=0.01128733",
+        "P1_WORLD_RULER r0.55-asymTrue-scale1x1-214x320 expected=0.55 goldPixels=184 relativeErrorP95=0.0114675",
+        "P1_WORLD_RULER r0.55-asymTrue-scale1x1-512x512 expected=0.55 goldPixels=835 relativeErrorP95=0.0113652",
+        "P1_WORLD_RULER r0.55-asymTrue-scale2x0.5-214x320 expected=1.1 goldPixels=173 relativeErrorP95=0.01164707",
+        "P1_WORLD_RULER r0.55-asymTrue-scale2x0.5-512x512 expected=1.1 goldPixels=946 relativeErrorP95=0.01143434",
+        "P1_WORLD_RULER r0.55-asymFalse-scale0.5x1.5-214x320 expected=0.825 goldPixels=230 relativeErrorP95=0.01107483",
+        "P1_WORLD_RULER r0.55-asymFalse-scale0.5x1.5-512x512 expected=0.825 goldPixels=1204 relativeErrorP95=0.01136281"
+      ],
+      "uiPixels": [],
+      "realSubjects": []
+    }
+  },
+  "screenshots": [
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/expanded-1280x720.png",
+      "bytes": 142568,
+      "sha256": "5e837f1261e23710feed8cf630ff87c84479da149d45d5c2fc62da5a2b73c243"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/expanded-1920x1080.png",
+      "bytes": 268752,
+      "sha256": "a36229812a0c0efdbabd0d78cb1c939b517c06b809cd01b06933b33dda792f2d"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/library-1280x720.png",
+      "bytes": 169912,
+      "sha256": "d638a0a7dae0c71e4669d244bd9539ce56a70ca319e5829c9a4c0c801bb1c5b7"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/library-1920x1080.png",
+      "bytes": 378656,
+      "sha256": "457aa2093d79f2654d2f18552e8202bcac05b8238a57c15033929853a361a79f"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r0.45-asymFalse-scale1x1-214x320.png",
+      "bytes": 2884,
+      "sha256": "7c106bb6baef7b54f06ada35f6b58dc5eea03b4b4ca09b9ce76d60a9a20d3c7e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r0.45-asymFalse-scale1x1-512x512.png",
+      "bytes": 8653,
+      "sha256": "b94cd60abf7af57876579ae3509d8234919496babbe97046dd1374823cab25e5"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r0.55-asymFalse-scale0.5x1.5-214x320.png",
+      "bytes": 2866,
+      "sha256": "192b40f63d6e9446bb0ed83f56de4f449525faa75774ab6becb97076f16b56cc"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r0.55-asymFalse-scale0.5x1.5-512x512.png",
+      "bytes": 9273,
+      "sha256": "95b1aa7660a676f7f4f8175591800621f27cf1a76ac9a2947c53b4ac33ac82db"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r0.55-asymTrue-scale1x1-214x320.png",
+      "bytes": 2658,
+      "sha256": "8c3aab5a3e1069bfc2f15f4c297ebe4a53ebaca500159c77d9acca3b802ba709"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r0.55-asymTrue-scale1x1-512x512.png",
+      "bytes": 8280,
+      "sha256": "a20b77b48068fe946b0486029f15a8d34f12e85fbc06bf0ecc617cef936dec1e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r0.55-asymTrue-scale2x0.5-214x320.png",
+      "bytes": 2475,
+      "sha256": "fa0ee8f78fc1eabdb98eedbab1116032b81e51cdbc36fafba3039cbfa58a79bc"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r0.55-asymTrue-scale2x0.5-512x512.png",
+      "bytes": 8054,
+      "sha256": "4e50d2430d74e5589a87018dd16af241b3ce6916f3a265693e062a289be85baf"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r1-asymFalse-scale1x1-214x320.png",
+      "bytes": 2884,
+      "sha256": "7c106bb6baef7b54f06ada35f6b58dc5eea03b4b4ca09b9ce76d60a9a20d3c7e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r1-asymFalse-scale1x1-512x512.png",
+      "bytes": 8653,
+      "sha256": "b94cd60abf7af57876579ae3509d8234919496babbe97046dd1374823cab25e5"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r4.8-asymFalse-scale1x1-214x320.png",
+      "bytes": 2884,
+      "sha256": "7c106bb6baef7b54f06ada35f6b58dc5eea03b4b4ca09b9ce76d60a9a20d3c7e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/r4.8-asymFalse-scale1x1-512x512.png",
+      "bytes": 8653,
+      "sha256": "b94cd60abf7af57876579ae3509d8234919496babbe97046dd1374823cab25e5"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/real-roster-dragon.png",
+      "bytes": 21551,
+      "sha256": "aa8920a0ee6e2fdc3874184d37de3011b8b2cb6d7a9e59558765dc8958af15d6"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/real-roster-male.png",
+      "bytes": 29019,
+      "sha256": "a76789311a698b42a6d85c3f130926bc397bc7fef831ee46173e2c34a19c01aa"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/real-roster-ranger.png",
+      "bytes": 42249,
+      "sha256": "07356164a1ba1297aa3bc06997e2c62eb8f40c4bacf326290933e3362e10db49"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-02/radius-evidence/real-roster-spider.png",
+      "bytes": 14248,
+      "sha256": "62aad4dd20584a29e2cc2a2dc8a5e69c51127224450b85a3ab6afe6327c673ca"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/expanded-1280x720.png",
+      "bytes": 142774,
+      "sha256": "04e53790c55c03986c470617d8aa3748771fec1f14a5af063d83cfd174e09a13"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/expanded-1920x1080.png",
+      "bytes": 269289,
+      "sha256": "b8b191bc83b1a577534e64999c6053c4702f67dc1e3ac9f3e90942f69731ba35"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/library-1280x720.png",
+      "bytes": 170146,
+      "sha256": "b153b9d817b3c1e44ec7c83f662e94abc84bb230f7ce2b95422473c7b8f6b354"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/library-1920x1080.png",
+      "bytes": 379724,
+      "sha256": "5d8889be49de5198c2e5584011df81b3d802fb4931a9f8b55bfb89b41364ac1d"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r0.45-asymFalse-scale1x1-214x320.png",
+      "bytes": 2882,
+      "sha256": "11b9522471439e3558141183904c7bb950ef12fef0def5abd1a1c57f5dc9cdf5"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r0.45-asymFalse-scale1x1-512x512.png",
+      "bytes": 8673,
+      "sha256": "6f76847227872a0e2fe109f8e5bcbe72507832d9c025b92be92e89bb22165229"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r0.55-asymFalse-scale0.5x1.5-214x320.png",
+      "bytes": 2869,
+      "sha256": "e345cb78b5d175a9ef4636455bdc24a8ee24281f69e6bd768bca603e836b9163"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r0.55-asymFalse-scale0.5x1.5-512x512.png",
+      "bytes": 9308,
+      "sha256": "0910460c785f6de95a3448335ee63b3cea54e287531a36042801b3388ae57139"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r0.55-asymTrue-scale1x1-214x320.png",
+      "bytes": 2678,
+      "sha256": "bf7c0a5b0fbb1492e4a24964601b0c7c1e04069d7fb2c1d5290422a627defc62"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r0.55-asymTrue-scale1x1-512x512.png",
+      "bytes": 8274,
+      "sha256": "1f7221e90658c8f58345520454ffb3c0026170df471a77cd653c28fa7e7e26e6"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r0.55-asymTrue-scale2x0.5-214x320.png",
+      "bytes": 2475,
+      "sha256": "1690f91650a68feb0a61c5b1af2823049f4a0768536de6c4548704a016dc12a1"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r0.55-asymTrue-scale2x0.5-512x512.png",
+      "bytes": 8048,
+      "sha256": "e867e3bc8b0daac7b5dc68192cdc2bca09024ed84d2b32c0a10ed13dc3bb76da"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r1-asymFalse-scale1x1-214x320.png",
+      "bytes": 2882,
+      "sha256": "11b9522471439e3558141183904c7bb950ef12fef0def5abd1a1c57f5dc9cdf5"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r1-asymFalse-scale1x1-512x512.png",
+      "bytes": 8673,
+      "sha256": "6f76847227872a0e2fe109f8e5bcbe72507832d9c025b92be92e89bb22165229"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r4.8-asymFalse-scale1x1-214x320.png",
+      "bytes": 2882,
+      "sha256": "11b9522471439e3558141183904c7bb950ef12fef0def5abd1a1c57f5dc9cdf5"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/r4.8-asymFalse-scale1x1-512x512.png",
+      "bytes": 8673,
+      "sha256": "6f76847227872a0e2fe109f8e5bcbe72507832d9c025b92be92e89bb22165229"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/real-roster-dragon.png",
+      "bytes": 21532,
+      "sha256": "098a8c2c509180e4fc5de7e9dcadcad8118f4c84cf4244e86fe55791ec6795cc"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/real-roster-male.png",
+      "bytes": 29029,
+      "sha256": "b8470eabfbf300ecd2a4a08a2f2ded7f0ee888b081cd6650652f1bfb40bc340c"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/real-roster-ranger.png",
+      "bytes": 42269,
+      "sha256": "96686d49144116ea5e4c9d068f5e8e0a60845f6102808daea88dea32f2f784d2"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/preview-03/radius-evidence/real-roster-spider.png",
+      "bytes": 14144,
+      "sha256": "c76d9dd3a78bd257e247c04cd17a5a391a5fe8262fed9566e25fbf8995acb942"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/expanded-1280x720.png",
+      "bytes": 17709,
+      "sha256": "ede929abdeee3784b0ceb3faa063a2ab22a21b47cef09106552487c7f66dde8e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/expanded-1920x1080.png",
+      "bytes": 38667,
+      "sha256": "2cea9c91fb1584053f2d340d993eba6e755fc14bfc44b6e33a2c551d13f625d6"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/library-1280x720.png",
+      "bytes": 17709,
+      "sha256": "ede929abdeee3784b0ceb3faa063a2ab22a21b47cef09106552487c7f66dde8e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/library-1920x1080.png",
+      "bytes": 38667,
+      "sha256": "2cea9c91fb1584053f2d340d993eba6e755fc14bfc44b6e33a2c551d13f625d6"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r0.45-asymFalse-scale1x1-214x320.png",
+      "bytes": 2884,
+      "sha256": "7c106bb6baef7b54f06ada35f6b58dc5eea03b4b4ca09b9ce76d60a9a20d3c7e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r0.45-asymFalse-scale1x1-512x512.png",
+      "bytes": 8653,
+      "sha256": "b94cd60abf7af57876579ae3509d8234919496babbe97046dd1374823cab25e5"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r0.55-asymFalse-scale0.5x1.5-214x320.png",
+      "bytes": 2866,
+      "sha256": "192b40f63d6e9446bb0ed83f56de4f449525faa75774ab6becb97076f16b56cc"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r0.55-asymFalse-scale0.5x1.5-512x512.png",
+      "bytes": 9273,
+      "sha256": "95b1aa7660a676f7f4f8175591800621f27cf1a76ac9a2947c53b4ac33ac82db"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r0.55-asymTrue-scale1x1-214x320.png",
+      "bytes": 2658,
+      "sha256": "8c3aab5a3e1069bfc2f15f4c297ebe4a53ebaca500159c77d9acca3b802ba709"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r0.55-asymTrue-scale1x1-512x512.png",
+      "bytes": 8280,
+      "sha256": "a20b77b48068fe946b0486029f15a8d34f12e85fbc06bf0ecc617cef936dec1e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r0.55-asymTrue-scale2x0.5-214x320.png",
+      "bytes": 2475,
+      "sha256": "fa0ee8f78fc1eabdb98eedbab1116032b81e51cdbc36fafba3039cbfa58a79bc"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r0.55-asymTrue-scale2x0.5-512x512.png",
+      "bytes": 8054,
+      "sha256": "4e50d2430d74e5589a87018dd16af241b3ce6916f3a265693e062a289be85baf"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r1-asymFalse-scale1x1-214x320.png",
+      "bytes": 2884,
+      "sha256": "7c106bb6baef7b54f06ada35f6b58dc5eea03b4b4ca09b9ce76d60a9a20d3c7e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r1-asymFalse-scale1x1-512x512.png",
+      "bytes": 8653,
+      "sha256": "b94cd60abf7af57876579ae3509d8234919496babbe97046dd1374823cab25e5"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r4.8-asymFalse-scale1x1-214x320.png",
+      "bytes": 2884,
+      "sha256": "7c106bb6baef7b54f06ada35f6b58dc5eea03b4b4ca09b9ce76d60a9a20d3c7e"
+    },
+    {
+      "path": "Logs/InteractionRefinement-20261007/P1/radius-01/radius-evidence/r4.8-asymFalse-scale1x1-512x512.png",
+      "bytes": 8653,
+      "sha256": "b94cd60abf7af57876579ae3509d8234919496babbe97046dd1374823cab25e5"
+    }
+  ],
+  "activeProcessesAfter": [],
+  "unityLockExists": false,
+  "finishedAt": "2026-10-07T14:23:06.598410",
+  "protectionPassed": true,
+  "qualifiedRuns": [
+    "editmode-03",
+    "preview-03"
+  ],
+  "automatedRunsPassed": true,
+  "pixelEvidenceQualified": true,
+  "rejectedEvidence": {
+    "editmode-01": "P0-only isolation guard correctly refused P1 output path; no tests ran. Fixed in P1-owned isolation helper without modifying P0.",
+    "radius-01 UI PNGs": "Blank due to fixture camera layer mask. Component assertions passed, but these four UI screenshots are rejected. preview-02 adds nonblank/colour diversity/visible gold pixels inside actual RawImage assertions."
+  },
+  "status": "P1_AUTOMATED_PASS_PENDING_MANUAL_ACCEPTANCE"
+}

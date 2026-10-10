@@ -112,7 +112,7 @@ def package(name, source_build='M73FarLod', expected_guid=BUILD_GUID, build_log=
                  'packages': packages, 'managedAssemblies': managed,
                  'sourceProvenanceToConfirm': ['RPG Tiny Hero Duo models/texture/animations and derived VAT',
                                                'SazenGames Skeleton helper scripts reported in the build'],
-                 'unityChanModelReportedInBuild': any('ModelTrialSource/UnityChan' in p for p in assets)}
+                 'unityChanModelReportedInBuild': any('Art/Source/ModelTrials/UnityChan' in p for p in assets)}
     write_json(output / 'dependency-inventory.json', inventory)
     if review_report:
         notes = ('战争沙盒 · 新构建资源记录\n\n'

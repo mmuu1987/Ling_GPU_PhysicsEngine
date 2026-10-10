@@ -1,0 +1,171 @@
+文件 managed-src/Assembly-CSharp/NavGrid.cs（共 1616 行，本次显示 170 行，行号起于 1371）
+ 1371 | 		navGpu.Dispatch(0, Mathf.RoundToInt((UpdateRes.x + 4f) / 8f), Mathf.RoundToInt((UpdateRes.y + 4f) / 8f), 1);
+ 1372 | 	}
+ 1373 | 
+ 1374 | 	public static void FullSearch(Vector3 TargPos, int Team, int Distance, bool OrderGrid, int FormationLength, int SearchGrid, Vector3 TargFrom, int TeamOrder, bool AvoidEnemies)
+ 1375 | 	{
+ 1376 | 		navGpu.SetBool("HeavyEnemyAvoid", AvoidEnemies);
+ 1377 | 		navGpu.SetBuffer(5, "KillCounts", Army.KillCounts);
+ 1378 | 		Vector3 vector = TargPos - TargFrom;
+ 1379 | 		navGpu.SetVector("FormationForward", vector.normalized);
+ 1380 | 		navGpu.SetVector("FormationRight", new Vector3(vector.z, 0f, 0f - vector.x).normalized);
+ 1381 | 		navGpu.SetVector("targ", TargPos);
+ 1382 | 		navGpu.SetInt("GridSearch", SearchGrid);
+ 1383 | 		navGpu.SetInt("formation", FormationLength);
+ 1384 | 		navGpu.SetInt("tteam", SearchGrid);
+ 1385 | 		navGpu.SetTexture(4, "Grid", AiGpuGrid);
+ 1386 | 		navGpu.SetBuffer(4, "army", Army.AllArmies);
+ 1387 | 		navGpu.SetBuffer(4, "ai", Army.AllAi);
+ 1388 | 		navGpu.SetTexture(4, "Ground", GroundDepthTex);
+ 1389 | 		navGpu.SetInt("TargTeam", FormationLength);
+ 1390 | 		navGpu.SetInt("MyTeam", TeamOrder);
+ 1391 | 		navGpu.SetTexture(0, "Obstables", ObstacleGrid);
+ 1392 | 		navGpu.SetTexture(1, "Obstables", ObstacleGrid);
+ 1393 | 		if (OrderGrid)
+ 1394 | 		{
+ 1395 | 			navGpu.SetTexture(1, "NavTex", GridNavOrder);
+ 1396 | 			navGpu.SetTexture(4, "NavTex", GridNavOrder);
+ 1397 | 			navGpu.SetTexture(1, "NavDirection", NavOrderDirection);
+ 1398 | 		}
+ 1399 | 		else
+ 1400 | 		{
+ 1401 | 			navGpu.SetTexture(1, "NavTex", GridNav);
+ 1402 | 			navGpu.SetTexture(4, "NavTex", GridNav);
+ 1403 | 			navGpu.SetTexture(1, "NavDirection", GridNavDirection);
+ 1404 | 		}
+ 1405 | 		navGpu.SetInt("startingteam", Team);
+ 1406 | 		navGpu.Dispatch(4, 1 + FormationLength / 16, 1, 1);
+ 1407 | 		Vector2 vector2 = new Vector2(TargPos.x, TargPos.z) - new Vector2(gpos.x, gpos.z);
+ 1408 | 		int num = (int)vector2.x;
+ 1409 | 		int num2 = (int)vector2.y;
+ 1410 | 		num = Mathf.Max(0, num - Distance / 2);
+ 1411 | 		num2 = Mathf.Max(0, num2 - Distance / 2);
+ 1412 | 		navGpu.SetInt("xstart", num);
+ 1413 | 		navGpu.SetInt("ystart", num2);
+ 1414 | 		navGpu.SetBool("OneSearch", val: false);
+ 1415 | 		navGpu.SetBool("IgnoreEnemy", val: true);
+ 1416 | 		navGpu.Dispatch(1, Distance / 16, Distance / 16, 1);
+ 1417 | 		navGpu.SetInt("xstart", 0);
+ 1418 | 		navGpu.SetInt("ystart", 0);
+ 1419 | 		navGpu.SetTexture(1, "NavTex", GridNav);
+ 1420 | 		navGpu.SetTexture(4, "NavTex", GridNav);
+ 1421 | 		navGpu.SetTexture(1, "NavDirection", GridNavDirection);
+ 1422 | 		navGpu.SetBool("IgnoreEnemy", val: false);
+ 1423 | 		navGpu.SetBool("HeavyEnemyAvoid", val: false);
+ 1424 | 	}
+ 1425 | 
+ 1426 | 	public static void TargetSearch(Vector3 TargPos, int Target, int Distance, bool OrderGrid, int FormationLength, int StartIteration, int EndIteration, int SearchGrid, Vector3 TargFrom, int TeamOrder, bool AvoidEnemies)
+ 1427 | 	{
+ 1428 | 		navGpu.SetBuffer(5, "KillCounts", Army.KillCounts);
+ 1429 | 		navGpu.SetBool("HeavyEnemyAvoid", AvoidEnemies);
+ 1430 | 		Vector3 vector = TargPos - TargFrom;
+ 1431 | 		navGpu.SetVector("FormationForward", vector.normalized);
+ 1432 | 		navGpu.SetVector("FormationRight", new Vector3(vector.z, 0f, 0f - vector.x).normalized);
+ 1433 | 		navGpu.SetInt("GridSearch", SearchGrid);
+ 1434 | 		navGpu.SetInt("formation", FormationLength);
+ 1435 | 		navGpu.SetTexture(4, "Grid", AiGpuGrid);
+ 1436 | 		navGpu.SetTexture(4, "Ground", GroundDepthTex);
+ 1437 | 		navGpu.SetTexture(0, "Obstables", ObstacleGrid);
+ 1438 | 		navGpu.SetTexture(1, "Obstables", ObstacleGrid);
+ 1439 | 		navGpu.SetBuffer(4, "army", Army.AllArmies);
+ 1440 | 		navGpu.SetBuffer(4, "ai", Army.AllAi);
+ 1441 | 		navGpu.SetInt("TargTeam", FormationLength);
+ 1442 | 		navGpu.SetInt("MyTeam", TeamOrder);
+ 1443 | 		navGpu.SetVector("targ", TargPos);
+ 1444 | 		navGpu.SetBuffer(5, "army", Army.AllArmies);
+ 1445 | 		navGpu.SetBuffer(5, "ai", Army.AllAi);
+ 1446 | 		navGpu.SetTexture(5, "Grid", AiGpuGrid);
+ 1447 | 		navGpu.SetTexture(5, "Ground", GroundDepthTex);
+ 1448 | 		navGpu.SetBuffer(5, "AllOrders", OrderBuffer);
+ 1449 | 		navGpu.SetInt("startingteam", Target);
+ 1450 | 		navGpu.SetInt("tteam", SearchGrid);
+ 1451 | 		navGpu.SetInt("AttackStateIndex", Army.AttackStateIndex);
+ 1452 | 		navGpu.SetInt("PrimaryOrder", FlyCam.primaryOrder);
+ 1453 | 		navGpu.Dispatch(5, 1, 1, 1);
+ 1454 | 		int width = AiGpuGrid.width;
+ 1455 | 		Vector2 vector2 = new Vector2(TargPos.x, TargPos.z) - new Vector2(gpos.x, gpos.z);
+ 1456 | 		Vector2 vector3 = new Vector2(vector2.x, vector2.x);
+ 1457 | 		Vector2 vector4 = new Vector2(vector2.y, vector2.y);
+ 1458 | 		int num = (int)vector2.x;
+ 1459 | 		int num2 = (int)vector2.y;
+ 1460 | 		int num3 = 0;
+ 1461 | 		int num4 = 0;
+ 1462 | 		navGpu.SetBool("OneSearch", val: true);
+ 1463 | 		navGpu.SetBool("IgnoreEnemy", val: true);
+ 1464 | 		navGpu.SetFloat("GS", width);
+ 1465 | 		navGpu.SetVector("GridPos", gpos);
+ 1466 | 		if (OrderGrid)
+ 1467 | 		{
+ 1468 | 			navGpu.SetTexture(1, "NavTex", GridNavOrder);
+ 1469 | 			navGpu.SetTexture(2, "NavTex", GridNavOrder);
+ 1470 | 			navGpu.SetTexture(4, "NavTex", GridNavOrder);
+ 1471 | 			navGpu.SetTexture(1, "NavDirection", NavOrderDirection);
+ 1472 | 		}
+ 1473 | 		else
+ 1474 | 		{
+ 1475 | 			navGpu.SetTexture(1, "NavTex", GridNav);
+ 1476 | 			navGpu.SetTexture(2, "NavTex", GridNav);
+ 1477 | 			navGpu.SetTexture(4, "NavTex", GridNav);
+ 1478 | 			navGpu.SetTexture(1, "NavDirection", GridNavDirection);
+ 1479 | 		}
+ 1480 | 		num3 = 1;
+ 1481 | 		navGpu.SetInt("xstart", Mathf.Max(0, num - Distance / 32));
+ 1482 | 		navGpu.SetInt("ystart", Mathf.Max(0, num2 - Distance / 32));
+ 1483 | 		navGpu.SetInt("xstart", 0);
+ 1484 | 		navGpu.SetInt("ystart", 0);
+ 1485 | 		sw = new Stopwatch();
+ 1486 | 		sw.Start();
+ 1487 | 		navGpu.SetInt("startingteam", Target);
+ 1488 | 		navGpu.SetInt("steam", SearchGrid);
+ 1489 | 		if (StartIteration == 0)
+ 1490 | 		{
+ 1491 | 			navGpu.Dispatch(2, AiGpuGrid.width / 8, AiGpuGrid.width / 8, 1);
+ 1492 | 		}
+ 1493 | 		num = Mathf.Max(0, num - 8);
+ 1494 | 		num2 = Mathf.Max(0, num2 - 8);
+ 1495 | 		navGpu.SetVector("targ", TargPos);
+ 1496 | 		navGpu.Dispatch(4, 1 + FormationLength / 16, 1, 1);
+ 1497 | 		navGpu.SetVector("ExcludeX", vector3);
+ 1498 | 		navGpu.SetVector("ExcludeY", vector4);
+ 1499 | 		int num5 = 32;
+ 1500 | 		int num6 = 0;
+ 1501 | 		int num7 = 0;
+ 1502 | 		if (StartIteration > 0)
+ 1503 | 		{
+ 1504 | 			num3 += (int)Mathf.Round(StartIteration / 16);
+ 1505 | 		}
+ 1506 | 		num = Mathf.Max(0, num - StartIteration / 32);
+ 1507 | 		num2 = Mathf.Max(0, num2 - StartIteration / 32);
+ 1508 | 		for (int i = 0; i < EndIteration; i++)
+ 1509 | 		{
+ 1510 | 			num4++;
+ 1511 | 			num6++;
+ 1512 | 			if (num4 > 16)
+ 1513 | 			{
+ 1514 | 				navGpu.SetVector("targ", TargPos);
+ 1515 | 				navGpu.Dispatch(4, 1 + FormationLength / 16, 1, 1);
+ 1516 | 				if ((float)num3 < (float)Distance / 16f)
+ 1517 | 				{
+ 1518 | 					num3++;
+ 1519 | 					num = Mathf.Max(0, num - 8);
+ 1520 | 					num2 = Mathf.Max(0, num2 - 8);
+ 1521 | 					num4 = 0;
+ 1522 | 					navGpu.SetInt("xstart", num);
+ 1523 | 					navGpu.SetInt("ystart", num2);
+ 1524 | 				}
+ 1525 | 				navGpu.SetVector("ExcludeX", vector3);
+ 1526 | 				navGpu.SetVector("ExcludeY", vector4);
+ 1527 | 				if (num6 > num5)
+ 1528 | 				{
+ 1529 | 					num6 = 0;
+ 1530 | 					int num8 = 8;
+ 1531 | 					vector3.x -= num8;
+ 1532 | 					vector3.y += num8;
+ 1533 | 					vector4.x -= num8;
+ 1534 | 					vector4.y += num8;
+ 1535 | 					num7 += num8;
+ 1536 | 				}
+ 1537 | 			}
+ 1538 | 			navGpu.Dispatch(1, num3, num3, 1);
+ 1539 | 		}
+ 1540 | 		navGpu.SetInt("xstart", 0);

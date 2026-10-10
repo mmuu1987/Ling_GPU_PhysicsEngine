@@ -1,0 +1,33 @@
+{
+  "source": "adopted-01 only; not pooled with previous causal-01",
+  "conditions": [
+    {
+      "variant": "reference-24",
+      "label": "原值参考24（运行副本）",
+      "moveDeepPairs": "22–32",
+      "contactDeepPairs": "566–600",
+      "contactDeepAgentPct": "44.7–45.2",
+      "battleSimSeconds": "56.03–57.03",
+      "survivors": "782–789",
+      "meanBattleSeconds": 56.53333282470703,
+      "meanSurvivors": 785.5
+    },
+    {
+      "variant": "official-48",
+      "label": "正式配置48（已写回）",
+      "moveDeepPairs": "4–4",
+      "contactDeepPairs": "184–189",
+      "contactDeepAgentPct": "17.6–17.8",
+      "battleSimSeconds": "70.03–70.53",
+      "survivors": "698–717",
+      "meanBattleSeconds": 70.28333282470703,
+      "meanSurvivors": 707.5
+    }
+  ],
+  "timeDeltaPct": 24.321934181086835,
+  "survivorDeltaPct": -9.929980903882873,
+  "repeatsPerCondition": 2,
+  "statisticalSignificanceClaim": false,
+  "userAcceptedBalanceTradeoff": true,
+  "p3StageAccepted": false
+}

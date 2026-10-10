@@ -1,0 +1,251 @@
+文件 managed-src/Assembly-CSharp/ThreadManager.cs（共 1871 行，本次显示 130 行，行号起于 1561）
+ 1561 | 		else
+ 1562 | 		{
+ 1563 | 			cnter++;
+ 1564 | 		}
+ 1565 | 		int num8 = 0;
+ 1566 | 		GoalAiPerFrame = 0;
+ 1567 | 		for (int m = 0; m < AllArmies.Count; m++)
+ 1568 | 		{
+ 1569 | 			GoalAiPerFrame += AllArmies[m].TotalAi;
+ 1570 | 		}
+ 1571 | 		if (AllArmies.Count > 0)
+ 1572 | 		{
+ 1573 | 			GoalAiPerFrame /= Mathf.Min(AllArmies.Count, AiFrameSpread);
+ 1574 | 		}
+ 1575 | 		else
+ 1576 | 		{
+ 1577 | 			GoalAiPerFrame /= AiFrameSpread;
+ 1578 | 		}
+ 1579 | 		bool flag2 = false;
+ 1580 | 		waterdamage += Time.deltaTime;
+ 1581 | 		if (waterdamage > 0.5f)
+ 1582 | 		{
+ 1583 | 			dowatdam = true;
+ 1584 | 		}
+ 1585 | 		if (cnter > 5)
+ 1586 | 		{
+ 1587 | 			for (int n = lastend; n < AllArmies.Count; n++)
+ 1588 | 			{
+ 1589 | 				if (n == 0 && setarmystart)
+ 1590 | 				{
+ 1591 | 					Army.SetArmyData();
+ 1592 | 					setarmystart = false;
+ 1593 | 				}
+ 1594 | 				if (CountedAi >= GoalAiPerFrame)
+ 1595 | 				{
+ 1596 | 					continue;
+ 1597 | 				}
+ 1598 | 				AllArmies[n].RunGpuAi();
+ 1599 | 				num8++;
+ 1600 | 				if (n >= AllArmies.Count - 1)
+ 1601 | 				{
+ 1602 | 					lastend = 0;
+ 1603 | 					flag2 = true;
+ 1604 | 					if (Army.GenerateColors)
+ 1605 | 					{
+ 1606 | 						Army.GenerateColors = false;
+ 1607 | 						for (int num9 = 0; num9 < AllArmies.Count; num9++)
+ 1608 | 						{
+ 1609 | 							AllArmies[num9].Gpucolors();
+ 1610 | 						}
+ 1611 | 					}
+ 1612 | 				}
+ 1613 | 				else
+ 1614 | 				{
+ 1615 | 					lastend++;
+ 1616 | 				}
+ 1617 | 			}
+ 1618 | 		}
+ 1619 | 		if (FreezeAi || TestFreezeBug)
+ 1620 | 		{
+ 1621 | 			return;
+ 1622 | 		}
+ 1623 | 		if (flag2)
+ 1624 | 		{
+ 1625 | 			clearcount++;
+ 1626 | 			damwait = true;
+ 1627 | 			for (int num10 = 0; num10 < AllArmies.Count; num10++)
+ 1628 | 			{
+ 1629 | 				if (CountedAi < GoalAiPerFrame)
+ 1630 | 				{
+ 1631 | 					AllArmies[num10].RunGpuAi();
+ 1632 | 					num8++;
+ 1633 | 					if (num10 >= AllArmies.Count - 1)
+ 1634 | 					{
+ 1635 | 						lastend = 0;
+ 1636 | 					}
+ 1637 | 					else
+ 1638 | 					{
+ 1639 | 						lastend++;
+ 1640 | 					}
+ 1641 | 				}
+ 1642 | 			}
+ 1643 | 			NavGrid.ClearDamage();
+ 1644 | 			if (dowatdam)
+ 1645 | 			{
+ 1646 | 				waterdamage = 0f;
+ 1647 | 				dowatdam = false;
+ 1648 | 				Army.AiCompute.SetBool("WaterDamage", val: true);
+ 1649 | 			}
+ 1650 | 			else
+ 1651 | 			{
+ 1652 | 				Army.AiCompute.SetBool("WaterDamage", val: false);
+ 1653 | 			}
+ 1654 | 			if (RayRequest)
+ 1655 | 			{
+ 1656 | 				Army.AiCompute.SetInt("RayCount", RayQue.Count);
+ 1657 | 				GpuRays.Dispose();
+ 1658 | 				GpuRays = new ComputeBuffer(RayQue.Count, 36);
+ 1659 | 				GpuRays.SetData(RayQue);
+ 1660 | 				Army.AiCompute.SetBuffer(1, "GRays", GpuRays);
+ 1661 | 				RayRequest = false;
+ 1662 | 				RayQue.Clear();
+ 1663 | 			}
+ 1664 | 			else
+ 1665 | 			{
+ 1666 | 				Army.AiCompute.SetInt("RayCount", 0);
+ 1667 | 				if (RayQue.Count > 0)
+ 1668 | 				{
+ 1669 | 					RayQue.Clear();
+ 1670 | 				}
+ 1671 | 			}
+ 1672 | 		}
+ 1673 | 		float num11 = AiFrameSpread;
+ 1674 | 		if (AllArmies.Count > 0)
+ 1675 | 		{
+ 1676 | 			num11 = Mathf.Min(AllArmies.Count, num11);
+ 1677 | 		}
+ 1678 | 		CountedAi = 0;
+ 1679 | 		WorldDelta = Mathf.Min(0.15f, Time.deltaTime * num11);
+ 1680 | 		Lerp = 1f / num11 * 0.8f;
+ 1681 | 		_ = setarmystart;
+ 1682 | 	}
+ 1683 | 
+ 1684 | 	public static void ShadowLabel(Rect rect, string text, int FontSize)
+ 1685 | 	{
+ 1686 | 		if (!MenuManager.MenuOpen)
+ 1687 | 		{
+ 1688 | 			int fontSize = GUI.skin.label.fontSize;
+ 1689 | 			GUI.skin.label.fontSize = FontSize;
+ 1690 | 			Color color = GUI.color;
+文件 managed-src/Assembly-CSharp/Army.cs（共 2461 行，本次显示 38 行，行号起于 2121）
+ 2121 | 			GpuAiCompute.SetBuffer(18, "aigroup", MyAi);
+ 2122 | 			GpuAiCompute.SetBuffer(18, "ai", AllAi);
+ 2123 | 			GpuAiCompute.SetBuffer(18, "PAvatars", AvBuff);
+ 2124 | 			GpuAiCompute.SetTexture(18, "Ground", NavGrid.GroundDepthTex);
+ 2125 | 			GpuAiCompute.SetBuffer(18, "mats", CharacterMesh.MatrixBuffer);
+ 2126 | 			GpuAiCompute.SetBuffer(18, "AnimPlayInfo", CharacterMesh.AnimPlayInfo);
+ 2127 | 			GpuAiCompute.SetBuffer(18, "Reel", Reel);
+ 2128 | 			GpuAiCompute.Dispatch(18, Mathf.CeilToInt((float)SpawnedAi.Count / 32f), 1, 1);
+ 2129 | 		}
+ 2130 | 		ThreadManager.CountedAi += SpawnedAi.Count;
+ 2131 | 		ResetDelta = true;
+ 2132 | 	}
+ 2133 | 
+ 2134 | 	private void Update()
+ 2135 | 	{
+ 2136 | 		if (CheckForAliveAi)
+ 2137 | 		{
+ 2138 | 			CheckForAliveAi = false;
+ 2139 | 			GPUAi[] array = new GPUAi[AllGpuAi.Count];
+ 2140 | 			AllAi.GetData(array);
+ 2141 | 			AliveAi = 0;
+ 2142 | 			if (DebugAliveAis)
+ 2143 | 			{
+ 2144 | 				DebugAis = new List<GPUAi>();
+ 2145 | 			}
+ 2146 | 			for (int i = 0; i < array.Length; i++)
+ 2147 | 			{
+ 2148 | 				if (array[i].Health > 0 && GpuArmies[array[i].Army].Team == TeamCheck)
+ 2149 | 				{
+ 2150 | 					AliveAi++;
+ 2151 | 					if (DebugAliveAis)
+ 2152 | 					{
+ 2153 | 						DebugAis.Add(array[i]);
+ 2154 | 					}
+ 2155 | 				}
+ 2156 | 			}
+ 2157 | 		}
+ 2158 | 		if (spcount >= 0)
+文件 managed-src/Assembly-CSharp/Army.cs（共 2461 行，本次显示 80 行，行号起于 2381）
+ 2381 | 			UnityEngine.Object.DestroyImmediate(gameObject);
+ 2382 | 		}
+ 2383 | 		Gizmos.DrawWireMesh(CubeWire, 0, position, base.transform.rotation, new Vector3(Spacing * (float)num * RankShape, 0.001f, Spacing / RankShape * (float)num));
+ 2384 | 	}
+ 2385 | 
+ 2386 | 	public void OnGUI()
+ 2387 | 	{
+ 2388 | 		_ = KillCounts;
+ 2389 | 	}
+ 2390 | 
+ 2391 | 	private void LateUpdate()
+ 2392 | 	{
+ 2393 | 	}
+ 2394 | 
+ 2395 | 	public static void GetStuff()
+ 2396 | 	{
+ 2397 | 		if (KillCounts != null && request.done)
+ 2398 | 		{
+ 2399 | 			request = AsyncGPUReadback.Request(KillCounts, 2000, 0, OnCompleteReadback);
+ 2400 | 		}
+ 2401 | 	}
+ 2402 | 
+ 2403 | 	public void QueSpawnInactive(Vector3 Position, Vector3 forward)
+ 2404 | 	{
+ 2405 | 		if (ActiveSpawned < ArmyCount)
+ 2406 | 		{
+ 2407 | 			ActiveSpawned++;
+ 2408 | 			SpawnQues.Add(Position);
+ 2409 | 			SpawnRot.Add(forward);
+ 2410 | 		}
+ 2411 | 	}
+ 2412 | 
+ 2413 | 	public void SpawnInactive(Vector3[] Positions, Vector3[] Forwards, int amount, Vector3 PhysicsForce)
+ 2414 | 	{
+ 2415 | 		GpuAiCompute.SetBuffer(17, "aigroup", MyAi);
+ 2416 | 		GpuAiCompute.SetBuffer(17, "ai", AllAi);
+ 2417 | 		GpuAiCompute.SetInt("SpawnAmount", amount);
+ 2418 | 		GpuAiCompute.SetInt("SpawnStart", CurrentSpawnInactive);
+ 2419 | 		GpuAiCompute.SetVector("Force", PhysicsForce);
+ 2420 | 		GpuAiCompute.SetBuffer(17, "AnimPlayInfo", CharacterMesh.AnimPlayInfo);
+ 2421 | 		if (spawnpos != null)
+ 2422 | 		{
+ 2423 | 			spawnpos.Dispose();
+ 2424 | 		}
+ 2425 | 		spawnpos = new ComputeBuffer(Positions.Length, 12);
+ 2426 | 		spawnpos.SetData(Positions);
+ 2427 | 		if (spawnrot != null)
+ 2428 | 		{
+ 2429 | 			spawnrot.Dispose();
+ 2430 | 		}
+ 2431 | 		spawnrot = new ComputeBuffer(Forwards.Length, 12);
+ 2432 | 		spawnrot.SetData(Forwards);
+ 2433 | 		GpuAiCompute.SetBuffer(17, "SpawnRot", spawnrot);
+ 2434 | 		GpuAiCompute.SetBuffer(17, "SpawnPos", spawnpos);
+ 2435 | 		GpuAiCompute.SetBuffer(17, "Mats", CharacterMesh.MatrixBuffer);
+ 2436 | 		GpuAiCompute.Dispatch(17, Mathf.CeilToInt((float)amount / 4f), 1, 1);
+ 2437 | 		CurrentSpawnInactive += amount;
+ 2438 | 	}
+ 2439 | 
+ 2440 | 	private static void OnCompleteReadback(AsyncGPUReadbackRequest request)
+ 2441 | 	{
+ 2442 | 		if (ThreadManager.cnter <= 12 || !request.done || request.hasError || GameClosed)
+ 2443 | 		{
+ 2444 | 			return;
+ 2445 | 		}
+ 2446 | 		data = request.GetData<int>();
+ 2447 | 		ThreadManager.armydata = data.ToArray();
+ 2448 | 		SelectionState = data[selectid];
+ 2449 | 		SelectionHp = data[AvHpIndex];
+ 2450 | 		AttackState = data[AttackStateIndex];
+ 2451 | 		if (data.Length > 0 && ThreadManager.AllArmies != null)
+ 2452 | 		{
+ 2453 | 			for (int i = 0; i < ThreadManager.AllArmies.Count; i++)
+ 2454 | 			{
+ 2455 | 				ThreadManager.AllArmies[i].TotalKills = data[ThreadManager.AllArmies[i].MyArmyIndex];
+ 2456 | 				ThreadManager.AllArmies[i].Dead = data[ThreadManager.AllArmies[i].MyArmyIndex + GpuArmies.Count];
+ 2457 | 			}
+ 2458 | 		}
+ 2459 | 	}
+ 2460 | }

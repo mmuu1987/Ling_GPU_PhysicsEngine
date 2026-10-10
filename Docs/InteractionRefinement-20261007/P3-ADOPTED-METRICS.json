@@ -1,0 +1,4159 @@
+{
+  "passed": true,
+  "definition": "Live only: hp>0 AND state!=Dead. Deep: XZ center distance < 0.5*(radius_i+radius_j). Soft: <0.9*. Nominal: <1.0*. These are circle overlaps, not mesh-intersection/physics safety guarantees. Boundary tolerance is 1e-5 in normalized ratio for independent double versus captured float arithmetic.",
+  "crosscheckCount": 50,
+  "crosschecks": [
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-initial-r0-f0.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-hold-r0-f60.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-hold-r0-f180.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-move-r0-f300.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 728,
+          "independentCount": 728,
+          "boundaryBracket": [
+            728,
+            728
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 254,
+          "independentCount": 254,
+          "boundaryBracket": [
+            254,
+            254
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-move-r0-f600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 970,
+          "independentCount": 970,
+          "boundaryBracket": [
+            970,
+            970
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 451,
+          "independentCount": 451,
+          "boundaryBracket": [
+            451,
+            451
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 5,
+          "independentCount": 5,
+          "boundaryBracket": [
+            5,
+            5
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-move-r0-f1200.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1682,
+          "independentCount": 1682,
+          "boundaryBracket": [
+            1682,
+            1682
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1078,
+          "independentCount": 1078,
+          "boundaryBracket": [
+            1078,
+            1078
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 17,
+          "independentCount": 17,
+          "boundaryBracket": [
+            17,
+            17
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-move-r0-f1800.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1766,
+          "independentCount": 1766,
+          "boundaryBracket": [
+            1766,
+            1766
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1205,
+          "independentCount": 1205,
+          "boundaryBracket": [
+            1205,
+            1205
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 32,
+          "independentCount": 32,
+          "boundaryBracket": [
+            32,
+            32
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-r0-f600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1035,
+          "independentCount": 1035,
+          "boundaryBracket": [
+            1035,
+            1035
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 55,
+          "independentCount": 55,
+          "boundaryBracket": [
+            55,
+            55
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-r0-f1200.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 972,
+          "independentCount": 972,
+          "boundaryBracket": [
+            972,
+            972
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 52,
+          "independentCount": 52,
+          "boundaryBracket": [
+            52,
+            52
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-r0-f1800.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 884,
+          "independentCount": 884,
+          "boundaryBracket": [
+            884,
+            884
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 47,
+          "independentCount": 47,
+          "boundaryBracket": [
+            47,
+            47
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-r0-f2400.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 5037,
+          "independentCount": 5037,
+          "boundaryBracket": [
+            5037,
+            5037
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 3924,
+          "independentCount": 3924,
+          "boundaryBracket": [
+            3924,
+            3924
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 600,
+          "independentCount": 600,
+          "boundaryBracket": [
+            600,
+            601
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-ended-r0-f3362.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1584,
+          "independentCount": 1584,
+          "boundaryBracket": [
+            1584,
+            1584
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1183,
+          "independentCount": 1183,
+          "boundaryBracket": [
+            1183,
+            1183
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 82,
+          "independentCount": 82,
+          "boundaryBracket": [
+            82,
+            82
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-initial-r1-f0.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-hold-r1-f60.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-hold-r1-f180.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-move-r1-f300.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 704,
+          "independentCount": 704,
+          "boundaryBracket": [
+            704,
+            704
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 241,
+          "independentCount": 241,
+          "boundaryBracket": [
+            240,
+            241
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-move-r1-f600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1009,
+          "independentCount": 1009,
+          "boundaryBracket": [
+            1009,
+            1009
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 443,
+          "independentCount": 443,
+          "boundaryBracket": [
+            443,
+            443
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 1,
+          "independentCount": 1,
+          "boundaryBracket": [
+            1,
+            1
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-move-r1-f1200.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1666,
+          "independentCount": 1666,
+          "boundaryBracket": [
+            1666,
+            1666
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1057,
+          "independentCount": 1057,
+          "boundaryBracket": [
+            1057,
+            1057
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 14,
+          "independentCount": 14,
+          "boundaryBracket": [
+            14,
+            14
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-move-r1-f1800.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1746,
+          "independentCount": 1746,
+          "boundaryBracket": [
+            1745,
+            1746
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1206,
+          "independentCount": 1206,
+          "boundaryBracket": [
+            1206,
+            1206
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 22,
+          "independentCount": 22,
+          "boundaryBracket": [
+            22,
+            22
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-r1-f600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1032,
+          "independentCount": 1032,
+          "boundaryBracket": [
+            1032,
+            1032
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 60,
+          "independentCount": 60,
+          "boundaryBracket": [
+            60,
+            60
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-r1-f1200.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 970,
+          "independentCount": 970,
+          "boundaryBracket": [
+            970,
+            970
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 52,
+          "independentCount": 52,
+          "boundaryBracket": [
+            52,
+            52
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-r1-f1800.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 880,
+          "independentCount": 880,
+          "boundaryBracket": [
+            880,
+            880
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 51,
+          "independentCount": 51,
+          "boundaryBracket": [
+            51,
+            51
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-r1-f2400.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 4961,
+          "independentCount": 4961,
+          "boundaryBracket": [
+            4961,
+            4961
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 3807,
+          "independentCount": 3807,
+          "boundaryBracket": [
+            3807,
+            3807
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 566,
+          "independentCount": 566,
+          "boundaryBracket": [
+            566,
+            566
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "reference-24-contact-ended-r1-f3422.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1541,
+          "independentCount": 1541,
+          "boundaryBracket": [
+            1541,
+            1541
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1073,
+          "independentCount": 1073,
+          "boundaryBracket": [
+            1073,
+            1074
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 10,
+          "independentCount": 10,
+          "boundaryBracket": [
+            10,
+            10
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-initial-r0-f0.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-hold-r0-f60.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-hold-r0-f180.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-move-r0-f300.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 689,
+          "independentCount": 689,
+          "boundaryBracket": [
+            689,
+            689
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 127,
+          "independentCount": 127,
+          "boundaryBracket": [
+            127,
+            127
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-move-r0-f600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 960,
+          "independentCount": 960,
+          "boundaryBracket": [
+            960,
+            961
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 271,
+          "independentCount": 271,
+          "boundaryBracket": [
+            271,
+            271
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 1,
+          "independentCount": 1,
+          "boundaryBracket": [
+            1,
+            1
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-move-r0-f1200.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1711,
+          "independentCount": 1711,
+          "boundaryBracket": [
+            1711,
+            1711
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 910,
+          "independentCount": 910,
+          "boundaryBracket": [
+            910,
+            910
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 3,
+          "independentCount": 3,
+          "boundaryBracket": [
+            3,
+            3
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-move-r0-f1800.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1695,
+          "independentCount": 1695,
+          "boundaryBracket": [
+            1695,
+            1695
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 946,
+          "independentCount": 946,
+          "boundaryBracket": [
+            945,
+            946
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 4,
+          "independentCount": 4,
+          "boundaryBracket": [
+            4,
+            4
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r0-f600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 972,
+          "independentCount": 972,
+          "boundaryBracket": [
+            972,
+            972
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 5,
+          "independentCount": 5,
+          "boundaryBracket": [
+            5,
+            5
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r0-f1200.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 967,
+          "independentCount": 967,
+          "boundaryBracket": [
+            966,
+            967
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1,
+          "independentCount": 1,
+          "boundaryBracket": [
+            1,
+            1
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r0-f1800.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 855,
+          "independentCount": 855,
+          "boundaryBracket": [
+            855,
+            855
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 2,
+          "independentCount": 2,
+          "boundaryBracket": [
+            2,
+            2
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r0-f2400.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 4389,
+          "independentCount": 4389,
+          "boundaryBracket": [
+            4389,
+            4389
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 3357,
+          "independentCount": 3357,
+          "boundaryBracket": [
+            3357,
+            3357
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 189,
+          "independentCount": 189,
+          "boundaryBracket": [
+            189,
+            189
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r0-f3600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 2345,
+          "independentCount": 2345,
+          "boundaryBracket": [
+            2344,
+            2345
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1767,
+          "independentCount": 1767,
+          "boundaryBracket": [
+            1767,
+            1767
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 86,
+          "independentCount": 86,
+          "boundaryBracket": [
+            86,
+            86
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-ended-r0-f4232.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1232,
+          "independentCount": 1232,
+          "boundaryBracket": [
+            1232,
+            1232
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 823,
+          "independentCount": 823,
+          "boundaryBracket": [
+            823,
+            823
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-initial-r1-f0.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-hold-r1-f60.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-hold-r1-f180.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-move-r1-f300.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 687,
+          "independentCount": 687,
+          "boundaryBracket": [
+            687,
+            687
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 123,
+          "independentCount": 123,
+          "boundaryBracket": [
+            123,
+            123
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-move-r1-f600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 964,
+          "independentCount": 964,
+          "boundaryBracket": [
+            964,
+            964
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 264,
+          "independentCount": 264,
+          "boundaryBracket": [
+            264,
+            264
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 1,
+          "independentCount": 1,
+          "boundaryBracket": [
+            1,
+            1
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-move-r1-f1200.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1688,
+          "independentCount": 1688,
+          "boundaryBracket": [
+            1688,
+            1688
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 897,
+          "independentCount": 897,
+          "boundaryBracket": [
+            897,
+            897
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 3,
+          "independentCount": 3,
+          "boundaryBracket": [
+            3,
+            3
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-move-r1-f1800.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1799,
+          "independentCount": 1799,
+          "boundaryBracket": [
+            1799,
+            1799
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1087,
+          "independentCount": 1087,
+          "boundaryBracket": [
+            1087,
+            1087
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 4,
+          "independentCount": 4,
+          "boundaryBracket": [
+            4,
+            4
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r1-f600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 984,
+          "independentCount": 984,
+          "boundaryBracket": [
+            984,
+            984
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 2,
+          "independentCount": 2,
+          "boundaryBracket": [
+            2,
+            2
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r1-f1200.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 886,
+          "independentCount": 886,
+          "boundaryBracket": [
+            886,
+            887
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r1-f1800.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 796,
+          "independentCount": 796,
+          "boundaryBracket": [
+            796,
+            796
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r1-f2400.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 4445,
+          "independentCount": 4445,
+          "boundaryBracket": [
+            4444,
+            4445
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 3400,
+          "independentCount": 3400,
+          "boundaryBracket": [
+            3400,
+            3400
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 184,
+          "independentCount": 184,
+          "boundaryBracket": [
+            184,
+            184
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-r1-f3600.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 2321,
+          "independentCount": 2321,
+          "boundaryBracket": [
+            2321,
+            2321
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 1774,
+          "independentCount": 1774,
+          "boundaryBracket": [
+            1774,
+            1775
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 82,
+          "independentCount": 82,
+          "boundaryBracket": [
+            82,
+            82
+          ],
+          "passed": true
+        }
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "file": "official-48-contact-ended-r1-f4202.csv",
+      "aliveMatches": true,
+      "thresholdChecks": {
+        "nominalPairs": {
+          "gpuCaptureSummary": 1085,
+          "independentCount": 1085,
+          "boundaryBracket": [
+            1084,
+            1085
+          ],
+          "passed": true
+        },
+        "softPairs": {
+          "gpuCaptureSummary": 596,
+          "independentCount": 596,
+          "boundaryBracket": [
+            596,
+            596
+          ],
+          "passed": true
+        },
+        "deepPairs": {
+          "gpuCaptureSummary": 0,
+          "independentCount": 0,
+          "boundaryBracket": [
+            0,
+            0
+          ],
+          "passed": true
+        }
+      }
+    }
+  ],
+  "samples": [
+    {
+      "tag": "adopted-01",
+      "phase": "initial",
+      "variant": "reference-24",
+      "battlePhase": "Setup",
+      "csv": "reference-24-initial-r0-f0.csv",
+      "image": "reference-24-initial-r0-f0.png",
+      "repeat": 0,
+      "tick": 0,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 0.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "hold",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-hold-r0-f60.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 60,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 1.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "hold",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-hold-r0-f180.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 180,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 3.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-move-r0-f300.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 300,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 1,
+      "nominalPairs": 728,
+      "softPairs": 254,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 254,
+      "enemySoftPairs": 0,
+      "nominalAgents": 792,
+      "deepAgents": 0,
+      "maxCellPopulation": 10,
+      "overflowCells": 0,
+      "seconds": 5.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.637933075428009,
+      "nearestRatioP05": 0.7894817590713501,
+      "nearestRatioP50": 1.4113047122955322,
+      "nearestRatioP95": 1.4568952322006226,
+      "meanSpeed": 1.6140246391296387,
+      "maxSpeed": 3.832075595855713,
+      "team0GoalDistance": 95.40812683105469,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 16.455078125,
+      "sourceCsvSha256": "895906d3aa1a162429e606c4dd3b4f3b5c7674bd8e6a06e2dd7a5de442a56978",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 32.91015625,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9403494004912003,
+        "waiting": 1
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-move-r0-f600.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 600,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 10,
+      "nominalPairs": 970,
+      "softPairs": 451,
+      "deepPairs": 5,
+      "sameTeamSoftPairs": 451,
+      "enemySoftPairs": 0,
+      "nominalAgents": 876,
+      "deepAgents": 10,
+      "maxCellPopulation": 12,
+      "overflowCells": 0,
+      "seconds": 10.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.36688336730003357,
+      "nearestRatioP05": 0.7302244901657104,
+      "nearestRatioP50": 1.4049324989318848,
+      "nearestRatioP95": 1.453840970993042,
+      "meanSpeed": 1.478885293006897,
+      "maxSpeed": 3.985645055770874,
+      "team0GoalDistance": 81.21350860595703,
+      "independentDeepAgentPct": 0.48828125,
+      "independentSoftAgentPct": 24.755859375,
+      "sourceCsvSha256": "3ec6f0d04c0d1070d613a1fa3e3a479868d1a92cfbcd323a4fbe4b2e25fdb76c",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 49.51171875,
+        "deepAgentPct": 0.9765625,
+        "nearestRatioMedian": 0.9006134738639267,
+        "waiting": 10
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-move-r0-f1200.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 1200,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 102,
+      "nominalPairs": 1682,
+      "softPairs": 1078,
+      "deepPairs": 17,
+      "sameTeamSoftPairs": 1078,
+      "enemySoftPairs": 0,
+      "nominalAgents": 980,
+      "deepAgents": 34,
+      "maxCellPopulation": 13,
+      "overflowCells": 0,
+      "seconds": 20.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.38946855068206787,
+      "nearestRatioP05": 0.6043934226036072,
+      "nearestRatioP50": 1.3977159261703491,
+      "nearestRatioP95": 1.4530233144760132,
+      "meanSpeed": 0.9874370098114014,
+      "maxSpeed": 3.7179481983184814,
+      "team0GoalDistance": 58.423282623291016,
+      "independentDeepAgentPct": 1.66015625,
+      "independentSoftAgentPct": 41.796875,
+      "sourceCsvSha256": "0f85830b5c9b7d143321abc16057f3d8fe4ecef0f6692c523f60395021a9baf4",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 83.59375,
+        "deepAgentPct": 3.3203125,
+        "nearestRatioMedian": 0.7733947804490843,
+        "waiting": 102
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-move-r0-f1800.csv",
+      "image": "reference-24-move-r0-f1800.png",
+      "repeat": 0,
+      "tick": 1800,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 280,
+      "nominalPairs": 1766,
+      "softPairs": 1205,
+      "deepPairs": 32,
+      "sameTeamSoftPairs": 1205,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1010,
+      "deepAgents": 63,
+      "maxCellPopulation": 18,
+      "overflowCells": 0,
+      "seconds": 30.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.339926540851593,
+      "nearestRatioP05": 0.5452223420143127,
+      "nearestRatioP50": 1.3958479166030884,
+      "nearestRatioP95": 1.4526482820510864,
+      "meanSpeed": 0.7858784794807434,
+      "maxSpeed": 3.6724114418029785,
+      "team0GoalDistance": 43.417728424072266,
+      "independentDeepAgentPct": 3.076171875,
+      "independentSoftAgentPct": 45.01953125,
+      "sourceCsvSha256": "ace005e17f956bb3fd543ad1baf54a9942ad81c7777724b95544386ef87306ba",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 90.0390625,
+        "deepAgentPct": 6.15234375,
+        "nearestRatioMedian": 0.7419625581274228,
+        "waiting": 280
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-contact-r0-f600.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 600,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 1035,
+      "softPairs": 55,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 55,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1359,
+      "deepAgents": 0,
+      "maxCellPopulation": 8,
+      "overflowCells": 0,
+      "seconds": 10.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.8965209722518921,
+      "nearestRatioP05": 0.8989765644073486,
+      "nearestRatioP50": 0.9728976488113403,
+      "nearestRatioP95": 1.5073763132095337,
+      "meanSpeed": 3.36751127243042,
+      "maxSpeed": 3.758732795715332,
+      "team0GoalDistance": 97.7406997680664,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 5.126953125,
+      "sourceCsvSha256": "5a6f7a7266ff6d6086510a6e6fa24c101a8ae938dd0d4b75193e8c38b9beda49",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 4.98046875,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9726786824202149,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 5.2734375,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9732048347035511,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-contact-r0-f1200.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 1200,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 972,
+      "softPairs": 52,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 52,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1269,
+      "deepAgents": 0,
+      "maxCellPopulation": 8,
+      "overflowCells": 0,
+      "seconds": 20.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.9164371490478516,
+      "nearestRatioP05": 0.9013808369636536,
+      "nearestRatioP50": 0.9806272983551025,
+      "nearestRatioP95": 1.710728406906128,
+      "meanSpeed": 3.3640637397766113,
+      "maxSpeed": 3.7375032901763916,
+      "team0GoalDistance": 65.50679779052734,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 4.6875,
+      "sourceCsvSha256": "c8d7cb737fd0aff24646271667057c1805241016d07d0315418c74f013566a57",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 5.17578125,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9794303416304471,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 4.19921875,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9817787051937789,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-contact-r0-f1800.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 1800,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 884,
+      "softPairs": 47,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 47,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1194,
+      "deepAgents": 0,
+      "maxCellPopulation": 7,
+      "overflowCells": 0,
+      "seconds": 30.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.8691858053207397,
+      "nearestRatioP05": 0.9018685221672058,
+      "nearestRatioP50": 0.9861156940460205,
+      "nearestRatioP95": 2.0024325847625732,
+      "meanSpeed": 3.4199776649475098,
+      "maxSpeed": 4.609127521514893,
+      "team0GoalDistance": 35.78520584106445,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 4.248046875,
+      "sourceCsvSha256": "bb6c365a99b9548b34921e2dcec7551262d5f0535925bf23df336d6023f42279",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 4.58984375,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.986371618746373,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 3.90625,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9858723179402327,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-contact-r0-f2400.csv",
+      "image": "reference-24-contact-r0-f2400.png",
+      "repeat": 0,
+      "tick": 2400,
+      "alive": 1821,
+      "team0Alive": 971,
+      "attacking": 644,
+      "waiting": 342,
+      "nominalPairs": 5037,
+      "softPairs": 3924,
+      "deepPairs": 600,
+      "sameTeamSoftPairs": 3213,
+      "enemySoftPairs": 711,
+      "nominalAgents": 1617,
+      "deepAgents": 824,
+      "maxCellPopulation": 31,
+      "overflowCells": 24,
+      "seconds": 40.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.06136638671159744,
+      "nearestRatioP05": 0.27563679218292236,
+      "nearestRatioP50": 0.5243567824363708,
+      "nearestRatioP95": 1.376327395439148,
+      "meanSpeed": 1.3219201564788818,
+      "maxSpeed": 4.416581630706787,
+      "team0GoalDistance": 20.264291763305664,
+      "independentDeepAgentPct": 45.24986271279517,
+      "independentSoftAgentPct": 84.12959912136189,
+      "sourceCsvSha256": "cee5c0db2ebaada90922e14f6eb58b48a124682339d7449906106ccc46f656af",
+      "team0": {
+        "alive": 971,
+        "softAgentPct": 84.96395468589083,
+        "deepAgentPct": 46.03501544799176,
+        "nearestRatioMedian": 0.5184335156889517,
+        "waiting": 196
+      },
+      "team1": {
+        "alive": 850,
+        "softAgentPct": 83.17647058823529,
+        "deepAgentPct": 44.35294117647059,
+        "nearestRatioMedian": 0.5304498786964091,
+        "waiting": 146
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact-ended",
+      "variant": "reference-24",
+      "battlePhase": "AttackerVictory",
+      "csv": "reference-24-contact-ended-r0-f3362.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 3362,
+      "alive": 782,
+      "team0Alive": 782,
+      "attacking": 0,
+      "waiting": 235,
+      "nominalPairs": 1584,
+      "softPairs": 1183,
+      "deepPairs": 82,
+      "sameTeamSoftPairs": 1183,
+      "enemySoftPairs": 0,
+      "nominalAgents": 770,
+      "deepAgents": 148,
+      "maxCellPopulation": 17,
+      "overflowCells": 0,
+      "seconds": 56.03333282470703,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.2730346620082855,
+      "nearestRatioP05": 0.3741137683391571,
+      "nearestRatioP50": 0.6198814511299133,
+      "nearestRatioP95": 0.9120960235595703,
+      "meanSpeed": 1.2265045642852783,
+      "maxSpeed": 4.045447826385498,
+      "team0GoalDistance": 17.58025360107422,
+      "independentDeepAgentPct": 18.925831202046037,
+      "independentSoftAgentPct": 94.50127877237851,
+      "sourceCsvSha256": "e0a65c0042b336bb885ccc7eb858223ebe13b2c591b9e79452826f40f527d250",
+      "team0": {
+        "alive": 782,
+        "softAgentPct": 94.50127877237851,
+        "deepAgentPct": 18.925831202046037,
+        "nearestRatioMedian": 0.6198814693841083,
+        "waiting": 235
+      },
+      "team1": {
+        "alive": 0,
+        "softAgentPct": 0,
+        "deepAgentPct": 0,
+        "nearestRatioMedian": 0,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "initial",
+      "variant": "reference-24",
+      "battlePhase": "Setup",
+      "csv": "reference-24-initial-r1-f0.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 0,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 0.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "hold",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-hold-r1-f60.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 60,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 1.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "hold",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-hold-r1-f180.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 180,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 3.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-move-r1-f300.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 300,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 704,
+      "softPairs": 241,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 241,
+      "enemySoftPairs": 0,
+      "nominalAgents": 788,
+      "deepAgents": 0,
+      "maxCellPopulation": 9,
+      "overflowCells": 0,
+      "seconds": 5.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.6227549314498901,
+      "nearestRatioP05": 0.7960698008537292,
+      "nearestRatioP50": 1.4089912176132202,
+      "nearestRatioP95": 1.4563980102539062,
+      "meanSpeed": 1.6174163818359375,
+      "maxSpeed": 3.805344581604004,
+      "team0GoalDistance": 95.39728546142578,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 15.4296875,
+      "sourceCsvSha256": "85874e399c2189c34f77112efd06a6d29d485ea8a2881ca2bafe8c2ee74260eb",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 30.859375,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.940980750889535,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-move-r1-f600.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 600,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 3,
+      "nominalPairs": 1009,
+      "softPairs": 443,
+      "deepPairs": 1,
+      "sameTeamSoftPairs": 443,
+      "enemySoftPairs": 0,
+      "nominalAgents": 889,
+      "deepAgents": 2,
+      "maxCellPopulation": 10,
+      "overflowCells": 0,
+      "seconds": 10.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.29386046528816223,
+      "nearestRatioP05": 0.7258795499801636,
+      "nearestRatioP50": 1.4038153886795044,
+      "nearestRatioP95": 1.4537947177886963,
+      "meanSpeed": 1.483707070350647,
+      "maxSpeed": 3.8459527492523193,
+      "team0GoalDistance": 81.16780853271484,
+      "independentDeepAgentPct": 0.09765625,
+      "independentSoftAgentPct": 25.29296875,
+      "sourceCsvSha256": "9d6355b1a379da690a931564db7ceb2c253851f960876f33ca8a59ca705f24e6",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 50.5859375,
+        "deepAgentPct": 0.1953125,
+        "nearestRatioMedian": 0.89838804361612,
+        "waiting": 3
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-move-r1-f1200.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 1200,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 104,
+      "nominalPairs": 1666,
+      "softPairs": 1057,
+      "deepPairs": 14,
+      "sameTeamSoftPairs": 1057,
+      "enemySoftPairs": 0,
+      "nominalAgents": 985,
+      "deepAgents": 26,
+      "maxCellPopulation": 15,
+      "overflowCells": 0,
+      "seconds": 20.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.2724107503890991,
+      "nearestRatioP05": 0.6088094115257263,
+      "nearestRatioP50": 1.3977159261703491,
+      "nearestRatioP95": 1.4530867338180542,
+      "meanSpeed": 0.9950115084648132,
+      "maxSpeed": 3.80704927444458,
+      "team0GoalDistance": 58.31512451171875,
+      "independentDeepAgentPct": 1.26953125,
+      "independentSoftAgentPct": 41.845703125,
+      "sourceCsvSha256": "5ba644414be42c72442dcfa063ae52f2242a1d783dff7a21d0031753e2d765b6",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 83.69140625,
+        "deepAgentPct": 2.5390625,
+        "nearestRatioMedian": 0.782336049340087,
+        "waiting": 104
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-move-r1-f1800.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 1800,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 268,
+      "nominalPairs": 1746,
+      "softPairs": 1206,
+      "deepPairs": 22,
+      "sameTeamSoftPairs": 1206,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1012,
+      "deepAgents": 42,
+      "maxCellPopulation": 16,
+      "overflowCells": 0,
+      "seconds": 30.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.39057862758636475,
+      "nearestRatioP05": 0.554035484790802,
+      "nearestRatioP50": 1.3965550661087036,
+      "nearestRatioP95": 1.4526482820510864,
+      "meanSpeed": 0.8174576163291931,
+      "maxSpeed": 3.9448883533477783,
+      "team0GoalDistance": 43.081607818603516,
+      "independentDeepAgentPct": 2.05078125,
+      "independentSoftAgentPct": 45.068359375,
+      "sourceCsvSha256": "d6df1bcfead5bfe48321917d53cddb2d6683db39db481587e4816fbc338c8443",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 90.13671875,
+        "deepAgentPct": 4.1015625,
+        "nearestRatioMedian": 0.7399291816708083,
+        "waiting": 268
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-contact-r1-f600.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 600,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 1032,
+      "softPairs": 60,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 60,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1357,
+      "deepAgents": 0,
+      "maxCellPopulation": 8,
+      "overflowCells": 0,
+      "seconds": 10.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.8953143954277039,
+      "nearestRatioP05": 0.8975894451141357,
+      "nearestRatioP50": 0.9732727408409119,
+      "nearestRatioP95": 1.5028502941131592,
+      "meanSpeed": 3.3671388626098633,
+      "maxSpeed": 3.764103412628174,
+      "team0GoalDistance": 97.6861801147461,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 5.517578125,
+      "sourceCsvSha256": "3262663d4ef64f20b62c0a39f3274fd712f2561d35756ad34d59168070adb3c3",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 5.46875,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9728098881884599,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 5.56640625,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.973272188579322,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-contact-r1-f1200.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 1200,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 970,
+      "softPairs": 52,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 52,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1266,
+      "deepAgents": 0,
+      "maxCellPopulation": 8,
+      "overflowCells": 0,
+      "seconds": 20.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.9190350770950317,
+      "nearestRatioP05": 0.9013053774833679,
+      "nearestRatioP50": 0.9802297949790955,
+      "nearestRatioP95": 1.7103232145309448,
+      "meanSpeed": 3.3639066219329834,
+      "maxSpeed": 3.7375030517578125,
+      "team0GoalDistance": 65.45430755615234,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 4.736328125,
+      "sourceCsvSha256": "cc26036a8934715e1607854cf5fc6925404a02b3944b704833e3a12a30a4ed51",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 5.2734375,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9787895484675164,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 4.19921875,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9820500217751738,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-contact-r1-f1800.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 1800,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 880,
+      "softPairs": 51,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 51,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1187,
+      "deepAgents": 0,
+      "maxCellPopulation": 7,
+      "overflowCells": 0,
+      "seconds": 30.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.8680679798126221,
+      "nearestRatioP05": 0.9016167521476746,
+      "nearestRatioP50": 0.985867977142334,
+      "nearestRatioP95": 1.9938188791275024,
+      "meanSpeed": 3.420398235321045,
+      "maxSpeed": 4.632705211639404,
+      "team0GoalDistance": 35.74032211303711,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 4.736328125,
+      "sourceCsvSha256": "a056c069d88c4b5aac455d5dfc5fd0f6a9c95419d4473b14719c3e9cecc9e320",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 4.78515625,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9862942140924349,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 4.6875,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9856277830939925,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "reference-24",
+      "battlePhase": "Running",
+      "csv": "reference-24-contact-r1-f2400.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 2400,
+      "alive": 1818,
+      "team0Alive": 974,
+      "attacking": 630,
+      "waiting": 384,
+      "nominalPairs": 4961,
+      "softPairs": 3807,
+      "deepPairs": 566,
+      "sameTeamSoftPairs": 3069,
+      "enemySoftPairs": 738,
+      "nominalAgents": 1627,
+      "deepAgents": 813,
+      "maxCellPopulation": 31,
+      "overflowCells": 22,
+      "seconds": 40.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.14713943004608154,
+      "nearestRatioP05": 0.2965357005596161,
+      "nearestRatioP50": 0.5262327790260315,
+      "nearestRatioP95": 1.350719928741455,
+      "meanSpeed": 1.2817437648773193,
+      "maxSpeed": 5.540660381317139,
+      "team0GoalDistance": 20.2311954498291,
+      "independentDeepAgentPct": 44.71947194719472,
+      "independentSoftAgentPct": 85.03850385038504,
+      "sourceCsvSha256": "6450b23d28de582b1007775058e646013813946841a60469e09ff35a38087417",
+      "team0": {
+        "alive": 974,
+        "softAgentPct": 86.44763860369609,
+        "deepAgentPct": 45.17453798767967,
+        "nearestRatioMedian": 0.5229441703101481,
+        "waiting": 191
+      },
+      "team1": {
+        "alive": 844,
+        "softAgentPct": 83.41232227488152,
+        "deepAgentPct": 44.19431279620853,
+        "nearestRatioMedian": 0.5304315237787565,
+        "waiting": 193
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact-ended",
+      "variant": "reference-24",
+      "battlePhase": "AttackerVictory",
+      "csv": "reference-24-contact-ended-r1-f3422.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 3422,
+      "alive": 789,
+      "team0Alive": 789,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 1541,
+      "softPairs": 1073,
+      "deepPairs": 10,
+      "sameTeamSoftPairs": 1073,
+      "enemySoftPairs": 0,
+      "nominalAgents": 777,
+      "deepAgents": 19,
+      "maxCellPopulation": 19,
+      "overflowCells": 1,
+      "seconds": 57.03333282470703,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.38948869705200195,
+      "nearestRatioP05": 0.5614681839942932,
+      "nearestRatioP50": 0.7322798371315002,
+      "nearestRatioP95": 0.9216020107269287,
+      "meanSpeed": 1.6246980428695679,
+      "maxSpeed": 4.117591857910156,
+      "team0GoalDistance": 17.388317108154297,
+      "independentDeepAgentPct": 2.4081115335868186,
+      "independentSoftAgentPct": 92.39543726235742,
+      "sourceCsvSha256": "8d8e652c33457cb1835d0733fdaece97c9bbf19e833bd594ed08565966b7342e",
+      "team0": {
+        "alive": 789,
+        "softAgentPct": 92.39543726235742,
+        "deepAgentPct": 2.4081115335868186,
+        "nearestRatioMedian": 0.7322798854957397,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 0,
+        "softAgentPct": 0,
+        "deepAgentPct": 0,
+        "nearestRatioMedian": 0,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "initial",
+      "variant": "official-48",
+      "battlePhase": "Setup",
+      "csv": "official-48-initial-r0-f0.csv",
+      "image": "official-48-initial-r0-f0.png",
+      "repeat": 0,
+      "tick": 0,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 0.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "hold",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-hold-r0-f60.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 60,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 1.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "hold",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-hold-r0-f180.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 180,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 3.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-move-r0-f300.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 300,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 689,
+      "softPairs": 127,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 127,
+      "enemySoftPairs": 0,
+      "nominalAgents": 766,
+      "deepAgents": 0,
+      "maxCellPopulation": 9,
+      "overflowCells": 0,
+      "seconds": 5.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.8067597150802612,
+      "nearestRatioP05": 0.8733267784118652,
+      "nearestRatioP50": 1.4089912176132202,
+      "nearestRatioP95": 1.4572373628616333,
+      "meanSpeed": 1.6167489290237427,
+      "maxSpeed": 3.84177303314209,
+      "team0GoalDistance": 95.392333984375,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 8.49609375,
+      "sourceCsvSha256": "5a1a976cc10e77f9465b9f2953a4edaa51bff9966991b4bec1bed9cd5af41e58",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 16.9921875,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9682686019707332,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-move-r0-f600.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 600,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 11,
+      "nominalPairs": 960,
+      "softPairs": 271,
+      "deepPairs": 1,
+      "sameTeamSoftPairs": 271,
+      "enemySoftPairs": 0,
+      "nominalAgents": 857,
+      "deepAgents": 2,
+      "maxCellPopulation": 11,
+      "overflowCells": 0,
+      "seconds": 10.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.47044605016708374,
+      "nearestRatioP05": 0.812865674495697,
+      "nearestRatioP50": 1.4033693075180054,
+      "nearestRatioP95": 1.453494906425476,
+      "meanSpeed": 1.4768803119659424,
+      "maxSpeed": 4.087214469909668,
+      "team0GoalDistance": 81.143798828125,
+      "independentDeepAgentPct": 0.09765625,
+      "independentSoftAgentPct": 15.771484375,
+      "sourceCsvSha256": "0b1c698a78ac35c63b7cb5fcbb721294e4e27443fdc90d90a5117dd5bfa8ed66",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 31.54296875,
+        "deepAgentPct": 0.1953125,
+        "nearestRatioMedian": 0.9418802823497148,
+        "waiting": 11
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-move-r0-f1200.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 1200,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 158,
+      "nominalPairs": 1711,
+      "softPairs": 910,
+      "deepPairs": 3,
+      "sameTeamSoftPairs": 910,
+      "enemySoftPairs": 0,
+      "nominalAgents": 974,
+      "deepAgents": 6,
+      "maxCellPopulation": 13,
+      "overflowCells": 0,
+      "seconds": 20.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.5134330987930298,
+      "nearestRatioP05": 0.6880589723587036,
+      "nearestRatioP50": 1.3980932235717773,
+      "nearestRatioP95": 1.4530233144760132,
+      "meanSpeed": 0.9496176242828369,
+      "maxSpeed": 3.7896087169647217,
+      "team0GoalDistance": 58.37406921386719,
+      "independentDeepAgentPct": 0.29296875,
+      "independentSoftAgentPct": 36.62109375,
+      "sourceCsvSha256": "5dc151b0df438497e8226b72c2381ec2cbbfbd3312b1dcebfa764cc292886870",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 73.2421875,
+        "deepAgentPct": 0.5859375,
+        "nearestRatioMedian": 0.8264734927265327,
+        "waiting": 158
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-move-r0-f1800.csv",
+      "image": "official-48-move-r0-f1800.png",
+      "repeat": 0,
+      "tick": 1800,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 321,
+      "nominalPairs": 1695,
+      "softPairs": 946,
+      "deepPairs": 4,
+      "sameTeamSoftPairs": 946,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1008,
+      "deepAgents": 8,
+      "maxCellPopulation": 14,
+      "overflowCells": 0,
+      "seconds": 30.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.466796875,
+      "nearestRatioP05": 0.6519439816474915,
+      "nearestRatioP50": 1.3965550661087036,
+      "nearestRatioP95": 1.4528450965881348,
+      "meanSpeed": 0.74825119972229,
+      "maxSpeed": 3.8755593299865723,
+      "team0GoalDistance": 44.201324462890625,
+      "independentDeepAgentPct": 0.390625,
+      "independentSoftAgentPct": 39.55078125,
+      "sourceCsvSha256": "2b66d587df03cc60011459a347c4b2da85c5ac0b7151f65c28473f6d3364b006",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 79.1015625,
+        "deepAgentPct": 0.78125,
+        "nearestRatioMedian": 0.8100450366047928,
+        "waiting": 321
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r0-f600.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 600,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 972,
+      "softPairs": 5,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 5,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1301,
+      "deepAgents": 0,
+      "maxCellPopulation": 7,
+      "overflowCells": 0,
+      "seconds": 10.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.9545572996139526,
+      "nearestRatioP05": 0.9457198977470398,
+      "nearestRatioP50": 0.9884304404258728,
+      "nearestRatioP95": 1.5032484531402588,
+      "meanSpeed": 3.366363048553467,
+      "maxSpeed": 3.8469440937042236,
+      "team0GoalDistance": 97.66984558105469,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.48828125,
+      "sourceCsvSha256": "2112956d78a99c408c394254ccb9ee9af59545eaf7ee205e1091897d64a82559",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.1953125,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.988291417575113,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.78125,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9885987983274658,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r0-f1200.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 1200,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 967,
+      "softPairs": 1,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 1,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1291,
+      "deepAgents": 0,
+      "maxCellPopulation": 7,
+      "overflowCells": 0,
+      "seconds": 20.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.9783267974853516,
+      "nearestRatioP05": 0.9423513412475586,
+      "nearestRatioP50": 0.9889172315597534,
+      "nearestRatioP95": 1.7690232992172241,
+      "meanSpeed": 3.3631227016448975,
+      "maxSpeed": 3.7741804122924805,
+      "team0GoalDistance": 65.41703796386719,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.09765625,
+      "sourceCsvSha256": "fc64f6b99bc13c091e5161a1edb0d5890aa5b0f1142030b8a958db843c840695",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.1953125,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9883279056868335,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9898675928048738,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r0-f1800.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 1800,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 855,
+      "softPairs": 2,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 2,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1191,
+      "deepAgents": 0,
+      "maxCellPopulation": 8,
+      "overflowCells": 0,
+      "seconds": 30.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.9737427234649658,
+      "nearestRatioP05": 0.9458931684494019,
+      "nearestRatioP50": 0.992372989654541,
+      "nearestRatioP95": 1.9777531623840332,
+      "meanSpeed": 3.4230189323425293,
+      "maxSpeed": 4.740137100219727,
+      "team0GoalDistance": 35.68565368652344,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.1953125,
+      "sourceCsvSha256": "1c45e10b1f4337453059994c75224feaac9767c04e462dd1e405a0946c284ea3",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.1953125,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9916672154984824,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.1953125,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9927770985125607,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r0-f2400.csv",
+      "image": "official-48-contact-r0-f2400.png",
+      "repeat": 0,
+      "tick": 2400,
+      "alive": 1894,
+      "team0Alive": 989,
+      "attacking": 429,
+      "waiting": 701,
+      "nominalPairs": 4389,
+      "softPairs": 3357,
+      "deepPairs": 189,
+      "sameTeamSoftPairs": 2927,
+      "enemySoftPairs": 430,
+      "nominalAgents": 1704,
+      "deepAgents": 334,
+      "maxCellPopulation": 24,
+      "overflowCells": 8,
+      "seconds": 40.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.3114837408065796,
+      "nearestRatioP05": 0.413817822933197,
+      "nearestRatioP50": 0.6318986415863037,
+      "nearestRatioP95": 1.3633726835250854,
+      "meanSpeed": 1.0315428972244263,
+      "maxSpeed": 5.179102420806885,
+      "team0GoalDistance": 20.479572296142578,
+      "independentDeepAgentPct": 17.634635691657866,
+      "independentSoftAgentPct": 84.68848996832101,
+      "sourceCsvSha256": "5c30a4657c1b7f8a1df8088182756e0a49ca1a64d311db116fbcb7675edad311",
+      "team0": {
+        "alive": 989,
+        "softAgentPct": 85.54095045500506,
+        "deepAgentPct": 17.89686552072801,
+        "nearestRatioMedian": 0.6367757704880955,
+        "waiting": 373
+      },
+      "team1": {
+        "alive": 905,
+        "softAgentPct": 83.75690607734808,
+        "deepAgentPct": 17.34806629834254,
+        "nearestRatioMedian": 0.6247808068237557,
+        "waiting": 328
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r0-f3600.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 3600,
+      "alive": 985,
+      "team0Alive": 759,
+      "attacking": 299,
+      "waiting": 402,
+      "nominalPairs": 2345,
+      "softPairs": 1767,
+      "deepPairs": 86,
+      "sameTeamSoftPairs": 1506,
+      "enemySoftPairs": 261,
+      "nominalAgents": 978,
+      "deepAgents": 161,
+      "maxCellPopulation": 19,
+      "overflowCells": 1,
+      "seconds": 60.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.26777762174606323,
+      "nearestRatioP05": 0.42666396498680115,
+      "nearestRatioP50": 0.6257399320602417,
+      "nearestRatioP95": 0.8312345743179321,
+      "meanSpeed": 0.6193261742591858,
+      "maxSpeed": 4.829979419708252,
+      "team0GoalDistance": 18.66456413269043,
+      "independentDeepAgentPct": 16.34517766497462,
+      "independentSoftAgentPct": 98.1725888324873,
+      "sourceCsvSha256": "0f4352472669b1ee1faa89347eec133a90f2763c2273eda492a684c8047de8c6",
+      "team0": {
+        "alive": 759,
+        "softAgentPct": 97.89196310935442,
+        "deepAgentPct": 15.5467720685112,
+        "nearestRatioMedian": 0.6347051314220084,
+        "waiting": 337
+      },
+      "team1": {
+        "alive": 226,
+        "softAgentPct": 99.11504424778761,
+        "deepAgentPct": 19.02654867256637,
+        "nearestRatioMedian": 0.6084978685618974,
+        "waiting": 65
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact-ended",
+      "variant": "official-48",
+      "battlePhase": "AttackerVictory",
+      "csv": "official-48-contact-ended-r0-f4232.csv",
+      "image": "",
+      "repeat": 0,
+      "tick": 4232,
+      "alive": 698,
+      "team0Alive": 698,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 1232,
+      "softPairs": 823,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 823,
+      "enemySoftPairs": 0,
+      "nominalAgents": 665,
+      "deepAgents": 0,
+      "maxCellPopulation": 14,
+      "overflowCells": 0,
+      "seconds": 70.53333282470703,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.5823436379432678,
+      "nearestRatioP05": 0.6161774396896362,
+      "nearestRatioP50": 0.7752039432525635,
+      "nearestRatioP95": 0.9987964034080505,
+      "meanSpeed": 1.704338550567627,
+      "maxSpeed": 4.377040386199951,
+      "team0GoalDistance": 15.681295394897461,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 85.95988538681948,
+      "sourceCsvSha256": "00b9b5a65e123a4af2ee97dab49e2ec11d75bdf9c6135e0fb1ea9c0403ebf5d5",
+      "team0": {
+        "alive": 698,
+        "softAgentPct": 85.95988538681948,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.7752039683391484,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 0,
+        "softAgentPct": 0,
+        "deepAgentPct": 0,
+        "nearestRatioMedian": 0,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "initial",
+      "variant": "official-48",
+      "battlePhase": "Setup",
+      "csv": "official-48-initial-r1-f0.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 0,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 0.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "hold",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-hold-r1-f60.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 60,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 1.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "hold",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-hold-r1-f180.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 180,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 0,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 0,
+      "deepAgents": 0,
+      "maxCellPopulation": 4,
+      "overflowCells": 0,
+      "seconds": 3.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 1.5346689224243164,
+      "nearestRatioP05": 1.4072086811065674,
+      "nearestRatioP50": 1.4346386194229126,
+      "nearestRatioP95": 1.4574124813079834,
+      "meanSpeed": 0.0,
+      "maxSpeed": 0.0,
+      "team0GoalDistance": 22.083873748779297,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.4342625236345254,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-move-r1-f300.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 300,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 687,
+      "softPairs": 123,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 123,
+      "enemySoftPairs": 0,
+      "nominalAgents": 768,
+      "deepAgents": 0,
+      "maxCellPopulation": 9,
+      "overflowCells": 0,
+      "seconds": 5.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.7108954787254333,
+      "nearestRatioP05": 0.8745408654212952,
+      "nearestRatioP50": 1.4086248874664307,
+      "nearestRatioP95": 1.456139326095581,
+      "meanSpeed": 1.6231168508529663,
+      "maxSpeed": 3.786181926727295,
+      "team0GoalDistance": 95.39840698242188,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 8.544921875,
+      "sourceCsvSha256": "5356326cfec183d99fbf4a279da323b3cf99e53b1f3cb5b46879428e3c977439",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 17.08984375,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9694981779136503,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-move-r1-f600.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 600,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 5,
+      "nominalPairs": 964,
+      "softPairs": 264,
+      "deepPairs": 1,
+      "sameTeamSoftPairs": 264,
+      "enemySoftPairs": 0,
+      "nominalAgents": 869,
+      "deepAgents": 2,
+      "maxCellPopulation": 11,
+      "overflowCells": 0,
+      "seconds": 10.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.5106405019760132,
+      "nearestRatioP05": 0.8265143632888794,
+      "nearestRatioP50": 1.4033693075180054,
+      "nearestRatioP95": 1.4535179138183594,
+      "meanSpeed": 1.487662672996521,
+      "maxSpeed": 3.9130594730377197,
+      "team0GoalDistance": 81.11036682128906,
+      "independentDeepAgentPct": 0.09765625,
+      "independentSoftAgentPct": 15.576171875,
+      "sourceCsvSha256": "1dc2cb6aa7c8c0c6eb003169e90c5bb5ddc447bb33b717b0e69c796ffc32b727",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 31.15234375,
+        "deepAgentPct": 0.1953125,
+        "nearestRatioMedian": 0.944408154312703,
+        "waiting": 5
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-move-r1-f1200.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 1200,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 137,
+      "nominalPairs": 1688,
+      "softPairs": 897,
+      "deepPairs": 3,
+      "sameTeamSoftPairs": 897,
+      "enemySoftPairs": 0,
+      "nominalAgents": 968,
+      "deepAgents": 6,
+      "maxCellPopulation": 13,
+      "overflowCells": 0,
+      "seconds": 20.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.4794379770755768,
+      "nearestRatioP05": 0.6857860088348389,
+      "nearestRatioP50": 1.3977159261703491,
+      "nearestRatioP95": 1.4530029296875,
+      "meanSpeed": 0.9627822041511536,
+      "maxSpeed": 3.6500914096832275,
+      "team0GoalDistance": 58.3093376159668,
+      "independentDeepAgentPct": 0.29296875,
+      "independentSoftAgentPct": 36.328125,
+      "sourceCsvSha256": "08c82fb41d139a83dafff505344f9cb45f2619a2ecdca0e2101ad82d8b213a08",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 72.65625,
+        "deepAgentPct": 0.5859375,
+        "nearestRatioMedian": 0.8318858069070322,
+        "waiting": 137
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "move",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-move-r1-f1800.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 1800,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 378,
+      "nominalPairs": 1799,
+      "softPairs": 1087,
+      "deepPairs": 4,
+      "sameTeamSoftPairs": 1087,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1011,
+      "deepAgents": 8,
+      "maxCellPopulation": 14,
+      "overflowCells": 0,
+      "seconds": 30.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.4718756079673767,
+      "nearestRatioP05": 0.6342107057571411,
+      "nearestRatioP50": 1.3965550661087036,
+      "nearestRatioP95": 1.4528450965881348,
+      "meanSpeed": 0.6950909495353699,
+      "maxSpeed": 4.012006759643555,
+      "team0GoalDistance": 44.200645446777344,
+      "independentDeepAgentPct": 0.390625,
+      "independentSoftAgentPct": 41.2109375,
+      "sourceCsvSha256": "d7ee17c4ab2503c48bb780e2147fab3ab8d27d9dc9c95987f5dac513b0c52637",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 82.421875,
+        "deepAgentPct": 0.78125,
+        "nearestRatioMedian": 0.8011532417180597,
+        "waiting": 378
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 1.434989955392982,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r1-f600.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 600,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 984,
+      "softPairs": 2,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 2,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1300,
+      "deepAgents": 0,
+      "maxCellPopulation": 8,
+      "overflowCells": 0,
+      "seconds": 10.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.8866274952888489,
+      "nearestRatioP05": 0.9444195628166199,
+      "nearestRatioP50": 0.9873557090759277,
+      "nearestRatioP95": 1.5072646141052246,
+      "meanSpeed": 3.3645358085632324,
+      "maxSpeed": 3.785576820373535,
+      "team0GoalDistance": 97.67848205566406,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.1953125,
+      "sourceCsvSha256": "e16eb635743958547c1a7f515483597a814caabab4a3ce582bdb553a8a2fdee4",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.390625,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9868643393029402,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9880229652989667,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r1-f1200.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 1200,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 886,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1212,
+      "deepAgents": 0,
+      "maxCellPopulation": 8,
+      "overflowCells": 0,
+      "seconds": 20.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.99612957239151,
+      "nearestRatioP05": 0.9441662430763245,
+      "nearestRatioP50": 0.9917173385620117,
+      "nearestRatioP95": 1.7286971807479858,
+      "meanSpeed": 3.3657829761505127,
+      "maxSpeed": 3.76434063911438,
+      "team0GoalDistance": 65.41502380371094,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "b28f75269226f94d87c25706d4eeab068dee673594f4335ebf18c768bf9dee3e",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9915616325586646,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9921341402982573,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r1-f1800.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 1800,
+      "alive": 2048,
+      "team0Alive": 1024,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 796,
+      "softPairs": 0,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 0,
+      "enemySoftPairs": 0,
+      "nominalAgents": 1140,
+      "deepAgents": 0,
+      "maxCellPopulation": 7,
+      "overflowCells": 0,
+      "seconds": 30.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.9908161759376526,
+      "nearestRatioP05": 0.9476444721221924,
+      "nearestRatioP50": 0.9940224289894104,
+      "nearestRatioP95": 1.9696853160858154,
+      "meanSpeed": 3.422219753265381,
+      "maxSpeed": 4.644139289855957,
+      "team0GoalDistance": 35.665199279785156,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 0.0,
+      "sourceCsvSha256": "7308e21cb107e5850cede3e6fd23ac03a8f0841a1776a8bce7ab2edcea48ed73",
+      "team0": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9931458519007044,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 1024,
+        "softAgentPct": 0.0,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.9950774677698746,
+        "waiting": 0
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r1-f2400.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 2400,
+      "alive": 1900,
+      "team0Alive": 991,
+      "attacking": 416,
+      "waiting": 721,
+      "nominalPairs": 4445,
+      "softPairs": 3400,
+      "deepPairs": 184,
+      "sameTeamSoftPairs": 2948,
+      "enemySoftPairs": 452,
+      "nominalAgents": 1719,
+      "deepAgents": 338,
+      "maxCellPopulation": 22,
+      "overflowCells": 10,
+      "seconds": 40.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.12265890836715698,
+      "nearestRatioP05": 0.4184085726737976,
+      "nearestRatioP50": 0.6232907176017761,
+      "nearestRatioP95": 1.3080008029937744,
+      "meanSpeed": 1.0209611654281616,
+      "maxSpeed": 4.841399669647217,
+      "team0GoalDistance": 20.399744033813477,
+      "independentDeepAgentPct": 17.789473684210527,
+      "independentSoftAgentPct": 86.10526315789474,
+      "sourceCsvSha256": "7a844935e4a8214a9d63ac59e24dace22cbf11e500f8bfc22332966bed8a5bc4",
+      "team0": {
+        "alive": 991,
+        "softAgentPct": 87.5882946518668,
+        "deepAgentPct": 18.163471241170534,
+        "nearestRatioMedian": 0.6209801572463158,
+        "waiting": 378
+      },
+      "team1": {
+        "alive": 909,
+        "softAgentPct": 84.48844884488449,
+        "deepAgentPct": 17.381738173817382,
+        "nearestRatioMedian": 0.6298459444440755,
+        "waiting": 343
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact",
+      "variant": "official-48",
+      "battlePhase": "Running",
+      "csv": "official-48-contact-r1-f3600.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 3600,
+      "alive": 975,
+      "team0Alive": 768,
+      "attacking": 273,
+      "waiting": 397,
+      "nominalPairs": 2321,
+      "softPairs": 1774,
+      "deepPairs": 82,
+      "sameTeamSoftPairs": 1508,
+      "enemySoftPairs": 266,
+      "nominalAgents": 966,
+      "deepAgents": 151,
+      "maxCellPopulation": 17,
+      "overflowCells": 0,
+      "seconds": 60.0,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.30863502621650696,
+      "nearestRatioP05": 0.4197772741317749,
+      "nearestRatioP50": 0.6229668855667114,
+      "nearestRatioP95": 0.8613464832305908,
+      "meanSpeed": 0.680315375328064,
+      "maxSpeed": 4.952624320983887,
+      "team0GoalDistance": 18.76447105407715,
+      "independentDeepAgentPct": 15.487179487179487,
+      "independentSoftAgentPct": 97.33333333333334,
+      "sourceCsvSha256": "de1f65c70d3c57160f90dac2dfec537d133533f1e4962b24352bad56e4b42c4e",
+      "team0": {
+        "alive": 768,
+        "softAgentPct": 97.13541666666666,
+        "deepAgentPct": 14.713541666666666,
+        "nearestRatioMedian": 0.6295717404585054,
+        "waiting": 338
+      },
+      "team1": {
+        "alive": 207,
+        "softAgentPct": 98.06763285024155,
+        "deepAgentPct": 18.357487922705314,
+        "nearestRatioMedian": 0.6087701791065585,
+        "waiting": 59
+      }
+    },
+    {
+      "tag": "adopted-01",
+      "phase": "contact-ended",
+      "variant": "official-48",
+      "battlePhase": "AttackerVictory",
+      "csv": "official-48-contact-ended-r1-f4202.csv",
+      "image": "",
+      "repeat": 1,
+      "tick": 4202,
+      "alive": 717,
+      "team0Alive": 717,
+      "attacking": 0,
+      "waiting": 0,
+      "nominalPairs": 1085,
+      "softPairs": 596,
+      "deepPairs": 0,
+      "sameTeamSoftPairs": 596,
+      "enemySoftPairs": 0,
+      "nominalAgents": 662,
+      "deepAgents": 0,
+      "maxCellPopulation": 14,
+      "overflowCells": 0,
+      "seconds": 70.03333282470703,
+      "fixedDt": 0.01666666753590107,
+      "minDistance": 0.5640426278114319,
+      "nearestRatioP05": 0.6811367273330688,
+      "nearestRatioP50": 0.8327193260192871,
+      "nearestRatioP95": 1.0285638570785522,
+      "meanSpeed": 1.7097179889678955,
+      "maxSpeed": 4.378355026245117,
+      "team0GoalDistance": 14.224772453308105,
+      "independentDeepAgentPct": 0.0,
+      "independentSoftAgentPct": 71.96652719665272,
+      "sourceCsvSha256": "9d30f082fc30cf0fb57e97f640e99f73c9299b7181c8a5385ace42c8f23a6241",
+      "team0": {
+        "alive": 717,
+        "softAgentPct": 71.96652719665272,
+        "deepAgentPct": 0.0,
+        "nearestRatioMedian": 0.8327194138214631,
+        "waiting": 0
+      },
+      "team1": {
+        "alive": 0,
+        "softAgentPct": 0,
+        "deepAgentPct": 0,
+        "nearestRatioMedian": 0,
+        "waiting": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-09",
+  "purpose": "Offline architecture review, independently implement; excerpts not complete original project",
+  "referenceMcpRequiredAfterArchive": false,
+  "files": {
+    "README.md": {
+      "bytes": 1594,
+      "sha256": "7987c5089e3b215a73d1a428146bc8efecf61dc4f3403aa8aa1c13d4a9864eae"
+    },
+    "ADOPTION-CONTRACT.md": {
+      "bytes": 2674,
+      "sha256": "c1156d99753df19d48d6d3c7bf746d84b01e1bcb743962b63c47a945aa29dea6"
+    },
+    "HISTORICAL-BASELINE-NOTE.md": {
+      "bytes": 1139,
+      "sha256": "3acf1d7287d7dbbd779897d02e1401f12c1b1e191f8c7f928c94dec782a61d1e"
+    },
+    "NEXT-STEPS.md": {
+      "bytes": 2386,
+      "sha256": "35514e27ea953b1bbadcbe0d1fa10c511b58fa1f4bc6d43d376b1df3e9206f6e"
+    },
+    "REVIEW.md": {
+      "bytes": 10425,
+      "sha256": "9b5fb0cf98d61c5e402787338062239be43da2cee0630990339c8cc19cad4dd7"
+    },
+    "evidence/selection-code-excerpts.txt": {
+      "bytes": 12778,
+      "sha256": "c41ffad697b57f7d9d3d051c15cbaac74b3cafe29c3d2ab57ca2ea84f1e4575c"
+    },
+    "evidence/our-historical-baseline-excerpts.txt": {
+      "bytes": 29440,
+      "sha256": "fe10c770e2a5e2bdfd990ba982330e053e30bdcfb694e381679228ec4d1487b0"
+    },
+    "evidence/reference-document-excerpt.txt": {
+      "bytes": 20770,
+      "sha256": "9e61e91982a251c444d7c2292b5778abb4c0d3c602d9c0a1ed54f8ef9794c2d0"
+    },
+    "evidence/navigation-code-excerpts.txt": {
+      "bytes": 7778,
+      "sha256": "07fcea982158c20fd801bd0810fba317187fa4dad592b8fae91a0aa4bc1a0740"
+    },
+    "evidence/scheduling-code-excerpts.txt": {
+      "bytes": 8144,
+      "sha256": "ea77e43f6858cc6a0fc9230095b1d0ee6cd9b7493f656ea04b3afd43c1ad5d42"
+    }
+  }
+}
