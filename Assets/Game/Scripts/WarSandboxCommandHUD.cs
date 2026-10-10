@@ -41,6 +41,9 @@ namespace MassEngine.Game
         private float feedbackUntil;
         private CameraFocusMode cameraFocusMode;
         private int cameraFocusTeamId;
+        private int lastArmyTapTeam = -1;
+        private float lastArmyTapTime;
+        private const float ArmyDoubleTapSeconds = 0.35f;
         // Bottom of the panel content measured at the last repaint. The panel box grows to
         // fit this instead of clipping whenever new controls push past the preferred height.
         private float panelContentHeight;
@@ -93,12 +96,37 @@ namespace MassEngine.Game
             if (cameraNavigation)
                 cameraFocusMode = CameraFocusMode.None;
 
-            // 1..9 select by roster position, so a third army is reachable without inventing keys.
-            int hotkeyArmies = Mathf.Min(ResolveArmyCount(), 9);
+            // 1..9 (main row or keypad) select by roster position; a quick second tap of the same key also flies
+            // the camera there (RTS convention), and Tab / Shift+Tab cycles armies with focus, so more armies never
+            // need more F-keys (2026-10-10 feedback; F1/F2 removed).
+            int armyCount = ResolveArmyCount();
+            int hotkeyArmies = Mathf.Min(armyCount, 9);
             for (int teamId = 0; teamId < hotkeyArmies; teamId++)
             {
-                if (Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + teamId)))
+                if (!Input.GetKeyDown((KeyCode)((int)KeyCode.Alpha1 + teamId)) &&
+                    !Input.GetKeyDown((KeyCode)((int)KeyCode.Keypad1 + teamId)))
+                    continue;
+                float now = Time.unscaledTime;
+                if (teamId == lastArmyTapTeam && now - lastArmyTapTime <= ArmyDoubleTapSeconds)
+                {
+                    FocusArmy(teamId);
+                    lastArmyTapTeam = -1;
+                }
+                else
+                {
                     controller.SelectArmy(teamId);
+                    lastArmyTapTeam = teamId;
+                    lastArmyTapTime = now;
+                }
+            }
+            if (armyCount > 0 && Input.GetKeyDown(KeyCode.Tab))
+            {
+                bool back = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+                int current = controller.selectedTeam;
+                int next = current < 0 || current >= armyCount ? 0 : (current + (back ? armyCount - 1 : 1)) % armyCount;
+                controller.SelectArmy(next);
+                FocusArmy(next);
+                lastArmyTapTeam = -1;
             }
             if (!cameraNavigation)
             {
@@ -117,10 +145,6 @@ namespace MassEngine.Game
                 StartOrRestartDefaultBattle();
             if (Input.GetKeyDown(KeyCode.Escape))
                 CancelMoveTarget();
-            if (Input.GetKeyDown(KeyCode.F1))
-                FocusArmy(0);
-            if (Input.GetKeyDown(KeyCode.F2))
-                FocusArmy(1);
             if (Input.GetKeyDown(KeyCode.F3))
                 FocusBattlefield();
             if (Input.GetKeyDown(KeyCode.F))
@@ -277,7 +301,7 @@ namespace MassEngine.Game
             else if (Time.unscaledTime < feedbackUntil)
                 GUILayout.Label(commandFeedback, GUILayout.Height(compactLayout ? 17f : 20f));
             else if (showHotkeys && !compactLayout)
-                GUILayout.Label("数字键选军团 · F跟随 · F3全景 · Enter开战 · A/M/H/R下令");
+                GUILayout.Label("数字键选军团(双击聚焦) · Tab轮换 · F跟随 · F3全景 · Enter开战 · A/M/H/R下令");
 
             // Measure what the layout actually used this repaint (area-local coordinates).
             // BeginArea silently clips everything below its fixed height, so the box must be
@@ -576,7 +600,9 @@ namespace MassEngine.Game
             controller.SelectArmy(teamId);
             cameraFocusMode = CameraFocusMode.Army;
             cameraFocusTeamId = teamId;
-            cameraManager.FocusTacticalBounds(ExpandLiveBounds(bounds));
+            // Stand behind the army looking at the nearest enemy army; no enemy keeps the current heading.
+            Vector3? toward = TryResolveNearestEnemyCenter(teamId, bounds.center, out Vector3 enemy) ? enemy : (Vector3?)null;
+            cameraManager.FocusTacticalBounds(ExpandLiveBounds(bounds), toward);
             SetFeedback("镜头跟随：" + FormatTeamName(teamId));
         }
 
@@ -617,6 +643,25 @@ namespace MassEngine.Game
 
             if (resolved)
                 cameraManager.FollowTacticalBounds(ExpandLiveBounds(bounds), cameraFollowSharpness);
+        }
+
+        private bool TryResolveNearestEnemyCenter(int teamId, Vector3 from, out Vector3 center)
+        {
+            center = default;
+            float best = float.PositiveInfinity;
+            int armyCount = ResolveArmyCount();
+            // Live armies first (a wiped-out army has no live bounds); deployment bounds only without live telemetry.
+            for (int pass = 0; pass < 2 && float.IsPositiveInfinity(best); pass++)
+                for (int other = 0; other < armyCount; other++)
+                {
+                    if (other == teamId) continue;
+                    Bounds enemy;
+                    if (pass == 0 ? !TryResolveLiveArmyBounds(other, out enemy) : !TryResolveArmyBounds(other, out enemy)) continue;
+                    Vector3 delta = enemy.center - from; delta.y = 0f;
+                    float sqr = delta.sqrMagnitude;
+                    if (sqr < best) { best = sqr; center = enemy.center; }
+                }
+            return !float.IsPositiveInfinity(best);
         }
 
         private bool TryResolveLiveArmyBounds(int teamId, out Bounds bounds)
