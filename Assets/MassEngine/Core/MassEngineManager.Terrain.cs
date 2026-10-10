@@ -156,7 +156,7 @@ namespace MassEngine
             if (terrainRuntime == null || terrainRuntime.Navigation != navigation || terrainRuntime.LaneApproach33 != Flow.terrainLaneApproach33)
             {
                 terrainRuntime?.Dispose(); terrainRuntime = null;
-                try { terrainRuntime = new TerrainNavigationRuntime(navigation, bufferManager.TeamCount, Flow.terrainLaneApproach33); }
+                try { terrainRuntime = new TerrainNavigationRuntime(navigation, bufferManager.TeamCount, Flow.terrainLaneApproach33, asyncDynamicSolve: true); } // P3-CPU-01
                 catch (Exception exception) { terrainError = exception.Message; return false; }
                 MarkAllFlowFieldsDirty();
             }
@@ -211,4 +211,5 @@ namespace MassEngine
         }
     }
 }
+
 
