@@ -1,13 +1,20 @@
 # 工程导航（2026-10-03更新）
 
+> 新增方案B独立地形试装13：`Builds/TerrainPlanB-20261004-13/Start-Terrain.cmd`，Q版丘陵林地、真实高度/禁行及布阵高程图，256单位运行检查通过。11主流程与旧战场未替换。说明：`Docs/ProductPolish-20261003/TERRAIN-PLAN-B-20261004.md`。用户已改选B，不再等待方案A素材领取。
+
+> 当前11版：选兵新增近战/远程筛选、当前兵种标记和本局生命/攻击；军团人数支持显式更新与草稿状态提示，阻止非法人数写入和失败后误跳转。10版相机/拖动保持。详见 `Docs/ProductPolish-20261003/LEGION-FLOW-11-20261004.md`。
+
+> 历史10版（用户已确认基本可用）：用户已确认09透视和默认角度；本版仅修正拖动两轴方向，使模型跟随手势。14/14定向测试与独立EXE 33代表检查通过；待用户鼠标手感复查。说明：`Docs/UnitPreview-20261003/DRAG-DIRECTION-10-20261004.md`。下方09相机修复记录保持有效，旧拖动方向结论由10版替代。
+
+> 历史09版修正相机重复GPU投影转换导致的反向深度，默认改为正面偏侧俯视；14/14定向测试及独立EXE 33代表检查通过，四实际角色与标准Camera轮廓一致。[当前说明](../UnitPreview-20261003/CAMERA-DEPTH-FIX-20261004.md)。08仅顶底标记通过不代表遮挡正确，旧根因/修复口径已被本轮纠正。
 **初级可玩产品基本完成，当前转向已有功能与产品细节持续打磨。** 用户已经实际试玩；不是仍然只准备机器人入列或搭建基本闭环，也不等于M6/M7/V1全部签收。产品阶段见[阶段说明](../ProductPolish-20261003/README.md)，待办与发行门槛见[剩余工作](REMAINING-WORK.md)。
 
 ## 当前入口与依据
 
 | 用途 | 位置 / 状态 |
 |---|---|
-| 当前试玩包 | [Start-ToyUI.cmd](../../Builds/ToyUI-20261003-02/Start-ToyUI.cmd)，1920×1080独占全屏，保留完整包目录 |
-| 包身份 | `726fdd6090014c2f97ec2c4e7f913ee5`，Windows x64 Development；32构建场景含菜单 |
+| 当前试玩包 | 以[现役交付索引](CURRENT_DELIVERY.md)为准；历史ToyUI-11入口见下方归档 |
+| 包身份 | `1b057a4b1d0b426fbf81c7b0b60c3a6a`，Windows x64 Development；32构建场景含菜单 |
 | Unity工程 | 仓库根目录，Unity6000.3.14f1 |
 | Unity入口 / 内容资产 | [Version08/LaunchMenu.unity](../../Assets/Game/OfficialRoster/Version08/LaunchMenu.unity) / [Catalog.asset](../../Assets/Game/OfficialRoster/Version08/Catalog.asset) |
 | UI与去重实现 | [首轮UI](../ToyUI-20261003/IMPLEMENTATION.md)、[图鉴去重与02包](../ToyUI-20261003/ROSTER-DEDUP.md) |
@@ -15,14 +22,16 @@
 | 原包与证据 | Version08同步包、ToyUI-01不覆盖；[Version08资料](../Version08Delivery-20261003/README.md)按旧GUID保留 |
 | 历史工程整合 | [CHANGE-PLAN](CHANGE-PLAN.md)、[INTEGRATION](INTEGRATION.md)，PR #25已合入，不是最新UI工作区变更清单 |
 
-Version08是内容目录版本，ToyUI-02是当前构建。图鉴显示33个代表；Catalog中仍有68个模板身份，原66条未撤回配置不是66个独立模型。29个战场可选、31个战场身份保留。`WarSandboxRosterChoices`仅去重展示；运行时完整`Templates`不被缩减，`ChoiceTemplates`用于合法范围内的新选兵，保留近战/远程用途。
+共用角色3D预览已交付04：图鉴/放大弹窗/军团详情共用组件，3/3定向PlayMode与独立EXE 33代表检查通过。本轮代码尚未提交，详见[预览组件与回执](../UnitPreview-20261003/README.md)。
+
+Version08是内容目录版本，ToyUI-11是当前构建。图鉴显示33个代表；Catalog中仍有68个模板身份，原66条未撤回配置不是66个独立模型。29个战场可选、31个战场身份保留。`WarSandboxRosterChoices`仅去重展示；运行时完整`Templates`不被缩减，`ChoiceTemplates`用于合法范围内的新选兵，保留近战/远程用途。
 
 本批开发分支为`feat/mother-version08-sync`，交付资料检查点`55b4efd`和阶段文档检查点`532b801`已推送；用户随后授权将UI/去重代码、配套测试与构建工具提交并通过PR整合，具体提交与合并状态以Git/PR记录为准。NEXT_TASK、Builds/Logs及本地下载目录不纳入这批提交。原工作树迁移及清理已完成，继续在母工程开发。
 
 ## 最新已执行验证及边界
 
 - 去重定向EditMode62/62、UI PlayMode1/1：`Logs/RosterDedup-20261003/run-01/`。
-- ToyUI-02构建成功（0错误、20警告），独立EXE自动回调检查退出0：`Logs/ToyUIBuild-20261003-02/`。已检查图鉴33项、详情/草稿返回、开战、暂停、手动结算，并保存实际帧。
+- 历史ToyUI-02构建成功（0错误、20警告），独立EXE自动回调检查退出0：`Logs/ToyUIBuild-20261003-02/`。已检查图鉴33项、详情/草稿返回、开战、暂停、手动结算，并保存实际帧。
 - 29战场的合法候选列表检查不是逐场战斗；手动结算不是自然结算；自动回调不是OS输入。旧包的自然结算/跨进程/性能不移用为新包成绩。
 - UI首轮720p及军团详情1080p截图、全屏启动参数不等于所有页面/纵横比/硬件已验收。用户真实试玩反馈与专项签收分开记录。
 - 本次阶段文档更新只核对文档，不启动游戏、重跑测试或生成新包。
@@ -43,7 +52,7 @@ Version07 负责内容筛选和真实全身预览；Version08 复用它并加入
 
 | 类型 / 方法 | 实际内容与输出 | 当前使用边界 |
 |---|---|---|
-| `ToyUiTrialBuilder.Build` | 当前代码输出`Builds/ToyUI-20261003-02` | 目录已存在会拒绝；下次先指定新输出和证据目录，不删除旧包绕过保护 |
+| `ToyUiTrialBuilder.Build` | 历史ToyUI-11输出`Builds/ToyUI-20261004-11`；37版由`CaptureDefaultReplay.Build`输出 | 目录已存在会拒绝；下次先指定新输出和证据目录，不删除旧包绕过保护 |
 | `RobotExpressiveAdmissionBuilder.Prepare08 / Build08` | Version08；`OfficialRoster-20261002-04` | 历史内容/包制作来源；不重跑Prepare08，不覆盖旧资产或固定输出 |
 | `OfficialRosterBuilder.Prepare07 / Build10` | 委托 `OfficialRosterQualityBuilder.Prepare07 / Build07`；Version07，包 `20261002-02` | 质量修正历史入口，不会构建 Version08 |
 | `OfficialRosterBuilder.Prepare01–06 / Build01–09` | 历史入口，当前代码主动拒绝 | 旧文档中的 Build08 **不是**机器人 Build08 |

@@ -1,0 +1,56 @@
+[
+  {
+    "source": "P3证据/adopted-01/reference-24-initial-r0-f0.png",
+    "sourceSha256": "ece004f8c625cacdcc4ef41a0ed68c5651df65329013515e647e4e25bb676de4",
+    "derived": "P3采纳预览图/reference-24-initial-r0-f0.jpg",
+    "operation": "JPEG resize only; no content generation or compositing",
+    "condition": "reference-24",
+    "phase": "initial",
+    "tick": 0
+  },
+  {
+    "source": "P3证据/adopted-01/official-48-initial-r0-f0.png",
+    "sourceSha256": "ece004f8c625cacdcc4ef41a0ed68c5651df65329013515e647e4e25bb676de4",
+    "derived": "P3采纳预览图/official-48-initial-r0-f0.jpg",
+    "operation": "JPEG resize only; no content generation or compositing",
+    "condition": "official-48",
+    "phase": "initial",
+    "tick": 0
+  },
+  {
+    "source": "P3证据/adopted-01/reference-24-move-r0-f1800.png",
+    "sourceSha256": "90fbf7ea4ba6b4fb8039bd4930fab4a0d47c51df6067bc5edb95ce9e578cc9f7",
+    "derived": "P3采纳预览图/reference-24-move-r0-f1800.jpg",
+    "operation": "JPEG resize only; no content generation or compositing",
+    "condition": "reference-24",
+    "phase": "move",
+    "tick": 1800
+  },
+  {
+    "source": "P3证据/adopted-01/official-48-move-r0-f1800.png",
+    "sourceSha256": "66b85ba8f55fc391a2fe49d0e23eb27b34c6e5445b0d81e712fe0087b866f76a",
+    "derived": "P3采纳预览图/official-48-move-r0-f1800.jpg",
+    "operation": "JPEG resize only; no content generation or compositing",
+    "condition": "official-48",
+    "phase": "move",
+    "tick": 1800
+  },
+  {
+    "source": "P3证据/adopted-01/reference-24-contact-r0-f2400.png",
+    "sourceSha256": "b474b87fa1efea5aff3734e20f55a34e4c4de28050fb8fe88d439b2ae41a5a28",
+    "derived": "P3采纳预览图/reference-24-contact-r0-f2400.jpg",
+    "operation": "JPEG resize only; no content generation or compositing",
+    "condition": "reference-24",
+    "phase": "contact",
+    "tick": 2400
+  },
+  {
+    "source": "P3证据/adopted-01/official-48-contact-r0-f2400.png",
+    "sourceSha256": "cdbb9c98bc7ee1e50ec4d06e179efc443497efc1faa23b6c70422037ffcf4e87",
+    "derived": "P3采纳预览图/official-48-contact-r0-f2400.jpg",
+    "operation": "JPEG resize only; no content generation or compositing",
+    "condition": "official-48",
+    "phase": "contact",
+    "tick": 2400
+  }
+]

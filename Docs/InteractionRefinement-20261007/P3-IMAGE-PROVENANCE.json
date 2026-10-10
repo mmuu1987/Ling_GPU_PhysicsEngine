@@ -1,0 +1,34 @@
+[
+  {
+    "source": "P3证据/causal-01/baseline-move-r0-f1800.png",
+    "sourceSha256": "50b4fa4d6616b632a18cca322a34afd413158be3045c980cc9c2ce4fdc50c1b7",
+    "preview": "P3预览图/baseline-move-r0-f1800.jpg",
+    "previewSha256": "ce8224c2796d57915ab202632374d3ea6893efc9de9dba1f9868dd62e95f5ad0",
+    "operation": "resize within 1440x810 + JPEG89; no recolouring or content edits"
+  },
+  {
+    "source": "P3证据/causal-01/baseline-contact-r0-f2400.png",
+    "sourceSha256": "ded5503940fbaa6abd83e13fc34562e1a4c457b44a5ca1c7bab2e7bd46d96d4e",
+    "preview": "P3预览图/baseline-contact-r0-f2400.jpg",
+    "previewSha256": "e06341cc73ea2b188257eb8b453c1a7bcfabf2687c07592b6868059f8740acde",
+    "operation": "resize within 1440x810 + JPEG89; no recolouring or content edits"
+  },
+  {
+    "source": "P3证据/causal-01/separation-x2-contact-r0-f2400.png",
+    "sourceSha256": "9621a295f123e6bbcc3e32617341054c33c255879246a47760289ea3f453dbfb",
+    "preview": "P3预览图/separation-x2-contact-r0-f2400.jpg",
+    "previewSha256": "125c5308ff68bf0f590d9d920a30f71280d3382aa2e95e1515a67ac4a8275a54",
+    "operation": "resize within 1440x810 + JPEG89; no recolouring or content edits"
+  },
+  {
+    "source": "P3证据/causal-01/baseline-initial-r0-f0.csv",
+    "sourceSha256": "3efd4097fdb9ba46837f6bf7f48e02f33504a0e33e975c342fa345231ecd0041",
+    "derived": "P3-初始站位.svg",
+    "operation": "Exact CSV positions plotted as nominal-radius circles at equal XZ scale; not a screenshot"
+  },
+  {
+    "source": "P3证据/causal-01/baseline-initial-r0-f0.png",
+    "status": "REJECTED_AS_SUBJECT_VISIBILITY_EVIDENCE",
+    "reason": "Terrain visible but no soldiers. Nonblack assertion insufficient. CSV geometry evidence remains separately validated."
+  }
+]

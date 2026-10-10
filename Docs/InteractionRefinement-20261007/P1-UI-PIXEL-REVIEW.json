@@ -1,0 +1,86 @@
+{
+  "passed": true,
+  "note": "Post-capture narrow-colour and ellipse-locus check. Broad in-Unity goldInModelViewport counts may include similar character colours and are not a pure ring pixel count. This check qualifies visible UI ink, not physical metres (those use independent camera/plane tests).",
+  "runs": [
+    {
+      "file": "library-1280x720.png",
+      "sha256": "b153b9d817b3c1e44ec7c83f662e94abc84bb230f7ce2b95422473c7b8f6b354",
+      "strictInkPixels": 124,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        1059,
+        387,
+        1148,
+        435
+      ],
+      "ellipseRelativeResidualP95": 0.012333328129434279,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "expanded-1280x720.png",
+      "sha256": "04e53790c55c03986c470617d8aa3748771fec1f14a5af063d83cfd174e09a13",
+      "strictInkPixels": 269,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        570,
+        358,
+        699,
+        428
+      ],
+      "ellipseRelativeResidualP95": 0.012272644186209058,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "library-1920x1080.png",
+      "sha256": "5d8889be49de5198c2e5584011df81b3d802fb4931a9f8b55bfb89b41364ac1d",
+      "strictInkPixels": 166,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        1589,
+        580,
+        1723,
+        653
+      ],
+      "ellipseRelativeResidualP95": 0.012243089638831417,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "expanded-1920x1080.png",
+      "sha256": "b8b191bc83b1a577534e64999c6053c4702f67dc1e3ac9f3e90942f69731ba35",
+      "strictInkPixels": 419,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        856,
+        538,
+        1048,
+        643
+      ],
+      "ellipseRelativeResidualP95": 0.010637676186552125,
+      "inActualRawImageRegion": true,
+      "passed": true
+    }
+  ]
+}

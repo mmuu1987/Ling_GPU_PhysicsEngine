@@ -1,0 +1,146 @@
+{
+  "passed": true,
+  "note": "Narrow-colour/ellipse-locus screenshot qualification, not a replacement for independent physical-metre projection tests. Broad gold pixel counts can include model colours. No claim of mouse or readability acceptance.",
+  "runs": [
+    {
+      "file": "P2证据/radius-evidence/library-1280x720.png",
+      "sha256": "c0a96370ebff646a34c2bb8c97c36a0dfc538c3517aad3dc960c62e88e1df8d8",
+      "strictInkPixels": 124,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        1059,
+        387,
+        1148,
+        435
+      ],
+      "ellipseRelativeResidualP95": 0.012333328129434279,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "P2证据/radius-evidence/expanded-1280x720.png",
+      "sha256": "18be200233143d46a3294075c1dccacc5804b0f6cfc880bd6c3448def3937083",
+      "strictInkPixels": 269,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        570,
+        358,
+        699,
+        428
+      ],
+      "ellipseRelativeResidualP95": 0.012266966260489265,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "P2证据/radius-evidence/library-1920x1080.png",
+      "sha256": "1c1842a7dc383b5ce97c09d229c6d093598ea39fe97a6af210e63ce619c6d378",
+      "strictInkPixels": 166,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        1589,
+        580,
+        1723,
+        653
+      ],
+      "ellipseRelativeResidualP95": 0.012243089638831417,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "P2证据/radius-evidence/expanded-1920x1080.png",
+      "sha256": "eb5bccf4d73ed467f5b24efddcbcb7709c2824141e841e4a3bbc0ada9e4fa504",
+      "strictInkPixels": 419,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        856,
+        538,
+        1048,
+        643
+      ],
+      "ellipseRelativeResidualP95": 0.010637676186552125,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "P2证据/p2-evidence/library-pending-0.6.png",
+      "sha256": "891286f1112f88b17ac13e66fa76c8611c00fac17a44670cac0dd4cb60bba390",
+      "strictInkPixels": 141,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        1059,
+        383,
+        1152,
+        433
+      ],
+      "ellipseRelativeResidualP95": 0.01202034583370748,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "P2证据/p2-evidence/expanded-saved-0.6.png",
+      "sha256": "5d5ccca7f8d1e86df5b8af0039065f23311772c79839871783ee93607119552a",
+      "strictInkPixels": 304,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        569,
+        355,
+        705,
+        429
+      ],
+      "ellipseRelativeResidualP95": 0.011919935027837067,
+      "inActualRawImageRegion": true,
+      "passed": true
+    },
+    {
+      "file": "P2证据/p2-evidence/library-restore-pending-0.55.png",
+      "sha256": "918b0c76c6e6b3c918ee50b750b92b74d87d1cf69177827b6fb42de3ebad04c0",
+      "strictInkPixels": 124,
+      "inkSrgb": [
+        132,
+        72,
+        13
+      ],
+      "tolerancePerChannel": 1,
+      "bboxTopLeftPixels": [
+        1059,
+        387,
+        1148,
+        435
+      ],
+      "ellipseRelativeResidualP95": 0.012198936443940767,
+      "inActualRawImageRegion": true,
+      "passed": true
+    }
+  ]
+}

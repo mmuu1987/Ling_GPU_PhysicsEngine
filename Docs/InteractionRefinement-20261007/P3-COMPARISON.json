@@ -1,0 +1,46 @@
+{
+  "conditions": [
+    {
+      "variant": "baseline",
+      "label": "原参数",
+      "moveDeepPairs": "32–38",
+      "contactDeepPairs": "560–606",
+      "contactDeepAgentPct": "43.4–45.1",
+      "overflowCells": "18–23",
+      "battleSimSeconds": "56.53–57.03",
+      "survivors": "780–793",
+      "moveGoalDistance": "42.92–43.11",
+      "meanBattleSeconds": 56.78333282470703,
+      "meanSurvivors": 786.5
+    },
+    {
+      "variant": "separation-x2",
+      "label": "分离强度 24 → 48",
+      "moveDeepPairs": "3–4",
+      "contactDeepPairs": "170–184",
+      "contactDeepAgentPct": "16.0–17.4",
+      "overflowCells": "9–9",
+      "battleSimSeconds": "68.52–70.03",
+      "survivors": "716–717",
+      "moveGoalDistance": "44.08–44.14",
+      "meanBattleSeconds": 69.2750015258789,
+      "meanSurvivors": 716.5
+    },
+    {
+      "variant": "capacity-x4",
+      "label": "桶容量 18 → 72",
+      "moveDeepPairs": "32–41",
+      "contactDeepPairs": "516–530",
+      "contactDeepAgentPct": "42.8–45.1",
+      "overflowCells": "0–0",
+      "battleSimSeconds": "59.52–59.58",
+      "survivors": "745–764",
+      "moveGoalDistance": "42.92–43.18",
+      "meanBattleSeconds": 59.54999923706055,
+      "meanSurvivors": 754.5
+    }
+  ],
+  "repeatsPerCondition": 2,
+  "statisticalSignificanceClaim": false,
+  "productionFixAccepted": false
+}
