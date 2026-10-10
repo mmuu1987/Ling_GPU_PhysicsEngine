@@ -65,6 +65,22 @@ MonoBehaviour:
     featuredTemplateIds:
     - roster-male
     - roster-knight
+  - id: forest-green22-1024
+    displayName: "\u7FE0\u7EFF\u6797\u5730 \xB7 1024\u6D4B\u8BD5"
+    scenePath: Assets/Game/Content/Battlefields/Map1024/Green1024.unity
+    contentVersion: 1
+    terrainId: forest-hills-scale15-1024
+    terrainVersion: 1
+    terrainSurface: {fileID: 11400000, guid: bfade4f6b96f8f8468155a3c3fb2b233, type: 2}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 4c1d6ab0279c3d54a920a317d21c43d9, type: 3}
+    description: "\u7531\u7FE0\u7EFF\u6797\u5730512\u6D3E\u751F\u76841024\xD71024\u6D4B\u8BD5\u6218\u573A\n\u4EC5\u7528\u4E8E20\u4E07\u4EBA\u89C4\u6A21\u6D4B\u8BD5\uFF0C\u9ED8\u8BA42048\u4EBA\u3002"
+    briefing: "\u6D4B\u8BD5\u6218\u573A\uFF1A\u5730\u5F62/\u7981\u884C\u5E26/\u666F\u7269\u6309XZ\xD72\u653E\u5927\uFF08\u9AD8\u5EA6\u4E0D\u53D8\uFF09\uFF0C\u5BFC\u822A\u4E0E\u6D41\u573A256\xD7256@4\u7C73\u3002\n\u5019\u9009\u6539\u52A8\uFF0C\u672A\u9A8C\u6536\uFF1B\u9AD8\u4EBA\u6570\u4E0D\u662F\u6D41\u7545\u6027\u4FDD\u8BC1\u3002"
+    hiddenFromSelection: 0
+    selectionNote: 
+    featuredTemplateIds:
+    - roster-male
+    - roster-knight
   templates:
   - templateId: launch-open-unit-0
     revision: 1
