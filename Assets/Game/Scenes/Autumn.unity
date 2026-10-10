@@ -40688,7 +40688,7 @@ MonoBehaviour:
   ZoomSensitivity: 10
   AltRightDragZoomSensitivity: 0.01
   MinZoomDistance: 1.5
-  MaxZoomDistance: 720
+  MaxZoomDistance: 1600
   MaxTranslationPerFrame: 200
   MaxWorldCoordinate: 5000
   MaxMouseDeltaPerFrame: 80
@@ -40771,9 +40771,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game::MassEngine.Game.TerrainScaleBounds
   cameraController: {fileID: 925856967}
   manager: {fileID: 927799152}
-  maximumDistance: 720
-  maximumHorizontalRadius: 480
-  maximumHeight: 600
+  maximumDistance: 1600
+  maximumHorizontalRadius: 960
+  maximumHeight: 1200
   center: {x: 0, y: 10, z: 0}
 --- !u!114 &925856971
 MonoBehaviour:
@@ -40794,8 +40794,8 @@ MonoBehaviour:
   panSensitivity: 0.8
   lookDegreesPerPixel: 0.14
   wheelFraction: 0.06
-  horizontalLimit: 480
-  maximumHeight: 600
+  horizontalLimit: 960
+  maximumHeight: 1200
 --- !u!1 &927799151
 GameObject:
   m_ObjectHideFlags: 0

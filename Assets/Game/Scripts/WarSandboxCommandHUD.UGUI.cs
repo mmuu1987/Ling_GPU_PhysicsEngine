@@ -31,7 +31,7 @@ namespace MassEngine.Game
             }
             return lines * size * 1.42f + 6;
         }
-        private string HelpText() => "操作提示\n1. 点击军团，或用数字键选择\n2. 按 M，再点击地面设置目标\n3. 左键拖框当前军团；框空不指挥任何人\n4. 局部只支持单目标；整军团可Shift追加航点\nEsc先取消选点，再清选区；不清除原命令\nSpace 暂停 / 继续；改令会继续运行\n右键 + WASD 观察 · 滚轮缩放\nF 跟随所选军团 · F3 全景\n小地图：左键定位，右键下令";
+        private string HelpText() => "操作提示\n1. 点击军团，或用数字键选择（双击聚焦，Tab 轮换）\n2. 按 M，再点击地面设置目标\n3. 左键拖框当前军团；框空不指挥任何人\n4. 局部只支持单目标；整军团可Shift追加航点\nEsc先取消选点，再清选区；不清除原命令\nSpace 暂停 / 继续；改令会继续运行\n右键 + WASD 观察 · 方向键平移 · 滚轮缩放\nF 跟随所选军团 · F3 全景\n小地图：左键定位，右键下令";
         private string DiagnosticsText() => "技术信息\n战斗时间 " + controller.TelemetrySnapshot.battleSeconds.ToString("F1") + " s\n网格溢出 " + controller.TelemetrySnapshot.gridOverflowPerFrame + " / 帧\n流场重建 " +
             controller.TelemetrySnapshot.attackerFlowRebuilds + " / " + controller.TelemetrySnapshot.defenderFlowRebuilds;
         private string StartLabel()

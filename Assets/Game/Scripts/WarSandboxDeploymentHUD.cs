@@ -102,6 +102,7 @@ namespace MassEngine.Game
                 if (Confirming) CancelConfirmation();
                 else { placing = templateMenu = armyMenu = false; clearFocusRequested = true; }
             }
+            HandleFacingKeys();
             RefreshUGUI();
         }
 

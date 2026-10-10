@@ -32,6 +32,13 @@ public class MyCameraManager : MonoBehaviour
     [Min(100f)] public float MaxWorldCoordinate = 5000f;
     [Min(1f)] public float MaxMouseDeltaPerFrame = 80f;
 
+    [Header("Tactical framing (army focus)")]
+    // Focus pitch, framing tightness and follow auto-zoom are player settings (设置 → 镜头), see WarSandboxCameraPrefs.
+    private static float TacticalPitch => MassEngine.Game.WarSandboxCameraPrefs.Current.focusPitch;
+    private static float TacticalFrameMargin => MassEngine.Game.WarSandboxCameraPrefs.Current.FrameMargin;
+    [Min(1f)] public float TacticalMinDistance = 30f;
+    [Min(0f)] public float TacticalFlySeconds = 0.6f;
+
     private MassEngine.Game.BattlefieldCameraComfort24 _comfort24;
     private bool _lockInput;
     private bool _orbiting;
@@ -46,6 +53,11 @@ public class MyCameraManager : MonoBehaviour
     private Vector3 _lastSafeCameraPosition;
     private Vector3 _lastSafePointPosition;
     private bool _reportedInvalidTransform;
+    private bool _flyActive;
+    private float _flyT, _flyFromDistance, _flyToDistance, _followDistance, _followTargetDistance;
+    private Vector3 _flyFromPos, _flyToPos, _flyToPoint;
+    private Quaternion _flyFromRot, _flyToRot;
+    public bool TacticalFlyActive => _flyActive;
 
     public Camera MainCamera => ControlledCamera;
 
@@ -137,6 +149,7 @@ public class MyCameraManager : MonoBehaviour
     {
         RecoverInvalidTransform();
         HandleInput();
+        AdvanceTacticalFly();
     }
 
     private void LateUpdate()
@@ -369,13 +382,64 @@ public class MyCameraManager : MonoBehaviour
         CaptureSafeTransform();
     }
 
-    public void FocusTacticalBounds(Bounds bounds)
-    {
-        if (ControlledCamera == null)
-            return;
+    public void FocusTacticalBounds(Bounds bounds) => FocusTacticalBounds(bounds, null);
 
-        ControlledCamera.transform.rotation = Quaternion.Euler(55f, 0f, 0f);
-        FocusBounds(bounds);
+    /// <summary>
+    /// Frames the whole box (2026-10-10 feedback): with lookToward the camera stands behind the box looking at that
+    /// point (e.g. the nearest enemy army), otherwise it keeps the current heading. The closest distance that keeps
+    /// every corner on screen is solved for the real vertical and horizontal FOV, then the camera flies there.
+    /// </summary>
+    public void FocusTacticalBounds(Bounds bounds, Vector3? lookToward)
+    {
+        if (ControlledCamera == null || _point == null)
+            return;
+        float currentYaw = ControlledCamera.transform.eulerAngles.y;
+        float yaw = lookToward.HasValue ? TacticalCameraFraming.YawToward(bounds.center, lookToward.Value, currentYaw) : currentYaw;
+        Quaternion rotation = Quaternion.Euler(TacticalPitch, yaw, 0f);
+        if (!TacticalCameraFraming.TryFit(bounds, rotation, ControlledCamera.fieldOfView, ControlledCamera.aspect,
+                TacticalFrameMargin, Mathf.Max(MinZoomDistance, TacticalMinDistance), out Vector3 lookAt, out float distance))
+            return;
+        distance = Mathf.Clamp(distance, MinZoomDistance, MaxZoomDistance);
+        if (_comfort24 != null && _comfort24.isActiveAndEnabled) _comfort24.NotifyFocus();
+        _flyFromPos = ControlledCamera.transform.position; _flyFromRot = ControlledCamera.transform.rotation;
+        _flyFromDistance = Mathf.Clamp(Vector3.Distance(_flyFromPos, _point.position), MinZoomDistance, MaxZoomDistance);
+        _flyToRot = rotation; _flyToPoint = lookAt; _flyToDistance = distance;
+        _flyToPos = CameraMotionSafety.ClampWorldPosition(lookAt - rotation * Vector3.forward * distance, MaxWorldCoordinate);
+        _followDistance = _followTargetDistance = distance;
+        ControlledCamera.farClipPlane = Mathf.Clamp(Mathf.Max(ControlledCamera.farClipPlane, distance + bounds.size.magnitude), 100f, MaxWorldCoordinate * 2f);
+        _flyT = 0f;
+        _flyActive = TacticalFlySeconds > 0.01f;
+        if (!_flyActive) ApplyTacticalPose(_flyToPos, rotation, distance);
+    }
+
+    private void ApplyTacticalPose(Vector3 position, Quaternion rotation, float distance)
+    {
+        position = CameraMotionSafety.ClampWorldPosition(position, MaxWorldCoordinate);
+        ControlledCamera.transform.SetPositionAndRotation(position, rotation);
+        _distance = Mathf.Clamp(distance, MinZoomDistance, MaxZoomDistance);
+        _point.position = CameraMotionSafety.ClampWorldPosition(position + rotation * Vector3.forward * _distance, MaxWorldCoordinate);
+        SyncFreeLookAngles();
+        if (_mouseOrbit != null) { _mouseOrbit.Target = _point; _mouseOrbit.Distance = _distance; _mouseOrbit.RestRotationInfo(); }
+        CaptureSafeTransform();
+    }
+
+    private bool TacticalCameraInterrupted()
+    {
+        if (_lockInput) return true;
+        if (_comfort24 != null && _comfort24.isActiveAndEnabled)
+            return _comfort24.SuppressFollow || _comfort24.CurrentMode != MassEngine.Game.BattlefieldCameraComfort24.DragMode.None;
+        return Input.GetMouseButton(1) || Input.GetMouseButton(2) || !Mathf.Approximately(Input.GetAxis("Mouse ScrollWheel"), 0f);
+    }
+
+    private void AdvanceTacticalFly()
+    {
+        if (!_flyActive || ControlledCamera == null || _point == null) return;
+        if (TacticalCameraInterrupted()) { _flyActive = false; CaptureSafeTransform(); return; }
+        _flyT = Mathf.Min(1f, _flyT + Mathf.Clamp(Time.unscaledDeltaTime, 0f, 0.1f) / Mathf.Max(0.01f, TacticalFlySeconds));
+        float s = _flyT * _flyT * (3f - 2f * _flyT);
+        ApplyTacticalPose(Vector3.Lerp(_flyFromPos, _flyToPos, s), Quaternion.Slerp(_flyFromRot, _flyToRot, s),
+            Mathf.Lerp(_flyFromDistance, _flyToDistance, s));
+        if (_flyT >= 1f) _flyActive = false;
     }
 
     /// <summary>
@@ -386,17 +450,31 @@ public class MyCameraManager : MonoBehaviour
     public void FollowTacticalBounds(Bounds bounds, float sharpness)
     {
         if (_comfort24 != null && _comfort24.isActiveAndEnabled && _comfort24.SuppressFollow) return;
-        if (ControlledCamera == null || _point == null || !CameraMotionSafety.IsFinite(bounds.center))
+        if (_flyActive || ControlledCamera == null || _point == null || !CameraMotionSafety.IsFinite(bounds.center))
             return;
 
-        Vector3 target = CameraMotionSafety.ClampWorldPosition(bounds.center, MaxWorldCoordinate);
-        Vector3 step = CameraMotionSafety.ResolveFollowStep(
-            _point.position,
-            target,
-            sharpness,
-            Time.unscaledDeltaTime,
-            MaxTranslationPerFrame);
-        ApplyTranslation(step, true);
+        // Heading stays fixed. Distance re-fits only when the army clearly overflows (>8%) or clearly underfills
+        // (<65%) the current framing, and then eases slowly, so ordinary formation breathing does not pump the zoom.
+        Quaternion rotation = ControlledCamera.transform.rotation;
+        if (_followDistance <= 0f) _followDistance = _followTargetDistance = Mathf.Max(_distance, MinZoomDistance);
+        Vector3 target = bounds.center;
+        if (TacticalCameraFraming.TryFit(bounds, rotation, ControlledCamera.fieldOfView, ControlledCamera.aspect,
+                TacticalFrameMargin, Mathf.Max(MinZoomDistance, TacticalMinDistance), out Vector3 lookAt, out float required))
+        {
+            required = Mathf.Clamp(required, MinZoomDistance, MaxZoomDistance);
+            if (MassEngine.Game.WarSandboxCameraPrefs.Current.followAutoZoom &&
+                (required > _followTargetDistance * 1.08f || required < _followTargetDistance * 0.65f)) _followTargetDistance = required;
+            target = lookAt;
+        }
+        float dt = Mathf.Clamp(Time.unscaledDeltaTime, 0f, 0.1f);
+        _followDistance = Mathf.Lerp(_followDistance, _followTargetDistance, 1f - Mathf.Exp(-1.5f * dt));
+        target = CameraMotionSafety.ClampWorldPosition(target, MaxWorldCoordinate);
+        Vector3 step = CameraMotionSafety.ResolveFollowStep(_point.position, target, sharpness, dt, MaxTranslationPerFrame);
+        Vector3 point = _point.position + step;
+        ControlledCamera.transform.position = CameraMotionSafety.ClampWorldPosition(point - rotation * Vector3.forward * _followDistance, MaxWorldCoordinate);
+        _point.position = point;
+        _distance = Mathf.Clamp(_followDistance, MinZoomDistance, MaxZoomDistance);
+        CaptureSafeTransform();
     }
 
     public void CenterTacticalPoint(Vector3 point)

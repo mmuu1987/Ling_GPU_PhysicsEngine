@@ -28,6 +28,10 @@ namespace MassEngine
         [Tooltip("Fraction of lattice step used for deterministic jitter. Existing scenes retain 0.08; dense trial templates use 0.02 to preserve physical separation.")]
         [Range(0f, .08f)] public float formationJitterFraction = .08f;
 
+        [Header("Facing")]
+        [Tooltip("Initial yaw in degrees (0 = +Z, 90 = +X). Agents keep it until they first move or acquire a target. Existing assets keep 0.")]
+        public float facingYawDegrees = 0f;
+
         [Header("Manual Override")]
         [Tooltip("If BOTH x and z are > 0 this exact footprint is used and density is ignored. Leave zero for auto.")]
         public Vector3 spawnSize = Vector3.zero;
