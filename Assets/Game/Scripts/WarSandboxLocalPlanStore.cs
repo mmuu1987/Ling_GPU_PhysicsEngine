@@ -126,6 +126,9 @@ namespace MassEngine.Game
         public float aspect;
         [DataMember(IsRequired = true)]
         public WarSandboxPlanVector3 manualSize;
+        /// <summary>Optional; omitted when 0 (auto) so older plans stay byte-identical and still load.</summary>
+        [DataMember(EmitDefaultValue = false)]
+        public int facing;
 
         public static WarSandboxPlanEntry From(WarSandboxDeploymentEntry source, string id, int revision)
         {
@@ -134,7 +137,7 @@ namespace MassEngine.Game
                 valuesVersion = 1, templateId = id, templateRevision = revision,
                 teamId = source.teamId, count = source.count,
                 center = WarSandboxPlanVector3.From(source.center), density = source.density,
-                aspect = source.aspect, manualSize = WarSandboxPlanVector3.From(source.manualSize)
+                aspect = source.aspect, manualSize = WarSandboxPlanVector3.From(source.manualSize), facing = source.facing
             };
         }
 
@@ -149,7 +152,7 @@ namespace MassEngine.Game
             result = new WarSandboxDeploymentEntry
             {
                 template = template, teamId = teamId, count = count, center = center.ToRuntime(),
-                density = density, aspect = aspect, manualSize = manualSize.ToRuntime()
+                density = density, aspect = aspect, manualSize = manualSize.ToRuntime(), facing = facing
             };
             return true;
         }
@@ -344,7 +347,7 @@ namespace MassEngine.Game
                     !Finite(entry.density) || entry.density < 0.05f || entry.density > SpawnConfig.PackingLimitPerSquareMeter ||
                     !Finite(entry.aspect) || entry.aspect < 0.1f || entry.aspect > 10f ||
                     entry.manualSize.x < 0 || entry.manualSize.y < 0 || entry.manualSize.z < 0 ||
-                    ((entry.manualSize.x > 0) != (entry.manualSize.z > 0)))
+                    ((entry.manualSize.x > 0) != (entry.manualSize.z > 0)) || !WarSandboxDeploymentFacing.IsValid(entry.facing))
                 { error = "方案编成包含非法数值。"; return false; }
             }
             if (plan.entries.Sum(entry => (long)entry.count) > WarSandboxDeploymentDraft.MaxTotalUnits)

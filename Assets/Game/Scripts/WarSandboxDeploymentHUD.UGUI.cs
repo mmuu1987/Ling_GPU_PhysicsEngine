@@ -151,7 +151,7 @@ namespace MassEngine.Game
                 deployment.controller.TryResolveGroundPoint(deployment.Draft[selected].center, out var ground, out _))
                 note = "地表高程 " + ground.y.ToString("F1") + "m · 浅色较高 / 深灰禁行 · 编成须完整放入可通行区";
             if (FlowPolish23.Active(deployment)) note = FlowPolish23.MapHint(deployment, selected, placing, spatialSelection);
-            note = "拖色块平移 · 选中后拖边/角改尺寸 · Shift锁比例 · 松手校验 · Esc/移出取消";
+            note = "拖色块平移 · 选中后拖边/角改尺寸 · R旋转朝向 · Shift锁比例 · 松手校验 · Esc/移出取消";
             ui.Label("map-note", new Rect(area.x + 12, area.y + 48, area.width - 24, 30), note, 13, WarSandboxUGUI.Muted);
             Vector2 world = deployment.WorldSize; if (world.x <= 0 || world.y <= 0) return;
             float scale = Mathf.Min((area.width - 32) / world.x, (area.height - 106) / world.y);
@@ -188,7 +188,8 @@ namespace MassEngine.Game
                     ui.Panel("map-selected-left", new Rect(rect.x, rect.y, 2, rect.height), WarSandboxUGUI.Accent, false);
                     ui.Panel("map-selected-right", new Rect(rect.xMax - 2, rect.y, 2, rect.height), WarSandboxUGUI.Accent, false);
                 }
-                if (rect.width > 40 && rect.height > 24) ui.Label("map-number-" + i, rect, (i + 1).ToString(), 14, WarSandboxUGUI.Ink, true);
+                DrawFacingMark(ui, i, rect);
+                if (rect.width > 40 && rect.height > 24) ui.Label("map-number-" + i, rect, (i + 1) + " " + FacingArrow(i), 14, WarSandboxUGUI.Ink, true);
             }
             BindTranslation(ui, map, world);
             DrawResizeHandles(ui,map,world);

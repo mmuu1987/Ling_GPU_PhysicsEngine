@@ -126,9 +126,10 @@ namespace MassEngine.Game
                 ui.Label("placement-unit", new Rect(rx + 10, top + 50, right - 90, 44), Check32 ? DeploymentCheck32.Scope(draft, selected) + "\n" + draft[selected].Name : draft[selected].Name, 15, WarSandboxUGUI.Muted);
                 ui.Button("placement-prev", new Rect(rx + right - 76, top + 54, 30, 32), "‹", () => SelectFormation((selected + draft.Count - 1) % draft.Count));
                 ui.Button("placement-next", new Rect(rx + right - 40, top + 54, 30, 32), "›", () => SelectFormation((selected + 1) % draft.Count));
-                ui.Scroll("placement-fields", new Rect(rx + 12, top + 104, right - 24, body - 120), TightEnabled ? 510 : 410);
+                ui.Scroll("placement-fields", new Rect(rx + 12, top + 104, right - 24, body - 120), TightEnabled ? 610 : 510);
                 float fy = 0, fw = right - 32;
                 DrawTightPresets(ui, ref fy, fw);
+                DrawFacingControls(ui, ref fy, fw);
                 UGUIField(ui, "x", "中心 X", x, v => x = v, ref fy, fw);
                 UGUIField(ui, "z", "中心 Z", z, v => z = v, ref fy, fw);
                 ui.Button("field-manual", new Rect(0, fy, fw, 36), manual ? "阵型：手动尺寸" : "阵型：密度 / 宽深比", () => manual = !manual); fy += 46;

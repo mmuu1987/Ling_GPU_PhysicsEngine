@@ -36,6 +36,7 @@ namespace MassEngine
             float jitterFraction = Config != null ? Mathf.Clamp(Config.formationJitterFraction, 0f, .08f) : .08f;
             float jitterX = stepX * jitterFraction;
             float jitterZ = stepZ * jitterFraction;
+            float yaw = Config != null && !float.IsNaN(Config.facingYawDegrees) && !float.IsInfinity(Config.facingYawDegrees) ? Config.facingYawDegrees : 0f;
 
             for (int i = offset; i < end; i++)
             {
@@ -60,7 +61,7 @@ namespace MassEngine
                 buffer[i] = new AgentData
                 {
                     position = new Vector3(center.x + x, center.y, center.z + z),
-                    rotation = Vector3.zero,
+                    rotation = new Vector3(0f, yaw, 0f),
                     scale = Vector3.one,
                     velocity = Vector3.zero,
                     currentState = (int)AgentState.Idle,

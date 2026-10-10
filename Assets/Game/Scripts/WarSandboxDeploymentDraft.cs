@@ -14,6 +14,8 @@ namespace MassEngine.Game
         public float density;
         public float aspect;
         public Vector3 manualSize;
+        /// <summary>0 = auto (face nearest enemy formation); 1..4 = manual quarter, see WarSandboxDeploymentFacing.</summary>
+        public int facing;
 
         public static WarSandboxDeploymentEntry From(UnitTypeConfig unit) => new WarSandboxDeploymentEntry
         {
@@ -197,6 +199,7 @@ namespace MassEngine.Game
                 var validation = ConfigValidator.Validate(e.template);
                 if (!validation.IsValid) { error = prefix + string.Join("\n", validation.Errors); return false; }
                 if (e.teamId < 0 || e.teamId > ConfigValidator.MaxTeamId) error = prefix + "军团无效。";
+                else if (!WarSandboxDeploymentFacing.IsValid(e.facing)) error = prefix + "朝向无效。";
                 else if (e.count <= 0 || e.count > MaxTotalUnits) error = prefix + "人数必须为 1 到 " + MaxTotalUnits + "。";
                 else if (!Finite(e.center) || !Finite(e.manualSize) || e.manualSize.x < 0 || e.manualSize.y < 0 || e.manualSize.z < 0)
                     error = prefix + "位置和阵型尺寸必须为有效数值。";
@@ -280,6 +283,7 @@ namespace MassEngine.Game
                     }
                     spawn.unitCount = e.count; spawn.spawnCenter = e.center;
                     spawn.formationDensity = e.density; spawn.formationAspect = e.aspect; spawn.spawnSize = e.manualSize;
+                    spawn.facingYawDegrees = WarSandboxDeploymentFacing.ResolveYaw(entries, i);
                     Scenario.unitTypes[i] = unit;
                 }
             }
