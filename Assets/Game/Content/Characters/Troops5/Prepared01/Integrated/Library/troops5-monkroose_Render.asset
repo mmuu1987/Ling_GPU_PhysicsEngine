@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: troops5-monkroose_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: ac46ec96432eb274aa5639b1a6fe8725, type: 2}
-  nearMesh: {fileID: -3872472837030954610, guid: ae5b816dce006f74997e047f6c2f0293, type: 2}
-  midMesh: {fileID: 2093057742963814752, guid: ac46ec96432eb274aa5639b1a6fe8725, type: 2}
-  farMesh: {fileID: 2093057742963814752, guid: ac46ec96432eb274aa5639b1a6fe8725, type: 2}
+  vatProfile: {fileID: 11400000, guid: fb1dd1119f034854abcf0cfdd029dd2f, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: 94880da283d74ba4582cc1402075d6d0, type: 2}
   midMaterial: {fileID: 2100000, guid: e58287317585ea84eaad4532ab1a9c54, type: 2}
   farMaterial: {fileID: 2100000, guid: e58287317585ea84eaad4532ab1a9c54, type: 2}

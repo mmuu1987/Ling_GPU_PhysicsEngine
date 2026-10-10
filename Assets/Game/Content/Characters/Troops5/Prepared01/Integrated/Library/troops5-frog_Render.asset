@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: troops5-frog_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: 2bb189c15f63c474cb1fc8eaa8c52faf, type: 2}
-  nearMesh: {fileID: -7959172728246672848, guid: 26942ac6f15ceac48985e3b0e8844367, type: 2}
-  midMesh: {fileID: 5473501764778527594, guid: 2bb189c15f63c474cb1fc8eaa8c52faf, type: 2}
-  farMesh: {fileID: 5473501764778527594, guid: 2bb189c15f63c474cb1fc8eaa8c52faf, type: 2}
+  vatProfile: {fileID: 11400000, guid: 2f0248bd06c387f48888cbdaa043507d, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: f6689d957d0a55b429f08092f1d320b0, type: 2}
   midMaterial: {fileID: 2100000, guid: ab2c3343f85fba04b939cbc70823bb5a, type: 2}
   farMaterial: {fileID: 2100000, guid: ab2c3343f85fba04b939cbc70823bb5a, type: 2}

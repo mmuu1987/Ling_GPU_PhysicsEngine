@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: large-knight-control_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: d07a67df8fd6e5f42b6ace1fecf7360b, type: 2}
-  nearMesh: {fileID: -3487595683387538129, guid: b9cbbfa94bce30f4e9942dcbf04bd029, type: 2}
-  midMesh: {fileID: 2936778620165953556, guid: d07a67df8fd6e5f42b6ace1fecf7360b, type: 2}
-  farMesh: {fileID: 2936778620165953556, guid: d07a67df8fd6e5f42b6ace1fecf7360b, type: 2}
+  vatProfile: {fileID: 11400000, guid: 64642f77329515d4699cd6a1fae59329, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: a2fed8d184890984b8a7547da0487c42, type: 2}
   midMaterial: {fileID: 2100000, guid: 08fc80f8ae8b7584b9051352a5f0293c, type: 2}
   farMaterial: {fileID: 2100000, guid: 08fc80f8ae8b7584b9051352a5f0293c, type: 2}

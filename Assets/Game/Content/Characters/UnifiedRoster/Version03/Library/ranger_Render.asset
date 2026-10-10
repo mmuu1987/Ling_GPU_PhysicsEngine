@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: ranger_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: bb215584e01eab342a8fd190ad5bb6c5, type: 2}
-  nearMesh: {fileID: 9043146481938458335, guid: 3ba21521942ea284baf8699212ff7837, type: 2}
-  midMesh: {fileID: -389926985913616172, guid: bb215584e01eab342a8fd190ad5bb6c5, type: 2}
-  farMesh: {fileID: -389926985913616172, guid: bb215584e01eab342a8fd190ad5bb6c5, type: 2}
+  vatProfile: {fileID: 11400000, guid: 7e54446d35fb50c45b4da93d04611d66, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: 4b35f05f926bb9c48bc8f837542637fa, type: 2}
   midMaterial: {fileID: 2100000, guid: 769c35c3ba5eec540a447b13752f6b22, type: 2}
   farMaterial: {fileID: 2100000, guid: 769c35c3ba5eec540a447b13752f6b22, type: 2}

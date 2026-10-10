@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: triceratops_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: 520c793606e18824d80b659523b87e1c, type: 2}
-  nearMesh: {fileID: 5574376964113262136, guid: 4c353f8070802ba40b3791575b7783dd, type: 2}
-  midMesh: {fileID: -8861126642598964740, guid: 520c793606e18824d80b659523b87e1c, type: 2}
-  farMesh: {fileID: -8861126642598964740, guid: 520c793606e18824d80b659523b87e1c, type: 2}
+  vatProfile: {fileID: 11400000, guid: 523dcc74a8f4dba4893eef3beb4a8ce8, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: 2b33a1ba97ff0834499efafe178f9480, type: 2}
   midMaterial: {fileID: 2100000, guid: f9a68d2cae5fdc849ac7ffeac8695c4c, type: 2}
   farMaterial: {fileID: 2100000, guid: f9a68d2cae5fdc849ac7ffeac8695c4c, type: 2}
