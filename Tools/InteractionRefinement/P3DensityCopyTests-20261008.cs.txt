@@ -1,0 +1,58 @@
+
+namespace MassEngine.Tests {
+ public sealed class P3DensityCopyTests {
+  [Serializable] public sealed class Timing { public int repetition,order;public string mode;public double milliseconds; }
+  [Serializable] public sealed class Report {public int sample,cells,targets;public bool exactBits,sourceUnchanged;public long scratchPayloadBytes;public string inputScope="Density support reconstructed from saved ordered target cells; positive magnitudes are synthetic, not captured GPU density values. NativeArray is owned test memory. Bulk copy included; allocation of persistent scratch excluded and disclosed. No live GetData/request timing.";public Timing[] rows;}
+  static void Scan(TerrainNavigationGrid nav,Unity.Collections.NativeArray<uint> density,List<Vector2> snapshot){snapshot.Clear();for(int i=0;i<density.Length;i++)if(density[i]>0&&nav.IsWalkable(nav.CellCenter(i)))snapshot.Add(nav.CellCenter(i));}
+  static void Bulk(TerrainNavigationGrid nav,Unity.Collections.NativeArray<uint> density,uint[] scratch,List<Vector2> snapshot){snapshot.Clear();density.CopyTo(scratch);for(int i=0;i<density.Length;i++)if(scratch[i]>0&&nav.IsWalkable(nav.CellCenter(i)))snapshot.Add(nav.CellCenter(i));}
+  static void Exact(IReadOnlyList<Vector2> a,IReadOnlyList<Vector2> b){Assert.AreEqual(a.Count,b.Count);for(int i=0;i<a.Count;i++){Assert.AreEqual(BitConverter.SingleToInt32Bits(a[i].x),BitConverter.SingleToInt32Bits(b[i].x),"x "+i);Assert.AreEqual(BitConverter.SingleToInt32Bits(a[i].y),BitConverter.SingleToInt32Bits(b[i].y),"y "+i);}}
+  static TerrainNavigationGrid Grid(string layout) => (TerrainNavigationGrid)typeof(TerrainCardinalRouteCacheTests).GetMethod("Grid",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,new object[]{layout,16,16});
+  static string Output(){foreach(string arg in Environment.GetCommandLineArgs())if(arg.StartsWith("--interaction-p8-output=",StringComparison.Ordinal))return arg.Substring("--interaction-p8-output=".Length);throw new Exception("Missing output");}
+  [TestCase(0)][TestCase(1)][TestCase(2)][TestCase(3)][TestCase(4)][TestCase(5)]
+  public void ReconstructedCapturedSupportIsExactAndMeasured(int sample){
+   string capture=System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath,"../Logs/InteractionRefinement-20261007/P3/fixed-input-20261008-01-capture"));Vector2[] goals;
+   using(var r=new System.IO.BinaryReader(System.IO.File.OpenRead(System.IO.Path.Combine(capture,"fixed-sample-"+sample+"-input.bin")))){Assert.AreEqual("P3_FIXED_INPUT_V1",r.ReadString());r.ReadSingle();goals=new Vector2[r.ReadInt32()];for(int i=0;i<goals.Length;i++)goals[i]=new Vector2(r.ReadSingle(),r.ReadSingle());}
+   var nav=(TerrainNavigationGrid)typeof(P3UniformOutputTests).GetMethod("Hydrate",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,new object[]{typeof(TerrainNavigationGrid)});
+   var data=new uint[nav.CellCount];for(int i=0;i<goals.Length;i++){Assert.IsTrue(nav.TryGetCell(goals[i],out int cell));Assert.AreEqual(0u,data[cell],"Recorded goals must have unique support");data[cell]=i%2==0?uint.MaxValue:1u;}
+   var scratch=new uint[data.Length];var buffer=new List<Vector2>(goals.Length);var rows=new List<Timing>();
+   using(var density=new Unity.Collections.NativeArray<uint>(data,Unity.Collections.Allocator.Persistent)){
+    Scan(nav,density,buffer);Exact(goals,buffer);Bulk(nav,density,scratch,buffer);Exact(goals,buffer);
+    for(int rep=-3;rep<20;rep++)for(int order=0;order<2;order++){
+     int mode=(rep+4+order)%2;long start=System.Diagnostics.Stopwatch.GetTimestamp();if(mode==0)Scan(nav,density,buffer);else Bulk(nav,density,scratch,buffer);double ms=(System.Diagnostics.Stopwatch.GetTimestamp()-start)*1000.0/System.Diagnostics.Stopwatch.Frequency;
+     Exact(goals,buffer);if(rep>=0)rows.Add(new Timing{repetition=rep,order=order,mode=mode==0?"native-index":"bulk-copy-scan",milliseconds=ms});
+    }
+    CollectionAssert.AreEqual(data,density.ToArray());CollectionAssert.AreEqual(data,scratch);
+   }
+   var report=new Report{sample=sample,cells=data.Length,targets=goals.Length,exactBits=true,sourceUnchanged=true,scratchPayloadBytes=4L*data.Length,rows=rows.ToArray()};
+   System.IO.File.WriteAllText(System.IO.Path.Combine(Output(),"density-copy-"+sample+".json"),JsonUtility.ToJson(report,true));
+  }
+  [TestCase(0)][TestCase(1)][TestCase(2)][TestCase(3)][TestCase(4)][TestCase(5)][TestCase(6)][TestCase(7)]
+  public void BoundarySupportOrderAndScratchReuse(int mode){
+   var nav=Grid(mode==5?"holes":mode==7?"fractional":"flat");var data=new uint[nav.CellCount];var walk=nav.CopyWalkable();
+   for(int i=0;i<data.Length;i++)data[i]=mode==3?uint.MaxValue:mode==4?(i%7==0?(uint)(i+1):0):mode==5?(walk[i]==0?17u:0u):mode>=6?(i%3==0?1u:0u):0;
+   if(mode==1){for(int i=0;i<data.Length;i++)if(walk[i]!=0){data[i]=1;break;}}
+   if(mode==2){for(int i=data.Length-1;i>=0;i--)if(walk[i]!=0){data[i]=uint.MaxValue;break;}}
+   var scratch=new uint[data.Length];for(int i=0;i<scratch.Length;i++)scratch[i]=uint.MaxValue;
+   var a=new List<Vector2>();var b=new List<Vector2>();var saved=new List<Vector2>();
+   using(var density=new Unity.Collections.NativeArray<uint>(data,Unity.Collections.Allocator.Persistent)){
+    Scan(nav,density,a);Bulk(nav,density,scratch,b);Exact(a,b);saved.AddRange(b);CollectionAssert.AreEqual(data,scratch);CollectionAssert.AreEqual(data,density.ToArray());
+    if(mode==0||mode==5)Assert.AreEqual(0,b.Count);if(mode==1||mode==2)Assert.AreEqual(1,b.Count);
+   }
+   // Reuse the same managed scratch for another empty team; previous output must survive.
+   using(var empty=new Unity.Collections.NativeArray<uint>(data.Length,Unity.Collections.Allocator.Persistent)){Bulk(nav,empty,scratch,b);Assert.AreEqual(0,b.Count);}
+   Exact(a,saved);foreach(uint x in scratch)Assert.AreEqual(0u,x);
+  }
+  [Test]
+  public void CompletedGpuReadbackCopiesBeforeRequestLifetimeEnds(){
+   Assert.IsTrue(SystemInfo.supportsAsyncGPUReadback,"This machine must exercise real async readback, not skip");
+   var nav=Grid("holes");var data=new uint[nav.CellCount];for(int i=0;i<data.Length;i++)data[i]=i%5==0?uint.MaxValue:0u;
+   var scratch=new uint[data.Length];var a=new List<Vector2>();var b=new List<Vector2>();
+   using(var gpu=new ComputeBuffer(data.Length,4)){
+    gpu.SetData(data);var request=UnityEngine.Rendering.AsyncGPUReadback.Request(gpu);request.WaitForCompletion();Assert.IsFalse(request.hasError);
+    var density=request.GetData<uint>();Scan(nav,density,a);Bulk(nav,density,scratch,b);Exact(a,b);CollectionAssert.AreEqual(data,scratch);
+   }
+   // Only owned managed copies are used after buffer release; never keep/read the request view.
+   Exact(a,b);CollectionAssert.AreEqual(data,scratch);
+  }
+ }
+}

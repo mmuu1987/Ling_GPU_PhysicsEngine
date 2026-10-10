@@ -1,0 +1,54 @@
+# P9 多命令与远程优化进展 — 2026-10-09
+
+## 结论
+仍未完成生产修复或真实冷态命令验收。P12 生产代码未改；测试资产由 8 个增至 24 个，母工程/P11/37、HEAD/index、用户数据保护检查全部通过。没有发布、提交合并或启用 Burst。
+
+本轮有效测试矩阵为 **120 项多命令差分 + 32 项远程优化差分，全部 Passed**。连同此前 16 项专用近战与 26 项分区原型，当前四套原型验证共 194 项；各轮重跑不重复累计，原版 60 项回归另算安全基线。
+
+## 1. v12 多命令差分
+- `baseline-other-02.json`：120/120 Passed，测试用时 4.6053278s。
+- Move 近战、Hold-here 近战、Attack 远程、Move 远程、Hold-here 远程，5 类 × 12 场景 × 单帧/32帧。
+- 8 单位、全部有效 local order。Move 到达点放在对面而非原地；射程 20、速度 12、hit radius .1、lifetime 5。
+- 交替使用零重力与 -9.81 向下重力；初版 `baseline-other-01` 也 120/120，但使用 +9.81，不作为正常弹道代表。初版证据保留。
+- 比较 HP、pendingDamage、target、launch、agent transform/状态/动画/冷却/拥挤状态，整数精确、浮点 1e-4。
+- 对远程 Attack 的一个 32 帧参考场景，断言确有目标和非零射界状态，防止根本未执行射界的空验证。72 条 coverage 记录保存在 JSON 的 stages 中。
+- **仅战斗模拟与 launch/readiness 状态；没有启用 projectile flight/命中结算。** 不代表远程完整弹道回归或混合兵种 host 路由已完成。
+
+## 2. v13 CPU 编译缩减
+在 v12 Attack ranged 专用内核上，保留地形/墙体/边界/切角和真实射界判定：
+
+| 版本 | CPU 编译秒 | DXBC 字节 |
+|---|---:|---:|
+| v12 Attack ranged | 17.9112579 | 195696 |
+| v13 navigation loops | 16.3312260 | 182256 |
+| v13 single ranged probe call site | 11.9534327 | 157752 |
+| v13 probe + navigation loops | **10.1126774** | **144812** |
+
+- 将 centre/left/right 射界检查合为一个保序循环调用点，保留原触发条件；局部导航四角检查、积分尝试改为显式循环。
+- 同类射界合并在原大内核的 v4 曾无效；本次是不同的专用内核组合，不是原样重复。
+- 仍为系统 d3dcompiler_47.dll、O3、cs_5_0 的 CPU 筛查，**不是 Unity 实际点击耗时**。10.11 秒仍不可视为卡顿已解决。
+- 采用测试的 v13 DXBC SHA：`afbe31f5dbcd30c94369a05f176f5ef1d46dc52b57b55f73e4ac1ed57c703b12`。
+
+## 3. v13 GPU 验证与覆盖补强
+- `baseline-optimized-01` 24/24，通过但只有畅通射界。
+- 检查 coverage 后发现原 12 场景的墙是导航阻挡，并未使远程射界受阻；因此没有把这轮当成侧向探测已验证。
+- 增加真正挡住射线的友军实体：中央阻挡、左侧加阻挡、左右均阻挡、右侧加阻挡。
+- 最终 `baseline-optimized-03.json`：**32/32 Passed，1.4786857s**。前 12 场景各 1/32 帧，4 个阻挡场景各 1/160 帧（FrameDt=.02，160 帧为 3.2 秒）。
+- 对每个阻挡场景，强制断言源单位 0 第一帧确为 blocked；对镜像单侧阻挡，强制断言分别选择右侧状态 -2 / 左侧状态 -1。
+- 第一帧各阻挡场景均有 5 个 blocked 单位；160 帧后出现实际状态演进，镜像右侧阻挡场景已 clear=8、blocked=0、launchPositive=8。上述参考结果与优化结果保持一致。
+- 中间 `baseline-optimized-02` 30/30 及所有原始资产/manifest 备份保留。
+- 32 项测试用时不是首个 Attack 响应时间；短时间来自已缓存 shader，不能拿来验收冷态问题。
+
+## 4. 保护、脚本与接续
+- 当前 `prototype-harness.json`：24 文件；新增 5 个 v12 compute、1 个 v13 compute、2 个 C# partial 及各 meta。旧 8 文件未覆盖。
+- C# fixture 最新本地副本：`MassEngineGpuKernelTests.P9Other.cs`（revision02）、`MassEngineGpuKernelTests.P9Optimized.cs`（revision03）。
+- 最新 runner `Tools/InteractionRefinement/p9_fix_run_v8_20261009.py`：other 固定要求 120 cases，optimized 固定要求 32；所有原有保护保留。
+- 远端证据目录仍为 `outputs/P9ColdFix-20261009-01/`；CPU 新目录 `compiler-probes-v13-REQUIRES-HOST-SPLIT/`。测试原始存档 `prototype-other-original/`、`prototype-optimized-original/`，每次修订均有 manifest/fixture 存档。
+- 本轮远端进程：`6f591b50`（other01）、`611510d3`（other02 + v13）、`790ed75a`（optimized01）、`cabf850a`（optimized02）、`62f7abfc`（optimized03）均 exit0。最后结束 13:49:45.920383。无本轮仍运行的 Unity/probe。
+- `patch-manifest.json`、`diagnostic-harness.json` 仍不存在；没有生产 host 分区，未跑 fixed/cold/repeat/joint。
+
+## 下一步
+1. 将已经有差分证据的专用化设计转成可扩展的生产 host 分区；不能直接部署 8 单位 mask 或反射调度夹具。
+2. 在实现前明确成员/epoch/stance/type 的数据来源与同步契约；涵盖改令、取消、配置变更、死亡、场景重置、多 manager、生命周期和预算。每 agent 恰算一次，共用快照与 damage，只清零/Swap/AfterDispatch 一次。
+3. 覆盖真实混合命令/兵种、charge、projectile flight、2048 选 4，以及 Unity 冷缓存命令与完整回归。进一步减少 5–10 秒级专用编译成本，不能靠加载预热搬移停顿。
+4. 暖态约 333ms 规划、Player/AOT、真人验收仍分别开放。继续安全工作，不逐步向用户询问。

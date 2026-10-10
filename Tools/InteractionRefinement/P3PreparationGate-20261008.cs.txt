@@ -1,0 +1,43 @@
+
+#if UNITY_EDITOR
+namespace MassEngine {
+ // Temporary independent diagnostic only. Not called by TerrainNavigationRuntime.Upload or scene code.
+ public sealed class P3PreparationUnavailableException : System.Exception { public P3PreparationUnavailableException(string message):base(message){} }
+ public sealed class P3PreparationGate : System.IDisposable {
+  public enum Phase { Waiting, Ready, Unavailable, Faulted, Disposed }
+  public Phase State {get;private set;} = Phase.Waiting;
+  public string Reason {get;private set;}
+  readonly object owner;readonly System.Func<bool> probe;readonly System.Action release;
+  readonly double deadline;double nextProbe,lastTime;bool released;
+  public P3PreparationGate(object owner,System.Func<bool> probe,System.Action release,double now,double timeout=60) {
+   if(owner==null||probe==null||release==null)throw new System.ArgumentNullException();
+   if(double.IsNaN(now)||double.IsInfinity(now)||now<0||double.IsNaN(timeout)||double.IsInfinity(timeout)||timeout<=0)throw new System.ArgumentOutOfRangeException();
+   this.owner=owner;this.probe=probe;this.release=release;lastTime=nextProbe=now;deadline=now+timeout;
+  }
+  void ReleaseOnce(){if(released)return;released=true;release();}
+  bool Reject(string reason){Reason=reason;State=Phase.Unavailable;ReleaseOnce();return false;}
+  bool Validate(object currentOwner,bool enabled,bool forceSync,double now){
+   if(State==Phase.Disposed||State==Phase.Unavailable||State==Phase.Faulted)return false;
+   if(double.IsNaN(now)||double.IsInfinity(now)||now<lastTime)throw new System.ArgumentOutOfRangeException(nameof(now));
+   lastTime=now;
+   if(!object.ReferenceEquals(owner,currentOwner))return Reject("owner-replaced");
+   if(!enabled)return Reject("disabled");
+   if(forceSync)return Reject("forced-sync");
+   if(State==Phase.Waiting&&now>=deadline)return Reject("timeout");
+   return true;
+  }
+  // Normal navigation asks this only: it never starts/probes compilation as a side effect.
+  public bool CanUseBurst(object currentOwner,bool enabled,bool forceSync,double now)=>Validate(currentOwner,enabled,forceSync,now)&&State==Phase.Ready;
+  public bool Advance(object currentOwner,bool enabled,bool forceSync,double now){
+   if(!Validate(currentOwner,enabled,forceSync,now))return false;
+   if(State==Phase.Ready)return true;
+   if(now<nextProbe)return false;
+   nextProbe=now+0.1;
+   try {if(probe())State=Phase.Ready;return State==Phase.Ready;}
+   catch(P3PreparationUnavailableException){return Reject("backend-unavailable");}
+   catch {State=Phase.Faulted;Reason="unexpected-error";ReleaseOnce();throw;}
+  }
+  public void Dispose(){if(State==Phase.Disposed)return;State=Phase.Disposed;ReleaseOnce();}
+ }
+}
+#endif

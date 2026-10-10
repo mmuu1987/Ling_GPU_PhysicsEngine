@@ -1,0 +1,20 @@
+        private struct TailRow { public int frame, stage, costFrame, fields, probes, managed, native, gc0, gc1, gc2; public double time, gap, battleAge, prep, solve, lane, upload, tick; public string state; }
+        private static readonly List<TailRow> tailRows = new List<TailRow>(16384);
+        private static int tailLastFrame=-1;
+        private static double tailLastTime;
+        private static void RecordTail(List<Camera> cameras)
+        {
+            if(!EditorApplication.isPlaying || Time.frameCount==tailLastFrame || !cameras.Any(c=>c!=null&&c.cameraType==CameraType.Game))return;
+            tailLastFrame=Time.frameCount;double now=Time.realtimeSinceStartupAsDouble;
+            var controller=WarSandboxSceneSession.Instance!=null?WarSandboxSceneSession.Instance.Controller:null;
+            var r=controller!=null&&controller.manager!=null?(TerrainNavigationRuntime)typeof(MassEngineManager).GetField("terrainRuntime",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(controller.manager):null;
+            bool current=r!=null&&r.DiagnosticFrame==Time.frameCount;
+            tailRows.Add(new TailRow{frame=Time.frameCount,stage=stage,time=now,gap=tailLastTime>0?(now-tailLastTime)*1000:0,battleAge=stage>=5?now-runningSince:-1,state=r!=null?r.PreparationState:"NoRuntime",costFrame=r!=null?r.DiagnosticFrame:-1,fields=r!=null?r.CompletedFields:0,probes=r!=null?r.PreparationProbeCount:0,managed=r!=null?r.ManagedSolveCount:0,native=r!=null?r.BurstSolveCount:0,prep=current?r.DiagnosticPrepareMs:0,solve=current?r.DiagnosticSolveMs:0,lane=current?r.DiagnosticLaneMs:0,upload=current?r.DiagnosticUploadMs:0,tick=current?r.DiagnosticTickMs:0,gc0=GC.CollectionCount(0),gc1=GC.CollectionCount(1),gc2=GC.CollectionCount(2)});tailLastTime=now;
+        }
+        private static void WriteTail()
+        {
+            using(var w=new StreamWriter(Path.Combine(output,"cold-tail.csv"))){
+                w.WriteLine("frame,stage,time,gapMs,battleAge,state,costFrame,fields,probes,managed,native,prepMs,solveMs,laneMs,uploadMs,tickMs,gc0,gc1,gc2");
+                foreach(var r in tailRows)w.WriteLine(string.Join(",",r.frame.ToString(Inv),r.stage.ToString(Inv),r.time.ToString("R",Inv),r.gap.ToString("R",Inv),r.battleAge.ToString("R",Inv),r.state,r.costFrame.ToString(Inv),r.fields.ToString(Inv),r.probes.ToString(Inv),r.managed.ToString(Inv),r.native.ToString(Inv),r.prep.ToString("R",Inv),r.solve.ToString("R",Inv),r.lane.ToString("R",Inv),r.upload.ToString("R",Inv),r.tick.ToString("R",Inv),r.gc0.ToString(Inv),r.gc1.ToString(Inv),r.gc2.ToString(Inv)));
+            }
+        }

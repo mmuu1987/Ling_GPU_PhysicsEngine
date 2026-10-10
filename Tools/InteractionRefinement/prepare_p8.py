@@ -1,0 +1,8 @@
+from common_p7 import *
+import sys
+sys.stdout.reconfigure(encoding='utf-8');P8=LOG/'P8';assert not(P8/'baseline.json').exists();active=processes();lock=(ROOT/'Temp/UnityLockfile').exists();print({'active':active,'lock':lock},flush=True);assert not active and not lock
+check=project_check(full=True);assert check['passed'],check;assert user_check()['passed'];pub=json.loads((P7/'publication.json').read_text(encoding='utf-8'));final=json.loads((P7/'finalization.json').read_text(encoding='utf-8'));assert final['passed'] and pub['passed']
+for r in pub['files']:assert sha(ROOT/r['path'])==r['sha256'],r['path']
+b=json.loads((P7/'baseline.json').read_text(encoding='utf-8'))['files'];b.update({p:r['expectedSha256'] for p,r in json.loads((P7/'approved-changes.json').read_text(encoding='utf-8')).items()});save(P8/'baseline.json',{'files':b,'p7Check':check,'createdAt':datetime.datetime.now().isoformat()});save(P8/'approved-changes.json',{});save(P8/'scope.json',{'userAuthorizedP8':True,'scope':'Unify player buttons/hotkeys/world/minimap order scope; explicit whole/local/pending/empty/unavailable; local Move/Hold/Retreat/Attack; independent obstacle-aware attack flow and bounded refresh; snapshot/receipt execution feedback; no silent whole-army fallback; preserve explicit Controller API and whole-army waypoints; no P9/build38/onboarding.','P3Deferred':True,'P4P5HumanAccepted':False,'P6PerformanceBounded':True});backup=P8/'handoff-docs-before';backup.mkdir()
+for n in ['IMPLEMENTATION.md','P3-QUALIFICATION-STATE.md']:(backup/n).write_bytes((ROOT/'Docs/InteractionRefinement-20261007'/n).read_bytes())
+save(P8/'handoff.json',{'status':'P8_AUTHORIZED_PREPARED','p7Publication':pub,'baselineFiles':len(b)});print('P8 PREPARED',len(b),'files')

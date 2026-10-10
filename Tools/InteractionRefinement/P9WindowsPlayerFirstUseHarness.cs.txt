@@ -1,0 +1,294 @@
+#if DEVELOPMENT_BUILD
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
+using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
+
+namespace MassEngine.Game
+{
+    /// <summary>
+    /// Isolated development-player harness for the Windows x64 first-local-order check.
+    /// It is inert unless explicitly launched with --p9-player-validation.
+    /// This file is temporary P12 validation code, not shipping runtime code.
+    /// </summary>
+    public sealed class P9WindowsPlayerFirstUseHarness : MonoBehaviour
+    {
+        [Serializable] sealed class CommandRow
+        {
+            public string command, status;
+            public int members, triggerAttempts, frames;
+            public double callbackMs, receiptMs, readbackMs, planMs, uploadMs, maxYieldGapMs;
+        }
+        [Serializable] sealed class Result
+        {
+            public bool passed;
+            public string error, unityVersion, graphicsApi, platform, scene;
+            public int agentCount, selectedMembers;
+            public double startedRealtime, finishedRealtime, processStartToHarnessMs;
+            public string processStartUtc, harnessStartUtc;
+            public List<string> stages = new List<string>();
+            public List<CommandRow> commands = new List<CommandRow>();
+        }
+
+        const string EntryId = "forest-green22";
+        static string output;
+        static bool booted;
+        Result result = new Result();
+        WarSandboxSceneSession session;
+        WarSandboxBattleController controller;
+        MassEngineManager manager;
+        WarSandboxCommandHUD hud;
+        int[] members;
+        Camera selectionCamera;
+        float deadline;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void Bootstrap()
+        {
+            if (booted) return;
+            string arg = Environment.GetCommandLineArgs().FirstOrDefault(x => x.StartsWith("--p9-player-output=", StringComparison.Ordinal));
+            if (arg == null || !Environment.GetCommandLineArgs().Contains("--p9-player-validation")) return;
+            output = arg.Substring("--p9-player-output=".Length).Trim('"');
+            if (string.IsNullOrWhiteSpace(output)) return;
+            booted = true;
+            var host = new GameObject("P9 Windows Player first-use validation (temporary)");
+            Object.DontDestroyOnLoad(host);
+            host.AddComponent<P9WindowsPlayerFirstUseHarness>();
+        }
+
+        void Start()
+        {
+            Directory.CreateDirectory(output);
+            Application.logMessageReceived += CaptureLog;
+            deadline = Time.realtimeSinceStartup + 900f;
+            result.unityVersion = Application.unityVersion;
+            result.graphicsApi = SystemInfo.graphicsDeviceType.ToString();
+            result.platform = Application.platform.ToString();
+            result.startedRealtime = Time.realtimeSinceStartupAsDouble;
+            result.harnessStartUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+            try
+            {
+                using (Process process = Process.GetCurrentProcess())
+                {
+                    DateTime processStart = process.StartTime.ToUniversalTime();
+                    result.processStartUtc = processStart.ToString("o", CultureInfo.InvariantCulture);
+                    result.processStartToHarnessMs = (DateTime.UtcNow - processStart).TotalMilliseconds;
+                }
+            }
+            catch (Exception ex) { result.processStartToHarnessMs = -1; Debug.LogWarning("Could not read Player process start time: " + ex.Message); }
+            WriteStage("player-harness-started");
+            StartCoroutine(Run());
+        }
+
+        void Update()
+        {
+            if (!result.passed && string.IsNullOrEmpty(result.error) && Time.realtimeSinceStartup > deadline)
+                Finish(false, "Player validation exceeded 900 seconds.");
+        }
+
+        void CaptureLog(string condition, string stack, LogType type)
+        {
+            if (output == null || type == LogType.Log) return;
+            File.AppendAllText(Path.Combine(output, "player-log-errors.txt"), type + ": " + condition + Environment.NewLine + stack + Environment.NewLine);
+        }
+
+        void WriteStage(string text)
+        {
+            double elapsed = Time.realtimeSinceStartupAsDouble - result.startedRealtime;
+            string stamped = text + ";t_s=" + F(elapsed);
+            result.stages.Add(stamped);
+            Debug.Log("P9_PLAYER_STAGE " + stamped);
+        }
+
+        IEnumerator Run()
+        {
+            string expectedArg = Environment.GetCommandLineArgs().FirstOrDefault(x => x.StartsWith("--p9-expected-api=", StringComparison.Ordinal));
+            string expectedApi = expectedArg != null ? expectedArg.Substring("--p9-expected-api=".Length) : "Direct3D11";
+            if (!string.Equals(SystemInfo.graphicsDeviceType.ToString(), expectedApi, StringComparison.Ordinal))
+            { Finish(false, "Expected " + expectedApi + ", got " + SystemInfo.graphicsDeviceType); yield break; }
+            if (Application.platform != RuntimePlatform.WindowsPlayer)
+            { Finish(false, "Expected WindowsPlayer, got " + Application.platform); yield break; }
+
+            float until = Time.realtimeSinceStartup + 90f;
+            while ((session = WarSandboxSceneSession.Instance) == null && Time.realtimeSinceStartup < until) yield return null;
+            if (session == null) { Finish(false, "MainMenu scene session did not initialize."); yield break; }
+            while (session.IsLoading && Time.realtimeSinceStartup < until) yield return null;
+            if (session.State != WarSandboxEntryState.Menu)
+            { Finish(false, "Expected MainMenu state, got " + session.State + ": " + session.Error); yield break; }
+            WriteStage("menu-ready");
+
+            WriteStage("enter-battlefield-start;entry=" + EntryId);
+            if (!session.TryEnterBattlefield(EntryId, false, out string error))
+            { Finish(false, "TryEnterBattlefield rejected: " + error); yield break; }
+            until = Time.realtimeSinceStartup + 120f;
+            while (session.IsLoading && Time.realtimeSinceStartup < until) yield return null;
+            if (session.IsLoading || session.State != WarSandboxEntryState.Battle)
+            { Finish(false, "Battlefield entry failed: " + session.State + " / " + session.Error); yield break; }
+            controller = session.Controller;
+            manager = controller != null ? controller.manager : null;
+            hud = manager != null ? manager.GetComponent<WarSandboxCommandHUD>() : null;
+            if (controller == null || manager == null || hud == null)
+            { Finish(false, "Battle controller, manager, or command HUD is missing."); yield break; }
+            result.scene = session.CurrentEntryId;
+            result.agentCount = manager.Buffers != null ? manager.Buffers.AgentCount : 0;
+            if (result.agentCount != 2048)
+            { Finish(false, "Expected 2048 agents, got " + result.agentCount); yield break; }
+            WriteStage("entered-forest-green22;agents=" + result.agentCount);
+
+            // Do not issue setup orders here: the first Hold issued in this Player must remain measured.
+            for (int i = 0; i < 20; i++) yield return null;
+            WriteStage("battle-ready-without-setup-orders");
+            yield return SelectFour();
+            if (!string.IsNullOrEmpty(result.error)) yield break;
+            if (members == null || members.Length != 4)
+            { Finish(false, "Expected a 4-member selection, got " + (members == null ? 0 : members.Length)); yield break; }
+            result.selectedMembers = members.Length;
+            WriteStage("selected-four;first-local-order-next");
+            WriteStage("first-local-command-start;attack");
+
+            yield return MeasureOrder("attack", LocalOrderKind.Attack);
+            if (!string.IsNullOrEmpty(result.error)) yield break;
+            yield return MeasureOrder("hold", LocalOrderKind.Hold);
+            if (!string.IsNullOrEmpty(result.error)) yield break;
+            yield return MeasureOrder("retreat", LocalOrderKind.Retreat);
+            if (!string.IsNullOrEmpty(result.error)) yield break;
+            yield return MeasureOrder("move", LocalOrderKind.Move);
+            if (!string.IsNullOrEmpty(result.error)) yield break;
+
+            WriteStage("first-four-orders-complete");
+            Finish(true, null);
+        }
+
+        IEnumerator SelectFour()
+        {
+            var go = new GameObject("P9 player selection projection camera (temporary)");
+            selectionCamera = go.AddComponent<Camera>();
+            selectionCamera.enabled = false;
+            selectionCamera.orthographic = true;
+            selectionCamera.orthographicSize = 35f;
+            selectionCamera.nearClipPlane = .1f;
+            selectionCamera.farClipPlane = 500f;
+            selectionCamera.pixelRect = new Rect(0, 0, Mathf.Max(256, Screen.width), Mathf.Max(256, Screen.height));
+            selectionCamera.transform.rotation = Quaternion.LookRotation(Vector3.down, Vector3.forward);
+            hud.commandCamera = selectionCamera;
+            controller.SelectArmy(0);
+            var agents = new AgentData[manager.Buffers.AgentCount];
+            manager.Buffers.agentBuffer.GetData(agents);
+            Vector3 anchor = agents[0].position;
+            selectionCamera.transform.position = anchor + Vector3.up * 100f;
+            Vector2 lo = selectionCamera.WorldToScreenPoint(anchor + new Vector3(-3.5f, 0f, -3.5f));
+            Vector2 hi = selectionCamera.WorldToScreenPoint(anchor + new Vector3(3.5f, 0f, 3.5f));
+            hud.TestSelectionPointerP7(lo, true, false, false);
+            hud.TestSelectionPointerP7(hi, false, true, false);
+            hud.TestSelectionPointerP7(hi, false, false, true);
+            float until = Time.realtimeSinceStartup + 20f;
+            while ((hud.SelectionPreview == null || hud.SelectionPreview.Busy || hud.SelectionPreview.State.Scope == MemberSelectionScope.Pending) && Time.realtimeSinceStartup < until) yield return null;
+            if (hud.SelectionPreview == null || !hud.SelectionPreview.TrySnapshot(out members, out _))
+            { Finish(false, "Selection projection/readback did not complete."); yield break; }
+            WriteStage("selection-ready;members=" + members.Length);
+        }
+
+        Vector3 Goal()
+        {
+            var positions = new Vector2[manager.Buffers.AgentCount];
+            manager.Buffers.agentPositionReadBuffer.GetData(positions);
+            Vector2 p = positions[members[0]];
+            foreach (Vector2 delta in new[] { new Vector2(24, 0), new Vector2(-24, 0), new Vector2(0, 24), new Vector2(0, -24), new Vector2(40, 40) })
+            {
+                Vector2 target = p + delta;
+                if (manager.TerrainNavigation.IsFootprintWalkable(target, new Vector2(20, 20)) && manager.TerrainNavigation.AreConnected(p, target))
+                    return new Vector3(target.x, 0, target.y);
+            }
+            return Vector3.zero;
+        }
+
+        IEnumerator MeasureOrder(string commandName, LocalOrderKind kind)
+        {
+            Vector3 moveGoal = Vector3.zero;
+            if (kind == LocalOrderKind.Move)
+            {
+                moveGoal = Goal();
+                if (moveGoal == Vector3.zero) { Finish(false, "No connected, walkable Move target was available."); yield break; }
+                WriteStage("move-target-ready");
+            }
+            LocalOrderReceipt previous = hud.LastPlayerReceipt;
+            var timer = Stopwatch.StartNew();
+            int startFrame = Time.frameCount, attempts = 0;
+            double callbackMs = 0, maxGapMs = 0;
+            bool moveArmed = false;
+            while (hud.LastPlayerReceipt == previous && timer.Elapsed.TotalSeconds < 120.0)
+            {
+                var trigger = Stopwatch.StartNew();
+                if (kind == LocalOrderKind.Move)
+                {
+                    if (!moveArmed)
+                    {
+                        hud.TestBeginMoveP8();
+                        moveArmed = hud.AwaitingMove25;
+                    }
+                    if (moveArmed) hud.TestGroundMoveP8(moveGoal);
+                }
+                else
+                {
+                    ArmyOrderType order = kind == LocalOrderKind.Attack ? ArmyOrderType.Attack :
+                        kind == LocalOrderKind.Hold ? ArmyOrderType.Hold : ArmyOrderType.Retreat;
+                    hud.TestPlayerOrderP8(order, Vector3.zero, false);
+                }
+                callbackMs += trigger.Elapsed.TotalMilliseconds;
+                attempts++;
+                if (hud.LastPlayerReceipt != previous) break;
+                yield return null;
+            }
+            LocalOrderReceipt receipt = hud.LastPlayerReceipt;
+            if (receipt == null || receipt == previous)
+            { Finish(false, commandName + " did not produce a receipt within 120 seconds."); yield break; }
+            while (receipt.Status == LocalOrderStatus.AwaitingSnapshot && timer.Elapsed.TotalSeconds < 120.0)
+            {
+                double before = timer.Elapsed.TotalMilliseconds;
+                yield return null;
+                maxGapMs = Math.Max(maxGapMs, timer.Elapsed.TotalMilliseconds - before);
+            }
+            if (receipt.Kind != kind || (receipt.Status != LocalOrderStatus.Committed && receipt.Status != LocalOrderStatus.GpuExecuting))
+            { Finish(false, kind + " was not accepted: kind=" + receipt.Kind + ", status=" + receipt.Status + ", error=" + receipt.Error); yield break; }
+            if (receipt.MemberSnapshot == null || receipt.MemberSnapshot.Count != members.Length)
+            { Finish(false, kind + " receipt member count mismatch."); yield break; }
+            var row = new CommandRow
+            {
+                command = kind.ToString(), status = receipt.Status.ToString(), members = receipt.MemberSnapshot.Count,
+                triggerAttempts = attempts, frames = Time.frameCount - startFrame,
+                callbackMs = callbackMs, receiptMs = timer.Elapsed.TotalMilliseconds,
+                readbackMs = receipt.ReadbackMilliseconds, planMs = receipt.PlanMilliseconds,
+                uploadMs = receipt.UploadMilliseconds, maxYieldGapMs = maxGapMs
+            };
+            result.commands.Add(row);
+            File.AppendAllText(Path.Combine(output, "cold-summary.csv"), string.Join(",", "player-first-session", row.command, row.members, row.triggerAttempts,
+                F(row.callbackMs), F(row.receiptMs), F(row.readbackMs), F(row.planMs), F(row.uploadMs), F(row.maxYieldGapMs), 0, row.frames) + "\n");
+            WriteStage("first-use-" + kind + ";receiptMs=" + F(row.receiptMs));
+            for (int i = 0; i < 4; i++) yield return null;
+        }
+
+        static string F(double value) => value.ToString("R", CultureInfo.InvariantCulture);
+
+        void Finish(bool success, string error)
+        {
+            if (output == null) return;
+            result.passed = success;
+            result.error = error;
+            result.finishedRealtime = Time.realtimeSinceStartupAsDouble;
+            try { File.WriteAllText(Path.Combine(output, "result.json"), JsonUtility.ToJson(result, true)); }
+            catch (Exception ex) { Debug.LogError("Could not write P9 Player result: " + ex); }
+            Debug.Log(success ? "P9_PLAYER_RESULT passed" : "P9_PLAYER_RESULT failed: " + error);
+            Application.logMessageReceived -= CaptureLog;
+            Application.Quit();
+        }
+    }
+}
+#endif

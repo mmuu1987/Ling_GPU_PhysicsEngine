@@ -1,0 +1,62 @@
+# P9 冷态 Attack 修复接续 — 2026-10-09，GPU 分区原型已验证
+
+## 当前结论
+**尚无通过验收的完整修复。** 用户已授权持续安全修复，不再逐步询问。生产代码仍未改；母工程、P11、37 包、HEAD/index 与用户数据未动。P12 只新增 8 个测试资产（两套 compute/C# 及各自 meta）。不发布 38、不提交合并、不默认开启 Burst、不代签真人。
+
+## 已核实证据
+远端记录目录：`outputs/P9ColdFix-20261009-01/`，隔离工程：`outputs/P12`。
+
+| 验证 | 结果 | 边界 |
+|---|---|---|
+| 原版黄金 baseline-golden-01 | 3/3，8.7608777s | 安全基线，不是修复回归 |
+| 原版回归 baseline-regression-01 | 60/60，3.9922516s | 安全基线，不是修复回归 |
+| 专用近战 Attack baseline-parity-02 | 16/16，6.6808937s | 12 单帧差分 + 4 分区拒绝 |
+| 分区原型 baseline-partition-01 | 26/26，43.6742409s | 13 场景 × 单帧/32 帧，固定 8 单位 |
+
+上述秒数是整套测试的耗时，**不是首次 Attack 命令延迟**。三个最新测试 JSON 已完整核对：无 C#/shader 错误，manifest、母保护、用户数据、HEAD/index 检查通过。原版 60 项不算修复测试；新增原型测试共 42 项通过。
+
+### 专用内核与分区测试
+- 使用 v10 selected-attack-melee，不是 v11 循环变体。
+- 12 场景覆盖近战接触/远距、坡面、墙、低频帧、暂停、部分死亡、等待状态、局部导航掩码、较大 dt。
+- 4 拒绝条件：无 slot、过期 epoch、非 Advance stance、远程射程；HP 写缓冲 -777 哨兵只是测试观察，不是生产跳过方案。
+- 分区原型包含单独 global remainder 与 selected 内核，共用同一 compute asset 的帧常量。测试监听器在正常 Simulate 前派发 selected，然后正常管线派发 global remainder；每帧只走一次 DispatchFrame、伤害清零和末尾 Swap。
+- 第二个 orchestrator **仅用于调用 BindCombatBuffers 绑定资源**，绝不再调用 DispatchFrame；通过测试专用反射替换 boxed MassGpuShaderSet 的 kernel ID。每帧交换后重新绑定 selected 缓冲与地形。
+- 固定 8 单位 mask：全选 0xff、交错选中 0x55、仅 1 单位 0x01、无选中 0。全员单位类型为近战；有效局部命令为 Advance。
+- 精确比较 HP、pendingDamage、targets、launch、整数状态/槽位；位置/速度/rotation、动画、冷却、拥挤浮点容差 1e-4。检查每帧清零/全局/专用派发次数。
+- **不是生产 LocalOrderChannel 真实提交流程，不覆盖 2048 选 4、混合兵种/命令、命令替换取消、charge、长期战斗或冷态 UI 命令。** 固定 32-bit mask 只服务 8 单位夹具，不能部署为通用成员表。
+
+## CPU 编译筛查（不能当 Unity 命令计时）
+系统 d3dcompiler_47.dll，O3、cs_5_0、terrain/local 开启。
+
+| 候选 | 秒 | DXBC 字节 |
+|---|---:|---:|
+| 原版 v2 | 62.7497105 | 338920 |
+| v9 共享 DDA cell-check | 53.9506154 | 326844 |
+| v10 selected-only | 35.5195874 | 261116 |
+| v10 Attack melee | 5.5893915 | 130392 |
+| v11 integration loop | 5.9739811 | 120040 |
+| v11 point loop | 5.6426958 | 127612 |
+| v11 both loops | 4.9842457 | 118408 |
+| v12 Move melee | 3.6100745 | 88800 |
+| v12 Hold-here melee | 6.5928367 | 137604 |
+| v12 Attack ranged | 17.9112579 | 195696 |
+| v12 Move ranged | 5.2058070 | 92908 |
+| v12 Hold-here ranged | 9.4951707 | 159392 |
+
+v12 的 5 个候选全部编译成功，但**尚未 GPU 差分验证、未部署**。按原 stance 3/4/1 和 projectileRange 分类设置严格入口 guard，固定本单位读取的命令 stance；近战保持 ranged clock 原有 no-op，远程恢复原 clock 并固定 main isRanged=true。保留地形/墙体/切角/射界逻辑。5–18 秒仍是严重停顿，说明仅六路专用化不能直接宣布完成。
+
+## 下一步与验收门槛
+1. 进一步缩小远程射界/导航重复内联路径；不能把停顿转移到 Move/Hold/远程或加载阶段。先验证 v12 等价性，不能仅因编译成功就部署。
+2. 设计完整生产 host 分区：可扩展成员表，slot/epoch/stance/type 一致性，命令取消替换、配置变化、死者清理、场景重置、多 manager、资源释放与内存预算。不能用固定夹具 mask；不能漏算或重复计算任何 agent。
+3. 分区共享帧快照及 damage，只清零/Swap/AfterDispatch 一次，保持 cadence、charge 与 Projectile/LOD 顺序。不得用 HP 标死、stride 不匹配 buffer、两个完整 DispatchFrame 或大量逐区间 Dispatch 糊弄。
+4. 接入仅限隔离 P12；生成 patch-manifest 与冷诊断 harness 后，再测真实 2048 选 4、混合命令兵种、连续战斗、Unity 冷缓存 A/B/A 和完整回归。暖态 CPU 规划约 333ms 与 shader 冷停顿分开验收。
+5. Player/AOT、真人 720p/1080p、P3/P9 整体验收仍开放。
+
+## 文件与进程
+- `p9_fix_run_v4_20261009.py` 增加 `baseline-partition-NN`：固定要求 26 个 case 全 Passed，所有原保护保留；v3 parity 仍要求 16。
+- `prototype-harness.json` 当前包含 8 个测试文件。新分区原始资产存档 `prototype-partition-original/`，先前 manifest 备份 `prototype-harness-before-partition.json`。
+- `baseline-parity-01` 曾因测试写错 hpBuffer 编译失败；已仅改为 hpWriteBuffer，parity-02 通过。失败证据保留，本地旧 fixture 字段也已校正。
+- 远端分区部署/测试进程 `8d413301` exit0，结束 13:03:02；本地 watch `p9-gpu-6867887c` exit0。
+- v12 CPU 筛查进程 `d27d67ac` exit0；本地 watch `p9-24ef4ac8` exit0。
+- 所有本轮已启动测试/编译均结束。`patch-manifest.json` 和 `diagnostic-harness.json` 仍不存在，fixed/cold/repeat/joint 修复验收未运行。
+- 本地 `p9-evidence/` 保存已读 JSON；生产基线不能覆盖，所有一次性 deploy/probe/fixture-fix 脚本不可重跑原名。

@@ -1,0 +1,640 @@
+#if DEVELOPMENT_BUILD
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using Unity.Profiling;
+using Unity.Profiling.LowLevel.Unsafe;
+using UnityEngine;
+using UnityEngine.UI;
+using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
+
+namespace MassEngine.Game
+{
+    /// <summary>
+    /// Temporary P12-only Player harness: frame-time breakdown on the 1024 m candidate map forest-green22-1024 (100k/200k, D3D11), Burst nav default.
+    /// Same strict layout as the P3Scale1024 run (density 0.7, aspect 2.2, gap 50, z 0, 20 s warmup + 60 s sample).
+    /// Adds FrameTimingManager (CPU main / render thread / present wait / GPU), ProfilerRecorder on built-in + project markers,
+    /// an orchestrator dispatch counter (existing IDispatchListener hook) and ablation windows that only use existing switches
+    /// (camera cullingMask, MassEngineManager.enableGpuDispatch, the manager's own renderDispatcher), as WarSandboxTerrainCycle.GpuBreakdown does.
+    /// Inert unless launched with --p3p-profile. Not shipping code; removed after the run.
+    /// </summary>
+    public sealed class P3ProfileFrameHarness : MonoBehaviour
+    {
+        [Serializable] sealed class Nav
+        {
+            public bool found; public string preparationState, preparationBlockReason;
+            public int completedFields, burstSolves, managedSolves, managedNativeSolves, probes;
+            public double totalSolveMs, maxSolveMs, lastSolveMs, maxProbeMs;
+        }
+        [Serializable] sealed class Stat
+        {
+            public string name, category, unit; public int frames, framesNonZero;
+            public double median, p95, mean, max, meanCount;
+        }
+        [Serializable] sealed class WindowResult
+        {
+            public string mode; public bool computeEnabled, worldVisible, frozenDraw; public int frames, camerasMasked;
+            public double seconds, medianMs, p95Ms, p99Ms, meanMs, avgFps;
+            public int ftFrames; public bool ftFeatureEnabled;
+            public Stat ftCpuFrame, ftCpuMain, ftCpuRender, ftPresentWait, ftGpu;
+            public Stat dispatchesPerFrame;
+            public List<Stat> markers = new List<Stat>();
+        }
+        [Serializable] sealed class LabelCount { public string label; public long total; public double perFrame; }
+        [Serializable] sealed class Result
+        {
+            public bool passed, managedArgument, deploymentValid, startConfirmClicked, sampledWhileRunning;
+            public string error, unityVersion, graphicsApi, graphicsDeviceName, graphicsDeviceVersion, platform, scene;
+            public string phaseAtSampleStart, phaseAtSampleEnd, deploymentNote, navBackend, terrainId;
+            public float worldSizeX, worldSizeZ, navCellSize, flowCellSize, surfaceStep; public int navResolutionX, navResolutionZ, flowResolution;
+            public int requestedUnits, perSide, draftEntries, configuredUnits, agentCount, aliveAtSampleStart, aliveAtSampleEnd, aliveAtEnd;
+            public int team0Initial, team1Initial, layoutAttempts;
+            public float densityUsed, aspectUsed, gapUsed, zOffsetUsed;
+            public int screenWidth, screenHeight, vSyncCount, targetFrameRate, frames, over33, over50, graphicsMemorySizeMB;
+            public double warmupSeconds, sampleSeconds, actualSampleSeconds, medianMs, p95Ms, p99Ms, maxMs, meanMs, avgFps;
+            public double loadSeconds, applyToRunningSeconds, navSolveMsPerFrameInWindow;
+            public long gfxDriverBytesAtSampleStart, gfxDriverBytesPeak, gfxDriverBytesEnd, totalAllocatedBytesEnd, totalReservedBytesEnd;
+            public Nav navAtSampleStart = new Nav(), navAtSampleEnd = new Nav();
+            public bool frameTimingFeatureEnabled, dispatchListenerInstalled; public string dispatchListenerNote;
+            public int availableMarkerCount, recordedMarkerCount; public List<string> missingCuratedMarkers = new List<string>();
+            public WindowResult full; public List<WindowResult> ablations = new List<WindowResult>();
+            public List<LabelCount> dispatchLabelsInFullWindow = new List<LabelCount>();
+            public List<string> stages = new List<string>();
+            public List<string> validationErrors = new List<string>();
+        }
+
+        sealed class DispatchCounter : IDispatchListener
+        {
+            public IDispatchListener inner; public int frame; public bool countLabels;
+            public readonly Dictionary<string, long> labels = new Dictionary<string, long>();
+            public void OnDispatch(string kernelLabel)
+            {
+                frame++;
+                if (countLabels) { labels.TryGetValue(kernelLabel ?? "null", out long n); labels[kernelLabel ?? "null"] = n + 1; }
+                if (inner != null) inner.OnDispatch(kernelLabel);
+            }
+        }
+
+        sealed class Rec
+        {
+            public string name, category, unit; public bool time; public ProfilerRecorder r;
+            public List<double> values = new List<double>(4096); public List<double> counts = new List<double>(4096);
+        }
+
+        sealed class Window
+        {
+            public string mode; public bool computeEnabled = true, worldVisible = true, frozenDraw; public int camerasMasked;
+            public readonly List<double> frameMs = new List<double>(8192);
+            public readonly List<double> cpuFrame = new List<double>(8192), cpuMain = new List<double>(8192), cpuRender = new List<double>(8192), presentWait = new List<double>(8192), gpu = new List<double>(8192);
+            public readonly List<double> dispatches = new List<double>(8192);
+            public double start, end;
+        }
+
+        static readonly string[] Curated = {
+            "PlayerLoop", "Update.ScriptRunBehaviourUpdate", "BehaviourUpdate", "FixedUpdate", "FixedUpdate.PhysicsFixedUpdate", "FixedBehaviourUpdate",
+            "PreLateUpdate", "PreLateUpdate.ScriptRunBehaviourLateUpdate", "LateBehaviourUpdate", "PostLateUpdate", "PostLateUpdate.FinishFrameRendering", "PostLateUpdate.PresentAfterDraw",
+            "PostLateUpdate.UpdateAllRenderers", "PostLateUpdate.PlayerUpdateCanvases", "PostLateUpdate.PlayerEmitCanvasGeometry",
+            "Gfx.WaitForPresentOnGfxThread", "Gfx.PresentFrame", "Gfx.WaitForRenderThread", "Gfx.WaitForGfxCommandsFromMainThread", "Gfx.WaitForCommands", "Gfx.ProcessCommands",
+            "Camera.Render", "Render.OpaqueGeometry", "Render.TransparentGeometry", "Semaphore.WaitForSignal", "WaitForTargetFPS",
+            "GC.Alloc", "GC.Collect", "Initialization.PlayerUpdateTime", "EarlyUpdate.UpdatePreloading", "Update.ScriptRunDelayedDynamicFrameRate",
+            "UniversalRenderPipeline.RenderSingleCameraInternal", "Inl_UniversalRenderPipeline.RenderSingleCameraInternal", "UniversalRenderPipeline.RenderCameraStack",
+            "RenderPipelineManager.DoRenderLoop_Internal()", "ScriptableRenderer.Execute", "DrawOpaqueObjects", "DrawTransparentObjects", "MainLightShadow", "AdditionalLightsShadow",
+            "RenderLoop.DrawSRPBatcher", "RenderLoop.ScheduleDraw", "CullScriptable", "Culling", "ScriptableRenderContext.Submit", "Shadows.RenderShadowMap",
+            "MassEngineManager.Update() [Invoke]", "WarSandboxBattleController.Update() [Invoke]", "WarSandboxCommandHUD.Update() [Invoke]",
+            "MassEngine/SpatialHash", "MassEngine/RuntimeFlow", "MassEngine/DensityMap", "MassEngine/Combat", "MassEngine/Projectile", "MassEngine/LodClassification",
+            "GC Allocated In Frame", "GC Allocation In Frame Count", "Batches Count", "SetPass Calls Count", "Draw Calls Count", "Triangles Count", "Vertices Count", "Shadow Casters Count",
+            "Gfx Used Memory", "System Used Memory", "Main Thread", "CPU Main Thread Frame Time", "CPU Render Thread Frame Time", "GPU Frame Time", "CPU Total Frame Time"
+        };
+        static readonly string[] Keywords = { "MassEngine", "WarSandbox", "Terrain", "Navigation", "Burst", "Readback", "Dispatch", "Compute", "UniversalRenderPipeline", "Shadow",
+            "DrawOpaque", "DrawTransparent", "RenderLoop", "Cull", "Gfx.", "Semaphore", "WaitFor", "Present", "Job", "LocalOrder", "Flow", "Projectile", "Telemetry", "Canvas", "UGUI" };
+        const int MaxRecorders = 420;
+
+        const string EntryId = "forest-green22-1024";
+        const double WarmupSeconds = 20, SampleSeconds = 60, AblationSeconds = 20, DrainSeconds = 2, HardLimitSeconds = 900;
+        static readonly float[] Densities = { .7f }; const float Aspect = 2.2f;
+        static readonly float[] Gaps = { 50f };
+        static readonly float[] ZOffsets = { 0f };
+        static string output; static int requested; static bool booted;
+        readonly Result result = new Result();
+        WarSandboxSceneSession session; WarSandboxBattleController controller; MassEngineManager manager;
+        readonly List<Rec> recs = new List<Rec>();
+        readonly FrameTiming[] ftBuf = new FrameTiming[1];
+        DispatchCounter counter; FieldInfo listenerField; object orchestrator; object previousListener;
+        Window current; bool sampling, trackMemory, ftEnabled; long lastTick; double hardDeadline, nextBeat, nextMem;
+        MassGpuRenderDispatcher frozenRenderer; Bounds frozenBounds; Vector4 frozenSink; bool drawFrozen;
+        readonly List<KeyValuePair<Camera, int>> maskedCameras = new List<KeyValuePair<Camera, int>>();
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void Bootstrap()
+        {
+            if (booted) return;
+            var args = Environment.GetCommandLineArgs();
+            if (!args.Contains("--p3p-profile")) return;
+            string arg = args.FirstOrDefault(x => x.StartsWith("--p3p-output=", StringComparison.Ordinal));
+            string units = args.FirstOrDefault(x => x.StartsWith("--p3p-units=", StringComparison.Ordinal));
+            if (arg == null || units == null) return;
+            output = arg.Substring("--p3p-output=".Length).Trim('"');
+            if (string.IsNullOrWhiteSpace(output) || !int.TryParse(units.Substring("--p3p-units=".Length), out requested)) return;
+            booted = true;
+            var host = new GameObject("P3 profile 1024 frame breakdown (temporary)");
+            Object.DontDestroyOnLoad(host);
+            host.AddComponent<P3ProfileFrameHarness>();
+        }
+
+        void Start()
+        {
+            Directory.CreateDirectory(output);
+            var args = Environment.GetCommandLineArgs();
+            result.managedArgument = args.Contains("--war-sandbox-nav-managed");
+            result.requestedUnits = requested; result.perSide = requested / 2;
+            result.unityVersion = Application.unityVersion;
+            result.graphicsApi = SystemInfo.graphicsDeviceType.ToString();
+            result.graphicsDeviceName = SystemInfo.graphicsDeviceName;
+            result.graphicsDeviceVersion = SystemInfo.graphicsDeviceVersion;
+            result.graphicsMemorySizeMB = SystemInfo.graphicsMemorySize;
+            result.platform = Application.platform.ToString();
+            result.warmupSeconds = WarmupSeconds; result.sampleSeconds = SampleSeconds;
+            hardDeadline = Time.realtimeSinceStartupAsDouble + HardLimitSeconds;
+            QualitySettings.vSyncCount = 0; Application.targetFrameRate = -1;
+            try { ftEnabled = FrameTimingManager.IsFeatureEnabled(); } catch { ftEnabled = false; }
+            result.frameTimingFeatureEnabled = ftEnabled;
+            Stage("harness-started;api=" + result.graphicsApi + ";units=" + requested + ";frameTiming=" + ftEnabled);
+            StartCoroutine(Guarded());
+        }
+
+        void Update()
+        {
+            long now = Stopwatch.GetTimestamp();
+            if (ftEnabled) { try { FrameTimingManager.CaptureFrameTimings(); } catch { } }
+            if (sampling && current != null && lastTick != 0)
+            {
+                current.frameMs.Add((now - lastTick) * 1000.0 / Stopwatch.Frequency);
+                if (ftEnabled && FrameTimingManager.GetLatestTimings(1, ftBuf) > 0)
+                {
+                    var f = ftBuf[0];
+                    current.cpuFrame.Add(f.cpuFrameTime); current.cpuMain.Add(f.cpuMainThreadFrameTime); current.cpuRender.Add(f.cpuRenderThreadFrameTime);
+                    current.presentWait.Add(f.cpuMainThreadPresentWaitTime); current.gpu.Add(f.gpuFrameTime);
+                }
+                if (counter != null) current.dispatches.Add(counter.frame);
+                for (int i = 0; i < recs.Count; i++)
+                {
+                    var r = recs[i];
+                    if (!r.r.Valid) continue;
+                    double v = r.r.LastValueAsDouble; long c = 0;
+                    if (r.r.Count > 0) { try { c = r.r.GetSample(r.r.Count - 1).Count; } catch { } }
+                    r.values.Add(r.time ? v / 1e6 : v); r.counts.Add(c);
+                }
+            }
+            if (counter != null) counter.frame = 0;
+            lastTick = now;
+            if (drawFrozen && frozenRenderer != null && manager != null && manager.Buffers != null && manager.Buffers.IsAllocated)
+                frozenRenderer.Draw(manager.UnitTypes, manager.Buffers, frozenBounds, frozenSink);
+            double t = Time.realtimeSinceStartupAsDouble;
+            if (trackMemory && t >= nextMem)
+            {
+                nextMem = t + 0.5;
+                long g = UnityEngine.Profiling.Profiler.GetAllocatedMemoryForGraphicsDriver();
+                if (g > result.gfxDriverBytesPeak) result.gfxDriverBytesPeak = g;
+            }
+            if (!sampling && t >= nextBeat) { nextBeat = t + 5; Beat(); }
+            if (!result.passed && string.IsNullOrEmpty(result.error) && t > hardDeadline)
+                Finish(false, "Exceeded " + HardLimitSeconds + " s.");
+        }
+
+        void Beat()
+        {
+            try { File.WriteAllText(Path.Combine(output, "progress.txt"), DateTime.Now.ToString("o") + " " + (result.stages.Count > 0 ? result.stages[result.stages.Count - 1] : "")); } catch { }
+        }
+
+        void Stage(string s)
+        {
+            result.stages.Add(s + ";t_s=" + Time.realtimeSinceStartupAsDouble.ToString("F3", CultureInfo.InvariantCulture));
+            Debug.Log("P3P_PLAYER_STAGE " + s);
+            Beat();
+        }
+
+        static Button FindButton(string name)
+        {
+            return Object.FindObjectsByType<Button>(FindObjectsSortMode.None).FirstOrDefault(x => x != null && x.gameObject.activeInHierarchy && x.name == name && x.interactable);
+        }
+
+        IEnumerator Guarded()
+        {
+            var e = Run();
+            while (true)
+            {
+                object next;
+                try { if (!e.MoveNext()) break; next = e.Current; }
+                catch (Exception ex) { sampling = false; RestoreSwitches(); Finish(false, "Exception: " + ex); yield break; }
+                yield return next;
+            }
+        }
+
+        void InstallDispatchCounter()
+        {
+            try
+            {
+                var of = typeof(MassEngineManager).GetField("pipelineOrchestrator", BindingFlags.Instance | BindingFlags.NonPublic);
+                orchestrator = of != null ? of.GetValue(manager) : null;
+                if (orchestrator == null) { result.dispatchListenerNote = "pipelineOrchestrator not found"; return; }
+                listenerField = orchestrator.GetType().GetField("dispatchListener", BindingFlags.Instance | BindingFlags.NonPublic);
+                if (listenerField == null) { result.dispatchListenerNote = "dispatchListener field not found"; return; }
+                previousListener = listenerField.GetValue(orchestrator);
+                counter = new DispatchCounter { inner = previousListener as IDispatchListener };
+                listenerField.SetValue(orchestrator, counter);
+                result.dispatchListenerInstalled = ReferenceEquals(listenerField.GetValue(orchestrator), counter);
+                result.dispatchListenerNote = "orchestrator dispatches only (LocalOrderChannel/BattleTelemetry/Projectile pool/GpuMemberSelection/terrain nav Rebuild internals not counted); previousListener=" + (previousListener == null ? "null" : previousListener.GetType().Name);
+            }
+            catch (Exception ex) { result.dispatchListenerNote = "install failed: " + ex.GetType().Name + ": " + ex.Message; counter = null; }
+        }
+
+        void UninstallDispatchCounter()
+        {
+            try { if (listenerField != null && orchestrator != null && counter != null) listenerField.SetValue(orchestrator, previousListener); } catch { }
+        }
+
+        void SetupRecorders()
+        {
+            var handles = new List<ProfilerRecorderHandle>();
+            ProfilerRecorderHandle.GetAvailable(handles);
+            result.availableMarkerCount = handles.Count;
+            var byName = new Dictionary<string, ProfilerRecorderDescription>();
+            var dump = new StringBuilder("category\tname\tunit\tdataType\tflags\n");
+            foreach (var h in handles)
+            {
+                ProfilerRecorderDescription d;
+                try { d = ProfilerRecorderHandle.GetDescription(h); } catch { continue; }
+                string n = d.Name; if (string.IsNullOrEmpty(n)) continue;
+                dump.Append(d.Category.Name).Append('\t').Append(n).Append('\t').Append(d.UnitType).Append('\t').Append(d.DataType).Append('\t').Append(d.Flags).Append('\n');
+                if (!byName.ContainsKey(n)) byName[n] = d;
+            }
+            try { File.WriteAllText(Path.Combine(output, "available-markers.tsv"), dump.ToString()); } catch { }
+            var chosen = new List<string>();
+            var seen = new HashSet<string>();
+            foreach (var n in Curated) { if (byName.ContainsKey(n)) { if (seen.Add(n)) chosen.Add(n); } else result.missingCuratedMarkers.Add(n); }
+            foreach (var kv in byName.OrderBy(k => k.Key, StringComparer.Ordinal))
+            {
+                if (chosen.Count >= MaxRecorders) break;
+                string cat = kv.Value.Category.Name ?? "";
+                bool want = cat == "Scripts" || Keywords.Any(k => kv.Key.IndexOf(k, StringComparison.Ordinal) >= 0);
+                if (want && seen.Add(kv.Key)) chosen.Add(kv.Key);
+            }
+            foreach (var n in chosen)
+            {
+                var d = byName[n];
+                var rec = new Rec { name = n, category = d.Category.Name, unit = d.UnitType.ToString(), time = d.UnitType == ProfilerMarkerDataUnit.TimeNanoseconds };
+                try { rec.r = ProfilerRecorder.StartNew(d.Category, n, 1); } catch (Exception ex) { Debug.LogWarning("P3P recorder failed " + n + ": " + ex.Message); continue; }
+                recs.Add(rec);
+            }
+            result.recordedMarkerCount = recs.Count;
+        }
+
+        void ClearRecorderSamples() { foreach (var r in recs) { r.values.Clear(); r.counts.Clear(); } }
+
+        static Stat MakeStat(string name, string category, string unit, List<double> v, List<double> c)
+        {
+            var st = new Stat { name = name, category = category, unit = unit, frames = v.Count };
+            if (v.Count == 0) return st;
+            var s = v.OrderBy(x => x).ToArray();
+            double Q(double q) { double pos = (s.Length - 1) * q; int lo = (int)Math.Floor(pos), hi = (int)Math.Ceiling(pos); return s[lo] + (s[hi] - s[lo]) * (pos - lo); }
+            st.median = Q(.5); st.p95 = Q(.95); st.mean = s.Average(); st.max = s[s.Length - 1]; st.framesNonZero = s.Count(x => x != 0);
+            st.meanCount = c != null && c.Count > 0 ? c.Average() : 0;
+            return st;
+        }
+
+        WindowResult Summ(Window w)
+        {
+            var wr = new WindowResult { mode = w.mode, computeEnabled = w.computeEnabled, worldVisible = w.worldVisible, frozenDraw = w.frozenDraw, camerasMasked = w.camerasMasked };
+            wr.seconds = w.end - w.start; wr.frames = w.frameMs.Count; wr.ftFeatureEnabled = ftEnabled; wr.ftFrames = w.gpu.Count;
+            var fs = MakeStat("frameMs", "harness", "ms", w.frameMs, null);
+            wr.medianMs = fs.median; wr.p95Ms = fs.p95; wr.meanMs = fs.mean; wr.avgFps = wr.seconds > 0 ? w.frameMs.Count / wr.seconds : 0;
+            if (w.frameMs.Count > 0) { var s = w.frameMs.OrderBy(x => x).ToArray(); double pos = (s.Length - 1) * .99; int lo = (int)Math.Floor(pos), hi = (int)Math.Ceiling(pos); wr.p99Ms = s[lo] + (s[hi] - s[lo]) * (pos - lo); }
+            wr.ftCpuFrame = MakeStat("cpuFrameTime", "FrameTiming", "ms", w.cpuFrame, null);
+            wr.ftCpuMain = MakeStat("cpuMainThreadFrameTime", "FrameTiming", "ms", w.cpuMain, null);
+            wr.ftCpuRender = MakeStat("cpuRenderThreadFrameTime", "FrameTiming", "ms", w.cpuRender, null);
+            wr.ftPresentWait = MakeStat("cpuMainThreadPresentWaitTime", "FrameTiming", "ms", w.presentWait, null);
+            wr.ftGpu = MakeStat("gpuFrameTime", "FrameTiming", "ms", w.gpu, null);
+            wr.dispatchesPerFrame = MakeStat("orchestratorDispatches", "harness", "count", w.dispatches, null);
+            foreach (var r in recs)
+            {
+                if (r.values.Count == 0) continue;
+                var st = MakeStat(r.name, r.category, r.time ? "ms" : r.unit, r.values, r.counts);
+                if (st.framesNonZero == 0) continue;
+                wr.markers.Add(st);
+            }
+            wr.markers = wr.markers.OrderByDescending(x => x.unit == "ms" ? 1 : 0).ThenByDescending(x => x.median).ThenByDescending(x => x.mean).ToList();
+            return wr;
+        }
+
+        void WriteFrameCsv(Window w, string file)
+        {
+            try
+            {
+                string[] keys = { "PlayerLoop", "Update.ScriptRunBehaviourUpdate", "MassEngineManager.Update() [Invoke]", "PostLateUpdate.FinishFrameRendering", "Gfx.WaitForPresentOnGfxThread", "Gfx.PresentFrame", "Semaphore.WaitForSignal", "Gfx.WaitForGfxCommandsFromMainThread", "GC Allocated In Frame" };
+                var cols = keys.Select(k => recs.FirstOrDefault(r => r.name == k)).ToArray();
+                var sb = new StringBuilder("index,frameMs,cpuFrame,cpuMain,cpuRender,presentWait,gpu,dispatches");
+                foreach (var k in keys) sb.Append(',').Append('"').Append(k).Append('"');
+                sb.Append('\n');
+                for (int i = 0; i < w.frameMs.Count; i++)
+                {
+                    sb.Append(i).Append(',').Append(w.frameMs[i].ToString("R", CultureInfo.InvariantCulture));
+                    foreach (var l in new[] { w.cpuFrame, w.cpuMain, w.cpuRender, w.presentWait, w.gpu, w.dispatches })
+                        sb.Append(',').Append(i < l.Count ? l[i].ToString("R", CultureInfo.InvariantCulture) : "");
+                    foreach (var c in cols)
+                        sb.Append(',').Append(c != null && i < c.values.Count ? c.values[i].ToString("R", CultureInfo.InvariantCulture) : "");
+                    sb.Append('\n');
+                }
+                File.WriteAllText(Path.Combine(output, file), sb.ToString());
+            }
+            catch (Exception ex) { Debug.LogWarning("P3P csv failed: " + ex.Message); }
+        }
+
+        IEnumerator Run()
+        {
+            if (Application.platform != RuntimePlatform.WindowsPlayer) { Finish(false, "Expected WindowsPlayer, got " + Application.platform); yield break; }
+            if (requested != 100000 && requested != 200000) { Finish(false, "Unapproved population " + requested); yield break; }
+            double until = Time.realtimeSinceStartupAsDouble + 120;
+            while ((session = WarSandboxSceneSession.Instance) == null && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            if (session == null) { Finish(false, "MainMenu session missing."); yield break; }
+            while (session.IsLoading && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            if (session.State != WarSandboxEntryState.Menu) { Finish(false, "Expected Menu, got " + session.State + ": " + session.Error); yield break; }
+            Stage("menu-ready");
+            double loadStart = Time.realtimeSinceStartupAsDouble;
+            if (!session.TryEnterBattlefield(EntryId, false, out string error)) { Finish(false, "TryEnterBattlefield: " + error); yield break; }
+            until = Time.realtimeSinceStartupAsDouble + 180;
+            while (session.IsLoading && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            if (session.IsLoading || session.State != WarSandboxEntryState.Battle) { Finish(false, "Entry failed: " + session.State + " / " + session.Error); yield break; }
+            result.loadSeconds = Time.realtimeSinceStartupAsDouble - loadStart;
+            controller = session.Controller; manager = controller != null ? controller.manager : null;
+            if (manager == null) { Finish(false, "Manager missing."); yield break; }
+            result.scene = session.CurrentEntryId;
+            try
+            {
+                var sim = manager.systemConfig.simulationConfig; var flow = manager.systemConfig.runtimeFlowConfig;
+                result.worldSizeX = sim.simulationWorldSize.x; result.worldSizeZ = sim.simulationWorldSize.y;
+                result.flowResolution = flow.flowFieldResolution; result.flowCellSize = flow.flowFieldCellSize;
+                if (manager.TryGetTerrainContext(out var surf, out var navg, out _) && surf != null && navg != null)
+                { result.terrainId = surf.Id; result.surfaceStep = surf.Step.x; result.navCellSize = navg.CellSize; result.navResolutionX = navg.ResolutionX; result.navResolutionZ = navg.ResolutionZ; }
+            }
+            catch (Exception ex) { result.terrainId = "read-error:" + ex.Message; }
+            Stage("entered;defaultAgents=" + (manager.Buffers != null ? manager.Buffers.AgentCount : -1) + ";world=" + result.worldSizeX + ";nav=" + result.navResolutionX + "@" + result.navCellSize + ";terrain=" + result.terrainId);
+            if (result.worldSizeX != 1024f || result.terrainId != "forest-hills-scale15-1024") { Finish(false, "Not the 1024 m candidate map: world=" + result.worldSizeX + " terrain=" + result.terrainId); yield break; }
+            for (int i = 0; i < 30; i++) yield return null;
+
+            var d = controller.GetComponent<WarSandboxRuntimeDeployment>();
+            if (d == null) { Finish(false, "WarSandboxRuntimeDeployment missing."); yield break; }
+            until = Time.realtimeSinceStartupAsDouble + 5;
+            while (!d.IsEditing && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            if (!d.IsEditing)
+            {
+                if (!d.TryBeginEdit(false, out error)) { Finish(false, "TryBeginEdit: " + error + " / phase=" + controller.Phase); yield break; }
+                Stage("begin-edit-called;phase=" + controller.Phase);
+                for (int i = 0; i < 30; i++) yield return null;
+            }
+            if (!d.IsEditing || d.Draft == null) { Finish(false, "Deployment editor not active after TryBeginEdit."); yield break; }
+            result.draftEntries = d.Draft.Count;
+            if (d.Draft.Count != 2) { Finish(false, "Expected 2 draft entries, got " + d.Draft.Count); yield break; }
+            var base0 = d.Draft[0]; var base1 = d.Draft[1];
+            int per = requested / 2; bool fit = false; int attempts = 0;
+            foreach (float density in Densities)
+            {
+                foreach (float gap in Gaps)
+                {
+                    foreach (float z in ZOffsets)
+                    {
+                        var a = base0; var b = base1;
+                        a.count = per; b.count = per; a.manualSize = Vector3.zero; b.manualSize = Vector3.zero;
+                        a.density = density; b.density = density; a.aspect = Aspect; b.aspect = Aspect;
+                        int t0 = a.teamId == 0 ? -1 : 1, t1 = b.teamId == 0 ? -1 : 1;
+                        if (t0 == t1) { t0 = -1; t1 = 1; }
+                        a.center = new Vector3(t0 * (gap * .5f + a.Size.x * .5f), base0.center.y, z);
+                        b.center = new Vector3(t1 * (gap * .5f + b.Size.x * .5f), base1.center.y, z);
+                        d.Draft.Set(0, a); d.Draft.Set(1, b); attempts++;
+                        if (d.TryValidate(out error))
+                        {
+                            fit = true; result.densityUsed = density; result.aspectUsed = a.aspect; result.gapUsed = gap; result.zOffsetUsed = z;
+                            break;
+                        }
+                        if (result.validationErrors.Count < 40) result.validationErrors.Add("d=" + density + ";gap=" + gap + ";z=" + z + ";size=" + a.Size + ": " + error);
+                        if (attempts % 8 == 0) yield return null;
+                    }
+                    if (fit) break;
+                }
+                if (fit) break;
+            }
+            result.layoutAttempts = attempts;
+            result.deploymentValid = fit;
+            if (!fit) { Finish(false, "No valid deployment layout for " + requested + " units on " + EntryId + " (strict density .7 / aspect 2.2 / gap 50 / z 0)."); yield break; }
+            result.deploymentNote = "density=" + result.densityUsed + ";aspect=" + result.aspectUsed + ";gap=" + result.gapUsed + ";z=" + result.zOffsetUsed + ";size=" + d.Draft[0].Size;
+            Stage("layout-valid;" + result.deploymentNote);
+            yield return null; yield return null;
+
+            Button start = null;
+            until = Time.realtimeSinceStartupAsDouble + 5;
+            while ((start = FindButton("deployment-start")) == null && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            double applyStart = Time.realtimeSinceStartupAsDouble;
+            if (start != null) start.onClick.Invoke();
+            else
+            {
+                Stage("deployment-start-button-missing;fallback=TryApply");
+                if (!d.TryApply(out error)) { Finish(false, "TryApply: " + error); yield break; }
+            }
+            until = Time.realtimeSinceStartupAsDouble + 10;
+            while (controller.Phase != WarSandboxBattlePhase.Running && Time.realtimeSinceStartupAsDouble < until)
+            {
+                var confirm = FindButton("tight-dialog-confirm");
+                if (confirm != null) { confirm.onClick.Invoke(); result.startConfirmClicked = true; Stage("tight-dialog-confirm"); }
+                yield return null;
+            }
+            if (controller.Phase != WarSandboxBattlePhase.Running)
+            {
+                controller.StartOrResumeBattle();
+                until = Time.realtimeSinceStartupAsDouble + 30;
+                while (controller.Phase != WarSandboxBattlePhase.Running && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            }
+            if (controller.Phase != WarSandboxBattlePhase.Running) { Finish(false, "Battle not Running: " + controller.Phase + " / " + d.Error + " / " + controller.CommandError); yield break; }
+            result.applyToRunningSeconds = Time.realtimeSinceStartupAsDouble - applyStart;
+            result.agentCount = manager.Buffers != null ? manager.Buffers.AgentCount : -1;
+            try { result.configuredUnits = manager.scenarioConfig.unitTypes.Sum(u => u.spawnConfig.unitCount); } catch { result.configuredUnits = -1; }
+            try { result.team0Initial = controller.GetArmy(0).initialUnitCount; result.team1Initial = controller.GetArmy(1).initialUnitCount; } catch { }
+            double battleStart = Time.realtimeSinceStartupAsDouble;
+            trackMemory = true;
+            Stage("battle-running;agents=" + result.agentCount);
+            if (result.agentCount != requested) { Finish(false, "Expected " + requested + " agents, got " + result.agentCount); yield break; }
+            InstallDispatchCounter();
+            Stage("dispatch-counter;installed=" + result.dispatchListenerInstalled + ";" + result.dispatchListenerNote);
+            while (Time.realtimeSinceStartupAsDouble - battleStart < WarmupSeconds) yield return null;
+            SetupRecorders();
+            Stage("recorders;available=" + result.availableMarkerCount + ";recorded=" + result.recordedMarkerCount + ";missingCurated=" + result.missingCuratedMarkers.Count);
+            yield return null; yield return null;
+            result.phaseAtSampleStart = controller.Phase.ToString();
+            result.navAtSampleStart = ReadNav();
+            result.aliveAtSampleStart = Alive();
+            result.gfxDriverBytesAtSampleStart = UnityEngine.Profiling.Profiler.GetAllocatedMemoryForGraphicsDriver();
+            Stage("sample-start;alive=" + result.aliveAtSampleStart + ";nav=" + result.navAtSampleStart.preparationState);
+            yield return null;
+
+            // ---- Main window: full gameplay path (identical to the P3Scale1024 measurement) ----
+            var full = new Window { mode = "full" };
+            ClearRecorderSamples();
+            if (counter != null) counter.countLabels = true;
+            current = full; lastTick = 0; sampling = true; full.start = Time.realtimeSinceStartupAsDouble;
+            bool allRunning = true;
+            while (Time.realtimeSinceStartupAsDouble - full.start < SampleSeconds)
+            {
+                if (controller.Phase != WarSandboxBattlePhase.Running) allRunning = false;
+                yield return null;
+            }
+            sampling = false; full.end = Time.realtimeSinceStartupAsDouble;
+            if (counter != null) counter.countLabels = false;
+            result.actualSampleSeconds = full.end - full.start;
+            result.sampledWhileRunning = allRunning;
+            result.phaseAtSampleEnd = controller.Phase.ToString();
+            result.navAtSampleEnd = ReadNav();
+            result.full = Summ(full);
+            WriteFrameCsv(full, "frames-full.csv");
+            if (counter != null)
+            {
+                int fr = Math.Max(1, full.frameMs.Count);
+                result.dispatchLabelsInFullWindow = counter.labels.OrderByDescending(k => k.Value).Select(k => new LabelCount { label = k.Key, total = k.Value, perFrame = (double)k.Value / fr }).ToList();
+            }
+            var ns = result.navAtSampleStart; var ne = result.navAtSampleEnd;
+            result.navBackend = !ne.found ? "not-found" : (ne.burstSolves > ns.burstSolves && ne.managedSolves == ns.managedSolves ? "Burst" : (ne.managedSolves > ns.managedSolves && ne.burstSolves == ns.burstSolves ? "Managed" : (ne.burstSolves == ns.burstSolves && ne.managedSolves == ns.managedSolves ? "no-solves-in-window(burstTotal=" + ne.burstSolves + ",managedTotal=" + ne.managedSolves + ")" : "Mixed")));
+            result.navSolveMsPerFrameInWindow = full.frameMs.Count > 0 && ne.found ? (ne.totalSolveMs - ns.totalSolveMs) / full.frameMs.Count : -1;
+            result.frames = full.frameMs.Count; result.medianMs = result.full.medianMs; result.p95Ms = result.full.p95Ms; result.p99Ms = result.full.p99Ms; result.meanMs = result.full.meanMs;
+            result.maxMs = full.frameMs.Count > 0 ? full.frameMs.Max() : 0; result.over33 = full.frameMs.Count(x => x > 33.33); result.over50 = full.frameMs.Count(x => x > 50);
+            result.avgFps = result.full.avgFps;
+            result.screenWidth = Screen.width; result.screenHeight = Screen.height; result.vSyncCount = QualitySettings.vSyncCount; result.targetFrameRate = Application.targetFrameRate;
+            Stage("sample-end;frames=" + full.frameMs.Count + ";median=" + result.medianMs.ToString("F2", CultureInfo.InvariantCulture) + ";gpuMedian=" + (result.full.ftGpu != null ? result.full.ftGpu.median.ToString("F2", CultureInfo.InvariantCulture) : "-"));
+            try { File.WriteAllText(Path.Combine(output, "result.partial.json"), JsonUtility.ToJson(result, true)); } catch { }
+            try { ScreenCapture.CaptureScreenshot(Path.Combine(output, "full.png")); } catch { }
+            for (int i = 0; i < 5; i++) yield return null;
+
+            // ---- Ablation windows: existing switches only (precedent: WarSandboxTerrainCycle.GpuBreakdown) ----
+            frozenRenderer = null;
+            try
+            {
+                var rf = typeof(MassEngineManager).GetField("renderDispatcher", BindingFlags.Instance | BindingFlags.NonPublic);
+                frozenRenderer = rf != null ? rf.GetValue(manager) as MassGpuRenderDispatcher : null;
+                Vector2 world = manager.systemConfig.simulationConfig.simulationWorldSize;
+                frozenBounds = new Bounds(Vector3.zero, new Vector3(world.x + 40, 2000, world.y + 40));
+                var lod = manager.systemConfig.lodConfig;
+                frozenSink = new Vector4(Mathf.Max(0, lod.corpseLingerSeconds), Mathf.Max(0, lod.corpseSinkSeconds), Mathf.Max(0, lod.corpseSinkDepth), 0);
+            }
+            catch (Exception ex) { Stage("frozen-renderer-unavailable;" + ex.GetType().Name + ":" + ex.Message); frozenRenderer = null; }
+            string[] modes = { "compute-only", "frozen-draw", "empty" };
+            foreach (string mode in modes)
+            {
+                if (mode == "frozen-draw" && frozenRenderer == null) { Stage("skip-ablation;" + mode); continue; }
+                var w = new Window { mode = mode };
+                bool hide = mode == "compute-only" || mode == "empty";
+                bool freeze = mode == "frozen-draw" || mode == "empty";
+                if (freeze) { manager.enableGpuDispatch = false; drawFrozen = mode == "frozen-draw"; }
+                if (hide) MaskCameras();
+                w.computeEnabled = manager.enableGpuDispatch; w.worldVisible = !hide; w.frozenDraw = drawFrozen; w.camerasMasked = maskedCameras.Count;
+                Stage("ablation-start;" + mode + ";compute=" + w.computeEnabled + ";masked=" + w.camerasMasked + ";frozenDraw=" + drawFrozen);
+                double drainUntil = Time.realtimeSinceStartupAsDouble + DrainSeconds;
+                while (Time.realtimeSinceStartupAsDouble < drainUntil) yield return null;
+                ClearRecorderSamples();
+                current = w; lastTick = 0; sampling = true; w.start = Time.realtimeSinceStartupAsDouble;
+                while (Time.realtimeSinceStartupAsDouble - w.start < AblationSeconds) yield return null;
+                sampling = false; w.end = Time.realtimeSinceStartupAsDouble;
+                if (mode == "frozen-draw") { try { ScreenCapture.CaptureScreenshot(Path.Combine(output, "frozen-draw.png")); } catch { } }
+                RestoreSwitches();
+                var wr = Summ(w); result.ablations.Add(wr);
+                WriteFrameCsv(w, "frames-" + mode + ".csv");
+                Stage("ablation-end;" + mode + ";frames=" + w.frameMs.Count + ";median=" + wr.medianMs.ToString("F2", CultureInfo.InvariantCulture) + ";gpuMedian=" + (wr.ftGpu != null ? wr.ftGpu.median.ToString("F2", CultureInfo.InvariantCulture) : "-"));
+                for (int i = 0; i < 10; i++) yield return null;
+            }
+            current = null;
+            UninstallDispatchCounter();
+            result.gfxDriverBytesEnd = UnityEngine.Profiling.Profiler.GetAllocatedMemoryForGraphicsDriver();
+            if (result.gfxDriverBytesEnd > result.gfxDriverBytesPeak) result.gfxDriverBytesPeak = result.gfxDriverBytesEnd;
+            trackMemory = false;
+            result.totalAllocatedBytesEnd = UnityEngine.Profiling.Profiler.GetTotalAllocatedMemoryLong();
+            result.totalReservedBytesEnd = UnityEngine.Profiling.Profiler.GetTotalReservedMemoryLong();
+            result.aliveAtEnd = Alive(); result.aliveAtSampleEnd = result.aliveAtEnd;
+            foreach (var r in recs) { try { r.r.Dispose(); } catch { } }
+            string invalid = null;
+            if (result.phaseAtSampleStart != "Running" || !allRunning) invalid = "Battle not Running for the whole main window.";
+            Finish(invalid == null, invalid);
+        }
+
+        void MaskCameras()
+        {
+            maskedCameras.Clear();
+            foreach (var cam in Object.FindObjectsByType<Camera>(FindObjectsSortMode.None))
+            {
+                if (cam == null || !cam.isActiveAndEnabled) continue;
+                maskedCameras.Add(new KeyValuePair<Camera, int>(cam, cam.cullingMask));
+                cam.cullingMask = 0;
+            }
+        }
+
+        void RestoreSwitches()
+        {
+            drawFrozen = false;
+            try { if (manager != null) manager.enableGpuDispatch = true; } catch { }
+            foreach (var kv in maskedCameras) { try { if (kv.Key != null) kv.Key.cullingMask = kv.Value; } catch { } }
+            maskedCameras.Clear();
+        }
+
+        int Alive()
+        {
+            try
+            {
+                int n = manager.Buffers.AgentCount;
+                var hp = new int[n];
+                manager.Buffers.combatBuffers.hpReadBuffer.GetData(hp, 0, 0, n);
+                int alive = 0; for (int i = 0; i < n; i++) if (hp[i] > 0) alive++;
+                return alive;
+            }
+            catch (Exception ex) { Debug.LogWarning("P3P alive read failed: " + ex.Message); return -1; }
+        }
+
+        Nav ReadNav()
+        {
+            var n = new Nav();
+            try
+            {
+                var f = typeof(MassEngineManager).GetField("terrainRuntime", BindingFlags.Instance | BindingFlags.NonPublic);
+                object rt = f != null ? f.GetValue(manager) : null;
+                if (rt == null) return n;
+                n.found = true;
+                Type t = rt.GetType();
+                object P(string name) { var p = t.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic); return p != null ? p.GetValue(rt) : null; }
+                n.preparationState = P("PreparationState") as string ?? "n/a";
+                n.preparationBlockReason = P("PreparationBlockReason") as string;
+                n.completedFields = Convert.ToInt32(P("CompletedFields") ?? -1);
+                n.burstSolves = Convert.ToInt32(P("BurstSolveCount") ?? -1);
+                n.managedSolves = Convert.ToInt32(P("ManagedSolveCount") ?? -1);
+                n.managedNativeSolves = Convert.ToInt32(P("ManagedNativeSolveCount") ?? -1);
+                n.probes = Convert.ToInt32(P("PreparationProbeCount") ?? -1);
+                n.totalSolveMs = Convert.ToDouble(P("TotalSolveMilliseconds") ?? -1.0);
+                n.maxSolveMs = Convert.ToDouble(P("MaxSolveMilliseconds") ?? -1f);
+                n.lastSolveMs = Convert.ToDouble(P("LastSolveMilliseconds") ?? -1f);
+                n.maxProbeMs = Convert.ToDouble(P("MaxPreparationProbeMilliseconds") ?? -1.0);
+            }
+            catch (Exception ex) { n.preparationBlockReason = "read-error:" + ex.GetType().Name + ":" + ex.Message; }
+            return n;
+        }
+
+        void Finish(bool ok, string error)
+        {
+            if (result.passed || !string.IsNullOrEmpty(result.error)) return;
+            RestoreSwitches();
+            result.passed = ok; result.error = ok ? null : (error ?? "unknown");
+            try { File.WriteAllText(Path.Combine(output, "result.json"), JsonUtility.ToJson(result, true)); } catch (Exception ex) { Debug.LogError("P3P result write failed: " + ex); }
+            Debug.Log("P3P_PLAYER_RESULT passed=" + ok + " error=" + result.error);
+            Application.Quit(ok ? 0 : 3);
+        }
+    }
+}
+#endif

@@ -1,0 +1,92 @@
+
+namespace MassEngine.Tests
+{
+ public sealed class P3LaneWorkTests
+ {
+  [Serializable] public sealed class Counts {
+   public int cells, goals, validGoals, uniqueGoalCells, rowLists, columnLists, maxRowGoals, maxColumnGoals;
+   public int inactive, active, bothLanesEmpty, horizontal, vertical, dotRejected, noList, searches, targetSelf, noForwardTarget, tooNear, routeCalls, routeBlocked, routeClear, replacements, changed;
+   public long searchComparisons, routeEdges, requestedRouteEdges;
+   public int uniqueDirectedEdges, maxEdgeReuse, maxRouteEdges;
+   public int[] searchSizeBins=new int[10], routeLengthBins=new int[10];
+  }
+  [Serializable] public sealed class Report {
+   public int sample; public bool exactBits, goalsUnchanged, countsRepeatedExactly, routeDecisionsExact;
+   public Counts counts; public double[] uninstrumentedBeforeMs, uninstrumentedAfterMs;
+   public string scope="Counting runs are NOT timed. No per-cell clocks. Production Apply timing is a control, not attribution. Binary-search and route clones are checked against actual APIs. No production change or optimization candidate.";
+  }
+  static int Bin(int n) { int i=0;while(n>1&&i<9){n>>=1;i++;}return i; }
+  static void Exact(Vector2[] a,Vector2[] b) { typeof(P3UniformOutputTests).GetMethod("Exact",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,new object[]{a,b}); }
+  static bool Route(TerrainNavigationGrid nav, uint[] walkable, byte[] edges,int from,int to,Counts c,int[] edgeHits) {
+   if(from<0||to<0||from>=nav.CellCount||to>=nav.CellCount||walkable[from]==0||walkable[to]==0)return false;
+   if(from==to)return true;
+   int step,bit;
+   if(from/nav.ResolutionX==to/nav.ResolutionX){step=to>from?1:-1;bit=step>0?0:4;}
+   else if(from%nav.ResolutionX==to%nav.ResolutionX){step=to>from?nav.ResolutionX:-nav.ResolutionX;bit=step>0?1:5;}
+   else return false;
+   int requested=Math.Abs((to-from)/step);c.requestedRouteEdges+=requested;c.routeLengthBins[Bin(requested)]++;
+   int tested=0;bool clear=true;
+   for(int cell=from;cell!=to;cell+=step){c.routeEdges++;tested++;edgeHits[cell*8+bit]++;if((edges[cell]&(1<<bit))==0){clear=false;break;}}
+   c.maxRouteEdges=Math.Max(c.maxRouteEdges,tested);return clear;
+  }
+  static Counts Count(TerrainNavigationGrid nav,Vector2[] goals,Vector2[] directions,float stopRadius) {
+   var c=new Counts{cells=directions.Length,goals=goals.Length};
+   var rows=new List<int>[nav.ResolutionZ];var columns=new List<int>[nav.ResolutionX];Vector2 mean=Vector2.zero;int total=0;
+   var unique=new HashSet<int>();
+   foreach(var p in goals){if(!nav.TryGetCell(p,out int cell)||!nav.IsWalkable(p))continue;int x=cell%nav.ResolutionX,z=cell/nav.ResolutionX;if(rows[z]==null)rows[z]=new List<int>();if(columns[x]==null)columns[x]=new List<int>();rows[z].Add(cell);columns[x].Add(cell);mean+=nav.CellCenter(cell);total++;unique.Add(cell);}
+   c.validGoals=total;c.uniqueGoalCells=unique.Count;
+   if(total==0)return c;mean/=total;
+   foreach(var list in rows)if(list!=null){list.Sort();c.rowLists++;c.maxRowGoals=Math.Max(c.maxRowGoals,list.Count);}
+   foreach(var list in columns)if(list!=null){list.Sort();c.columnLists++;c.maxColumnGoals=Math.Max(c.maxColumnGoals,list.Count);}
+   var flags=System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance;
+   var walkable=(uint[])typeof(TerrainNavigationGrid).GetField("walkable",flags).GetValue(nav);
+   var edges=(byte[])typeof(TerrainNavigationGrid).GetField("neighbours",flags).GetValue(nav);
+   var hits=new int[nav.CellCount*8];
+   float near=Mathf.Max(nav.CellSize*4,stopRadius+nav.CellSize);
+   for(int cell=0;cell<directions.Length;cell++){
+    Vector2 original=directions[cell];if(original.sqrMagnitude<.0001f){c.inactive++;continue;}c.active++;
+    if(rows[cell/nav.ResolutionX]==null&&columns[cell%nav.ResolutionX]==null)c.bothLanesEmpty++;
+    Vector2 here=nav.CellCenter(cell),toward=mean-here;bool horizontal=Mathf.Abs(toward.x)>=Mathf.Abs(toward.y);int sign=(horizontal?toward.x:toward.y)>=0?1:-1;
+    if(horizontal)c.horizontal++;else c.vertical++;
+    Vector2 proposed=horizontal?new Vector2(sign,0):new Vector2(0,sign);if(Vector2.Dot(proposed,original)<.5f){c.dotRejected++;continue;}
+    var list=horizontal?rows[cell/nav.ResolutionX]:columns[cell%nav.ResolutionX];if(list==null){c.noList++;continue;}
+    c.searches++;c.searchSizeBins[Bin(list.Count)]++;
+    int lo=0,hi=list.Count-1,probe=0;bool found=false;
+    while(lo<=hi){int mid=lo+((hi-lo)>>1);c.searchComparisons++;int v=list[mid];if(v==cell){probe=mid;found=true;break;}if(v<cell)lo=mid+1;else hi=mid-1;}
+    if(!found)probe=~lo;
+    int at=list.BinarySearch(cell);Assert.AreEqual(at,probe,"Search clone index including duplicate-hit choice");
+    if(at<0)at=~at;else{c.targetSelf++;continue;}int pick=sign>0?at:at-1;if(pick<0||pick>=list.Count){c.noForwardTarget++;continue;}int target=list[pick];
+    if(Vector2.Distance(here,nav.CellCenter(target))<near){c.tooNear++;continue;}
+    c.routeCalls++;bool clear=Route(nav,walkable,edges,cell,target,c,hits);Assert.AreEqual(nav.HasClearCardinalRoute33(cell,target),clear,"Route decision");
+    if(!clear){c.routeBlocked++;continue;}c.routeClear++;c.replacements++;
+    if(original.x!=proposed.x||original.y!=proposed.y)c.changed++;
+    directions[cell]=proposed;
+   }
+   foreach(int hit in hits)if(hit>0){c.uniqueDirectedEdges++;c.maxEdgeReuse=Math.Max(c.maxEdgeReuse,hit);}
+   Assert.AreEqual(c.cells,c.inactive+c.active);
+   Assert.AreEqual(c.active,c.dotRejected+c.noList+c.targetSelf+c.noForwardTarget+c.tooNear+c.routeBlocked+c.replacements);
+   Assert.AreEqual(c.searches,c.targetSelf+c.noForwardTarget+c.tooNear+c.routeCalls);
+   return c;
+  }
+  [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)]
+  public void CountFixedLaneWorkWithoutTimingProbes(int sample) {
+   string output=null;foreach(string arg in Environment.GetCommandLineArgs())if(arg.StartsWith("--interaction-p8-output=",StringComparison.Ordinal))output=arg.Substring("--interaction-p8-output=".Length);Assert.IsNotNull(output);
+   string capture=System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath,"../Logs/InteractionRefinement-20261007/P3/fixed-input-20261008-01-capture"));
+   Vector2[] goals,input;float radius;
+   using(var r=new System.IO.BinaryReader(System.IO.File.OpenRead(System.IO.Path.Combine(capture,"fixed-sample-"+sample+"-input.bin")))){Assert.AreEqual("P3_FIXED_INPUT_V1",r.ReadString());radius=r.ReadSingle();goals=new Vector2[r.ReadInt32()];for(int i=0;i<goals.Length;i++)goals[i]=new Vector2(r.ReadSingle(),r.ReadSingle());}
+   using(var r=new System.IO.BinaryReader(System.IO.File.OpenRead(System.IO.Path.Combine(capture,"fixed-sample-"+sample+"-expected.bin")))){input=new Vector2[r.ReadInt32()];for(int i=0;i<input.Length;i++)input[i]=new Vector2(r.ReadSingle(),r.ReadSingle());}
+   var nav=(TerrainNavigationGrid)typeof(P3UniformOutputTests).GetMethod("Hydrate",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,new object[]{typeof(TerrainNavigationGrid)});
+   var expected=(Vector2[])input.Clone();TerrainLaneApproach33.Apply(nav,goals,expected,radius);
+   var oldGoals=(Vector2[])goals.Clone();var buffer=new Vector2[input.Length];
+   var before=new List<double>();var after=new List<double>();Counts counts=null;
+   for(int phase=0;phase<2;phase++){
+    for(int rep=-2;rep<8;rep++){Array.Copy(input,buffer,input.Length);long start=System.Diagnostics.Stopwatch.GetTimestamp();TerrainLaneApproach33.Apply(nav,goals,buffer,radius);double ms=(System.Diagnostics.Stopwatch.GetTimestamp()-start)*1000.0/System.Diagnostics.Stopwatch.Frequency;Exact(expected,buffer);if(rep>=0)(phase==0?before:after).Add(ms);}
+    if(phase==0)for(int rep=0;rep<2;rep++){Array.Copy(input,buffer,input.Length);var next=Count(nav,goals,buffer,radius);Exact(expected,buffer);Exact(oldGoals,goals);if(counts!=null)Assert.AreEqual(JsonUtility.ToJson(counts),JsonUtility.ToJson(next));counts=next;}
+   }
+   Exact(oldGoals,goals);
+   using(var w=new System.IO.BinaryWriter(System.IO.File.Create(System.IO.Path.Combine(output,"lane-work-final-"+sample+".bin")))){w.Write(expected.Length);foreach(var p in expected){w.Write(p.x);w.Write(p.y);}}
+   var report=new Report{sample=sample,counts=counts,exactBits=true,goalsUnchanged=true,countsRepeatedExactly=true,routeDecisionsExact=true,uninstrumentedBeforeMs=before.ToArray(),uninstrumentedAfterMs=after.ToArray()};
+   System.IO.File.WriteAllText(System.IO.Path.Combine(output,"lane-work-"+sample+".json"),JsonUtility.ToJson(report,true));
+  }
+ }
+}

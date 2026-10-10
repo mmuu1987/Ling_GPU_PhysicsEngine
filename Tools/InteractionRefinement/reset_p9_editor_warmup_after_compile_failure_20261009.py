@@ -1,0 +1,14 @@
+from pathlib import Path
+import subprocess,json,hashlib,datetime,sys
+R=Path(__file__).resolve().parents[2];P=R/'outputs/P12';Q=R/'outputs/P9FirstCommand-20261009-01';D=R/'outputs/P9ColdFix-20261009-01'
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest()
+def files(root):return {p.relative_to(root).as_posix():{'sha256':sha(p),'size':p.stat().st_size,'mtime_ns':p.stat().st_mtime_ns} for p in root.rglob('*') if p.is_file()}
+assert subprocess.check_output(['powershell','-NoProfile','-Command',"@(Get-Process Unity,WarSandbox -ErrorAction SilentlyContinue).Count"],text=True).strip()=='0'
+trial=Q/'editor-warmup-candidate-trial.json';j=json.loads(trial.read_text(encoding='utf-8'));assert j['toolExit']==1 and 'CS0118' in j['error'] and 'namespace but is used like a type' in j['error'];assert j['cacheRestoredExactly'] and not (P/'Library/WarSandbox/P9ShaderWarmup-D3D11.json').exists()
+C=P/'Library/ShaderCache/compute/AgentCombatSimulation79e5';assert files(C)==j['originalComputeCache'];marker=P/'Library/WarSandbox/P9ShaderWarmup-D3D11.json';assert not marker.exists()
+manifestPath=Q/'candidate-manifest.json';current=json.loads(manifestPath.read_text(encoding='utf-8'));assert current['editorWarmupTool'] and not current['accepted'];(Q/'candidate-manifest-after-failed-compile.json').write_bytes(manifestPath.read_bytes())
+rel='Assets/Game/Editor/P9LocalCommandShaderWarmup.cs';meta=rel+'.meta';source=P/rel;metafile=P/meta;assert source.exists() and metafile.exists();(Q/'P9LocalCommandShaderWarmup-failed-compile.cs').write_bytes(source.read_bytes());(Q/'P9LocalCommandShaderWarmup-failed-compile.cs.meta').write_bytes(metafile.read_bytes());source.unlink();metafile.unlink()
+manifestPath.write_bytes((Q/'navigation-only-before-editor-tool.json').read_bytes());nav=json.loads(manifestPath.read_text(encoding='utf-8'));assert nav['name']=='first-command-navigation-sharing-candidate-01' and not nav.get('accepted');assert all(sha(P/f)==h for f,h in nav['files'].items())
+failed=Q/'editor-warmup-candidate-trial-01-compile-failure.json';assert not failed.exists();trial.rename(failed)
+assert all(sha(P/f)==h for f,h in json.loads((D/'patch-manifest.json').read_text(encoding='utf-8'))['files'].items())
+print(json.dumps({'status':'isolated-compile-failure-archived','compileError':'CS0118: UnityEditor.Editor type shadowed by MassEngine.Game.Editor namespace; now fully qualified','failedTrialArchived':str(failed.relative_to(R)),'navCandidateManifestRestored':nav['name'],'P12ShaderCacheRestoredExactly':files(C)==j['originalComputeCache'],'markerAbsent':not marker.exists(),'unverifiedToolRemovedFromP12':not source.exists() and not metafile.exists(),'r03RuntimeHashesUnchanged':True,'motherCodeTouched':False,'next':'Retry Unity compilation with typeof(UnityEditor.Editor).'},ensure_ascii=False,indent=2))

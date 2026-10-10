@@ -1,0 +1,8 @@
+from common_p6 import *
+import sys
+sys.stdout.reconfigure(encoding='utf-8');P7=LOG/'P7';assert not(P7/'baseline.json').exists();active=processes();lock=(ROOT/'Temp/UnityLockfile').exists();print({'active':active,'lock':lock},flush=True);assert not active and not lock
+check=project_check(full=True);assert check['passed'],check;assert user_check()['passed'];pub=json.loads((P6/'scenario-followup-01/publication.json').read_text(encoding='utf-8'));final=json.loads((P6/'scenario-followup-01/finalization.json').read_text(encoding='utf-8'));assert final['passed'] and pub['prototypeCheckpointPassed']
+for r in pub['files']:assert sha(ROOT/r['path'])==r['sha256'],r['path']
+b=json.loads((P6/'baseline.json').read_text(encoding='utf-8'))['files'];b.update({p:r['expectedSha256'] for p,r in json.loads((P6/'approved-changes.json').read_text(encoding='utf-8')).items()});save(P7/'baseline.json',{'files':b,'p6Check':check,'createdAt':datetime.datetime.now().isoformat()});save(P7/'approved-changes.json',{});save(P7/'scope.json',{'userAuthorizedP7':True,'scope':'Developer-opt-in only: same-team live GPU projected-centre replace selection, generation/team/request/version, asynchronous masks/counts, instanced rings, modal/camera arbitration. No P8 orders/public selection UI/build38. No runtime teamId/AgentData/VAT changes. Selection changes preserve historical local orders.','P3Deferred':True,'P4P5HumanAccepted':False,'P6CheckpointBounded':True});backup=P7/'handoff-docs-before';backup.mkdir()
+for n in ['IMPLEMENTATION.md','P3-QUALIFICATION-STATE.md']:(backup/n).write_bytes((ROOT/'Docs/InteractionRefinement-20261007'/n).read_bytes())
+save(P7/'handoff.json',{'status':'P7_AUTHORIZED_PREPARED','p6Publication':pub,'baselineFiles':len(b)});print('P7 PREPARED',len(b),'files')

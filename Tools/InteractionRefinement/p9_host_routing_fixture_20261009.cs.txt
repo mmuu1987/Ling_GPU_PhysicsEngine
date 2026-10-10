@@ -1,0 +1,57 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools;
+namespace MassEngine.Game.Tests {
+ public sealed class P9HostRoutingTests {
+  LocalOrdersSceneTests owner;
+  readonly Dictionary<ComputePipelineOrchestrator,IDispatchListener> attached=new Dictionary<ComputePipelineOrchestrator,IDispatchListener>();
+  readonly Dictionary<string,int> counts=new Dictionary<string,int>();
+  static readonly BindingFlags Private=BindingFlags.Instance|BindingFlags.NonPublic;
+  sealed class Recorder:IDispatchListener {
+   readonly IDispatchListener previous;readonly Dictionary<string,int> counts;
+   public Recorder(IDispatchListener p,Dictionary<string,int> c){previous=p;counts=c;}
+   public void OnDispatch(string label){previous?.OnDispatch(label);counts.TryGetValue(label,out int n);counts[label]=n+1;}
+  }
+  void Attach() {
+   var m=(MassEngineManager)typeof(LocalOrdersSceneTests).GetField("m",Private).GetValue(owner);if(m==null)return;
+   var p=(ComputePipelineOrchestrator)typeof(MassEngineManager).GetField("pipelineOrchestrator",Private).GetValue(m);
+   if(p==null||attached.ContainsKey(p))return;
+   var f=typeof(ComputePipelineOrchestrator).GetField("dispatchListener",Private);var old=(IDispatchListener)f.GetValue(p);
+   attached.Add(p,old);f.SetValue(p,new Recorder(old,counts));
+  }
+  // Flatten nested waits so a rebuilt scenario's new orchestrator is observed before its next frame.
+  IEnumerator Trace(IEnumerator routine) {
+   var stack=new Stack<IEnumerator>();stack.Push(routine);
+   try {
+    while(stack.Count>0) {
+     var current=stack.Peek();if(!current.MoveNext()){(current as IDisposable)?.Dispose();stack.Pop();continue;}
+     if(current.Current is IEnumerator nested){stack.Push(nested);continue;}
+     Attach();yield return current.Current;
+    }
+   }finally{while(stack.Count>0)(stack.Pop() as IDisposable)?.Dispose();}
+  }
+  [UnitySetUp] public IEnumerator Setup(){owner=new LocalOrdersSceneTests();yield return Trace(owner.Setup());}
+  [UnityTearDown] public IEnumerator Cleanup(){
+   var field=typeof(ComputePipelineOrchestrator).GetField("dispatchListener",Private);
+   foreach(var item in attached)field.SetValue(item.Key,item.Value);attached.Clear();
+   if(owner!=null)yield return owner.Cleanup();
+  }
+  int Count(string label)=>counts.TryGetValue(label,out int n)?n:0;
+  void Verify(params string[] required) {
+   foreach(string label in required)Assert.Greater(Count(label),0,"Must execute the production specialized kernel, not legacy fallback: "+label);
+   Assert.Greater(Count("SimulateCombatAndAccumulateDamage"),0);
+   Assert.AreEqual(Count("ClearPendingDamage"),Count("SimulateCombatAndAccumulateDamage"),"Exactly one shared damage clear per global simulation");
+   foreach(var row in counts)if(row.Key.StartsWith("Simulate")||row.Key=="ClearPendingDamage")Debug.Log("P9_STAGE host-routing "+row.Key+"="+row.Value);
+  }
+  [UnityTest] public IEnumerator P9HostGreenLifecycle() {yield return Trace(owner.P6GreenBridgeWholeArmyResetAndResourceBudget());Verify("SimulateLocalMoveMelee","SimulateLocalHoldMelee");}
+  [UnityTest] public IEnumerator P9HostGreenFourGroups() {yield return Trace(owner.P6FourGroupsGreen2048AndRealObstacleChange());Verify("SimulateLocalMoveMelee","SimulateLocalHoldMelee");}
+  [UnityTest] public IEnumerator P9HostMixedFourGroups() {yield return Trace(owner.P6FourGroupsAuthoredMaleKnightRangerMix());Verify("SimulateLocalMoveMelee","SimulateLocalMoveRanged","SimulateLocalHoldRanged");}
+  [UnityTest] public IEnumerator P9HostRangerProjectile() {yield return Trace(owner.P6AuthoredRangerMoveThenHoldFiresOwnedProjectile());Verify("SimulateLocalMoveRanged","SimulateLocalHoldRanged");}
+ }
+}
+#endif

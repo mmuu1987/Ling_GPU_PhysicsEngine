@@ -1,0 +1,30 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
+using System.Collections.Generic;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.TestTools;
+using NUnit.Framework;
+namespace MassEngine.Game.Tests {
+ public sealed class P9ShaderUtilCompileProbe {
+  [Serializable] public sealed class Row { public string key; public string sha256; }
+  [Serializable] public sealed class Result { public bool methodFound; public string error; public string shader; public string kernel; public string keywords; public string graphicsApi; public string buildTarget; public double elapsedMs; public string returnType; public string[] returnMembers; public Row[] cacheBefore; public Row[] cacheAfter; public string[] added; public string[] changed; public string[] removed; }
+  static string Output=>Environment.GetCommandLineArgs().FirstOrDefault(x=>x.StartsWith("--interaction-p8-output="))?.Substring("--interaction-p8-output=".Length);
+  static string Sha(string p){using(var h=SHA256.Create())return BitConverter.ToString(h.ComputeHash(File.ReadAllBytes(p))).Replace("-","").ToLowerInvariant();}
+  static Dictionary<string,string> Cache(string root){var d=new Dictionary<string,string>();if(Directory.Exists(root))foreach(var p in Directory.GetFiles(root,"*",SearchOption.AllDirectories))d[Path.GetRelativePath(root,p)]=Sha(p);return d;}
+  static Row[] Rows(Dictionary<string,string> d)=>d.OrderBy(x=>x.Key).Select(x=>new Row{key=x.Key,sha256=x.Value}).ToArray();
+  static string MemberValue(object v){if(v==null)return "null";if(v is string||v.GetType().IsPrimitive||v.GetType().IsEnum)return v.ToString();if(v is Array a)return "array["+a.Length+"]";return v.GetType().FullName;}
+  [UnityTest,Timeout(180000)] public IEnumerator CompileExactLocalAttackVariant(){Assert.NotNull(Output,"Owned P9 runner required");var result=new Result{shader="Assets/MassEngine/Simulation/Shaders/AgentCombatSimulation.compute",kernel="SimulateLocalAttackMelee",keywords="MASS_TERRAIN_ENABLED|MASS_LOCAL_ORDERS",graphicsApi=GraphicsDeviceType.Direct3D11.ToString(),buildTarget=BuildTarget.StandaloneWindows64.ToString()};string cache=Path.GetFullPath(Path.Combine(Application.dataPath,"../Library/ShaderCache/compute/AgentCombatSimulation79e5"));var before=Cache(cache);result.cacheBefore=Rows(before);ComputeShader shader=AssetDatabase.LoadAssetAtPath<ComputeShader>(result.shader);Assert.NotNull(shader);int kernel=shader.FindKernel(result.kernel);var method=typeof(ShaderUtil).GetMethod("CompileComputeShaderVariant",BindingFlags.NonPublic|BindingFlags.Static);result.methodFound=method!=null;System.Diagnostics.Stopwatch watch=System.Diagnostics.Stopwatch.StartNew();
+   try{Assert.NotNull(method,"Unity internal ShaderUtil.CompileComputeShaderVariant not found");object returned=method.Invoke(null,new object[]{shader,kernel,new[]{"MASS_TERRAIN_ENABLED","MASS_LOCAL_ORDERS"},GraphicsDeviceType.Direct3D11,BuildTarget.StandaloneWindows64});watch.Stop();result.elapsedMs=watch.Elapsed.TotalMilliseconds;result.returnType=returned?.GetType().FullName??"null";if(returned!=null){var fields=returned.GetType().GetFields(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).Select(f=>f.Name+":"+f.FieldType.Name+"="+MemberValue(f.GetValue(returned)));var props=returned.GetType().GetProperties(BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic).Where(p=>p.GetIndexParameters().Length==0&&p.GetGetMethod(true)!=null).Select(p=>p.Name+":"+p.PropertyType.Name);result.returnMembers=fields.Concat(props).ToArray();}}
+   catch(Exception ex){watch.Stop();result.elapsedMs=watch.Elapsed.TotalMilliseconds;result.error=ex.ToString();}
+   var after=Cache(cache);result.cacheAfter=Rows(after);result.added=after.Keys.Except(before.Keys).OrderBy(x=>x).ToArray();result.removed=before.Keys.Except(after.Keys).OrderBy(x=>x).ToArray();result.changed=after.Keys.Intersect(before.Keys).Where(k=>after[k]!=before[k]).OrderBy(x=>x).ToArray();File.WriteAllText(Path.Combine(Output,"shaderutil-probe.json"),JsonUtility.ToJson(result,true));Debug.Log("P9_SHADERUTIL "+JsonUtility.ToJson(result));Assert.IsNull(result.error,result.error);Assert.IsNotEmpty(result.returnType);yield return null;}
+ }
+}
+#endif

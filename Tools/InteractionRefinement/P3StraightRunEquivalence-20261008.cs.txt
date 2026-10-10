@@ -1,0 +1,53 @@
+
+namespace MassEngine.Tests
+{
+    // Lane route checks must match the original cell-by-cell walk exactly on every same-row and same-column pair.
+    public sealed class TerrainStraightRunEquivalenceTests
+    {
+        static TerrainNavigationGrid Holes(int width, int height)
+        {
+            var method = typeof(TerrainCardinalRouteCacheTests).GetMethod("Grid", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            return (TerrainNavigationGrid)method.Invoke(null, new object[] { "holes", width, height });
+        }
+
+        static bool Reference(TerrainNavigationGrid nav, uint[] walkable, byte[] neighbours, int from, int to)
+        {
+            int resolution = nav.ResolutionX, count = nav.CellCount;
+            if (from < 0 || to < 0 || from >= count || to >= count || walkable[from] == 0 || walkable[to] == 0) return false;
+            if (from == to) return true;
+            int step, bit;
+            if (from / resolution == to / resolution) { step = to > from ? 1 : -1; bit = step > 0 ? 0 : 4; }
+            else if (from % resolution == to % resolution) { step = to > from ? resolution : -resolution; bit = step > 0 ? 1 : 5; }
+            else return false;
+            for (int cell = from; cell != to; cell += step) if ((neighbours[cell] & (1 << bit)) == 0) return false;
+            return true;
+        }
+
+        [NUnit.Framework.Test]
+        public void MatchesCellByCellReferenceForEverySameRowAndColumnPair()
+        {
+            int clear = 0, blocked = 0;
+            foreach (var size in new[] { new[] { 16, 16 }, new[] { 24, 12 } })
+            {
+                var nav = Holes(size[0], size[1]);
+                var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                var walkable = (uint[])typeof(TerrainNavigationGrid).GetField("walkable", flags).GetValue(nav);
+                var neighbours = (byte[])typeof(TerrainNavigationGrid).GetField("neighbours", flags).GetValue(nav);
+                int count = nav.CellCount;
+                for (int from = 0; from < count; from++)
+                for (int to = 0; to < count; to++)
+                {
+                    bool sameRow = from / nav.ResolutionX == to / nav.ResolutionX;
+                    bool sameColumn = from % nav.ResolutionX == to % nav.ResolutionX;
+                    if (!sameRow && !sameColumn) continue;
+                    bool expected = Reference(nav, walkable, neighbours, from, to);
+                    bool actual = nav.HasClearCardinalRoute33(from, to);
+                    NUnit.Framework.Assert.AreEqual(expected, actual, "size " + size[0] + "x" + size[1] + " from " + from + " to " + to);
+                    if (expected) clear++; else blocked++;
+                }
+            }
+            NUnit.Framework.Assert.Greater(clear, 0, "fixture must contain clear routes");
+            NUnit.Framework.Assert.Greater(blocked, 0, "fixture must contain blocked routes");
+        }
+    }
+}

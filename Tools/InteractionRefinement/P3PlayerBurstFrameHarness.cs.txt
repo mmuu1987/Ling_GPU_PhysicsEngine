@@ -1,0 +1,190 @@
+#if DEVELOPMENT_BUILD
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using UnityEngine;
+using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
+
+namespace MassEngine.Game
+{
+    /// <summary>
+    /// Temporary P12-only Player harness: P3-PERF-01 frame-time window, managed vs Burst opt-in (same binary).
+    /// Inert unless launched with --p3-player-frame-validation. Not shipping code; removed after the run.
+    /// </summary>
+    public sealed class P3PlayerBurstFrameHarness : MonoBehaviour
+    {
+        [Serializable] sealed class Nav
+        {
+            public bool found; public string preparationState, preparationBlockReason;
+            public int completedFields, burstSolves, managedSolves, managedNativeSolves, probes;
+            public double totalSolveMs, maxSolveMs, lastSolveMs, maxProbeMs;
+        }
+        [Serializable] sealed class Result
+        {
+            public bool passed, burstArgument, managedArgument, playerBurstDefine;
+            public string error, unityVersion, graphicsApi, platform, scene, phaseAtSampleStart, phaseAtSampleEnd;
+            public int agentCount, screenWidth, screenHeight, vSyncCount, targetFrameRate, frames, over33, over50;
+            public double warmupSeconds, sampleSeconds, medianMs, p95Ms, p99Ms, maxMs, meanMs, battleStartToSampleS;
+            public Nav navAtSampleStart = new Nav(), navAtSampleEnd = new Nav();
+            public List<string> stages = new List<string>();
+        }
+
+        const string EntryId = "forest-green22";
+        const double WarmupSeconds = 35, SampleSeconds = 15;
+        static string output; static bool booted;
+        readonly Result result = new Result();
+        WarSandboxSceneSession session; WarSandboxBattleController controller; MassEngineManager manager;
+        readonly List<double> frameMs = new List<double>(8192);
+        bool sampling; long lastTick; double hardDeadline;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void Bootstrap()
+        {
+            if (booted) return;
+            var args = Environment.GetCommandLineArgs();
+            string arg = args.FirstOrDefault(x => x.StartsWith("--p3-player-output=", StringComparison.Ordinal));
+            if (arg == null || !args.Contains("--p3-player-frame-validation")) return;
+            output = arg.Substring("--p3-player-output=".Length).Trim('"');
+            if (string.IsNullOrWhiteSpace(output)) return;
+            booted = true;
+            var host = new GameObject("P3 Player Burst frame validation (temporary)");
+            Object.DontDestroyOnLoad(host);
+            host.AddComponent<P3PlayerBurstFrameHarness>();
+        }
+
+        void Start()
+        {
+            Directory.CreateDirectory(output);
+            var args = Environment.GetCommandLineArgs();
+            result.burstArgument = args.Contains("--war-sandbox-nav-burst");
+            result.managedArgument = args.Contains("--war-sandbox-nav-managed");
+#if WAR_SANDBOX_PLAYER_BURST
+            result.playerBurstDefine = true;
+#endif
+            result.unityVersion = Application.unityVersion;
+            result.graphicsApi = SystemInfo.graphicsDeviceType.ToString();
+            result.platform = Application.platform.ToString();
+            result.warmupSeconds = WarmupSeconds; result.sampleSeconds = SampleSeconds;
+            hardDeadline = Time.realtimeSinceStartupAsDouble + 600;
+            QualitySettings.vSyncCount = 0; Application.targetFrameRate = -1;
+            Stage("harness-started");
+            StartCoroutine(Run());
+        }
+
+        void Update()
+        {
+            long now = Stopwatch.GetTimestamp();
+            if (sampling && lastTick != 0) frameMs.Add((now - lastTick) * 1000.0 / Stopwatch.Frequency);
+            lastTick = now;
+            if (!result.passed && string.IsNullOrEmpty(result.error) && Time.realtimeSinceStartupAsDouble > hardDeadline)
+                Finish(false, "Exceeded 600 s.");
+        }
+
+        void Stage(string s) { result.stages.Add(s + ";t_s=" + Time.realtimeSinceStartupAsDouble.ToString("F3", CultureInfo.InvariantCulture)); Debug.Log("P3_PLAYER_STAGE " + s); }
+
+        IEnumerator Run()
+        {
+            if (Application.platform != RuntimePlatform.WindowsPlayer) { Finish(false, "Expected WindowsPlayer, got " + Application.platform); yield break; }
+            double until = Time.realtimeSinceStartupAsDouble + 90;
+            while ((session = WarSandboxSceneSession.Instance) == null && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            if (session == null) { Finish(false, "MainMenu session missing."); yield break; }
+            while (session.IsLoading && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            if (session.State != WarSandboxEntryState.Menu) { Finish(false, "Expected Menu, got " + session.State + ": " + session.Error); yield break; }
+            Stage("menu-ready");
+            if (!session.TryEnterBattlefield(EntryId, false, out string error)) { Finish(false, "TryEnterBattlefield: " + error); yield break; }
+            until = Time.realtimeSinceStartupAsDouble + 120;
+            while (session.IsLoading && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            if (session.IsLoading || session.State != WarSandboxEntryState.Battle) { Finish(false, "Entry failed: " + session.State + " / " + session.Error); yield break; }
+            controller = session.Controller; manager = controller != null ? controller.manager : null;
+            if (manager == null) { Finish(false, "Manager missing."); yield break; }
+            result.scene = session.CurrentEntryId;
+            result.agentCount = manager.Buffers != null ? manager.Buffers.AgentCount : 0;
+            if (result.agentCount != 2048) { Finish(false, "Expected 2048 agents, got " + result.agentCount); yield break; }
+            Stage("entered;agents=" + result.agentCount);
+            for (int i = 0; i < 20; i++) yield return null;
+            controller.StartOrResumeBattle();
+            until = Time.realtimeSinceStartupAsDouble + 20;
+            while (controller.Phase != WarSandboxBattlePhase.Running && Time.realtimeSinceStartupAsDouble < until) yield return null;
+            if (controller.Phase != WarSandboxBattlePhase.Running) { Finish(false, "Battle not Running: " + controller.Phase + " / " + controller.CommandError); yield break; }
+            double battleStart = Time.realtimeSinceStartupAsDouble;
+            Stage("battle-running");
+            while (Time.realtimeSinceStartupAsDouble - battleStart < WarmupSeconds) yield return null;
+            result.phaseAtSampleStart = controller.Phase.ToString();
+            result.navAtSampleStart = ReadNav();
+            result.battleStartToSampleS = Time.realtimeSinceStartupAsDouble - battleStart;
+            Stage("sample-start;nav=" + result.navAtSampleStart.preparationState);
+            lastTick = 0; sampling = true;
+            double sampleStart = Time.realtimeSinceStartupAsDouble;
+            while (Time.realtimeSinceStartupAsDouble - sampleStart < SampleSeconds) yield return null;
+            sampling = false;
+            result.phaseAtSampleEnd = controller.Phase.ToString();
+            result.navAtSampleEnd = ReadNav();
+            Stage("sample-end;frames=" + frameMs.Count);
+            Summarize();
+            string invalid = null;
+            if (result.phaseAtSampleStart != "Running" || result.phaseAtSampleEnd != "Running") invalid = "Battle not Running for the whole window.";
+            else if (!result.navAtSampleStart.found) invalid = "Navigation runtime not found.";
+            else if (result.navAtSampleEnd.completedFields <= result.navAtSampleStart.completedFields) invalid = "No dynamic navigation solves during window.";
+            Finish(invalid == null, invalid);
+        }
+
+        Nav ReadNav()
+        {
+            var n = new Nav();
+            try
+            {
+                var f = typeof(MassEngineManager).GetField("terrainRuntime", BindingFlags.Instance | BindingFlags.NonPublic);
+                object rt = f != null ? f.GetValue(manager) : null;
+                if (rt == null) return n;
+                n.found = true;
+                Type t = rt.GetType();
+                object P(string name) { var p = t.GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic); return p != null ? p.GetValue(rt) : null; }
+                n.preparationState = P("PreparationState") as string ?? "n/a";
+                n.preparationBlockReason = P("PreparationBlockReason") as string;
+                n.completedFields = Convert.ToInt32(P("CompletedFields") ?? -1);
+                n.burstSolves = Convert.ToInt32(P("BurstSolveCount") ?? -1);
+                n.managedSolves = Convert.ToInt32(P("ManagedSolveCount") ?? -1);
+                n.managedNativeSolves = Convert.ToInt32(P("ManagedNativeSolveCount") ?? -1);
+                n.probes = Convert.ToInt32(P("PreparationProbeCount") ?? -1);
+                n.totalSolveMs = Convert.ToDouble(P("TotalSolveMilliseconds") ?? -1.0);
+                n.maxSolveMs = Convert.ToDouble(P("MaxSolveMilliseconds") ?? -1f);
+                n.lastSolveMs = Convert.ToDouble(P("LastSolveMilliseconds") ?? -1f);
+                n.maxProbeMs = Convert.ToDouble(P("MaxPreparationProbeMilliseconds") ?? -1.0);
+            }
+            catch (Exception ex) { n.preparationBlockReason = "read-error:" + ex.GetType().Name + ":" + ex.Message; }
+            return n;
+        }
+
+        void Summarize()
+        {
+            result.frames = frameMs.Count;
+            result.screenWidth = Screen.width; result.screenHeight = Screen.height;
+            result.vSyncCount = QualitySettings.vSyncCount; result.targetFrameRate = Application.targetFrameRate;
+            if (frameMs.Count == 0) return;
+            var s = frameMs.OrderBy(x => x).ToArray();
+            double Q(double q) { double pos = (s.Length - 1) * q; int lo = (int)Math.Floor(pos), hi = (int)Math.Ceiling(pos); return s[lo] + (s[hi] - s[lo]) * (pos - lo); }
+            result.medianMs = Q(.5); result.p95Ms = Q(.95); result.p99Ms = Q(.99); result.maxMs = s[s.Length - 1]; result.meanMs = s.Average();
+            result.over33 = s.Count(x => x > 33.33); result.over50 = s.Count(x => x > 50);
+            var sb = new StringBuilder("index,ms\n");
+            for (int i = 0; i < frameMs.Count; i++) sb.Append(i).Append(',').Append(frameMs[i].ToString("R", CultureInfo.InvariantCulture)).Append('\n');
+            File.WriteAllText(Path.Combine(output, "frames.csv"), sb.ToString());
+        }
+
+        void Finish(bool ok, string error)
+        {
+            if (result.passed || !string.IsNullOrEmpty(result.error)) return;
+            result.passed = ok; result.error = ok ? null : (error ?? "unknown");
+            File.WriteAllText(Path.Combine(output, "result.json"), JsonUtility.ToJson(result, true));
+            Debug.Log("P3_PLAYER_RESULT passed=" + ok + " error=" + result.error);
+            Application.Quit(ok ? 0 : 3);
+        }
+    }
+}
+#endif

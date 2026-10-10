@@ -1,0 +1,112 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEngine;
+
+namespace MassEngine.Game.Editor
+{
+    /// <summary>Temporary P12-only Windows Player build entry for isolated P9 validation.</summary>
+    public static class P9WindowsPlayerBuild
+    {
+        public static void ReportContext()
+        {
+            var apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.StandaloneWindows64);
+            Debug.Log("P9 PLAYER CONTEXT: activeTarget=" + EditorUserBuildSettings.activeBuildTarget +
+                "; Win64APIs=" + string.Join(",", apis.Select(x => x.ToString())) +
+                "; unity=" + Application.unityVersion);
+            var initial = EditorBuildSettings.scenes.Where(x => x.enabled).Select(x => x.path).ToArray();
+            string[] added;
+            string[] expanded = ExpandCatalogScenes(initial, out added);
+            Debug.Log("P9 PLAYER CATALOG SCENES: initial=" + initial.Length + "; added=" + added.Length +
+                "; expanded=" + expanded.Length + "; paths=" + string.Join(";", added));
+        }
+
+        static string[] ExpandCatalogScenes(string[] initial, out string[] added)
+        {
+            var scenes = new List<string>(initial);
+            var seen = new HashSet<string>(initial, StringComparer.Ordinal);
+            string projectRoot = Directory.GetParent(Application.dataPath).FullName;
+            bool changed;
+            do
+            {
+                changed = false;
+                string[] dependencies = AssetDatabase.GetDependencies(scenes.ToArray(), true);
+                foreach (string dependency in dependencies)
+                {
+                    var catalog = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>(dependency);
+                    if (catalog == null || catalog.entries == null) continue;
+                    foreach (var entry in catalog.entries)
+                    {
+                        if (entry == null || !WarSandboxBattlefieldEntry.IsScenePath(entry.scenePath)) continue;
+                        string path = entry.scenePath;
+                        if (!File.Exists(Path.GetFullPath(Path.Combine(projectRoot, path))))
+                            throw new FileNotFoundException("Catalog scene is missing from P12: " + path, path);
+                        if (seen.Add(path)) { scenes.Add(path); changed = true; }
+                    }
+                }
+            }
+            while (changed);
+            added = scenes.Skip(initial.Length).ToArray();
+            return scenes.ToArray();
+        }
+
+        public static void BuildDevelopmentPlayer()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                throw new InvalidOperationException("Build validation must run outside Play Mode.");
+            if (EditorUserBuildSettings.activeBuildTarget != BuildTarget.StandaloneWindows64)
+                throw new InvalidOperationException("P12 must already target StandaloneWindows64.");
+
+            string buildArg = Environment.GetCommandLineArgs().FirstOrDefault(x => x.StartsWith("--p9-player-build-output=", StringComparison.Ordinal));
+            string output = buildArg != null
+                ? Path.GetFullPath(buildArg.Substring("--p9-player-build-output=".Length))
+                : Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "P9FirstCommand-20261009-01", "WindowsPlayerPrepared", "P9WindowsValidation.exe"));
+            Directory.CreateDirectory(Path.GetDirectoryName(output));
+
+            var originalEditorScenes = EditorBuildSettings.scenes;
+            var initialScenes = originalEditorScenes.Where(x => x.enabled).Select(x => x.path).ToArray();
+            if (initialScenes.Length == 0 || !initialScenes.Contains("Assets/Game/Scenes/MainMenu.unity") || !initialScenes.Contains("Assets/Game/Scenes/Green.unity"))
+                throw new InvalidOperationException("Expected MainMenu and Green scenes in the existing Player scene list.");
+            string[] additionalScenes;
+            string[] scenes = ExpandCatalogScenes(initialScenes, out additionalScenes);
+            var apis = PlayerSettings.GetGraphicsAPIs(BuildTarget.StandaloneWindows64);
+            Debug.Log("P9 PLAYER BUILD: target=StandaloneWindows64; APIs=" + string.Join(",", apis.Select(x => x.ToString())) +
+                "; activeTarget=" + EditorUserBuildSettings.activeBuildTarget + "; sceneCount=" + scenes.Length +
+                "; catalogScenesAdded=" + additionalScenes.Length + "; added=" + string.Join(";", additionalScenes) +
+                "; scenes=" + string.Join(";", scenes) + "; development=true; scriptingBackend=" + PlayerSettings.GetScriptingBackend(BuildTargetGroup.Standalone));
+
+            var options = new BuildPlayerOptions
+            {
+                scenes = scenes,
+                locationPathName = output,
+                target = BuildTarget.StandaloneWindows64,
+                options = BuildOptions.Development | BuildOptions.AllowDebugging
+            };
+            BuildReport report;
+            try
+            {
+                // This temporary test-only expansion satisfies the project's catalog scene validator;
+                // the original EditorBuildSettings scene list is restored immediately after BuildPlayer.
+                EditorBuildSettings.scenes = scenes.Select(x => new EditorBuildSettingsScene(x, true)).ToArray();
+                report = BuildPipeline.BuildPlayer(options);
+            }
+            finally
+            {
+                EditorBuildSettings.scenes = originalEditorScenes;
+            }
+
+            var summary = report.summary;
+            string result = string.Format("result={0}; errors={1}; warnings={2}; totalSize={3}; totalTime={4}; output={5}; catalogScenesAdded={6}",
+                summary.result, summary.totalErrors, summary.totalWarnings, summary.totalSize, summary.totalTime, output, additionalScenes.Length);
+            Debug.Log("P9 PLAYER BUILD RESULT: " + result);
+            File.WriteAllText(output + ".build.txt", result);
+            if (summary.result != BuildResult.Succeeded || summary.totalErrors != 0 || !File.Exists(output))
+                throw new InvalidOperationException("Windows Player build failed: " + result);
+        }
+    }
+}
+#endif

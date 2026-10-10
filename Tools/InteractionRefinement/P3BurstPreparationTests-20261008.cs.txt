@@ -1,0 +1,86 @@
+
+namespace MassEngine.Tests {
+ public sealed partial class P3BurstPreparationTests {
+  const System.Reflection.BindingFlags F=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+  [Serializable] public sealed class CacheFile {public string path;public long bytes;public string lastWriteUtc;}
+  [Serializable] public sealed class CacheView {public string stage;public string utc;public CacheFile[] files;}
+  [Serializable] public sealed class Result {public string utcStart,utcEnd;public bool enabled,firstUsedBurst,secondUsedBurst,exactBits,disposed;public double hydrateMs,managedFirstMs,factoryMs,firstRunMs,disposeMs,secondFactoryMs,secondFirstRunMs;public double prewarmMs;public bool prewarmed;public int fallbackChecks;public bool probePreservedOutput,recreatedGateStartedWaiting;public bool forceSyncOption,forceSyncArgument,observedManagedToBurst,disposedWhilePending;public int polls,heartbeats;public double preparationWallMs,maxPollMs,maxHeartbeatGapMs;public double[] pollMs,heartbeatGapMs;public double[] reuseMs;public int created,disposedCount,active,burstCalls,managedCalls;public CacheView[] cacheViews;}
+  static string Output(){foreach(var a in Environment.GetCommandLineArgs())if(a.StartsWith("--interaction-p8-output="))return a.Substring("--interaction-p8-output=".Length);throw new Exception("Missing output");}
+  static double Ms(long start)=>(System.Diagnostics.Stopwatch.GetTimestamp()-start)*1000.0/System.Diagnostics.Stopwatch.Frequency;
+  static CacheView Cache(string stage){var folder=System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath,"../Library/BurstCache/JIT"));var files=new List<CacheFile>();if(System.IO.Directory.Exists(folder))foreach(var p in System.IO.Directory.GetFiles(folder,"*",System.IO.SearchOption.AllDirectories)){var f=new System.IO.FileInfo(p);files.Add(new CacheFile{path=p.Substring(folder.Length+1),bytes=f.Length,lastWriteUtc=f.LastWriteTimeUtc.ToString("o")});}return new CacheView{stage=stage,utc=DateTime.UtcNow.ToString("o"),files=files.ToArray()};}
+  static void Exact(Vector2[] a,Vector2[] b){Assert.AreEqual(a.Length,b.Length);for(int i=0;i<a.Length;i++)if(BitConverter.SingleToInt32Bits(a[i].x)!=BitConverter.SingleToInt32Bits(b[i].x)||BitConverter.SingleToInt32Bits(a[i].y)!=BitConverter.SingleToInt32Bits(b[i].y))Assert.Fail("Float bits "+i);}
+  static P3PreparationGate BuildGate(object workspace,double now){var probe=(Func<bool>)Delegate.CreateDelegate(typeof(Func<bool>),workspace,workspace.GetType().GetMethod("ProbeCompilation"));return new P3PreparationGate(workspace,probe,()=>((IDisposable)workspace).Dispose(),now);}
+  static void Directions(object workspace,Vector2[] data,bool write){object job=workspace.GetType().GetField("job").GetValue(workspace);object array=job.GetType().GetField("result").GetValue(job);array.GetType().GetMethod(write?"CopyFrom":"CopyTo",new Type[]{typeof(Vector2[])}).Invoke(array,new object[]{data});}
+  static void Unchanged(object workspace,Vector2[] expected,int count){var actual=new Vector2[count];Directions(workspace,actual,false);Exact(expected,actual);object job=workspace.GetType().GetField("job").GetValue(workspace);Assert.AreEqual(count,(int)job.GetType().GetField("CellCount").GetValue(job));}
+  [UnityEngine.TestTools.UnityTest] public System.Collections.IEnumerator FirstUseAndRecreatedWorkspace(){
+   var result=new Result{utcStart=DateTime.UtcNow.ToString("o")};var views=new List<CacheView>();views.Add(Cache("test-entry"));result.enabled=Unity.Burst.BurstCompiler.IsEnabled;Assert.IsTrue(result.enabled);result.forceSyncOption=Unity.Burst.BurstCompiler.Options.EnableBurstCompileSynchronously;result.forceSyncArgument=Array.Exists(Environment.GetCommandLineArgs(),a=>a=="--burst-force-sync-compilation");Assert.IsFalse(result.forceSyncOption,"User synchronous compilation preference active; do not modify it");Assert.IsFalse(result.forceSyncArgument,"Runner forces sync; invalid async fixture");
+   string capture=System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath,"../Logs/InteractionRefinement-20261007/P3/fixed-input-20261008-01-capture"));Vector2[] goals,expected;float radius;
+   using(var r=new System.IO.BinaryReader(System.IO.File.OpenRead(System.IO.Path.Combine(capture,"fixed-sample-0-input.bin")))){Assert.AreEqual("P3_FIXED_INPUT_V1",r.ReadString());radius=r.ReadSingle();goals=new Vector2[r.ReadInt32()];for(int i=0;i<goals.Length;i++)goals[i]=new Vector2(r.ReadSingle(),r.ReadSingle());}
+   using(var r=new System.IO.BinaryReader(System.IO.File.OpenRead(System.IO.Path.Combine(capture,"fixed-sample-0-expected.bin")))){expected=new Vector2[r.ReadInt32()];for(int i=0;i<expected.Length;i++)expected[i]=new Vector2(r.ReadSingle(),r.ReadSingle());}
+   long start=System.Diagnostics.Stopwatch.GetTimestamp();var nav=(TerrainNavigationGrid)typeof(P3UniformOutputTests).GetMethod("Hydrate",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,new object[]{typeof(TerrainNavigationGrid)});result.hydrateMs=Ms(start);
+   start=System.Diagnostics.Stopwatch.GetTimestamp();var managed=nav.CreateFlowField(goals,radius);result.managedFirstMs=Ms(start);Exact(expected,managed);
+   var factory=typeof(TerrainNavigationGrid).GetMethod("CreateBurstWorkspace",F);Assert.NotNull(factory);object workspace=null;Type type=null;P3PreparationGate gate=null;
+   try{
+    start=System.Diagnostics.Stopwatch.GetTimestamp();workspace=factory.Invoke(nav,null);result.factoryMs=Ms(start);type=workspace.GetType();
+    var solve=(Func<IReadOnlyList<Vector2>,float,Vector2[]>)Delegate.CreateDelegate(typeof(Func<IReadOnlyList<Vector2>,float,Vector2[]>),workspace,type.GetMethod("Solve"));
+    Directions(workspace,expected,true);gate=BuildGate(workspace,0);
+    views.Add(Cache("before-prewarm"));
+    var pollTimes=new List<double>();var gaps=new List<double>();long begin=System.Diagnostics.Stopwatch.GetTimestamp(),lastBeat=begin;
+    UnityEditor.EditorApplication.CallbackFunction heartbeat=()=>{double gap=Ms(lastBeat);lastBeat=System.Diagnostics.Stopwatch.GetTimestamp();gaps.Add(gap);};
+    UnityEditor.EditorApplication.update+=heartbeat;
+    try {
+     while(Ms(begin)<60000){
+      start=System.Diagnostics.Stopwatch.GetTimestamp();bool native=gate.Advance(workspace,result.enabled,result.forceSyncOption||result.forceSyncArgument,Ms(begin)/1000);double elapsed=Ms(start);pollTimes.Add(elapsed);
+      if(native){Assert.IsTrue((bool)type.GetProperty("LastRunUsedBurst").GetValue(workspace));Unchanged(workspace,expected,nav.CellCount);result.probePreservedOutput=true;result.prewarmed=true;break;}
+      result.observedManagedToBurst=true;
+      // Dispose one pending preparation workspace after Run has returned. Compilation owns code, not these arrays.
+      if(!result.disposedWhilePending){Unchanged(workspace,expected,nav.CellCount);Assert.IsFalse(gate.CanUseBurst(workspace,true,false,Ms(begin)/1000));Exact(expected,nav.CreateFlowField(goals,radius));result.fallbackChecks++;gate.Dispose();Assert.IsTrue((bool)type.GetProperty("IsDisposed").GetValue(workspace));workspace=null;workspace=factory.Invoke(nav,null);solve=(Func<IReadOnlyList<Vector2>,float,Vector2[]>)Delegate.CreateDelegate(typeof(Func<IReadOnlyList<Vector2>,float,Vector2[]>),workspace,type.GetMethod("Solve"));Directions(workspace,expected,true);gate=BuildGate(workspace,Ms(begin)/1000);result.disposedWhilePending=true;}
+      long next=System.Diagnostics.Stopwatch.GetTimestamp();do {yield return null;} while(Ms(next)<100);
+     }
+     result.preparationWallMs=Ms(begin);yield return null;
+    } finally {UnityEditor.EditorApplication.update-=heartbeat;result.pollMs=pollTimes.ToArray();result.heartbeatGapMs=gaps.ToArray();result.polls=pollTimes.Count;result.heartbeats=gaps.Count;foreach(double t in pollTimes)result.maxPollMs=Math.Max(result.maxPollMs,t);foreach(double t in gaps)result.maxHeartbeatGapMs=Math.Max(result.maxHeartbeatGapMs,t);result.prewarmMs=pollTimes.Count>0?pollTimes[0]:0;result.observedManagedToBurst &= result.prewarmed;System.IO.File.WriteAllText(System.IO.Path.Combine(Output(),"async-preparation-progress.json"),JsonUtility.ToJson(result,true));}
+    Assert.IsTrue(result.prewarmed,"Did not observe native execution within 60 seconds; remain managed, do not integrate");views.Add(Cache("after-prewarm"));
+    Assert.IsTrue(gate.CanUseBurst(workspace,true,false,Ms(begin)/1000));
+    views.Add(Cache("before-first-run"));start=System.Diagnostics.Stopwatch.GetTimestamp();var actual=solve(goals,radius);result.firstRunMs=Ms(start);result.firstUsedBurst=(bool)type.GetProperty("LastRunUsedBurst").GetValue(workspace);Assert.IsTrue(result.firstUsedBurst);Exact(expected,actual);views.Add(Cache("after-first-run"));
+    result.reuseMs=new double[12];for(int i=0;i<12;i++){start=System.Diagnostics.Stopwatch.GetTimestamp();actual=solve(goals,radius);result.reuseMs[i]=Ms(start);Exact(expected,actual);Assert.IsTrue((bool)type.GetProperty("LastRunUsedBurst").GetValue(workspace));}
+    Assert.IsTrue((bool)type.GetMethod("ProbeCompilation").Invoke(workspace,null));Unchanged(workspace,expected,nav.CellCount);
+    start=System.Diagnostics.Stopwatch.GetTimestamp();gate.Dispose();result.disposeMs=Ms(start);Assert.IsTrue((bool)type.GetProperty("IsDisposed").GetValue(workspace));workspace=null;
+    start=System.Diagnostics.Stopwatch.GetTimestamp();workspace=factory.Invoke(nav,null);result.secondFactoryMs=Ms(start);solve=(Func<IReadOnlyList<Vector2>,float,Vector2[]>)Delegate.CreateDelegate(typeof(Func<IReadOnlyList<Vector2>,float,Vector2[]>),workspace,type.GetMethod("Solve"));
+    gate=BuildGate(workspace,0);result.recreatedGateStartedWaiting=!gate.CanUseBurst(workspace,true,false,0);Assert.IsTrue(result.recreatedGateStartedWaiting);Assert.IsTrue(gate.Advance(workspace,true,false,0));
+    start=System.Diagnostics.Stopwatch.GetTimestamp();actual=solve(goals,radius);result.secondFirstRunMs=Ms(start);result.secondUsedBurst=(bool)type.GetProperty("LastRunUsedBurst").GetValue(workspace);Exact(expected,actual);Assert.IsTrue(result.secondUsedBurst);result.exactBits=true;
+   }finally{gate?.Dispose();if(workspace!=null)((IDisposable)workspace).Dispose();}
+   result.disposed=true;var flags=System.Reflection.BindingFlags.Static|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+   result.created=(int)type.GetProperty("CreatedWorkspaces",flags).GetValue(null);result.disposedCount=(int)type.GetProperty("DisposedWorkspaces",flags).GetValue(null);result.active=(int)type.GetProperty("ActiveWorkspaces",flags).GetValue(null);result.burstCalls=(int)type.GetProperty("BurstCalls",flags).GetValue(null);result.managedCalls=(int)type.GetProperty("ManagedNativeCalls",flags).GetValue(null);
+   Assert.AreEqual(result.disposedWhilePending?3:2,result.created);Assert.AreEqual(result.created,result.disposedCount);Assert.AreEqual(0,result.active);Assert.AreEqual(17,result.burstCalls);Assert.AreEqual(result.polls-1,result.managedCalls);
+   views.Add(Cache("test-finished"));result.cacheViews=views.ToArray();result.utcEnd=DateTime.UtcNow.ToString("o");System.IO.File.WriteAllText(System.IO.Path.Combine(Output(),"burst-startup.json"),JsonUtility.ToJson(result,true));
+  }
+ }
+}
+
+
+namespace MassEngine.Tests {
+ public sealed partial class P3BurstPreparationTests {
+  [Test] public void WaitingRoutesManagedWithoutProbingAndThenBecomesReady(){
+   object owner=new object();int probes=0,releases=0,managed=0,native=0;
+   using(var gate=new P3PreparationGate(owner,()=>++probes==2,()=>releases++,0)){
+    if(gate.CanUseBurst(owner,true,false,0))native++;else managed++;
+    Assert.AreEqual(0,probes);Assert.AreEqual(1,managed);Assert.AreEqual(0,native);
+    Assert.IsFalse(gate.Advance(owner,true,false,0));Assert.IsFalse(gate.Advance(owner,true,false,.05));Assert.AreEqual(1,probes);
+    Assert.IsTrue(gate.Advance(owner,true,false,.1));
+    if(gate.CanUseBurst(owner,true,false,.1))native++;else managed++;
+    Assert.AreEqual(1,native);Assert.AreEqual(1,managed);Assert.IsTrue(gate.Advance(owner,true,false,.2));Assert.AreEqual(2,probes);
+   }Assert.AreEqual(1,releases);
+  }
+  [TestCase(false,false)][TestCase(true,true)][TestCase(false,true)]
+  public void ForbiddenPolicyNeverProbes(bool enabled,bool forceSync){object o=new object();int probes=0,releases=0;using(var g=new P3PreparationGate(o,()=>{probes++;return true;},()=>releases++,0)){Assert.IsFalse(g.Advance(o,enabled,forceSync,0));Assert.IsFalse(g.Advance(o,true,false,1));Assert.IsFalse(g.CanUseBurst(o,true,false,2));Assert.AreEqual(P3PreparationGate.Phase.Unavailable,g.State);}Assert.AreEqual(0,probes);Assert.AreEqual(1,releases);}
+  [TestCase(false,false)][TestCase(true,true)]
+  public void LostPermissionInvalidatesEvenReady(bool enabled,bool forced){object o=new object();int p=0,d=0;using(var g=new P3PreparationGate(o,()=>{p++;return true;},()=>d++,0)){Assert.IsTrue(g.Advance(o,true,false,0));Assert.IsFalse(g.CanUseBurst(o,enabled,forced,.1));Assert.IsFalse(g.Advance(o,true,false,.2));}Assert.AreEqual(1,p);Assert.AreEqual(1,d);}
+  [Test] public void DeadlineRejectsBeforeAnotherProbeAndDoesNotRetry(){object o=new object();int p=0,d=0;using(var g=new P3PreparationGate(o,()=>{p++;return false;},()=>d++,0,.1)){Assert.IsFalse(g.Advance(o,true,false,0));Assert.IsFalse(g.Advance(o,true,false,.1));Assert.AreEqual("timeout",g.Reason);Assert.IsFalse(g.Advance(o,true,false,99));}Assert.AreEqual(1,p);Assert.AreEqual(1,d);}
+  [Test] public void NewOwnerCannotReuseOldReady(){object a=new object(),b=new object();int da=0,db=0;using(var old=new P3PreparationGate(a,()=>true,()=>da++,0)){Assert.IsTrue(old.Advance(a,true,false,0));Assert.IsFalse(old.CanUseBurst(b,true,false,1));Assert.AreEqual("owner-replaced",old.Reason);using(var fresh=new P3PreparationGate(b,()=>true,()=>db++,1)){Assert.IsFalse(fresh.CanUseBurst(b,true,false,1));Assert.IsTrue(fresh.Advance(b,true,false,1));Assert.IsFalse(old.CanUseBurst(a,true,false,2));}}Assert.AreEqual(1,da);Assert.AreEqual(1,db);}
+  [Test] public void DisposePendingIsIdempotentAndNeverProbesAgain(){object o=new object();int p=0,d=0;var g=new P3PreparationGate(o,()=>{p++;return false;},()=>d++,0);g.Advance(o,true,false,0);g.Dispose();g.Dispose();Assert.IsFalse(g.Advance(o,true,false,1));Assert.IsFalse(g.CanUseBurst(o,true,false,1));Assert.AreEqual(P3PreparationGate.Phase.Disposed,g.State);Assert.AreEqual(1,p);Assert.AreEqual(1,d);}
+  [Test] public void ExplicitUnavailableReturnsManagedAndReleases(){object o=new object();int p=0,d=0;using(var g=new P3PreparationGate(o,()=>{p++;throw new P3PreparationUnavailableException("simulated unavailable backend");},()=>d++,0)){Assert.IsFalse(g.Advance(o,true,false,0));Assert.AreEqual("backend-unavailable",g.Reason);Assert.IsFalse(g.Advance(o,true,false,1));}Assert.AreEqual(1,p);Assert.AreEqual(1,d);}
+  [Test] public void UnexpectedErrorIsNotSilentlyDowngraded(){object o=new object();int d=0;var error=new InvalidOperationException("data contract error");using(var g=new P3PreparationGate(o,()=>{throw error;},()=>d++,0)){Assert.AreSame(error,Assert.Throws<InvalidOperationException>(()=>g.Advance(o,true,false,0)));Assert.AreEqual(P3PreparationGate.Phase.Faulted,g.State);Assert.IsFalse(g.CanUseBurst(o,true,false,1));}Assert.AreEqual(1,d);}
+  [Test] public void InvalidOrBackwardClockCannotLaunchProbe(){object o=new object();int p=0;using(var g=new P3PreparationGate(o,()=>{p++;return true;},()=>{},1)){Assert.Throws<ArgumentOutOfRangeException>(()=>g.Advance(o,true,false,double.NaN));Assert.Throws<ArgumentOutOfRangeException>(()=>g.Advance(o,true,false,.9));Assert.AreEqual(0,p);}}
+  [Test] public void PreparationDeadlineDoesNotExpireAnAlreadyReadyInstance(){object o=new object();int p=0;using(var g=new P3PreparationGate(o,()=>{p++;return true;},()=>{},0,.1)){Assert.IsTrue(g.Advance(o,true,false,0));Assert.IsTrue(g.CanUseBurst(o,true,false,100));Assert.IsTrue(g.Advance(o,true,false,100));Assert.AreEqual(1,p);}}
+ }
+}

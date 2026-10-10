@@ -1,0 +1,44 @@
+
+namespace MassEngine.Tests {
+ public sealed class P3RuntimeGateTests {
+  const System.Reflection.BindingFlags F=System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.NonPublic;
+  [Serializable] public sealed class Report {public bool blocked,forced,observedPending,exactBits,disposedPendingReadback,recreatedUnstarted;public int managedSolves,nativeSolves,managedNativeSolves,probes,created,disposed,active;public double waitMs,maxTickMs,maxProbeMs;public string finalState;}
+  static string Output(){foreach(var a in Environment.GetCommandLineArgs())if(a.StartsWith("--interaction-p8-output="))return a.Substring("--interaction-p8-output=".Length);throw new Exception("Missing output");}
+  static int Count(string name)=> (int)typeof(TerrainNavigationRuntime).Assembly.GetType("MassEngine.TerrainNavigationBurstWorkspace").GetProperty(name,System.Reflection.BindingFlags.Public|System.Reflection.BindingFlags.Static).GetValue(null);
+  static double Ms(long start)=>(System.Diagnostics.Stopwatch.GetTimestamp()-start)*1000.0/System.Diagnostics.Stopwatch.Frequency;
+  static void Exact(Vector2[] a,Vector2[] b){Assert.AreEqual(a.Length,b.Length);for(int i=0;i<a.Length;i++){Assert.AreEqual(BitConverter.SingleToInt32Bits(a[i].x),BitConverter.SingleToInt32Bits(b[i].x),"x "+i);Assert.AreEqual(BitConverter.SingleToInt32Bits(a[i].y),BitConverter.SingleToInt32Bits(b[i].y),"y "+i);}}
+  sealed class World:IDisposable {
+   public TerrainNavigationGrid nav;public TerrainNavigationRuntime runtime;public MassGpuBufferManager buffers;public PipelineFrameContext context;public uint[] data;
+   public World(){nav=(TerrainNavigationGrid)typeof(TerrainCardinalRouteCacheTests).GetMethod("Grid",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Static).Invoke(null,new object[]{"holes",16,16});runtime=new TerrainNavigationRuntime(nav,2,true);buffers=new MassGpuBufferManager{runtimeFlowTargetDensityBuffer=new ComputeBuffer(512,4),flowFieldDirectionsBuffer=new ComputeBuffer(512,8)};buffers.flowFieldDirectionsBuffer.SetData(new Vector2[512]);data=new uint[512];for(int i=0;i<256;i++){data[i]=i%17==0?1u:0;data[256+i]=i%23==0?uint.MaxValue:0;}buffers.runtimeFlowTargetDensityBuffer.SetData(data);context=new PipelineFrameContext{battleStarted=false,teamFlows=new[]{new TeamFlowFrameSettings{enabled=true,dynamicFlowEnabled=true},new TeamFlowFrameSettings{enabled=true,dynamicFlowEnabled=true}}};}
+   public void Point(){int cell=255;while(!nav.IsWalkable(nav.CellCenter(cell)))cell--;Vector2 p=nav.CellCenter(cell);context.teamFlows[0].targetMode=1;context.teamFlows[0].targetPoint=new Vector3(p.x,0,p.y);runtime.Rebuild(buffers,context,0);Check(0,new List<Vector2>{p},false);}
+   public void Area(){context.teamFlows[0].targetMode=2;context.teamFlows[0].targetAreaCenter=new Vector3(8,0,8);context.teamFlows[0].targetAreaSize=new Vector3(6,0,6);runtime.Rebuild(buffers,context,0);var goals=new List<Vector2>();for(int i=0;i<256;i++){Vector2 p=nav.CellCenter(i);if(Mathf.Abs(p.x-8)<=3&&Mathf.Abs(p.y-8)<=3&&nav.IsWalkable(p))goals.Add(p);}Check(0,goals,false);}
+   public void RequestBoth(bool wait){context.battleStarted=true;for(int i=0;i<2;i++){context.teamFlows[i].targetMode=0;runtime.Rebuild(buffers,context,i);}if(wait)foreach(var r in (UnityEngine.Rendering.AsyncGPUReadbackRequest[])typeof(TerrainNavigationRuntime).GetField("requests",F).GetValue(runtime)){r.WaitForCompletion();Assert.IsFalse(r.hasError);}}
+   public void CheckDynamic(int team){var goals=new List<Vector2>();for(int i=0;i<256;i++)if(data[team*256+i]>0&&nav.IsWalkable(nav.CellCenter(i)))goals.Add(nav.CellCenter(i));Check(team,goals,true);}
+   void Check(int team,List<Vector2> goals,bool lane){var expected=nav.CreateFlowField(goals,0);if(lane)TerrainLaneApproach33.Apply(nav,goals,expected,0);var actual=new Vector2[256];buffers.flowFieldDirectionsBuffer.GetData(actual,0,team*256,256);Exact(expected,actual);}
+   public void Dispose(){runtime?.Dispose();buffers?.runtimeFlowTargetDensityBuffer?.Release();buffers?.flowFieldDirectionsBuffer?.Release();}
+  }
+  [Serializable] public sealed class FailureReport {public bool exactBits,timeoutReached,probeStopped,compilerMessageObserved;public int commands,probes,managed,native,managedNative,created,disposed,active;public double wallMs,maxTickMs;public string finalState,reason;}
+  [UnityEngine.TestTools.UnityTest] public System.Collections.IEnumerator RealCompileFailureTimesOutWithoutBlockingManagedUploads(){
+   Assert.IsTrue(TerrainNavigationRuntime.BurstReserveRequested);Assert.IsTrue(Unity.Burst.BurstCompiler.IsEnabled);Assert.IsFalse(Unity.Burst.BurstCompiler.Options.EnableBurstCompileSynchronously);
+   bool oldIgnore=UnityEngine.TestTools.LogAssert.ignoreFailingMessages;var q=new FailureReport();int c0=Count("CreatedWorkspaces"),d0=Count("DisposedWorkspaces");
+   Application.LogCallback handler=(message,stack,type)=>{if(message.Contains("BC")&&(message.Contains("Burst")||message.Contains("TerrainNavigationSolveJob")))q.compilerMessageObserved=true;};Application.logMessageReceived+=handler;
+   UnityEngine.TestTools.LogAssert.ignoreFailingMessages=true;
+   try {using(var w=new World()){
+    w.Point();q.commands++;double start=Time.realtimeSinceStartupAsDouble,nextCommand=start+2;
+    while(w.runtime.PreparationState!="Unavailable"&&Time.realtimeSinceStartupAsDouble-start<70){
+     long tick=System.Diagnostics.Stopwatch.GetTimestamp();w.runtime.Tick(w.buffers,w.context);q.maxTickMs=Math.Max(q.maxTickMs,Ms(tick));
+     Assert.AreEqual(0,w.runtime.BurstSolveCount,"Failure fixture must never become native");
+     if(Time.realtimeSinceStartupAsDouble>=nextCommand){w.Point();q.commands++;nextCommand=Time.realtimeSinceStartupAsDouble+2;}
+     yield return null;
+    }
+    q.wallMs=(Time.realtimeSinceStartupAsDouble-start)*1000;q.finalState=w.runtime.PreparationState;q.reason=w.runtime.PreparationBlockReason;
+    Assert.AreEqual("Unavailable",q.finalState);Assert.AreEqual("timeout",q.reason);Assert.GreaterOrEqual(q.wallMs,60000);Assert.Greater(q.commands,10);q.timeoutReached=true;
+    int probes=w.runtime.PreparationProbeCount;for(int i=0;i<12;i++){w.runtime.Tick(w.buffers,w.context);yield return null;}Assert.AreEqual(probes,w.runtime.PreparationProbeCount);q.probeStopped=true;
+    w.Point();w.Area();w.RequestBoth(true);w.runtime.Tick(w.buffers,w.context);w.CheckDynamic(0);yield return null;w.runtime.Tick(w.buffers,w.context);w.CheckDynamic(1);q.exactBits=true;
+    q.probes=probes;q.managed=w.runtime.ManagedSolveCount;q.native=w.runtime.BurstSolveCount;q.managedNative=w.runtime.ManagedNativeSolveCount;Assert.AreEqual(0,q.native);Assert.AreEqual(0,q.managedNative);Assert.AreEqual(0,Count("ActiveWorkspaces"));
+   }}finally{UnityEngine.TestTools.LogAssert.ignoreFailingMessages=oldIgnore;Application.logMessageReceived-=handler;}
+   q.created=Count("CreatedWorkspaces")-c0;q.disposed=Count("DisposedWorkspaces")-d0;q.active=Count("ActiveWorkspaces");Assert.AreEqual(1,q.created);Assert.AreEqual(q.created,q.disposed);Assert.AreEqual(0,q.active);
+   System.IO.File.WriteAllText(System.IO.Path.Combine(Output(),"compiler-failure.json"),JsonUtility.ToJson(q,true));
+  }
+ }
+}

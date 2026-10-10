@@ -1,0 +1,23 @@
+        private static Camera measurementCamera;
+        private static MyCameraManager measurementCameraOwner;
+        private static bool measurementCameraWasLocked;
+        private static float measurementFov;
+        private static void LockMeasurementCamera(WarSandboxBattleController controller)
+        {
+            if(measurementCamera!=null)return;
+            measurementCamera=controller.manager.cullingCamera;
+            if(measurementCamera==null)throw new InvalidOperationException("No simulation camera for fixed-view qualification");
+            measurementCameraOwner=measurementCamera.GetComponent<MyCameraManager>() ?? measurementCamera.GetComponentInParent<MyCameraManager>();
+            if(measurementCameraOwner==null)throw new InvalidOperationException("No camera input owner to isolate qualification");
+            measurementCameraWasLocked=(bool)typeof(MyCameraManager).GetField("_lockInput",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(measurementCameraOwner);
+            measurementCameraOwner.LockInput();
+            var comfort=measurementCameraOwner.GetComponent<BattlefieldCameraComfort24>();if(comfort!=null)comfort.CancelMotion();
+            if(Vector3.Distance(measurementCamera.transform.position,new Vector3(250,280,-384))>.01f)throw new InvalidOperationException("Macro camera already moved before qualification; do not silently change viewpoint");
+            measurementFov=measurementCamera.fieldOfView;
+            File.WriteAllText(Path.Combine(output,"camera-isolation.txt"),"Owned scene camera input locked via existing public API; motion cancelled; transform unchanged; canonical macro position required. Original lock="+measurementCameraWasLocked+"; FOV="+measurementFov.ToString(Inv));
+        }
+        private static void RestoreMeasurementCamera()
+        {
+            if(measurementCamera!=null && !Mathf.Approximately(measurementCamera.fieldOfView,measurementFov))throw new InvalidOperationException("Camera FOV changed during measurement");
+            if(measurementCameraOwner!=null){if(measurementCameraWasLocked)measurementCameraOwner.LockInput();else measurementCameraOwner.UnlockInput();}
+        }

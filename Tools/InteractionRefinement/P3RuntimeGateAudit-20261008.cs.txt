@@ -1,0 +1,42 @@
+
+        [Serializable] private sealed class PreparationAudit
+        {
+            public bool candidateAvailable, sameRuntime;
+            public string startState, endState;
+            public int startNative, endNative, startManaged, endManaged, startManagedNative, endManagedNative, startProbes, endProbes;
+            public int created, disposed, active, allJobBurstCalls, allJobManagedCalls;
+        }
+        private static PreparationAudit preparationAudit;
+        private static object preparationRuntime;
+        private static object CurrentPreparationRuntime()
+        {
+            var c=WarSandboxSceneSession.Instance != null ? WarSandboxSceneSession.Instance.Controller : null;
+            return c == null ? null : typeof(MassEngineManager).GetField("terrainRuntime",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(c.manager);
+        }
+        private static int PreparationInt(object r,string name) => (int)r.GetType().GetProperty(name).GetValue(r);
+        private static void StartPreparationAudit()
+        {
+            var t=Type.GetType("MassEngine.TerrainNavigationBurstWorkspace, MassEngine");
+            preparationAudit=new PreparationAudit{candidateAvailable=t!=null};
+            if(t==null)return;
+            preparationRuntime=CurrentPreparationRuntime();if(preparationRuntime==null)throw new InvalidOperationException("No terrain runtime for Burst window");
+            var a=preparationAudit;var r=preparationRuntime;
+            a.startState=(string)r.GetType().GetProperty("PreparationState").GetValue(r);
+            a.startNative=PreparationInt(r,"BurstSolveCount");a.startManaged=PreparationInt(r,"ManagedSolveCount");a.startManagedNative=PreparationInt(r,"ManagedNativeSolveCount");a.startProbes=PreparationInt(r,"PreparationProbeCount");
+            if(a.startState!="Ready")throw new InvalidOperationException("Candidate not ready at fixed 35-second window; do not shift window");
+        }
+        private static void EndPreparationAudit()
+        {
+            var a=preparationAudit;if(a==null)throw new InvalidOperationException("No measured preparation audit");if(!a.candidateAvailable)return;
+            a.sameRuntime=object.ReferenceEquals(preparationRuntime,CurrentPreparationRuntime());var r=preparationRuntime;
+            a.endState=(string)r.GetType().GetProperty("PreparationState").GetValue(r);
+            a.endNative=PreparationInt(r,"BurstSolveCount");a.endManaged=PreparationInt(r,"ManagedSolveCount");a.endManagedNative=PreparationInt(r,"ManagedNativeSolveCount");a.endProbes=PreparationInt(r,"PreparationProbeCount");
+            if(!a.sameRuntime||a.endState!="Ready"||a.endNative<=a.startNative||a.endManaged!=a.startManaged||a.endManagedNative!=0||a.endProbes!=a.startProbes)throw new InvalidOperationException("Measured backend switch/probe/fallback or missing native execution");
+        }
+        private static void WritePreparationAudit()
+        {
+            var a=preparationAudit;if(a.candidateAvailable){var t=Type.GetType("MassEngine.TerrainNavigationBurstWorkspace, MassEngine");
+                a.created=(int)t.GetProperty("CreatedWorkspaces").GetValue(null);a.disposed=(int)t.GetProperty("DisposedWorkspaces").GetValue(null);a.active=(int)t.GetProperty("ActiveWorkspaces").GetValue(null);a.allJobBurstCalls=(int)t.GetProperty("BurstCalls").GetValue(null);a.allJobManagedCalls=(int)t.GetProperty("ManagedNativeCalls").GetValue(null);
+                if(a.created<1||a.created!=a.disposed||a.active!=0)throw new InvalidOperationException("Native lifetime imbalance");}
+            File.WriteAllText(Path.Combine(output,"preparation-audit.json"),JsonUtility.ToJson(a,true));
+        }

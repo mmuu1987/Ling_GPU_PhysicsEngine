@@ -1,0 +1,222 @@
+#if UNITY_EDITOR
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace MassEngine.Game.Editor
+{
+    /// <summary>
+    /// TEMPORARY P12-only builder (removed by its runner after use). Derives a 1024x1024 m test battlefield
+    /// "forest-green22-1024" from forest-green22 (Assets/Game/Scenes/Green.unity) following TerrainScaleBuilder's
+    /// pattern: same height/blocked arrays with doubled XZ extent (vertex step 2 m -> 4 m), simulation world 1024,
+    /// nav/flow grid 256x256 @ 4 m (keeps FlowCellCount = 65536 = LocalOrderChannel.MaxCells), visual ground/backdrop
+    /// transforms scaled x2 in XZ, scenery positions x2 in XZ (models never scaled), camera envelope x2,
+    /// a roster policy clone with maximumUnits 200000, and ONE appended catalog entry. Never touches the 512 maps.
+    /// </summary>
+    public static class Map1024Builder
+    {
+        public const string Root = "Assets/Game/Content/Battlefields/Map1024";
+        public const string Battle = Root + "/Green1024.unity";
+        public const string SourceScene = "Assets/Game/Scenes/Green.unity";
+        public const string CatalogPath = "Assets/Game/Scenes/Catalog.asset";
+        public const string SourceId = "forest-green22";
+        public const string EntryId = "forest-green22-1024";
+        public const string TerrainId = "forest-hills-scale15-1024";
+        const float World = 1024f, FlowCell = 4f; const int FlowResolution = 256; const int MaxUnits = 200000;
+
+        static void Require(bool ok, string error) { if (!ok) throw new Exception("MAP1024: " + error); }
+        static string Arg(string name)
+        {
+            string a = Environment.GetCommandLineArgs().FirstOrDefault(x => x.StartsWith(name + "=", StringComparison.Ordinal));
+            return a == null ? null : a.Substring(name.Length + 1).Trim('"');
+        }
+        static T Copy<T>(T a, string name) where T : Object
+        {
+            var c = Object.Instantiate(a); c.name = name; AssetDatabase.CreateAsset(c, Root + "/" + name + ".asset"); return c;
+        }
+        static T Find<T>() where T : Object => Object.FindFirstObjectByType<T>(FindObjectsInactive.Include);
+        static object Field(object o, string name)
+        {
+            var f = o.GetType().GetField(name, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            Require(f != null, "field missing " + o.GetType().Name + "." + name); return f.GetValue(o);
+        }
+
+        public static void Build()
+        {
+            Require(!Directory.Exists(Root) && !File.Exists(Root + ".meta"), "Refuse overwrite " + Root);
+            var catalog = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>(CatalogPath);
+            Require(catalog != null, "catalog missing");
+            Require(catalog.entries.All(e => e.id != EntryId), "entry already exists");
+            var green = catalog.entries.Single(e => e.id == SourceId);
+            Require(green.scenePath == SourceScene, "unexpected green scene " + green.scenePath);
+            Directory.CreateDirectory(Root); AssetDatabase.Refresh();
+            Require(AssetDatabase.CopyAsset(SourceScene, Battle), "copy scene");
+            var scene = EditorSceneManager.OpenScene(Battle, OpenSceneMode.Single);
+            var m = Find<MassEngineManager>(); var d = Find<WarSandboxRuntimeDeployment>();
+            Require(m != null && d != null && m.systemConfig != null && m.terrainSurfaceAsset != null && d.rosterPolicy != null, "scene components");
+            Require(m.terrainSurfaceAsset == green.terrainSurface, "scene/catalog terrain mismatch");
+            Require(m.TryGetTerrainContext(out var old, out _, out var error), error);
+            Require(old.Size == new Vector2(512, 512) && old.Origin == new Vector2(-256, -256), "source is not 512");
+
+            // 1) Surface: identical authored arrays, doubled XZ extent.
+            var src = m.terrainSurfaceAsset;
+            var blocked = (bool[])((bool[])Field(src, "blockedCells")).Clone();
+            float slope = (float)Field(src, "maxSlopeDegrees");
+            var heights = new float[old.Width * old.Depth];
+            for (int z = 0; z < old.Depth; z++) for (int x = 0; x < old.Width; x++) heights[z * old.Width + x] = old.HeightAtVertex(x, z);
+            var surface = ScriptableObject.CreateInstance<TerrainSurfaceAsset>();
+            surface.Initialize(TerrainId, 1, old.Width, old.Depth, new Vector2(-World / 2, -World / 2), new Vector2(World, World), slope, heights, blocked);
+            AssetDatabase.CreateAsset(surface, Root + "/Surface1024.asset");
+            Require(surface.TryCreateSurface(out var s, out error), error);
+
+            // 2) Simulation / flow / system clones.
+            var system = Copy(m.systemConfig, "System1024");
+            system.simulationConfig = Copy(m.systemConfig.simulationConfig, "Simulation1024");
+            system.simulationConfig.simulationWorldSize = new Vector2(World, World);
+            system.runtimeFlowConfig = Copy(m.systemConfig.runtimeFlowConfig, "Flow1024");
+            system.runtimeFlowConfig.flowFieldOrigin = new Vector2(-World / 2, -World / 2);
+            system.runtimeFlowConfig.flowFieldResolution = FlowResolution;
+            system.runtimeFlowConfig.flowFieldCellSize = FlowCell;
+            var policy = Copy(d.rosterPolicy, "RosterPolicy1024");
+            policy.maximumUnits = MaxUnits;
+            policy.explanation = "1024×1024 测试战场（由翠绿林地512派生，仅用于20万人规模测试）：默认2048人，测试上限合计20万人；导航/流场 256×256@4米。人数上限不是性能保证。";
+            m.terrainSurfaceAsset = surface; m.systemConfig = system; d.rosterPolicy = policy;
+
+            // 3) Visual layout x2 in XZ (heights unchanged because surface(2x,2z) == old(x,z)).
+            int scaledRoots = 0, movedScenery = 0;
+            foreach (var go in scene.GetRootGameObjects())
+            {
+                if (go.name.StartsWith("Visual Only Backdrop", StringComparison.Ordinal) || go.name.StartsWith("Plan B - Shared Render And Navigation Surface", StringComparison.Ordinal))
+                {
+                    var t = go.transform; t.localScale = new Vector3(t.localScale.x * 2, t.localScale.y, t.localScale.z * 2);
+                    t.localPosition = new Vector3(t.localPosition.x * 2, t.localPosition.y, t.localPosition.z * 2); scaledRoots++;
+                    EditorUtility.SetDirty(t);
+                }
+                else if (go.name.StartsWith("22 Seasonal Woodland", StringComparison.Ordinal))
+                {
+                    foreach (Transform group in go.transform)
+                    {
+                        Require(group.localPosition == Vector3.zero && group.localScale == Vector3.one, "scenery group not at origin: " + group.name);
+                        foreach (Transform t in group)
+                        {
+                            t.localPosition = new Vector3(t.localPosition.x * 2, t.localPosition.y, t.localPosition.z * 2);
+                            EditorUtility.SetDirty(t); movedScenery++;
+                        }
+                    }
+                }
+            }
+            Require(scaledRoots == 2 && movedScenery > 1000, "visual roots " + scaledRoots + " scenery " + movedScenery);
+            var bounds = Find<TerrainScaleBounds>(); Require(bounds != null && bounds.cameraController != null, "camera bounds");
+            bounds.maximumDistance *= 2; bounds.maximumHorizontalRadius *= 2; bounds.cameraController.MaxZoomDistance *= 2;
+            EditorUtility.SetDirty(bounds); EditorUtility.SetDirty(bounds.cameraController);
+
+            foreach (var o in new Object[] { m, d, system, system.simulationConfig, system.runtimeFlowConfig, policy, surface }) EditorUtility.SetDirty(o);
+            Require(EditorSceneManager.SaveScene(scene), "save scene");
+
+            // 4) One appended catalog entry (defaultEntryId and existing entries untouched).
+            var e1024 = green.CopyIdentity();
+            e1024.id = EntryId; e1024.scenePath = Battle; e1024.terrainId = TerrainId; e1024.terrainVersion = 1; e1024.terrainSurface = surface;
+            e1024.displayName = "翠绿林地 · 1024测试";
+            e1024.description = "由翠绿林地512派生的1024×1024测试战场\n仅用于20万人规模测试，默认2048人。";
+            e1024.briefing = "测试战场：地形/禁行带/景物按XZ×2放大（高度不变），导航与流场256×256@4米。\n候选改动，未验收；高人数不是流畅性保证。";
+            catalog.entries = catalog.entries.Concat(new[] { e1024 }).ToArray();
+            EditorUtility.SetDirty(catalog);
+            AssetDatabase.SaveAssets();
+            Require(catalog.TryValidate(File.Exists, out error), "catalog validate: " + error);
+            Debug.Log("MAP1024 BUILD OK: scene=" + Battle + "; surface=" + s.Width + "x" + s.Depth + " step=" + s.Step + " size=" + s.Size +
+                "; flow=" + FlowResolution + "@" + FlowCell + "; scaledRoots=" + scaledRoots + "; movedScenery=" + movedScenery + "; entries=" + catalog.entries.Length);
+        }
+
+        [Serializable] class Case { public string map, label; public bool passed; public string error; public int perSide; public float density, aspect, gap; public string sizeA, sizeB, centerA, centerB; }
+        [Serializable] class Report
+        {
+            public bool passed, catalogValid, terrainProviderValid, footprintsWalkable, connected;
+            public string catalogError, terrainError, entryId, scenePath;
+            public float worldSize, surfaceStep, navCellSize, clearance; public int surfaceWidth, navResolutionX, navResolutionZ, navCells, walkableNavCells, flowCellCountCap = 65536;
+            public long estimatedNavManagedBytesPerGrid, estimatedNavManagedBytesAt2m512Grid, simulationGridCells, simulationGridIndexEntries;
+            public int rosterMaximumUnits; public int draftMaxTotalUnits = WarSandboxDeploymentDraft.MaxTotalUnits;
+            public List<Case> cases = new List<Case>();
+        }
+
+        static Case TryLayout(string map, string label, int perSide, float density, float aspect, float gap)
+        {
+            var c = new Case { map = map, label = label, perSide = perSide, density = density, aspect = aspect, gap = gap };
+            try
+            {
+                var d = Find<WarSandboxRuntimeDeployment>();
+                Require(d != null && d.controller != null, "deployment/controller missing");
+                try { d.controller.RebuildArmyStates(); } catch { }
+                if (!d.IsEditing) Require(d.TryBeginEdit(false, out var be), "TryBeginEdit: " + be);
+                Require(d.Draft != null && d.Draft.Count == 2, "expected 2 draft entries, got " + (d.Draft == null ? -1 : d.Draft.Count));
+                var base0 = d.Draft[0]; var base1 = d.Draft[1];
+                var a = base0; var b = base1; a.count = perSide; b.count = perSide; a.manualSize = Vector3.zero; b.manualSize = Vector3.zero;
+                a.density = density; b.density = density; a.aspect = aspect; b.aspect = aspect;
+                int t0 = a.teamId == 0 ? -1 : 1, t1 = b.teamId == 0 ? -1 : 1; if (t0 == t1) { t0 = -1; t1 = 1; }
+                a.center = new Vector3(t0 * (gap * .5f + a.Size.x * .5f), base0.center.y, 0);
+                b.center = new Vector3(t1 * (gap * .5f + b.Size.x * .5f), base1.center.y, 0);
+                d.Draft.Set(0, a); d.Draft.Set(1, b);
+                c.sizeA = d.Draft[0].Size.ToString("F2"); c.sizeB = d.Draft[1].Size.ToString("F2");
+                c.centerA = d.Draft[0].center.ToString("F2"); c.centerB = d.Draft[1].center.ToString("F2");
+                c.passed = d.TryValidate(out var error); c.error = error;
+                if (c.passed)
+                {
+                    var catalog = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>(CatalogPath);
+                    var entry = catalog.entries.Single(e => e.scenePath == SceneManagerActivePath());
+                    if (!WarSandboxSceneSession.TryValidateTerrainProvider(d.controller.manager, entry, out error)) { c.passed = false; c.error = "terrain provider: " + error; }
+                }
+            }
+            catch (Exception ex) { c.passed = false; c.error = ex.GetType().Name + ": " + ex.Message; }
+            return c;
+        }
+        static string SceneManagerActivePath() => UnityEngine.SceneManagement.SceneManager.GetActiveScene().path;
+
+        public static void Validate()
+        {
+            string output = Arg("--map1024-output"); Require(!string.IsNullOrEmpty(output), "--map1024-output missing");
+            Directory.CreateDirectory(output);
+            var r = new Report { entryId = EntryId, scenePath = Battle };
+            var catalog = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>(CatalogPath);
+            r.catalogValid = catalog.TryValidate(File.Exists, out r.catalogError);
+            var entry = catalog.entries.Single(e => e.id == EntryId);
+            EditorSceneManager.OpenScene(Battle, OpenSceneMode.Single);
+            var m = Find<MassEngineManager>(); var d = Find<WarSandboxRuntimeDeployment>();
+            r.terrainProviderValid = WarSandboxSceneSession.TryValidateTerrainProvider(m, entry, out r.terrainError);
+            if (m.TryGetTerrainContext(out var s, out var nav, out var err) && s != null && nav != null)
+            {
+                r.worldSize = m.systemConfig.simulationConfig.simulationWorldSize.x; r.surfaceWidth = s.Width; r.surfaceStep = s.Step.x;
+                r.navCellSize = nav.CellSize; r.navResolutionX = nav.ResolutionX; r.navResolutionZ = nav.ResolutionZ; r.navCells = nav.CellCount; r.clearance = nav.Clearance;
+                r.walkableNavCells = nav.CopyWalkable().Count(x => x != 0);
+                // walkable u32 + components i32 + neighbours u8 + edgeCosts 4xf64 + distances f64 + next i32 + heap i32 + heapPos i32 = 61 B/cell
+                r.estimatedNavManagedBytesPerGrid = (long)nav.CellCount * 61; r.estimatedNavManagedBytesAt2m512Grid = 512L * 512 * 61;
+                r.connected = nav.AreConnected(new Vector2(-200, 0), new Vector2(200, 0));
+                r.footprintsWalkable = nav.IsFootprintWalkable(new Vector2(-152.4f, 0), new Vector2(254.8f, 560.7f)) && nav.IsFootprintWalkable(new Vector2(152.4f, 0), new Vector2(254.8f, 560.7f));
+                var sim = m.systemConfig.simulationConfig; int gx = Mathf.CeilToInt(sim.simulationWorldSize.x / sim.cellSize), gz = Mathf.CeilToInt(sim.simulationWorldSize.y / sim.cellSize);
+                r.simulationGridCells = (long)gx * gz; r.simulationGridIndexEntries = r.simulationGridCells * sim.maxAgentsPerCell;
+            }
+            else r.terrainError = (r.terrainError ?? "") + " context: " + err;
+            r.rosterMaximumUnits = d.rosterPolicy != null ? d.rosterPolicy.maximumUnits : -1;
+            r.cases.Add(TryLayout("1024", "100k-total", 50000, .7f, 2.2f, 50));
+            // fresh scene for an independent 200k draft
+            EditorSceneManager.OpenScene(Battle, OpenSceneMode.Single);
+            r.cases.Add(TryLayout("1024", "200k-total", 100000, .7f, 2.2f, 50));
+            // control: the unmodified 512 map must still reject 200k (scene opened, never saved)
+            EditorSceneManager.OpenScene(SourceScene, OpenSceneMode.Single);
+            r.cases.Add(TryLayout("512-control", "200k-total", 100000, .7f, 2.2f, 50));
+            EditorSceneManager.OpenScene(SourceScene, OpenSceneMode.Single);
+            r.cases.Add(TryLayout("512-control", "100k-total", 50000, .7f, 2.2f, 50));
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            r.passed = r.catalogValid && r.terrainProviderValid && r.connected && r.footprintsWalkable && r.navCells <= 65536 &&
+                r.cases[0].passed && r.cases[1].passed && !r.cases[2].passed && r.cases[3].passed;
+            File.WriteAllText(Path.Combine(output, "map1024-validation.json"), JsonUtility.ToJson(r, true));
+            Debug.Log("MAP1024 VALIDATE passed=" + r.passed + " " + JsonUtility.ToJson(r));
+            if (!r.passed) throw new Exception("MAP1024 validation failed; see " + output);
+        }
+    }
+}
+#endif
