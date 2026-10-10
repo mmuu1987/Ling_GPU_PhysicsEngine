@@ -2,7 +2,16 @@
 
 现役包记录：2026-10-06；文档同步：2026-10-10。本页是当前包、入口、GUID与验证边界的唯一索引；各历史报告仍保留原日期和原GUID。
 
-## 当前：据点默认开战修复37版
+## 最新试玩包：38版（2026-10-10，待用户试玩）
+
+- 入口：`Builds/Playtest-20261010-38/Start-Game.cmd`（1920×1080独占全屏，保留完整目录）；GUID `1197917726b94292b299bf76eae3544c`。
+- 源码：main `a258916`（含交互改造P1～P8、非法坐标防护、导航共享+Burst默认、远景低模、动态流场后台求解、1024测试战场）。Windows x64 Development，Unity6000.3.14f1。
+- 构建入口：新增 `Assets/Game/Editor/PlaytestBuilder.cs`（场景=主菜单+战场目录全部场景，共5个）。构建前校验需要的31个旧目录场景只登记用于校验、未打进包（与37构建时状态一致），构建后EditorBuildSettings已还原。
+- 0错误/1706警告：几乎全为 `AgentCombatSimulation` 局部指挥kernel的HLSL编译器提示（未初始化/整数除法），按变体重复计数；待清理。
+- 同一EXE六项冒烟检查6/6通过（默认据点、移动、防守、撤退、开阔、障碍），运行日志无异常；隔离设置/引导/全局文件，未碰用户存档。37包关键文件哈希复核未变。
+- 未覆盖：真实键鼠/1080p手感、框选与布阵拖拽人工验收、EXE冷Shader首用停顿、1024图高人数自然对局。证据：`outputs/Playtest38-20261010-01/`；说明：包内 `试玩说明.txt`。
+
+## 上一版：据点默认开战修复37版
 
 - 入口：`Builds/CaptureDefault-20261006-37/Start-Game.cmd`
 - 完整本机路径：`E:\GitHub\Ling_GPU_PhysicsEngine\Ling_GPU_PhysicsEngine\Builds\CaptureDefault-20261006-37\Start-Game.cmd`
