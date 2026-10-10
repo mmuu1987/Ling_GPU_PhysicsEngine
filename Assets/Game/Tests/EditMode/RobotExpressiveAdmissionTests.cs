@@ -56,10 +56,13 @@ namespace MassEngine.Game.Tests
             var p=Load<WarSandboxRosterPolicy>(RobotExpressiveAdmissionBuilder.PolicyPath);Assert.IsTrue(p.TryValidateDefinition(out string error),error);Assert.IsTrue(p.templates.Contains(Catalog.FindTemplate(RobotExpressiveAdmissionBuilder.TemplateId).config));Assert.AreEqual(256,p.maximumUnits);
             foreach(var id in Previous.entries.Single(e=>e.id=="unified-regular").featuredTemplateIds)Assert.IsTrue(p.templates.Contains(Previous.FindTemplate(id).config),id);
         }
-        [Test]public void CurrentMenuAndEditorSceneListPointAtVersion08WithoutRemovingHistoricalScenes()
+        [Test]public void HistoricalVersion08MenuAndScenesRemainAvailableButDoNotReplaceShippingEntry()
         {
-            var expected=RobotExpressiveAdmissionBuilder.Scenes(Catalog);CollectionAssert.AreEqual(expected,EditorBuildSettings.scenes.Select(s=>s.path));Assert.IsTrue(EditorBuildSettings.scenes.All(s=>s.enabled));
-            StringAssert.Contains("guid: "+AssetDatabase.AssetPathToGUID(RobotExpressiveAdmissionBuilder.CatalogPath),File.ReadAllText(RobotExpressiveAdmissionBuilder.MenuScene));StringAssert.Contains("guid: "+AssetDatabase.AssetPathToGUID(RobotExpressiveAdmissionBuilder.ScenarioPath),File.ReadAllText(RobotExpressiveAdmissionBuilder.BattleScene));
+            foreach (string path in RobotExpressiveAdmissionBuilder.Scenes(Catalog))
+                Assert.NotNull(Load<SceneAsset>(path), path);
+            Assert.IsFalse(EditorBuildSettings.scenes.Any(s => s.enabled && s.path == RobotExpressiveAdmissionBuilder.MenuScene));
+            StringAssert.Contains("guid: "+AssetDatabase.AssetPathToGUID(RobotExpressiveAdmissionBuilder.CatalogPath),File.ReadAllText(RobotExpressiveAdmissionBuilder.MenuScene));
+            StringAssert.Contains("guid: "+AssetDatabase.AssetPathToGUID(RobotExpressiveAdmissionBuilder.ScenarioPath),File.ReadAllText(RobotExpressiveAdmissionBuilder.BattleScene));
         }
         [Test]public void AdmissionRecordsOnlyTheUsersRealScopeAndLeavesPilotEvidenceUntouched()
         {

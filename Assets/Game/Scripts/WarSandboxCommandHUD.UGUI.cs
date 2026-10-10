@@ -31,7 +31,7 @@ namespace MassEngine.Game
             }
             return lines * size * 1.42f + 6;
         }
-        private string HelpText() => "操作提示\n1. 点击军团，或用数字键选择\n2. 按 M，再点击地面设置目标\n3. 再按 M，Shift + 点击追加航点\nEsc / 取消按钮只取消选点，不清除原命令\nSpace 暂停 / 继续；改令会继续运行\n右键 + WASD 观察 · 滚轮缩放\nF 跟随所选军团 · F3 全景\n小地图：左键定位，右键下令";
+        private string HelpText() => "操作提示\n1. 点击军团，或用数字键选择\n2. 按 M，再点击地面设置目标\n3. 左键拖框当前军团；框空不指挥任何人\n4. 局部只支持单目标；整军团可Shift追加航点\nEsc先取消选点，再清选区；不清除原命令\nSpace 暂停 / 继续；改令会继续运行\n右键 + WASD 观察 · 滚轮缩放\nF 跟随所选军团 · F3 全景\n小地图：左键定位，右键下令";
         private string DiagnosticsText() => "技术信息\n战斗时间 " + controller.TelemetrySnapshot.battleSeconds.ToString("F1") + " s\n网格溢出 " + controller.TelemetrySnapshot.gridOverflowPerFrame + " / 帧\n流场重建 " +
             controller.TelemetrySnapshot.attackerFlowRebuilds + " / " + controller.TelemetrySnapshot.defenderFlowRebuilds;
         private string StartLabel()
@@ -284,9 +284,10 @@ namespace MassEngine.Game
         private void DrawUGUIResult(WarSandboxUGUI ui)
         {
             var result = controller.BattleResult;
+            bool result27 = BattleResult27.Active(controller);
             int count = result.ArmyCount, rows = (count + 1) / 2, visibleRows = Mathf.Min(rows, 2);
             float w = Mathf.Min(640, ui.Width - 40), x = (ui.Width - w) / 2, cellH = 88;
-            float height = Mathf.Min(ui.Height - 40, 130 + visibleRows * (cellH + 8) + 64), y = (ui.Height - height) / 2;
+            float height = Mathf.Min(ui.Height - 40, 130 + visibleRows * (cellH + 8) + 64 + (result27 ? 60 : 0)), y = (ui.Height - height) / 2;
             ui.Panel("result-shade", new Rect(0, 0, ui.Width, ui.Height), WarSandboxUGUI.Shade, true);
             var card = new Rect(x, y, w, height);
             ui.Panel("result-card", card); ui.Brackets("result-card-br", card);
@@ -295,7 +296,7 @@ namespace MassEngine.Game
             ui.LabelAligned("result-title", new Rect(x + 14, y + 38, w - 28, 54), FormatResultTitle(result), 38, decided ? WarSandboxUGUI.Ink : WarSandboxUGUI.Amber, true, TextAnchor.MiddleLeft);
             ui.LabelAligned("result-reason", new Rect(x + 14, y + 94, w - 28, 26), FormatVictoryReason(result.victoryReason) + "  ·  " + FormatBattleTime(result.battleSeconds) +
                 (CustomStatsActive() ? "  ·  自定义数值" : ""), 15, WarSandboxUGUI.Muted, false, TextAnchor.MiddleLeft);
-            float gridTop = y + 130, gridH = height - 130 - 64, gw = w - 48, colW = (gw - 8) / 2;
+            float gridTop = y + 130, gridH = height - 130 - 64 - (result27 ? 60 : 0), gw = w - 48, colW = (gw - 8) / 2;
             ui.Scroll("result-armies", new Rect(x + 24, gridTop, gw, gridH), rows * (cellH + 8));
             string[] headings = { "初始", "存活", "损失" };
             for (int i = 0; i < count; i++)
@@ -317,12 +318,13 @@ namespace MassEngine.Game
             }
             ui.EndScroll();
             float by = y + height - 58, bw = (w - 48 - 16) / 3;
-            ui.Button("result-restart", new Rect(x + 24, by, bw, 42), "再来一局", StartOrRestartDefaultBattle, true);
+            if (result27) ui.Label("result-next-note", new Rect(x + 24, by - 56, w - 48, 52), "再来一局：沿用本局已应用编成和布阵，立即重新开战。\n返回布阵：保留配置继续修改；战斗进度和路线不保留。", 14, WarSandboxUGUI.Muted);
+            ui.Button("result-restart", new Rect(x + 24, by, bw, 42), result27 ? "沿用配置再战" : "再来一局", StartOrRestartDefaultBattle, true);
             ui.Chip("result-restart-key", new Rect(x + 24 + bw - 46, by + 4, 42, 12), "ENTER", new Color(0, 0, 0, 0), WarSandboxUGUI.Deep, null, 9);
             var resultEditor = controller.GetComponent<WarSandboxDeploymentHUD>();
-            ui.Button("result-edit", new Rect(x + 32 + bw, by, bw, 42), "返回布阵", () => resultEditor.RequestEdit(), false, resultEditor != null);
+            ui.Button("result-edit", new Rect(x + 32 + bw, by, bw, 42), result27 ? "调整编成布阵" : "返回布阵", () => resultEditor.RequestEdit(), false, resultEditor != null);
             var session = WarSandboxSceneSession.Instance;
-            ui.Button("result-menu", new Rect(x + 40 + bw * 2, by, bw, 42), "选择其他战场", () => session.TryReturnToMenu(false, out _), false, session != null);
+            ui.Button("result-menu", new Rect(x + 40 + bw * 2, by, bw, 42), "选择其他战场", () => PlanState28.RequestCatalog(session), false, session != null);
         }
         private void DrawUGUIMinimap(WarSandboxUGUI ui, float screenWidth, float screenHeight, float minimumY, float bottom, float minimumX)
         {
@@ -380,13 +382,7 @@ namespace MassEngine.Game
             ui.PointerArea("mini-input", map, (point, button, shift) =>
             {
                 var target = WarSandboxMinimapProjection.MapToWorld(new Vector2(map.x + point.x * map.width, map.y + point.y * map.height), world, map);
-                var action = WarSandboxMinimapProjection.ResolvePointerAction(button, awaitingMoveTarget, shift);
-                if (action == WarSandboxMinimapAction.FocusCamera)
-                {
-                    if (!controller.TryResolveGroundPoint(target, out target, out string error)) { SetFeedback(error); return; }
-                    cameraFocusMode = CameraFocusMode.None; cameraManager?.CenterTacticalPoint(target);
-                }
-                else if (action != WarSandboxMinimapAction.None) IssueMoveTo(target, action == WarSandboxMinimapAction.QueueMoveSelectedArmy);
+                MinimapCommandP8(target,button,shift);
             });
         }
         private void OnDestroy()
@@ -397,3 +393,4 @@ namespace MassEngine.Game
         }
     }
 }
+

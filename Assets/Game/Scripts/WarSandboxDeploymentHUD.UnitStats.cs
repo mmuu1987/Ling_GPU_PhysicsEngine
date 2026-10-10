@@ -169,6 +169,11 @@ namespace MassEngine.Game
             ui.LabelAligned("st-ro-title", new Rect(lx0 + 10, ly + 6, leftW - 20, 18), "只读参数 · 由兵种资源决定", 11, WarSandboxStatTheme.Amber, true, TextAnchor.MiddleLeft);
             ui.LabelAligned("st-ro-body", new Rect(lx0 + 10, ly + 26, leftW - 20, 90), WarSandboxStatTheme.ReadOnlySummary(template), 12, WarSandboxStatTheme.Muted, false, TextAnchor.UpperLeft);
 
+            var radiusValue = resolver.Resolve(template, WarSandboxUnitStats.Get(WarSandboxUnitStat.AgentRadius));
+            float previewY = ly + 126, previewH = y0 + H - 18 - previewY;
+            if (radiusValue.applies && previewH >= 140)
+                ui.ModelPreview("st-radius-model", new Rect(lx0, previewY, leftW, previewH), template, null, radiusValue.effective);
+
             // Right: field table
             float rx = lx0 + leftW + 22, rw = x0 + W - 16 - rx, ty = y0 + 108;
             float labelW = 118, fieldW = 86, chipW = 50, resetW = 34, gap = 10;
@@ -181,7 +186,7 @@ namespace MassEngine.Game
             float footerTop = y0 + H - (twoRows ? 160 : 112);
             float tableTop = ty + 24, tableH = footerTop - tableTop - 8;
             var rows = new List<WarSandboxStatDefinition>();
-            foreach (var d in WarSandboxUnitStats.Definitions) if (WarSandboxUnitStats.Applies(template, d)) rows.Add(d);
+            foreach (var d in WarSandboxUnitStats.Definitions) if (WarSandboxUnitStats.Applies(template, d)) { if (d.UsesFlocking) rows.Insert(0, d); else rows.Add(d); }
             string group = null; float content = 0;
             foreach (var d in rows) { if (d.Group != group) { content += 30; group = d.Group; } content += 46; }
             ui.TintScroll("st-table", new Rect(rx, tableTop, rw, tableH), content, WarSandboxStatTheme.Card);
@@ -252,7 +257,8 @@ namespace MassEngine.Game
             float fx = labelW + sliderW + 2 * gap;
             ui.TintField(k + "-field", new Rect(fx, y + 5, fieldW, 32), d.Format(value.effective), text =>
             {
-                if (!WarSandboxStatTheme.TryParse(text, out float typed)) { Notice(d.Label + "：请输入数字。", true); return; }
+                if (!WarSandboxStatTheme.TryParse(text, out float typed)) { Notice(d.Label + "：请输入有限数字。", true); return; }
+                if (d.UsesFlocking && !d.Accepts(typed)) { Notice("半径必须为 0.05–4.8 米；应用时还需通过网格、间距和地形校验。", true); return; }
                 float clamped = d.Clamp(typed);
                 // Focus leaving an unchanged field must not create a local override.
                 if (WarSandboxUnitStats.Same(clamped, value.effective) && clamped == typed) return;
@@ -317,3 +323,4 @@ namespace MassEngine.Game
         }
     }
 }
+

@@ -84,6 +84,7 @@ namespace MassEngine.Game
             dispatchBeforeEdit = manager.enableGpuDispatch;
             manager.enableGpuDispatch = false;
             IsEditing = true; Error = null;
+            PlanState28.For(controller)?.Initialize(PlanSignature28(false));
             return true;
         }
 
@@ -116,6 +117,8 @@ namespace MassEngine.Game
             warning = null;
             if (controller == null || controller.manager == null || battlefieldCatalog == null) return false;
             var manager = controller.manager;
+            if (controller.Phase != WarSandboxBattlePhase.Setup || manager.IsBattleRunning)
+            { warning = "全局数值只能在进入战场或明确应用布阵时生效。"; return false; }
             var global = StatStore.Current;
             warning = StatStore.Warning;
             if (global.IsEmpty || manager.scenarioConfig == null || manager.scenarioConfig.unitTypes == null) return false;
@@ -125,10 +128,17 @@ namespace MassEngine.Game
             if (!affected) return false;
             if (!EnsureCommitted(out string error)) { warning = "全局兵种数值未生效：" + error; return false; }
             var previousScenario = manager.scenarioConfig;
+            var previousClearance = manager.DeploymentRadiusClearance;
+            var radiusDraft = new WarSandboxDeploymentDraft(committed, controller.CaptureBattlefieldRules());
+            if (!WarSandboxRadiusPolicy.TryValidate(manager, radiusDraft, resolver, out var clearance, out var radiusError) ||
+                (clearance.HasValue && !terrainValidation.TryValidate(manager, radiusDraft, out _, out radiusError, clearance)))
+            { warning = "全局半径未生效，保留原部署：" + radiusError; return false; }
             WarSandboxDeploymentInstance candidate = null;
             try
             {
                 candidate = new WarSandboxDeploymentInstance(committed, resolver);
+                if (clearance.HasValue || previousClearance.HasValue)
+                { manager.PauseBattle(); manager.Release(); manager.SetDeploymentRadiusClearance(clearance); }
                 manager.scenarioConfig = candidate.Scenario;
                 manager.ResetScenario(); manager.PauseBattle();
                 if (Application.isPlaying && (manager.Buffers == null || !manager.Buffers.IsAllocated ||
@@ -140,7 +150,7 @@ namespace MassEngine.Game
             }
             catch (Exception exception)
             {
-                manager.Release(); manager.scenarioConfig = previousScenario;
+                manager.Release(); manager.SetDeploymentRadiusClearance(previousClearance); manager.scenarioConfig = previousScenario;
                 try { manager.ResetScenario(); manager.PauseBattle(); } catch { }
                 candidate?.Dispose();
                 warning = "全局兵种数值未生效，已按官方数值运行：" + exception.Message;
@@ -191,6 +201,64 @@ namespace MassEngine.Game
             return ValidateDraft(Draft, out error);
         }
 
+        /// <summary>One validated translation of a captured draft entry. Never applies/rebuilds the GPU deployment.</summary>
+        public bool TryTranslateDraft(WarSandboxDeploymentDraft expectedDraft, int revision, int index,
+            WarSandboxDeploymentEntry expectedEntry, Vector3 center, out string error)
+        {
+            error = null;
+            if (!CanAccess() || !IsEditing || Draft == null || controller.Phase != WarSandboxBattlePhase.Setup ||
+                !ReferenceEquals(Draft, expectedDraft) || Draft.Revision != revision || index < 0 || index >= Draft.Count || !Draft[index].Equals(expectedEntry))
+            { error = "草稿或目标编成已变化，拖动已取消。"; return false; }
+            var next = expectedEntry; next.center = new Vector3(center.x, expectedEntry.center.y, center.z);
+            if (next.Equals(expectedEntry)) return true;
+            var entries = Draft.Snapshot(); entries[index] = next;
+            var candidate = new WarSandboxDeploymentDraft(entries, Draft.Rules, Draft.Stats);
+            if (!ValidateDraft(candidate, out error)) return false;
+            // Validation is CPU-only and synchronous. Recheck the token before the single history write.
+            if (!ReferenceEquals(Draft, expectedDraft) || Draft.Revision != revision || !Draft[index].Equals(expectedEntry))
+            { error = "草稿已变化，位置未提交。"; return false; }
+            return Draft.Set(index, next);
+        }
+
+        public bool TryGetResizeRadius(WarSandboxDeploymentEntry entry,out float radius,out string error)
+        {
+            radius=0;error=null;var info=UnitPreviewRadius.Read(entry.template);
+            if(!info.Available||entry.template.spawnConfig==null){error="自定义生成模块/实际半径尚未验证，不能调整尺寸。";return false;}
+            var resolver=new WarSandboxStatResolver(battlefieldCatalog,StatStore.Current,Draft.Stats);
+            var value=resolver.Resolve(entry.template,WarSandboxUnitStats.Get(WarSandboxUnitStat.AgentRadius));
+            radius=value.applies?value.effective:info.BaseRadius;
+            // DefaultSpawnModule generates scale=1. Do not import an unrelated rendering-size multiplier.
+            return WarSandboxDeploymentResize.Finite(radius)&&radius>0;
+        }
+        public bool TryResizeDraft(WarSandboxDeploymentDraft expected,int revision,int index,WarSandboxDeploymentEntry original,
+            WarSandboxDeploymentEntry proposed,out string error)
+        {
+            error=null;
+            if(proposed.count!=original.count||proposed.template!=original.template||proposed.teamId!=original.teamId||proposed.center.y!=original.center.y)
+            {error="尺寸拖拽不能改变人数、兵种、军团或高度。";return false;}
+            return TryEditFormation(expected,revision,index,original,proposed,true,out error);
+        }
+        public bool TryEditFormation(WarSandboxDeploymentDraft expected,int revision,int index,WarSandboxDeploymentEntry original,
+            WarSandboxDeploymentEntry next,bool shapeChanged,out string error)
+        {
+            error=null;
+            if(!CanAccess()||!IsEditing||Draft==null||controller.Phase!=WarSandboxBattlePhase.Setup||!ReferenceEquals(Draft,expected)||
+                Draft.Revision!=revision||index<0||index>=Draft.Count||!Draft[index].Equals(original)||next.template!=original.template||next.teamId!=original.teamId||next.center.y!=original.center.y)
+            {error="草稿或目标编成已变化，未提交。";return false;}
+            if(next.Equals(original))return true;
+            if(shapeChanged)
+            {
+                if(!WarSandboxDeploymentResize.Finite(next.density)||next.density<.05f||next.density>SpawnConfig.PackingLimitPerSquareMeter||!WarSandboxDeploymentResize.Finite(next.aspect)||next.aspect<.1f||next.aspect>10){error="密度或比例无效。";return false;}
+                if(!WarSandboxDeploymentResize.TryFromSize(next,next.center,new Vector2(next.Size.x,next.Size.z),out var converted,out error))return false;
+                if(next.manualSize.x>0&&next.manualSize.z>0)next=converted;
+                if(!TryGetResizeRadius(next,out var radius,out error)||!WarSandboxDeploymentResize.Fits(next,radius,next.template.spawnConfig.formationJitterFraction,out error))return false;
+            }
+            var entries=Draft.Snapshot();entries[index]=next;var candidate=new WarSandboxDeploymentDraft(entries,Draft.Rules,Draft.Stats);
+            if(!ValidateDraft(candidate,out error))return false;
+            if(!ReferenceEquals(Draft,expected)||Draft.Revision!=revision||!Draft[index].Equals(original)){error="草稿已变化。";return false;}
+            return Draft.Set(index,next);
+        }
+
         public bool SelectTemplate(int index, UnitTypeConfig template)
         {
             if (!IsEditing || Draft == null || index < 0 || index >= Draft.Count || !templates.Contains(template)) return false;
@@ -213,7 +281,22 @@ namespace MassEngine.Game
             var session = WarSandboxSceneSession.Instance;
             if (session != null && session.CurrentBattlefield != null &&
                 !WarSandboxSceneSession.TryValidateTerrainProvider(controller.manager, session.CurrentBattlefield, out error)) return false;
-            return terrainValidation.TryValidate(controller.manager, draft, out _, out error);
+            var resolver = new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, draft.Stats);
+            if (!WarSandboxRadiusPolicy.TryValidate(controller.manager, draft, resolver, out var clearance, out error)) return false;
+            return terrainValidation.TryValidate(controller.manager, draft, out _, out error, clearance);
+        }
+
+        // Presentation-only canonical state. Stable plan IDs, no persistence side effects.
+        public string PlanSignature28(bool current)
+        {
+            var entry = WarSandboxSceneSession.Instance != null ? WarSandboxSceneSession.Instance.CurrentBattlefield : null;
+            if (entry == null || committed == null || controller == null || controller.manager == null) return null;
+            bool draft = current && IsEditing && Draft != null;
+            var plan = WarSandboxLocalPlanStore.Create("state28", "state28", entry.id, entry.contentVersion,
+                entry.terrainId, entry.terrainVersion, WorldSize, controller.manager.systemConfig.simulationConfig.boundaryPadding,
+                draft ? Draft.Rules : controller.CaptureBattlefieldRules(), draft ? Draft.Snapshot() : committed,
+                battlefieldCatalog, draft ? Draft.Stats : committedStats, out _);
+            return PlanState28.Canonical(plan);
         }
 
         public bool TrySavePlan(string slot, string displayName, bool overwrite, out string error)
@@ -225,6 +308,8 @@ namespace MassEngine.Game
             var plan = WarSandboxLocalPlanStore.Create(slot, displayName, entry.id, entry.contentVersion,
                 entry.terrainId, entry.terrainVersion, WorldSize, padding, Draft.Rules, Draft.Snapshot(), battlefieldCatalog, Draft.Stats, out error);
             if (plan == null || !PlanStore.TrySave(plan, overwrite, out error)) return Reject(error, out error);
+            var state28 = PlanState28.For(controller);
+            if (state28 != null && !state28.RecordStored(slot, out error)) return Reject("方案已写入，但读取核验失败：" + error, out error);
             Error = null; return true;
         }
 
@@ -237,7 +322,9 @@ namespace MassEngine.Game
             float padding = controller.manager.systemConfig.simulationConfig.boundaryPadding;
             if (!WarSandboxLocalPlanStore.TryResolve(plan, entry, battlefieldCatalog, WorldSize, padding, out var candidate, out error))
                 return Reject(error, out error);
-            return TryReplaceDraft(candidate, out error);
+            bool loaded = TryReplaceDraft(candidate, out error);
+            if (loaded) PlanState28.For(controller)?.RecordStored(slot, out _);
+            return loaded;
         }
 
         public bool TryReplaceDraft(WarSandboxDeploymentDraft candidate, out string error)
@@ -262,10 +349,12 @@ namespace MassEngine.Game
 
         public bool TryApply(out string error)
         {
+            StatStore.Invalidate(); // Freeze one fresh global snapshot for validation AND runtime construction.
             if (!TryValidate(out error)) { Error = error; return false; }
             var manager = controller.manager;
             var previousScenario = manager.scenarioConfig;
             var previousRules = controller.CaptureBattlefieldRules();
+            var previousClearance = manager.DeploymentRadiusClearance;
             var nextEntries = Draft.Snapshot();
             WarSandboxDeploymentInstance candidate = null;
             try
@@ -282,10 +371,13 @@ namespace MassEngine.Game
                             throw new InvalidOperationException("部署中心不在地表上。");
                         runtimeEntries[i].center.y = sample.Position.y;
                     }
-                StatStore.Invalidate();
                 var nextStats = Draft.Stats;
-                candidate = new WarSandboxDeploymentInstance(runtimeEntries,
-                    new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, nextStats));
+                var resolver = new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, nextStats);
+                if (!WarSandboxRadiusPolicy.TryValidate(manager, Draft, resolver, out var clearance, out var radiusError))
+                    throw new InvalidOperationException(radiusError);
+                candidate = new WarSandboxDeploymentInstance(runtimeEntries, resolver);
+                if (clearance.HasValue || previousClearance.HasValue)
+                { manager.PauseBattle(); manager.Release(); manager.SetDeploymentRadiusClearance(clearance); }
                 manager.scenarioConfig = candidate.Scenario;
                 manager.enableGpuDispatch = dispatchBeforeEdit;
                 IsEditing = false;
@@ -296,6 +388,7 @@ namespace MassEngine.Game
                 var previous = active; active = candidate; candidate = null;
                 committed = nextEntries; committedStats = nextStats; Draft = null; Error = null;
                 controller.CommitDeploymentRules();
+                PlanState28.For(controller)?.MarkApplied();
                 previous?.Dispose();
                 for (int i = 0; i < controller.ArmyCount; i++)
                     if (controller.GetArmy(i).initialUnitCount > 0) { controller.SelectArmy(i); break; }
@@ -304,7 +397,7 @@ namespace MassEngine.Game
             catch (Exception exception)
             {
                 // The manager must stop referencing a candidate before its owned configs die.
-                manager.Release(); manager.scenarioConfig = previousScenario;
+                manager.Release(); manager.SetDeploymentRadiusClearance(previousClearance); manager.scenarioConfig = previousScenario;
                 manager.enableGpuDispatch = dispatchBeforeEdit;
                 IsEditing = false;
                 string rollbackError = null;
@@ -338,9 +431,14 @@ namespace MassEngine.Game
             if (active != null && controller != null && controller.manager != null && controller.manager.scenarioConfig == active.Scenario)
             {
                 controller.manager.Release();
+                if (controller.manager.DeploymentRadiusClearance.HasValue)
+                { controller.manager.PauseBattle(); controller.manager.SetDeploymentRadiusClearance(null); }
                 controller.manager.scenarioConfig = sourceScenario;
             }
             active?.Dispose(); active = null;
         }
     }
 }
+
+
+

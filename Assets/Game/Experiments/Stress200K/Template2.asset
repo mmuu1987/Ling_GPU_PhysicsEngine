@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: Template2
+  m_EditorClassIdentifier: 
+  unitTypeName: "UnityChan\uFF08UCL\uFF09"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 54ab512378f9e4447bca8384100981f4, type: 2}
+  movementConfig: {fileID: 11400000, guid: c17f4a2157a8613409513b899516f123, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 36994bf3d04d9184fbb945634a3c1977, type: 2}
+  animationConfig: {fileID: 11400000, guid: c4906ade1eb044847b0d44208748aebe, type: 2}
+  combatConfig: {fileID: 11400000, guid: 73d9a08882938694d8c74db5b9ebba42, type: 2}
+  renderConfig: {fileID: 11400000, guid: 66d5fea5c290a5742bd3ebcb6171eea9, type: 2}

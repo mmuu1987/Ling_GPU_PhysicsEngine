@@ -18,7 +18,7 @@ namespace MassEngine.Game.Tests
     /// <summary>Actual retained UI callbacks/PNG renders; not OS input, human art acceptance or a new balance test.</summary>
     public sealed class ToyUiFlowPlayModeTests
     {
-        private const string Menu = "Assets/Game/OfficialRoster/Version08/LaunchMenu.unity";
+        private const string Menu = "Assets/Game/Content/Characters/OfficialRoster/Version08/LaunchMenu.unity";
         private string temporary, evidence;
         private float oldDelta;
         private WarSandboxSceneSession session;
@@ -77,17 +77,54 @@ namespace MassEngine.Game.Tests
             Button("army-details-" + team).onClick.Invoke(); yield return Frames(15);
             Assert.That(editor.LegionOpen, Is.True);
             var entry = session.catalog.FindTemplate("roster-robot-expressive");
-            Assert.That(Image("legion-unit-preview").texture, Is.SameAs(entry.unitPreview)); AssertImageAspect("legion-unit-preview");
+            Assert.That(Image("legion-unit-preview").texture, Is.TypeOf<RenderTexture>());
+            Assert.That(Image("legion-unit-preview").GetComponent<UnitModelPreviewWidget>().Config, Is.SameAs(draft[0].template)); AssertImageAspect("legion-unit-preview");
             Assert.That(Active<Button>().Any(x => x.name == "deployment-start"), Is.False);
             Capture("04-legion-720.png");
             WarSandboxUGUI.ScreenSizeOverride = new Vector2(1920, 1080); yield return Frames(20);
             AssertImageAspect("legion-unit-preview"); Capture("05-legion-1080.png");
             WarSandboxUGUI.ScreenSizeOverride = new Vector2(1280, 720); yield return Frames(20);
+            int beforeCount = draft.Count;
+            Active<InputField>().Single(x => x.name == "input-count").text = "0";
+            Button("legion-update-count").onClick.Invoke(); yield return Frames(15);
+            Assert.That(draft[0].count, Is.EqualTo(initial), "Invalid count must not enter draft");
+            Assert.That(Active<Text>().Any(t => t.text.Contains("大于0")), Is.True);
+            Button("roster-add").onClick.Invoke(); yield return Frames(15);
+            Assert.That(draft.Count, Is.EqualTo(beforeCount), "Failed commit must not add a formation");
             Active<InputField>().Single(x => x.name == "input-count").text = "invalid";
             Button("legion-done").onClick.Invoke(); yield return Frames(15);
             Assert.That(editor.LegionOpen, Is.True, "Bad numeric text must not silently navigate or apply");
             Active<InputField>().Single(x => x.name == "input-count").text = (initial + 8).ToString();
+            yield return Frames(15);
+            Assert.That(Active<Text>().Any(t => t.text.Contains("输入尚未更新")), Is.True);
+            Button("legion-update-count").onClick.Invoke(); yield return Frames(15);
+            Assert.That(draft[0].count, Is.EqualTo(initial + 8));
+            Assert.That(controller.GetArmy(team).initialUnitCount, Is.EqualTo(liveInitial));
+            Capture("08-count-updated-720.png");
             Button("field-template").onClick.Invoke(); yield return Frames(15); Assert.That(editor.PickerOpen, Is.True);
+            Assert.That(Active<Button>().Count(b => b.name.StartsWith("template-")), Is.EqualTo(deployment.ChoiceTemplates.Count));
+            Capture("09-picker-all-720.png");
+            Button("picker-filter-2").onClick.Invoke(); yield return Frames(15);
+            Assert.That(Active<Button>().Count(b => b.name.StartsWith("template-")), Is.EqualTo(deployment.ChoiceTemplates.Count(t => WarSandboxUnitStats.IsRanged(t))));
+            Assert.That(draft[0].count, Is.EqualTo(initial + 8), "Filtering must not mutate the draft");
+            Capture("10-picker-ranged-720.png");
+            var originalTemplate = draft[0].template;
+            int rangedIndex = Enumerable.Range(0, deployment.ChoiceTemplates.Count).First(i => WarSandboxUnitStats.IsRanged(deployment.ChoiceTemplates[i]));
+            Button("template-" + rangedIndex).onClick.Invoke(); yield return Frames(15);
+            Assert.That(editor.PickerOpen, Is.False);
+            Assert.That(draft[0].template, Is.SameAs(deployment.ChoiceTemplates[rangedIndex]), "Filtered card must select its actual template, not its visible slot index");
+            Assert.That(Image("legion-unit-preview").GetComponent<UnitModelPreviewWidget>().Config, Is.SameAs(draft[0].template));
+            Assert.That(controller.GetArmy(team).initialUnitCount, Is.EqualTo(liveInitial));
+            Button("field-template").onClick.Invoke(); yield return Frames(15);
+            int originalIndex = Enumerable.Range(0, deployment.ChoiceTemplates.Count).First(i => deployment.ChoiceTemplates[i] == originalTemplate);
+            Button("template-" + originalIndex).onClick.Invoke(); yield return Frames(15);
+            Assert.That(draft[0].template, Is.SameAs(originalTemplate));
+            Active<InputField>().Single(x => x.name == "input-count").text = (initial + 8).ToString();
+            Button("legion-update-count").onClick.Invoke(); yield return Frames(15);
+            Button("field-template").onClick.Invoke(); yield return Frames(15);
+            Button("picker-filter-1").onClick.Invoke(); yield return Frames(15);
+            Assert.That(Active<Button>().Count(b => b.name.StartsWith("template-")), Is.EqualTo(deployment.ChoiceTemplates.Count(t => !WarSandboxUnitStats.IsRanged(t))));
+            Button("picker-filter-0").onClick.Invoke(); yield return Frames(15);
             Button("picker-back").onClick.Invoke(); yield return Frames(15);
             Button("field-army").onClick.Invoke(); yield return Frames(15);
             Button("army-assign-cancel").onClick.Invoke(); yield return Frames(15);
@@ -134,7 +171,7 @@ namespace MassEngine.Game.Tests
         {
             var image = Image(name); Rect rect = image.rectTransform.rect;
             Assert.That(rect.width, Is.GreaterThan(0)); Assert.That(rect.height, Is.GreaterThan(0));
-            Assert.That(rect.width / rect.height, Is.EqualTo(image.texture.width / (float)image.texture.height).Within(.0001f), "Image must not stretch: " + name);
+            Assert.That(rect.width / rect.height, Is.EqualTo(image.texture.width / (float)image.texture.height).Within(image.texture is RenderTexture ? 2f / image.texture.height : .0001f), "Image must not stretch: " + name);
         }
         private static void DisableAutoStart(Scene scene, LoadSceneMode mode)
         { if (scene.path == Menu && WarSandboxSceneSession.Instance != null) WarSandboxSceneSession.Instance.enterDefaultOnStart = false; }

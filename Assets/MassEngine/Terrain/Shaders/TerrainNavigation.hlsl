@@ -7,10 +7,47 @@ int2 TerrainNavCell(float2 p) { return (int2)floor((p - flowFieldOrigin) / flowF
 bool TerrainNavCellOpen(int2 cell)
 {
     if (any(cell < 0) || any(cell >= flowFieldResolution)) return false;
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+#ifdef LP_STANCE
+    return _LocalOrderMask[localSelfSlot*_LocalOrderCellCount+cell.y*flowFieldResolution.x+cell.x]!=0;
+#else
+    if(localSelfSlot>=0)return _LocalOrderMask[localSelfSlot*_LocalOrderCellCount+cell.y*flowFieldResolution.x+cell.x]!=0;
+#endif
+#endif
     return _NavigationWalkable[cell.y * flowFieldResolution.x + cell.x] != 0;
 }
 bool TerrainNavPointOpen(float2 p)
-{ return all(isfinite(p)) && TerrainNavCellOpen(TerrainNavCell(p)); }
+{
+    if (!all(isfinite(p))) return false;
+    // CPU cells use double subtraction; GPU float subtraction can round a point
+    // just inside a blocked cell onto the adjacent open cell (e.g. z=33.9999962,
+    // origin=-256, cellSize=2). Enclose the subtraction/division roundoff and
+    // require every possibly occupied cell to be open. Never relax the CPU mask.
+    // This is a numerical guard, not a change to agent radius or nav clearance.
+    float magnitude = max(1.0, max(max(abs(p.x), abs(p.y)),
+                                  max(abs(flowFieldOrigin.x), abs(flowFieldOrigin.y))));
+    float guard = max(flowFieldCellSize * 1e-6, magnitude * 9.5367431640625e-7);
+    float2 relative = p - flowFieldOrigin;
+    int2 lo = (int2)floor((relative - guard) / flowFieldCellSize);
+    int2 hi = (int2)floor((relative + guard) / flowFieldCellSize);
+    // Fail closed if a future grid is too fine to resolve reliably in float.
+    if (any(hi - lo > 1)) return false;
+#if defined(LP_STANCE) && LP_RANGED
+    // Keep the four conservative cell checks in their original order.
+    // A real loop avoids cloning the local/global-mask branch into every inlined caller.
+    [loop] for (int corner = 0; corner < 4; ++corner)
+    {
+        int2 cell = corner == 0 ? lo : (corner == 1 ? hi :
+            (corner == 2 ? int2(lo.x, hi.y) : int2(hi.x, lo.y)));
+        if (!TerrainNavCellOpen(cell)) return false;
+    }
+    return true;
+#else
+    return TerrainNavCellOpen(lo) && TerrainNavCellOpen(hi)
+        && TerrainNavCellOpen(int2(lo.x, hi.y))
+        && TerrainNavCellOpen(int2(hi.x, lo.y));
+#endif
+}
 
 // Supercover DDA over the inflated navigation mask. Tied crossings require both
 // cardinal neighbours, exactly as in the CPU graph; large steps cannot jump a wall.
@@ -72,7 +109,12 @@ void TerrainIntegrate(inout AgentData agent, float dt)
     float2 offset = tangent.xz * dt;
     float budget = speed * dt;
     float3 candidate = before;
-    [unroll] for (int attempt = 0; attempt < 4; ++attempt)
+#if defined(LP_STANCE) && LP_RANGED
+    [loop]
+#else
+    [unroll]
+#endif
+    for (int attempt = 0; attempt < 4; ++attempt)
     {
         candidate.xz = before.xz + offset;
         float4 next = SampleTerrainSurface(candidate.xz);
@@ -97,3 +139,5 @@ void TerrainConstrainPosition(float3 previousPosition, inout AgentData agent)
     TerrainAnchor(agent);
 }
 #endif
+
+

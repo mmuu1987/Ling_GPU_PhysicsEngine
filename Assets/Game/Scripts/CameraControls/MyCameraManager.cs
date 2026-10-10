@@ -32,6 +32,7 @@ public class MyCameraManager : MonoBehaviour
     [Min(100f)] public float MaxWorldCoordinate = 5000f;
     [Min(1f)] public float MaxMouseDeltaPerFrame = 80f;
 
+    private MassEngine.Game.BattlefieldCameraComfort24 _comfort24;
     private bool _lockInput;
     private bool _orbiting;
     private bool _panning;
@@ -51,6 +52,7 @@ public class MyCameraManager : MonoBehaviour
     protected virtual void Start()
     {
         SanitizeSettings();
+        _comfort24 = GetComponent<MassEngine.Game.BattlefieldCameraComfort24>();
         EnsureCamera();
         if (ControlledCamera == null)
         {
@@ -146,7 +148,12 @@ public class MyCameraManager : MonoBehaviour
 
     private void HandleInput()
     {
-        if (ControlledCamera == null || _lockInput)
+        if (_comfort24 != null && _comfort24.isActiveAndEnabled)
+        {
+            _comfort24.Tick(_lockInput || MassEngine.Game.WarSandboxCommandHUD.IsSelectionCameraCaptured(ControlledCamera));
+            return;
+        }
+        if (ControlledCamera == null || _lockInput || MassEngine.Game.WarSandboxCommandHUD.IsSelectionCameraCaptured(ControlledCamera))
             return;
 
         bool canUseInput = IsMouseInsideInputArea() && !MassEngine.Game.WarSandboxUGUI.PointerOverUI() && !MassEngine.Game.WarSandboxUGUI.IsTyping;
@@ -333,6 +340,7 @@ public class MyCameraManager : MonoBehaviour
         if (ControlledCamera == null || _point == null)
             return;
 
+        if (_comfort24 != null && _comfort24.isActiveAndEnabled) _comfort24.NotifyFocus();
         Vector3 center = CameraMotionSafety.ClampWorldPosition(bounds.center, MaxWorldCoordinate);
         _point.position = center;
 
@@ -377,6 +385,7 @@ public class MyCameraManager : MonoBehaviour
     /// </summary>
     public void FollowTacticalBounds(Bounds bounds, float sharpness)
     {
+        if (_comfort24 != null && _comfort24.isActiveAndEnabled && _comfort24.SuppressFollow) return;
         if (ControlledCamera == null || _point == null || !CameraMotionSafety.IsFinite(bounds.center))
             return;
 
@@ -524,6 +533,17 @@ public class MyCameraManager : MonoBehaviour
         }
     }
 
+    // Used only by opt-in battlefield view envelopes. Shift the orbit anchor with the
+    // correction so panning/zoom does not accumulate an unreachable camera position.
+    public void ConstrainWorldPosition(Vector3 position)
+    {
+        if (ControlledCamera == null || !CameraMotionSafety.IsFinite(position)) return;
+        Vector3 offset = position - ControlledCamera.transform.position;
+        ControlledCamera.transform.position = position;
+        if (_point != null) _point.position += offset;
+        CaptureSafeTransform();
+    }
+
     private void RecoverInvalidTransform()
     {
         if (ControlledCamera == null || _point == null)
@@ -571,3 +591,4 @@ public class MyCameraManager : MonoBehaviour
             Destroy(_point.gameObject);
     }
 }
+

@@ -15,9 +15,9 @@ namespace MassEngine.Editor
     /// </summary>
     public static class VatRebakeComparison
     {
-        private const string DefaultPrefab = "Assets/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab";
-        private const string DefaultReference = "Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Profile.asset";
-        private const string ClipFolder = "Assets/RPG Tiny Hero Duo/Animation/SwordAndShield";
+        private const string DefaultPrefab = "Assets/ThirdParty/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab";
+        private const string DefaultReference = "Assets/Art/VAT/Characters/MaleCharacter_Stage5_MultiClip_Profile.asset";
+        private const string ClipFolder = "Assets/ThirdParty/RPG Tiny Hero Duo/Animation/SwordAndShield";
         private const string InPlaceFolder = ClipFolder + "/InPlace";
 
         private const string ArgPrefab = "--vat-rebake-prefab=";
@@ -82,7 +82,7 @@ namespace MassEngine.Editor
             };
 
             string report = Path.Combine(outputDirectory, "rebake-comparison.md");
-            string tempAsset = "Assets/VAT_Data/_RebakeComparison.asset";
+            string tempAsset = "Assets/Art/VAT/Characters/_RebakeComparison.asset";
             var log = new StringBuilder();
             var failures = new List<string>();
 

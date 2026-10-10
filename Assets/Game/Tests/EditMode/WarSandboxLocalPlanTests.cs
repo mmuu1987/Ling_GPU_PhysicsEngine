@@ -26,7 +26,7 @@ namespace MassEngine.Game.Tests
             a = Unit("Melee", 0, -40); b = Unit("Ranged", 1, 40);
             config = ScriptableObject.CreateInstance<WarSandboxBattlefieldConfig>();
             battlefield = new WarSandboxBattlefieldEntry { id = "test-field", displayName = "Test",
-                scenePath = "Assets/Game/Scenes/WarSandbox.unity", rules = config };
+                scenePath = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity", rules = config };
             catalog = ScriptableObject.CreateInstance<WarSandboxBattlefieldCatalog>();
             catalog.entries = new[] { battlefield }; catalog.defaultEntryId = battlefield.id;
             catalog.templates = new[] {

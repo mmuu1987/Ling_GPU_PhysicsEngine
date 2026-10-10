@@ -1,0 +1,3033 @@
+// TEST-ONLY v12 specialization; no production integration.
+#define MASS_TERRAIN_ENABLED 1
+#define MASS_LOCAL_ORDERS 1
+#pragma kernel ClearPendingDamage
+#pragma kernel ClearDensityMap
+#pragma kernel BuildDensityMap
+#pragma kernel BuildEngagementSlotOccupancy
+#pragma kernel SimulateCombatAndAccumulateDamage
+#pragma kernel ClearLaunchRequests
+#pragma kernel ObserveLocalOrders
+
+#pragma multi_compile_local __ MASS_MELEE_CHARGE
+
+// Shared declarations and helpers for the MassEngine compute pipeline.
+// Keep this file in sync with AgentData.cs / UnitTypeGpuSettings.cs.
+//
+// MassEngine contracts enforced here:
+// - Team identity has exactly ONE source of truth: teamIdReadBuffer. No kernel may
+//   infer team membership from buffer index ranges.
+// - Per-unit-type tuning parameters travel through unitTypeSettings (StructuredBuffer),
+//   indexed via unitTypeIndexReadBuffer. No per-unit-type scalar uniforms.
+// - hp is double-buffered: hpReadBuffer is last frame's snapshot (read by every kernel),
+//   hpBuffer is this frame's write target (written only by the combat kernel).
+
+#define STATE_IDLE 0
+#define STATE_MOVE 1
+#define STATE_ENGAGE 2
+#define STATE_ATTACK 3
+#define STATE_DEAD 4
+// Per-team stance, uploaded in teamStanceReadBuffer and indexed by raw teamId. Hold is 0
+// so an un-uploaded buffer freezes everyone rather than marching teams that should not.
+// GuardHome has no producer yet; it keeps the leash branch reachable for a future order.
+#define TEAM_STANCE_HOLD 0
+#define TEAM_STANCE_ADVANCE 1
+#define TEAM_STANCE_GUARD_HOME 2
+#define TEAM_STANCE_MOVE_ONLY 3
+#define TEAM_STANCE_HOLD_HERE 4
+#define FLOW_TARGET_NONE 0
+#define FLOW_TARGET_POINT 1
+#define FLOW_TARGET_AREA 2
+// Per-team stride of the runtime flow scratch buffers. Stats: [0] = cells sampled,
+// [1]/[2] = enemy position sum at 1m precision, [3] = sectors that met the quorum.
+// Targets: one float4 per sector, so this doubles as the sector-count ceiling.
+#define FLOW_STATS_PER_TEAM 4
+#define FLOW_TARGETS_PER_TEAM 8
+// Hard upper bound for the local target search radius (cells). The effective radius is
+// min(localTargetSearchCellRadius, ceil(targetAcquireRadius / cellSize)) and is driven
+// from C# so a configured acquire radius is never silently truncated without a warning.
+#define LOCAL_TARGET_SEARCH_MAX_CELL_RADIUS 4
+#define LOCAL_TARGET_SEARCH_INTERVAL 4u
+#define LOCAL_TARGET_SEARCH_GROUP_SIZE 64u
+#define ENGAGEMENT_SLOT_COUNT 8u
+#define ENGAGEMENT_SLOT_SHIFT 3u
+#define ENGAGEMENT_SLOT_MASK 7u
+
+struct AgentData
+{
+    float3 position;
+    float3 rotation;
+    float3 scale;
+    float3 velocity;
+    int currentState;
+    float currentAnimationTime;
+    int presentationState;
+    float locomotionSpeed;
+};
+
+// Mirror of MassEngine.UnitTypeGpuSettings (144 bytes, sequential layout).
+struct UnitTypeSettings
+{
+    float agentRadius;
+    float separationStrength;
+    float velocityDamping;
+    float maxSpeed;
+    float targetAcquireRadius;
+    float attackRange;
+    float attackInterval;
+    int attackDamage;
+    float densityAvoidanceStrength;
+    float densityPressureRangePerSqm;
+    float densitySpeedPenalty;
+    float speedVariation;
+    float laneBiasStrength;
+    float flowFieldWeight;
+    float flowFieldResponsiveness;
+    float attractionStrength;
+    float idleClipDuration;
+    float moveClipDuration;
+    float attackClipDuration;
+    float deathClipDuration;
+    float moveAnimationSpeedMin;
+    float moveAnimationSpeedMax;
+    float densityComfortPerSqm;
+    float projectileRange;
+    float projectileSpeed;
+    float projectileGravity;
+    float projectileHitRadius;
+    float projectileMaxLifetime;
+    // Consumed by the CPU projectile launcher; kept here to mirror the 144-byte stride.
+    float projectileTrailLength;
+    int teamId;
+    float moveReferenceSpeed;
+    float moveStopSpeed;
+    float moveStartSpeed;
+    // Former reserved slots; C# / HLSL layout remains 36 x 4 = 144 bytes.
+    float attackReleasePhase;
+    float projectileOriginHeight;
+    float projectileTargetHeight;
+};
+
+// One team's flow configuration, uploaded once per frame for every team.
+//
+// These used to be uniforms (attackerFlowTargetMode / defenderFlowTargetPoint / ...). They
+// cannot stay uniforms past two teams: the combat kernel reads each agent's OWN team
+// parameters, while a uniform would only ever hold the values of whichever team was
+// dispatched last. That would silently steer every team with one team's target.
+struct TeamFlowParams
+{
+    // x = targetMode (FLOW_TARGET_*), y = flow field enabled, z = dynamic targeting enabled,
+    // w = minimum enemies a sector needs before it becomes a target.
+    int4 modes;
+    // xy = configured target point (world xz), z = dynamic target stop radius,
+    // w = sector count.
+    float4 target;
+    // xy = configured target area center (world xz), zw = area size (world xz).
+    float4 area;
+};
+
+RWStructuredBuffer<AgentData> agentBuffer;
+StructuredBuffer<float2> agentPositionReadBuffer;
+RWStructuredBuffer<float2> agentPositionBuffer;
+RWStructuredBuffer<uint> gridCounts;
+RWStructuredBuffer<uint> gridAgentIndices;
+RWStructuredBuffer<uint> teamGridCounts;
+RWStructuredBuffer<uint> teamGridAgentIndices;
+// [0] = agents dropped this frame because their cell was full (visibility for the
+// silent failure mode where overflow victims vanish from neighborhood queries).
+RWStructuredBuffer<int> spatialHashStats;
+// One fixed-size record per team, used by low-frequency telemetry. Per-team layout:
+// alive count, sum X, sum Z, min X, min Z, max X, max Z, observation-zone count.
+// Total length is teamCount * TEAM_STATS_SLOTS_PER_TEAM (mirrors MassGpuBufferManager).
+#define TEAM_STATS_SLOTS_PER_TEAM 8
+RWStructuredBuffer<int> teamSpatialStats;
+int telemetryObservationZoneEnabled;
+float4 telemetryObservationZone;
+StructuredBuffer<uint> gridCountsReadBuffer;
+StructuredBuffer<uint> gridAgentIndicesReadBuffer;
+StructuredBuffer<uint> teamGridCountsReadBuffer;
+StructuredBuffer<uint> teamGridAgentIndicesReadBuffer;
+// Team-partitioned flow field: one float2 per cell per team, addressed as
+// teamId * FlowFieldCellCount() + cellIndex (see FlowFieldTeamCellIndex). Every team
+// shares one grid - same resolution, origin and cell size - which is what lets the cell
+// index stay team-independent.
+RWStructuredBuffer<float2> flowFieldDirections;
+StructuredBuffer<float2> flowFieldDirectionsReadBuffer;
+Texture2D<uint> densityMap;
+RWTexture2D<uint> densityMapWrite;
+Texture2D<uint> attackerDensityMap;
+Texture2D<uint> defenderDensityMap;
+RWTexture2D<uint> attackerDensityMapWrite;
+RWTexture2D<uint> defenderDensityMapWrite;
+// Team-partitioned runtime flow scratch, all indexed off flowTeamId by the flow kernels.
+// Strides: cellCount, FLOW_STATS_PER_TEAM, FLOW_TARGETS_PER_TEAM.
+RWStructuredBuffer<uint> runtimeFlowTargetDensity;
+RWStructuredBuffer<int> runtimeFlowStats;
+RWStructuredBuffer<float4> runtimeFlowTargets;
+// Rebound per dispatch to the team being rebuilt, so the shader keeps a single texture
+// however many teams exist.
+RWTexture2D<float4> runtimeFlowPreviewTexture;
+int runtimeFlowPreviewMode;
+int flowPreviewEnabled;
+
+StructuredBuffer<UnitTypeSettings> unitTypeSettings;
+StructuredBuffer<int> unitTypeIndexReadBuffer;
+
+RWStructuredBuffer<int> hpBuffer;            // this frame's write target (combat kernel only)
+StructuredBuffer<int> hpReadBuffer;          // last frame's snapshot (read everywhere)
+StructuredBuffer<int> teamIdReadBuffer;
+RWStructuredBuffer<int> targetAgentIndexBuffer;
+RWStructuredBuffer<int> engagementSlotAssignmentBuffer;
+RWStructuredBuffer<uint> engagementSlotOccupancyBuffer;
+StructuredBuffer<uint> engagementSlotOccupancyReadBuffer;
+RWStructuredBuffer<float> attackCooldownBuffer;
+StructuredBuffer<float3> homePositionReadBuffer;
+RWStructuredBuffer<int> pendingDamageBuffer;
+StructuredBuffer<int> pendingDamageReadBuffer;
+
+// Projectile system
+RWStructuredBuffer<int> launchRequestBuffer;
+
+// LOD classification runs once per unit type; only the buffers of the unit type
+// currently being classified are bound.
+int classifyUnitTypeIndex;
+AppendStructuredBuffer<uint> nearVisibleAgentIndices;
+AppendStructuredBuffer<uint> midVisibleAgentIndices;
+AppendStructuredBuffer<uint> farVisibleAgentIndices;
+
+float deltaTime;
+float currentTime;
+uint frameIndex;
+
+float3 lodCenter;
+float nearLodRadiusSqr;
+float midLodRadiusSqr;
+
+int enableFrustumCulling;
+float cullingRadius;
+float maxRenderDistanceSqr; // 0 = unlimited
+int farIncludeDead; // 1 = corpses render in the far tier too (no 120m corpse pop line)
+// Corpse despawn. A dead agent's currentAnimationTime doubles as its corpse age, so no
+// extra per-agent state is needed. 0 linger = corpses never despawn (legacy behaviour).
+// Mirrored by CorpseLifetime.cs.
+float corpseLingerSeconds;
+float corpseSinkSeconds;
+float4 frustumPlanes[6];
+
+int nearAnimationInterval;
+int midAnimationInterval;
+int farAnimationInterval;
+
+// LOD-scaled simulation frequency: agents in the near/mid/far tier run their DECISION
+// pass every 1/2/4-th frame (configurable). Rate-dependent quantities are integrated
+// with the compensated timestep, so behaviour (DPS, speeds) matches full rate.
+int nearSimulationInterval;
+int midSimulationInterval;
+int farSimulationInterval;
+
+uint gridCellCount;
+int2 gridResolution;
+float2 gridOrigin;
+float2 gridWorldSize;
+float cellSize;
+uint maxAgentsPerCell;
+float boundaryPadding;
+
+// The one flow grid every team shares. Per-team resolution/origin would mean per-team
+// cell indices, which is the simplification this whole layer is built on.
+int2 flowFieldResolution;
+float2 flowFieldOrigin;
+float flowFieldCellSize;
+// One record per team, indexed by raw teamId, length teamCount. Replaced the pairs of
+// attacker*/defender* flow uniforms.
+StructuredBuffer<TeamFlowParams> teamFlowParamsReadBuffer;
+// Which team the flow kernels are rebuilding this dispatch. One team per dispatch, so the
+// kernels can keep their 1D thread mapping over cells and read a single team's parameters.
+// Meaningless to the combat kernel - agents there read their own team's record instead.
+int flowTeamId;
+
+#define MAX_STATIC_OBSTACLES 8
+int staticObstacleCount;
+float staticObstaclePadding;
+float4 staticObstacleRects[MAX_STATIC_OBSTACLES];
+
+// Whether this frame resolves combat at all - not how many teams are on the field. It was
+// named enableTwoTeamCombat back when two teams were the only arrangement the pipeline had,
+// which read as a team-count switch long after IsEnemy became "any team but mine". A
+// crowd-only frame leaves it at 0, and then nobody is an enemy and nobody holds.
+int combatEnabled;
+int battleStarted;
+int attackerTeamId;
+int defenderTeamId;
+// How many teams the team-partitioned buffers (teamGridCounts / teamGridAgentIndices /
+// teamSpatialStats / teamStanceReadBuffer) were sized for. Any teamId outside
+// [0, teamCount) must be skipped, never clamped: clamping would silently merge a stray
+// team into team 0's bucket.
+int teamCount;
+// One TEAM_STANCE_* value per team, indexed by raw teamId. This replaced the single
+// defenderMovementMode uniform: stance is a property of a team, not of "the defender".
+StructuredBuffer<int> teamStanceReadBuffer;
+int localTargetSearchCellRadius;
+float defenderGuardRadius;
+
+#if defined(MASS_TERRAIN_ENABLED)
+#ifndef MASS_LOCAL_ORDERS_INCLUDED
+#define MASS_LOCAL_ORDERS_INCLUDED
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+struct LocalAgentOrder { int slotPlusOne; int sequence; int stance; int epoch; float2 arrival; float arrivalRegionRadius; float stopRadius; };
+StructuredBuffer<LocalAgentOrder> _LocalOrders;
+StructuredBuffer<float2> _LocalOrderFlow;
+StructuredBuffer<uint> _LocalOrderMask;
+RWStructuredBuffer<uint> _LocalOrderAck;
+int _LocalOrderEpoch, _LocalOrderCellCount;
+// Per-invocation register state, set only by the combat kernel; no shared team state or UAV indirection.
+static int localSelfSlot = -1;
+LocalAgentOrder SpecializedOrder(uint index) { LocalAgentOrder o=_LocalOrders[index];o.stance=4;return o; }
+bool HasLocalOrder(uint index) { return true; }
+#endif
+#endif
+
+#ifndef MASS_TERRAIN_NAVIGATION_INCLUDED
+#define MASS_TERRAIN_NAVIGATION_INCLUDED
+#ifndef MASS_TERRAIN_SURFACE_INCLUDED
+#define MASS_TERRAIN_SURFACE_INCLUDED
+StructuredBuffer<float> _SurfaceHeights;
+StructuredBuffer<uint> _SurfaceWalkable;
+int2 _SurfaceDimensions;
+float4 _SurfaceBounds; // origin XZ, size XZ
+
+// Returns height, gradient X, gradient Z, walkability (-1 means outside).
+float4 SampleTerrainSurface(float2 worldXZ)
+{
+    float2 local = worldXZ - _SurfaceBounds.xy;
+    if (any(!isfinite(worldXZ)) || any(local < 0) || any(local > _SurfaceBounds.zw))
+        return float4(0, 0, 0, -1);
+    float2 stepSize = _SurfaceBounds.zw / (_SurfaceDimensions - 1);
+    float2 grid = local / stepSize;
+    int2 cell = min((int2)floor(grid), _SurfaceDimensions - 2);
+    float2 uv = saturate(grid - cell);
+    int i = cell.y * _SurfaceDimensions.x + cell.x;
+    float a = _SurfaceHeights[i], b = _SurfaceHeights[i + 1];
+    float c = _SurfaceHeights[i + _SurfaceDimensions.x], d = _SurfaceHeights[i + _SurfaceDimensions.x + 1];
+    float2 gradient = uv.x >= uv.y ? float2(b - a, d - b) / stepSize : float2(d - c, c - a) / stepSize;
+    float height = a + dot(gradient, uv * stepSize);
+    return float4(height, gradient, _SurfaceWalkable[cell.y * (_SurfaceDimensions.x - 1) + cell.x]);
+}
+
+float3 TerrainSurfaceVelocity(float2 velocity, float2 gradient)
+{
+    float3 tangent = float3(velocity.x, dot(velocity, gradient), velocity.y);
+    return dot(tangent, tangent) > 0 ? normalize(tangent) * length(velocity) : 0;
+}
+#endif
+
+StructuredBuffer<uint> _NavigationWalkable;
+
+int2 TerrainNavCell(float2 p) { return (int2)floor((p - flowFieldOrigin) / flowFieldCellSize); }
+bool TerrainNavCellOpen(int2 cell)
+{
+    if (any(cell < 0) || any(cell >= flowFieldResolution)) return false;
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    return _LocalOrderMask[localSelfSlot*_LocalOrderCellCount+cell.y*flowFieldResolution.x+cell.x]!=0;
+#endif
+    return _NavigationWalkable[cell.y * flowFieldResolution.x + cell.x] != 0;
+}
+bool TerrainNavPointOpen(float2 p)
+{
+    if (!all(isfinite(p))) return false;
+    // CPU cells use double subtraction; GPU float subtraction can round a point
+    // just inside a blocked cell onto the adjacent open cell (e.g. z=33.9999962,
+    // origin=-256, cellSize=2). Enclose the subtraction/division roundoff and
+    // require every possibly occupied cell to be open. Never relax the CPU mask.
+    // This is a numerical guard, not a change to agent radius or nav clearance.
+    float magnitude = max(1.0, max(max(abs(p.x), abs(p.y)),
+                                  max(abs(flowFieldOrigin.x), abs(flowFieldOrigin.y))));
+    float guard = max(flowFieldCellSize * 1e-6, magnitude * 9.5367431640625e-7);
+    float2 relative = p - flowFieldOrigin;
+    int2 lo = (int2)floor((relative - guard) / flowFieldCellSize);
+    int2 hi = (int2)floor((relative + guard) / flowFieldCellSize);
+    // Fail closed if a future grid is too fine to resolve reliably in float.
+    if (any(hi - lo > 1)) return false;
+    return TerrainNavCellOpen(lo) && TerrainNavCellOpen(hi)
+        && TerrainNavCellOpen(int2(lo.x, hi.y))
+        && TerrainNavCellOpen(int2(hi.x, lo.y));
+}
+
+// Supercover DDA over the inflated navigation mask. Tied crossings require both
+// cardinal neighbours, exactly as in the CPU graph; large steps cannot jump a wall.
+bool TerrainSegmentClear(float2 start, float2 end)
+{
+    if (!TerrainNavPointOpen(start) || !TerrainNavPointOpen(end)) return false;
+    int2 cell = TerrainNavCell(start), goal = TerrainNavCell(end);
+    float2 delta = end - start;
+    int2 step = int2(delta.x > 0 ? 1 : (delta.x < 0 ? -1 : 0), delta.y > 0 ? 1 : (delta.y < 0 ? -1 : 0));
+    float2 nextBoundary = flowFieldOrigin + (cell + int2(step.x > 0 ? 1 : 0, step.y > 0 ? 1 : 0)) * flowFieldCellSize;
+    float2 tMax = float2(step.x == 0 ? 1e30 : (nextBoundary.x - start.x) / delta.x,
+                        step.y == 0 ? 1e30 : (nextBoundary.y - start.y) / delta.y);
+    float2 tDelta = float2(step.x == 0 ? 1e30 : flowFieldCellSize / abs(delta.x),
+                          step.y == 0 ? 1e30 : flowFieldCellSize / abs(delta.y));
+    [loop] for (int i = 0; i < flowFieldResolution.x + flowFieldResolution.y + 2; ++i)
+    {
+        if (all(cell == goal)) return true;
+        if (abs(tMax.x - tMax.y) <= 1e-6)
+        {
+            if (!TerrainNavCellOpen(cell + int2(step.x, 0)) || !TerrainNavCellOpen(cell + int2(0, step.y))) return false;
+            cell += step; tMax += tDelta;
+        }
+        else if (tMax.x < tMax.y) { cell.x += step.x; tMax.x += tDelta.x; }
+        else { cell.y += step.y; tMax.y += tDelta.y; }
+        if (!TerrainNavCellOpen(cell)) return false;
+    }
+    return false;
+}
+
+float TerrainDistanceSquared(float3 selfPosition, float2 targetXZ)
+{
+    float4 sample = SampleTerrainSurface(targetXZ);
+    if (sample.w < 0) return 1e30;
+    float3 delta = float3(targetXZ.x, sample.x, targetXZ.y) - selfPosition;
+    return dot(delta, delta);
+}
+
+void TerrainRestoreIntentVelocity(inout AgentData agent)
+{
+    float horizontal = length(agent.velocity.xz);
+    float speed = length(agent.velocity);
+    agent.velocity = horizontal > 1e-6 ? float3(agent.velocity.x / horizontal * speed, 0, agent.velocity.z / horizontal * speed) : 0;
+}
+
+void TerrainAnchor(inout AgentData agent)
+{
+    float4 sample = SampleTerrainSurface(agent.position.xz);
+    if (sample.w >= 0) agent.position.y = sample.x;
+}
+
+void TerrainIntegrate(inout AgentData agent, float dt)
+{
+    float3 before = agent.position;
+    float horizontal = length(agent.velocity.xz), speed = length(agent.velocity);
+    float4 sample = SampleTerrainSurface(before.xz);
+    if (sample.w < .5 || horizontal <= 1e-6 || dt <= 0) { agent.velocity = 0; TerrainAnchor(agent); return; }
+    float2 direction = agent.velocity.xz / horizontal;
+    float3 tangent = normalize(float3(direction.x, dot(direction, sample.yz), direction.y)) * speed;
+    float2 offset = tangent.xz * dt;
+    float budget = speed * dt;
+    float3 candidate = before;
+    [unroll] for (int attempt = 0; attempt < 4; ++attempt)
+    {
+        candidate.xz = before.xz + offset;
+        float4 next = SampleTerrainSurface(candidate.xz);
+        if (next.w < .5) { agent.velocity = 0; return; }
+        candidate.y = next.x;
+        float actual = length(candidate - before);
+        if (actual <= budget + 1e-5) break;
+        offset *= budget / max(actual, 1e-6);
+    }
+    if (length(candidate - before) > budget + 1e-4 || !TerrainSegmentClear(before.xz, candidate.xz))
+    { agent.velocity = 0; return; }
+    agent.position = candidate;
+    // Keep an actual tangent velocity. Decision frames restore horizontal intent once;
+    // light LOD frames preserve this magnitude instead of attenuating it again each step.
+    agent.velocity = tangent;
+}
+
+void TerrainConstrainPosition(float3 previousPosition, inout AgentData agent)
+{
+    if (!TerrainSegmentClear(previousPosition.xz, agent.position.xz))
+    { agent.position = previousPosition; agent.velocity = 0; }
+    TerrainAnchor(agent);
+}
+#endif
+
+
+#endif
+
+UnitTypeSettings GetUnitSettings(uint agentIndex)
+{
+    return unitTypeSettings[unitTypeIndexReadBuffer[agentIndex]];
+}
+
+bool IsInsideFrustum(float3 position)
+{
+    if (enableFrustumCulling == 0)
+        return true;
+
+    [unroll]
+    for (int i = 0; i < 6; i++)
+    {
+        if (dot(frustumPlanes[i].xyz, position) + frustumPlanes[i].w < -cullingRadius)
+            return false;
+    }
+
+    return true;
+}
+
+float SafeDt()
+{
+    return min(deltaTime, 0.05);
+}
+
+float4 ExpandedStaticObstacleRect(int obstacleIndex, float extraPadding)
+{
+    float padding = max(0.0, staticObstaclePadding + extraPadding);
+    float4 rect = staticObstacleRects[obstacleIndex];
+    return rect + float4(-padding, -padding, padding, padding);
+}
+
+bool PointInsideStaticObstacleRect(float2 positionXZ, float4 rect)
+{
+    return positionXZ.x >= rect.x && positionXZ.x <= rect.z && positionXZ.y >= rect.y && positionXZ.y <= rect.w;
+}
+
+bool SegmentIntersectsStaticObstacleRect(float2 start, float2 end, float4 rect, out float enterDistance01)
+{
+    float2 delta = end - start;
+    float enter = 0.0;
+    float exit = 1.0;
+
+    if (abs(delta.x) <= 0.000001)
+    {
+        if (start.x < rect.x || start.x > rect.z)
+        {
+            enterDistance01 = 1.0;
+            return false;
+        }
+    }
+    else
+    {
+        float2 tx = (float2(rect.x, rect.z) - start.x) / delta.x;
+        enter = max(enter, min(tx.x, tx.y));
+        exit = min(exit, max(tx.x, tx.y));
+    }
+
+    if (abs(delta.y) <= 0.000001)
+    {
+        if (start.y < rect.y || start.y > rect.w)
+        {
+            enterDistance01 = 1.0;
+            return false;
+        }
+    }
+    else
+    {
+        float2 ty = (float2(rect.y, rect.w) - start.y) / delta.y;
+        enter = max(enter, min(ty.x, ty.y));
+        exit = min(exit, max(ty.x, ty.y));
+    }
+
+    enterDistance01 = enter;
+    return exit >= enter && exit >= 0.0 && enter <= 1.0;
+}
+
+float2 DirectionOutOfStaticObstacle(float2 positionXZ, float4 rect)
+{
+    float4 distances = float4(
+        positionXZ.x - rect.x,
+        rect.z - positionXZ.x,
+        positionXZ.y - rect.y,
+        rect.w - positionXZ.y);
+    float nearest = min(min(distances.x, distances.y), min(distances.z, distances.w));
+    if (nearest == distances.x)
+        return float2(-1.0, 0.0);
+    if (nearest == distances.y)
+        return float2(1.0, 0.0);
+    if (nearest == distances.z)
+        return float2(0.0, -1.0);
+    return float2(0.0, 1.0);
+}
+
+// The existing runtime flow is a direct per-cell steering field, not an integration
+// cost field. Preserve that architecture and detour only when the cell-to-target ray
+// crosses an obstacle. The cheapest visible expanded corner becomes the local waypoint.
+float2 StaticObstacleAwareDirection(float2 start, float2 target, float extraPadding)
+{
+    float2 direct = target - start;
+    if (dot(direct, direct) <= 0.0001)
+        return 0.0;
+
+    int count = clamp(staticObstacleCount, 0, MAX_STATIC_OBSTACLES);
+    int blockingObstacle = -1;
+    float nearestEnter = 2.0;
+    for (int obstacleIndex = 0; obstacleIndex < count; obstacleIndex++)
+    {
+        float4 rect = ExpandedStaticObstacleRect(obstacleIndex, extraPadding);
+        if (PointInsideStaticObstacleRect(start, rect))
+            return DirectionOutOfStaticObstacle(start, rect);
+
+        float enter;
+        if (SegmentIntersectsStaticObstacleRect(start, target, rect, enter) && enter < nearestEnter)
+        {
+            blockingObstacle = obstacleIndex;
+            nearestEnter = enter;
+        }
+    }
+
+    if (blockingObstacle < 0)
+        return normalize(direct);
+
+    float4 blockingRect = ExpandedStaticObstacleRect(blockingObstacle, extraPadding);
+    float cornerMargin = max(0.2, extraPadding * 0.5 + 0.1);
+    float bestScore = 1e20;
+    float2 bestCorner = float2(blockingRect.x - cornerMargin, blockingRect.y - cornerMargin);
+    [unroll]
+    for (int cornerIndex = 0; cornerIndex < 4; cornerIndex++)
+    {
+        float2 corner = float2(
+            cornerIndex < 2 ? blockingRect.x - cornerMargin : blockingRect.z + cornerMargin,
+            (cornerIndex & 1) == 0 ? blockingRect.y - cornerMargin : blockingRect.w + cornerMargin);
+        float ignoredEnter;
+        bool crossesBlockingRect = SegmentIntersectsStaticObstacleRect(start, corner, blockingRect, ignoredEnter);
+        float score = length(corner - start) + length(target - corner);
+        if (crossesBlockingRect)
+            score += 100000.0;
+
+        // Reject a corner whose first leg immediately cuts through another obstacle.
+        for (int otherIndex = 0; otherIndex < count; otherIndex++)
+        {
+            if (otherIndex == blockingObstacle)
+                continue;
+            float4 otherRect = ExpandedStaticObstacleRect(otherIndex, extraPadding);
+            if (SegmentIntersectsStaticObstacleRect(start, corner, otherRect, ignoredEnter))
+                score += 100000.0;
+        }
+
+        if (score < bestScore)
+        {
+            bestScore = score;
+            bestCorner = corner;
+        }
+    }
+
+    float2 detour = bestCorner - start;
+    return dot(detour, detour) > 0.0001 ? normalize(detour) : normalize(direct);
+}
+
+void ApplyStaticObstacleBounds(uint agentIndex, inout AgentData agent)
+{
+    int count = clamp(staticObstacleCount, 0, MAX_STATIC_OBSTACLES);
+    float radius = max(0.05, GetUnitSettings(agentIndex).agentRadius);
+    for (int obstacleIndex = 0; obstacleIndex < count; obstacleIndex++)
+    {
+        float4 rect = ExpandedStaticObstacleRect(obstacleIndex, radius);
+        if (!PointInsideStaticObstacleRect(agent.position.xz, rect))
+            continue;
+
+        float2 normal = DirectionOutOfStaticObstacle(agent.position.xz, rect);
+        if (normal.x < 0.0)
+            agent.position.x = rect.x - 0.001;
+        else if (normal.x > 0.0)
+            agent.position.x = rect.z + 0.001;
+        else if (normal.y < 0.0)
+            agent.position.z = rect.y - 0.001;
+        else
+            agent.position.z = rect.w + 0.001;
+
+        float inwardSpeed = dot(agent.velocity.xz, -normal);
+        if (inwardSpeed > 0.0)
+            agent.velocity.xz += normal * inwardSpeed;
+    }
+}
+
+// -----------------------------------------------------------------------------
+// LOD-scaled simulation cadence.
+// The stagger phase is per 64-agent group (= one threadgroup), NOT per agent, so a
+// whole threadgroup takes the same active/skip branch and skipping saves real time
+// (per-lane stagger would diverge every warp and pay the heavy path anyway).
+// -----------------------------------------------------------------------------
+int GetSimulationInterval(float3 position)
+{
+    float3 offset = position - lodCenter;
+    offset.y = 0.0;
+    float distSqr = dot(offset, offset);
+    if (distSqr <= nearLodRadiusSqr)
+        return max(1, nearSimulationInterval);
+    if (distSqr <= midLodRadiusSqr)
+        return max(1, midSimulationInterval);
+    return max(1, farSimulationInterval);
+}
+
+bool IsSimulationActiveFrame(uint index, int simInterval)
+{
+    if (simInterval <= 1)
+        return true;
+
+    uint simGroup = index / LOCAL_TARGET_SEARCH_GROUP_SIZE;
+    return ((frameIndex + simGroup) % (uint)simInterval) == 0u;
+}
+
+// -----------------------------------------------------------------------------
+// State model (authoritative; mirrored by AgentStateMachine.cs and requirements.md R10):
+// - Alive states (Idle/Move/Engage/Attack) are RE-DERIVED every frame from the combat
+//   situation by priority Attack > Engage > Move > Idle. There are no edge constraints
+//   between alive states.
+// - Dead has absolute priority, is entered exactly when hp <= 0, and is terminal.
+// -----------------------------------------------------------------------------
+int ResolveAliveState(bool inAttackHold, bool hasEngageTarget, bool hasMoveDirection)
+{
+    if (inAttackHold)
+        return STATE_ATTACK;
+    if (hasEngageTarget)
+        return STATE_ENGAGE;
+    if (hasMoveDirection)
+        return STATE_MOVE;
+    return STATE_IDLE;
+}
+
+float GetClipDurationForState(UnitTypeSettings settings, int state)
+{
+    if (state == STATE_DEAD)
+        return max(settings.deathClipDuration, 0.0001);
+    if (state == STATE_ATTACK)
+        return max(settings.attackClipDuration, 0.0001);
+    if (state == STATE_MOVE || state == STATE_ENGAGE)
+        return max(settings.moveClipDuration, 0.0001);
+    return max(settings.idleClipDuration, 0.0001);
+}
+
+// Corpse age at which a body is dropped from every visible list. 0 = never despawn.
+float GetCorpseDespawnSeconds()
+{
+    return corpseLingerSeconds > 0.0 ? corpseLingerSeconds + max(corpseSinkSeconds, 0.0) : 0.0;
+}
+
+// A dead agent whose corpse age reached the despawn point. It stays in agentBuffer (its
+// slot is never recycled) but is submitted for nothing: no draw, no animation step, and
+// no combat/locomotion pass either - the classification and combat kernels both return
+// on this test before they touch the record. Because nothing writes a retired body again,
+// LOWERING corpseLingerSeconds at runtime no longer clamps an already-retired age back
+// down to the new ceiling; the comparison below still holds, so the body stays retired.
+bool IsCorpseDespawned(AgentData agent)
+{
+    return corpseLingerSeconds > 0.0
+        && agent.currentState == STATE_DEAD
+        && agent.currentAnimationTime >= GetCorpseDespawnSeconds();
+}
+
+// Called once for each simulated agent AFTER all position constraints. Tactical
+// state is deliberately not changed when pursuit is blocked.
+void UpdateLocomotionPresentation(inout AgentData agent, float3 previousPosition, UnitTypeSettings settings)
+{
+    if (deltaTime <= 0.0) return;
+    float bodyScale = max(0.01, abs(agent.scale.y));
+    float stopSpeed = max(0.0, settings.moveStopSpeed) * bodyScale;
+    float startSpeed = max(settings.moveStartSpeed, settings.moveStopSpeed + 0.01) * bodyScale;
+    float actualSpeed = length(agent.position - previousPosition) / deltaTime;
+    // Stop promptly; otherwise smooth the crowd's small positional corrections.
+    agent.locomotionSpeed = actualSpeed <= stopSpeed ? 0.0 :
+        lerp(agent.locomotionSpeed, actualSpeed, saturate(deltaTime * 12.0));
+    int visual = agent.currentState;
+    if (visual != STATE_ATTACK && visual != STATE_DEAD)
+        visual = agent.locomotionSpeed > (agent.presentationState == STATE_MOVE ? stopSpeed : startSpeed)
+            ? STATE_MOVE : STATE_IDLE;
+    if (visual != agent.presentationState)
+    {
+        // Death time is corpse age; SetAgentState owns its reset, not this selector.
+        if (visual != STATE_DEAD) agent.currentAnimationTime = 0.0;
+        agent.presentationState = visual;
+    }
+}
+
+// Advances the VAT time accumulator. Looping states wrap at their OWN clip duration so
+// the wrap point is phase-aligned with the clip (no visual pop); Dead keeps counting
+// past the end of the death clip because that accumulator doubles as the corpse age.
+void UpdateAnimationTime(uint index, inout AgentData agent, int interval)
+{
+    if (battleStarted == 0) return;
+    interval = max(interval, 1);
+    if ((frameIndex % (uint)interval) != 0)
+        return;
+
+    UnitTypeSettings settings = GetUnitSettings(index);
+    // Ranged phase is written by the per-frame combat clock, including skipped
+    // decision frames. Never advance it again here or let render LOD change its rate.
+    if (agent.currentState == STATE_ATTACK && settings.projectileRange > 0.01) return;
+    int visual = agent.currentState >= STATE_ATTACK ? agent.currentState : agent.presentationState;
+    float duration = GetClipDurationForState(settings, visual);
+    bool loop = agent.currentState != STATE_DEAD;
+
+    float animationSpeed = 1.0;
+    if (visual == STATE_MOVE)
+    {
+        float reference = settings.moveReferenceSpeed > 0.0 ? settings.moveReferenceSpeed : settings.maxSpeed;
+        reference = max(0.01, reference * max(0.01, abs(agent.scale.y)));
+        animationSpeed = clamp(agent.locomotionSpeed / reference,
+            settings.moveAnimationSpeedMin, settings.moveAnimationSpeedMax);
+    }
+
+    float nextTime = agent.currentAnimationTime + deltaTime * interval * animationSpeed;
+    if (loop)
+    {
+        agent.currentAnimationTime = fmod(nextTime, duration);
+        return;
+    }
+
+    // Dead: run past the death clip so the linger/sink schedule has an age to read. The
+    // VAT sampler clamps the death clip to its last frame, so the pose still holds. The
+    // ceiling keeps the float bounded: the despawn point, or the clip end when corpses
+    // are configured to stay forever.
+    float ceiling = corpseLingerSeconds > 0.0 ? GetCorpseDespawnSeconds() : duration;
+    agent.currentAnimationTime = min(nextTime, ceiling);
+}
+
+void SetAgentState(inout AgentData agent, int state)
+{
+    if (agent.currentState != state)
+        agent.currentAnimationTime = 0.0;
+
+    agent.currentState = state;
+}
+
+bool IsLocomotionState(int state)
+{
+    return state == STATE_IDLE || state == STATE_MOVE || state == STATE_ENGAGE;
+}
+
+void SetCrowdState(inout AgentData agent, int state)
+{
+    if (agent.currentState == state)
+        return;
+
+    if (!IsLocomotionState(agent.currentState) || !IsLocomotionState(state))
+        agent.currentAnimationTime = 0.0;
+
+    agent.currentState = state;
+}
+
+int2 PositionXzToCell(float2 positionXZ)
+{
+    float2 local = (positionXZ - gridOrigin) / max(cellSize, 0.0001);
+    int2 cell = (int2)floor(local);
+    cell.x = clamp(cell.x, 0, gridResolution.x - 1);
+    cell.y = clamp(cell.y, 0, gridResolution.y - 1);
+    return cell;
+}
+
+int2 PositionToCell(float3 position)
+{
+    return PositionXzToCell(position.xz);
+}
+
+uint CellToIndex(int2 cell)
+{
+    return (uint)(cell.y * gridResolution.x + cell.x);
+}
+
+int2 PositionXzToFlowFieldCell(float2 positionXZ)
+{
+    float2 local = (positionXZ - flowFieldOrigin) / max(flowFieldCellSize, 0.0001);
+    int2 cell = (int2)floor(local);
+    cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
+    cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
+    return cell;
+}
+
+int2 PositionToFlowFieldCell(float3 position)
+{
+    return PositionXzToFlowFieldCell(position.xz);
+}
+
+uint FlowFieldCellToIndex(int2 cell)
+{
+    return (uint)(cell.y * flowFieldResolution.x + cell.x);
+}
+
+uint FlowFieldCellCount()
+{
+    return (uint)max(1, flowFieldResolution.x * flowFieldResolution.y);
+}
+
+float2 FlowFieldCellCenter(int2 cell)
+{
+    return flowFieldOrigin + ((float2)cell + 0.5) * flowFieldCellSize;
+}
+
+// Where a team's slice of the flow field starts. Teams share the grid, so this is just a
+// stride, but going through one helper keeps every kernel honest about the partitioning.
+uint FlowFieldTeamCellIndex(int teamId, uint cellIndex)
+{
+    return (uint)max(0, teamId) * FlowFieldCellCount() + cellIndex;
+}
+
+// A team with no allocated record navigates by nothing rather than by team 0's field: an
+// out-of-range teamId must never be clamped into another team's slice.
+TeamFlowParams GetTeamFlowParams(int teamId)
+{
+    if (teamId >= 0 && teamId < teamCount)
+        return teamFlowParamsReadBuffer[teamId];
+
+    TeamFlowParams disabled;
+    disabled.modes = int4(FLOW_TARGET_NONE, 0, 0, 0);
+    disabled.target = float4(0.0, 0.0, 0.0, 0.0);
+    disabled.area = float4(0.0, 0.0, 0.0, 0.0);
+    return disabled;
+}
+
+// Effective command params never change the raw team id used by enemy tests/statistics.
+TeamFlowParams GetAgentFlowParams(uint index)
+{
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    if(HasLocalOrder(index))
+    {
+        LocalAgentOrder o=SpecializedOrder(index);TeamFlowParams p;
+        p.modes=o.stance==TEAM_STANCE_ADVANCE?int4(FLOW_TARGET_NONE,1,1,0):int4(FLOW_TARGET_POINT,o.stance==TEAM_STANCE_MOVE_ONLY?1:0,0,0);
+        p.target=float4(o.arrival,o.stopRadius,0);p.area=0;return p;
+    }
+#endif
+    return GetTeamFlowParams(teamIdReadBuffer[index]);
+}
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+float2 SampleLocalOrderFlow(uint index,float3 position)
+{
+    LocalAgentOrder o=SpecializedOrder(index);if((o.stance!=TEAM_STANCE_MOVE_ONLY && o.stance!=TEAM_STANCE_ADVANCE) || GetUnitSettings(index).flowFieldWeight<=0)return 0;
+    if(!TerrainNavPointOpen(position.xz))return 0;
+    float2 to=o.arrival-position.xz;float d2=dot(to,to);
+    if(o.stance==TEAM_STANCE_MOVE_ONLY && d2<=o.stopRadius*o.stopRadius)return 0;
+    // Only the clear terminal region uses local distributed arrival steering. Never cross an obstacle by chasing a point.
+    if(o.stance==TEAM_STANCE_MOVE_ONLY && d2<=o.arrivalRegionRadius*o.arrivalRegionRadius && TerrainSegmentClear(position.xz,o.arrival))return normalize(to);
+    int2 here=TerrainNavCell(position.xz);uint cell=here.y*flowFieldResolution.x+here.x;
+    float2 direction=_LocalOrderFlow[(o.slotPlusOne-1)*_LocalOrderCellCount+cell];if(dot(direction,direction)<.0001)return 0;
+    int2 next=here+(int2)sign(direction);float2 center=flowFieldOrigin+(next+.5)*flowFieldCellSize;
+    if(!TerrainSegmentClear(position.xz,center))return 0;float2 offset=center-position.xz;return dot(offset,offset)>.000001?normalize(offset):0;
+}
+#endif
+
+int terrainLaneApproach33; // Defaults off; explicitly set on every terrain binding.
+
+float2 SampleFlowDirection(uint index, int teamId, float3 position)
+{
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    if(HasLocalOrder(index))return SampleLocalOrderFlow(index,position);
+#endif
+    if (teamId < 0 || teamId >= teamCount)
+        return 0.0;
+
+    if (teamFlowParamsReadBuffer[teamId].modes.y == 0 || GetUnitSettings(index).flowFieldWeight <= 0.0)
+        return 0.0;
+
+    uint cell = FlowFieldTeamCellIndex(teamId, FlowFieldCellToIndex(PositionToFlowFieldCell(position)));
+    float2 direction = flowFieldDirectionsReadBuffer[cell];
+    float lengthSqr = dot(direction, direction);
+#if defined(MASS_TERRAIN_ENABLED)
+    int2 here = TerrainNavCell(position.xz);
+    if (!TerrainNavCellOpen(here)) return 0;
+    if (lengthSqr <= 0.0001)
+    {
+        // Only an explicitly reachable SAME cell can finish at its exact target;
+        // zero elsewhere means unreachable/awaiting a field, never straight-line fallback.
+        TeamFlowParams p = GetTeamFlowParams(teamId);
+        if (p.modes.x == FLOW_TARGET_POINT && all(here == TerrainNavCell(p.target.xy)))
+        {
+            float2 offset = p.target.xy - position.xz;
+            return dot(offset, offset) > max(p.target.z * p.target.z, 0.0001) ? normalize(offset) : 0;
+        }
+        return 0;
+    }
+    // Candidate direction is used only when its full one-cell sweep is clear.
+    // The actual integrator still checks every movement segment; otherwise use the
+    // original safe neighbour-center route (never unconditional interpolation).
+    if (terrainLaneApproach33 != 0 && GetTeamFlowParams(teamId).modes.x == FLOW_TARGET_NONE)
+    {
+        float2 forward = normalize(direction);
+        if (TerrainSegmentClear(position.xz, position.xz + forward * flowFieldCellSize))
+            return forward;
+    }
+    int2 next = here + (int2)sign(direction);
+    float2 nextCenter = flowFieldOrigin + (next + .5) * flowFieldCellSize;
+    if (!TerrainSegmentClear(position.xz, nextCenter)) return 0;
+    float2 offset = nextCenter - position.xz;
+    return dot(offset, offset) > 0.000001 ? normalize(offset) : 0;
+#else
+    if (lengthSqr <= 0.0001)
+        return 0.0;
+
+    if (lengthSqr > 1.0)
+        direction *= rsqrt(lengthSqr);
+
+    return direction;
+#endif
+}
+
+float2 FallbackDirection(uint id)
+{
+    uint h = id * 1664525u + 1013904223u;
+    float angle = (float)(h & 65535u) * (6.2831853 / 65535.0);
+    return float2(cos(angle), sin(angle));
+}
+
+float Hash01(uint seed)
+{
+    seed ^= seed >> 16;
+    seed *= 2246822519u;
+    seed ^= seed >> 13;
+    seed *= 3266489917u;
+    seed ^= seed >> 16;
+    return (float)(seed & 0x00FFFFFFu) / 16777215.0;
+}
+
+float SignedHash01(uint seed)
+{
+    return Hash01(seed) * 2.0 - 1.0;
+}
+
+uint SampleDensityCell(int2 cell)
+{
+    cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
+    cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
+    return densityMap[cell];
+}
+
+uint SampleFriendlyDensityCell(uint selfIndex, int2 cell)
+{
+    cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
+    cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
+
+    int team = teamIdReadBuffer[selfIndex];
+    uint result = densityMap[cell];
+    if (team == attackerTeamId)
+        result = attackerDensityMap[cell];
+    else if (team == defenderTeamId)
+        result = defenderDensityMap[cell];
+
+    // The current battle path is two-team, but keep non-standard/editor teams safe.
+    return result;
+}
+
+float2 SampleFriendlyDensityGradientCell(uint selfIndex, int2 cell)
+{
+    float densityL = (float)SampleFriendlyDensityCell(selfIndex, cell + int2(-1, 0));
+    float densityR = (float)SampleFriendlyDensityCell(selfIndex, cell + int2(1, 0));
+    float densityD = (float)SampleFriendlyDensityCell(selfIndex, cell + int2(0, -1));
+    float densityU = (float)SampleFriendlyDensityCell(selfIndex, cell + int2(0, 1));
+    return float2(densityR - densityL, densityU - densityD) * 0.5;
+}
+
+int2 DirectionToCellStep(float2 direction)
+{
+    float lenSqr = dot(direction, direction);
+    if (lenSqr <= 0.0001)
+        return int2(0, 0);
+
+    float2 unitDirection = direction * rsqrt(lenSqr);
+    int2 step = (int2)round(unitDirection);
+    if (step.x == 0 && step.y == 0)
+    {
+        if (abs(unitDirection.x) > abs(unitDirection.y))
+            step.x = unitDirection.x >= 0.0 ? 1 : -1;
+        else
+            step.y = unitDirection.y >= 0.0 ? 1 : -1;
+    }
+
+    return step;
+}
+
+float SampleAheadFriendlyDensity(uint selfIndex, int2 cell, float2 desiredDirection)
+{
+    // Single result variable: keeps fxc's flow analysis happy after inlining
+    // (the early-return form triggered a spurious uninitialized-variable warning).
+    float result = (float)SampleFriendlyDensityCell(selfIndex, cell);
+    int2 ahead = DirectionToCellStep(desiredDirection);
+    if (ahead.x != 0 || ahead.y != 0)
+    {
+        int2 side = DirectionToCellStep(float2(-desiredDirection.y, desiredDirection.x));
+        float aheadCenter = (float)SampleFriendlyDensityCell(selfIndex, cell + ahead);
+        float aheadLeft = (float)SampleFriendlyDensityCell(selfIndex, cell + ahead + side);
+        float aheadRight = (float)SampleFriendlyDensityCell(selfIndex, cell + ahead - side);
+        result = (aheadCenter * 2.0 + aheadLeft + aheadRight) * 0.25;
+    }
+
+    return result;
+}
+
+float FriendlyNavigationCost(uint selfIndex, float3 position, float2 direction)
+{
+    float lenSqr = dot(direction, direction);
+    if (lenSqr <= 0.0001)
+        return 1e20;
+
+    float2 unitDirection = direction * rsqrt(lenSqr);
+    float lookAhead = max(0.5, flowFieldCellSize);
+    int2 nearCell = PositionToFlowFieldCell(position + float3(unitDirection.x * lookAhead, 0.0, unitDirection.y * lookAhead));
+    int2 farCell = PositionToFlowFieldCell(position + float3(unitDirection.x * lookAhead * 2.0, 0.0, unitDirection.y * lookAhead * 2.0));
+    return (float)SampleFriendlyDensityCell(selfIndex, nearCell) +
+           (float)SampleFriendlyDensityCell(selfIndex, farCell) * 0.45;
+}
+
+float2 ApplyFriendlyDensityNavigation(uint selfIndex, float3 position, float2 navigationDirection)
+{
+    float lenSqr = dot(navigationDirection, navigationDirection);
+    if (lenSqr <= 0.0001)
+        return navigationDirection;
+
+    float2 forward = navigationDirection * rsqrt(lenSqr);
+    float2 side = float2(-forward.y, forward.x);
+    // Roughly +/- 38 degrees: enough to move into a neighboring lane without
+    // overriding the global flow field or turning a marching column backwards.
+    float2 left = normalize(forward * 0.79 + side * 0.61);
+    float2 right = normalize(forward * 0.79 - side * 0.61);
+    float forwardCost = FriendlyNavigationCost(selfIndex, position, forward);
+    float leftCost = FriendlyNavigationCost(selfIndex, position, left) + 0.65;
+    float rightCost = FriendlyNavigationCost(selfIndex, position, right) + 0.65;
+
+    // A stable per-agent epsilon breaks perfectly symmetric queues without flicker.
+    float lanePreference = SignedHash01(selfIndex ^ 0xA24BAED5u) * 0.04;
+    leftCost += lanePreference;
+    rightCost -= lanePreference;
+
+    float2 bestDirection = forward;
+    float bestCost = forwardCost;
+    if (leftCost < bestCost)
+    {
+        bestCost = leftCost;
+        bestDirection = left;
+    }
+    if (rightCost < bestCost)
+    {
+        bestCost = rightCost;
+        bestDirection = right;
+    }
+
+    float congestionGain = saturate((forwardCost - bestCost) / max(1.0, forwardCost));
+    float2 blended = lerp(forward, bestDirection, congestionGain * 0.78);
+    float blendedLenSqr = dot(blended, blended);
+    return blendedLenSqr > 0.0001 ? blended * rsqrt(blendedLenSqr) : forward;
+}
+
+struct DensityPressureSample
+{
+    float2 avoidance;
+    float speedScale;
+    float pressure;
+    float centerPressure;
+    float aheadPressure;
+};
+
+DensityPressureSample ComputeDensityPressure(uint selfIndex, float3 position, float2 desiredDirection)
+{
+    DensityPressureSample result;
+    result.avoidance = 0.0;
+    result.speedScale = 1.0;
+    result.pressure = 0.0;
+    result.centerPressure = 0.0;
+    result.aheadPressure = 0.0;
+
+    UnitTypeSettings settings = GetUnitSettings(selfIndex);
+    int2 cell = PositionToFlowFieldCell(position);
+    // Density thresholds are authored in agents/m2 so they stay valid no matter how
+    // the flow-field cell size is retuned (a per-cell threshold silently saturated
+    // to 1.0 everywhere when cells grew from 2m to 5m).
+    float cellArea = max(0.25, flowFieldCellSize * flowFieldCellSize);
+    float comfort = max(0.0, settings.densityComfortPerSqm);
+    float range = max(0.01, settings.densityPressureRangePerSqm);
+    // Friendly pressure must remain strong while approaching an enemy formation. The
+    // previous all-agent map treated the enemy front as a wall, forcing the combat path
+    // to globally weaken avoidance and consequently allowing friendly ranks to overlap.
+    float centerDensity = (float)SampleFriendlyDensityCell(selfIndex, cell) / cellArea;
+    float centerPressure = saturate((centerDensity - comfort) / range);
+    float aheadPressure = saturate((SampleAheadFriendlyDensity(selfIndex, cell, desiredDirection) / cellArea - comfort) / range);
+    float pressure = max(centerPressure, aheadPressure);
+    result.pressure = pressure;
+    result.centerPressure = centerPressure;
+    result.aheadPressure = aheadPressure;
+
+    float penalty = saturate(settings.densitySpeedPenalty);
+    result.speedScale = saturate(1.0 - pressure * penalty);
+
+    float strength = max(0.0, settings.densityAvoidanceStrength);
+    float2 gradient = SampleFriendlyDensityGradientCell(selfIndex, cell);
+    float gradLenSqr = dot(gradient, gradient);
+    if (pressure > 0.0 && strength > 0.0 && gradLenSqr > 0.0001)
+        result.avoidance = -normalize(gradient) * strength * pressure;
+
+    float desiredLenSqr = dot(desiredDirection, desiredDirection);
+    if (aheadPressure > 0.0 && strength > 0.0 && desiredLenSqr > 0.0001)
+    {
+        float2 forward = desiredDirection * rsqrt(desiredLenSqr);
+        float2 side = float2(-forward.y, forward.x);
+        float lane = SignedHash01(selfIndex ^ 0xD1B54A35u);
+        result.avoidance += side * lane * strength * aheadPressure * 0.65;
+    }
+
+    return result;
+}
+
+float AgentSpeedMultiplier(uint agentId, uint selfIndex)
+{
+    float variation = saturate(GetUnitSettings(selfIndex).speedVariation);
+    return 1.0 + SignedHash01(agentId ^ 0x9E3779B9u) * variation;
+}
+
+float2 ApplyStableLaneBias(uint agentId, uint selfIndex, float2 direction, float pressure)
+{
+    float lenSqr = dot(direction, direction);
+    if (lenSqr <= 0.0001)
+        return direction;
+
+    float strength = saturate(GetUnitSettings(selfIndex).laneBiasStrength);
+    if (strength <= 0.0)
+        return direction * rsqrt(lenSqr);
+
+    float2 unitDirection = direction * rsqrt(lenSqr);
+    float2 side = float2(-unitDirection.y, unitDirection.x);
+    float lane = SignedHash01(agentId ^ 0x85EBCA6Bu);
+    float laneScale = strength * lerp(0.35, 1.0, saturate(pressure));
+    return normalize(unitDirection + side * lane * laneScale);
+}
+
+float3 HsvToRgb(float3 hsv)
+{
+    float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    float3 p = abs(frac(hsv.xxx + k.xyz) * 6.0 - k.www);
+    return hsv.z * lerp(k.xxx, saturate(p - k.xxx), hsv.y);
+}
+
+float3 FlowDirectionToPreviewColor(float2 direction)
+{
+    float magnitude = saturate(length(direction));
+    if (magnitude <= 0.0001)
+        return float3(0.03, 0.03, 0.03);
+
+    float hue = atan2(direction.y, direction.x) / 6.2831853;
+    if (hue < 0.0)
+        hue += 1.0;
+
+    float saturation = lerp(0.35, 0.9, magnitude);
+    float value = lerp(0.28, 0.88, magnitude);
+    return HsvToRgb(float3(hue, saturation, value));
+}
+
+float GetAgentRadius(uint index)
+{
+    return GetUnitSettings(index).agentRadius;
+}
+
+float GetSeparationStrength(uint index)
+{
+    return GetUnitSettings(index).separationStrength;
+}
+
+float GetVelocityDamping(uint index)
+{
+    return GetUnitSettings(index).velocityDamping;
+}
+
+float GetMaxSpeed(uint index)
+{
+    return GetUnitSettings(index).maxSpeed;
+}
+
+float GetTargetAcquireRadius(uint index)
+{
+    return GetUnitSettings(index).targetAcquireRadius;
+}
+
+int GetLocalTargetSearchCellRadius(float maxTargetRadius)
+{
+    int radiusFromDistance = (int)ceil(max(0.0, maxTargetRadius) / max(cellSize, 0.0001));
+    int configuredLimit = clamp(localTargetSearchCellRadius, 1, LOCAL_TARGET_SEARCH_MAX_CELL_RADIUS);
+    return clamp(radiusFromDistance, 1, configuredLimit);
+}
+
+// Search cadence counts DECISION passes, not global frames, so it stays aligned with
+// the LOD simulation interval for any value (a frame-based gate silently stretched the
+// re-target period to lcm(simInterval, 4) frames for non-power-of-two intervals).
+bool ShouldSearchForLocalTarget(uint selfIndex, int simInterval)
+{
+    uint groupIndex = selfIndex / LOCAL_TARGET_SEARCH_GROUP_SIZE;
+    uint interval = (uint)max(1, simInterval);
+    uint decisionIndex = (frameIndex + groupIndex) / interval;
+    uint cadence = max(1u, LOCAL_TARGET_SEARCH_INTERVAL / interval);
+    return (decisionIndex % cadence) == 0u;
+}
+
+float GetAttackRange(uint index)
+{
+    UnitTypeSettings settings = GetUnitSettings(index);
+    // 统一使用有效射程：远程单位用 projectileRange，近战单位用 attackRange
+    return settings.projectileRange > 0.01 ? settings.projectileRange : settings.attackRange;
+}
+
+int GetAttackDamage(uint index)
+{
+    return GetUnitSettings(index).attackDamage;
+}
+
+float GetAttackInterval(uint index)
+{
+    return GetUnitSettings(index).attackInterval;
+}
+
+float AttackExitRange(uint selfIndex)
+{
+    float effectiveRange = GetAttackRange(selfIndex);
+    return effectiveRange + max(0.25, GetAgentRadius(selfIndex) * 0.75);
+}
+
+float3 ClampVelocity(uint selfIndex, float3 velocity)
+{
+    velocity.y = 0.0;
+    float speedSqr = dot(velocity.xz, velocity.xz);
+    float maxSpeed = GetMaxSpeed(selfIndex);
+    float maxSpeedSqr = maxSpeed * maxSpeed;
+    if (speedSqr > maxSpeedSqr && speedSqr > 0.0001)
+        velocity.xz *= maxSpeed * rsqrt(speedSqr);
+    return velocity;
+}
+
+void ApplyBounds(inout AgentData agent)
+{
+    float2 minXZ = gridOrigin + boundaryPadding;
+    float2 maxXZ = gridOrigin + gridWorldSize - boundaryPadding;
+
+    if (agent.position.x < minXZ.x)
+    {
+        agent.position.x = minXZ.x;
+        agent.velocity.x = abs(agent.velocity.x) * 0.25;
+    }
+    else if (agent.position.x > maxXZ.x)
+    {
+        agent.position.x = maxXZ.x;
+        agent.velocity.x = -abs(agent.velocity.x) * 0.25;
+    }
+
+    if (agent.position.z < minXZ.y)
+    {
+        agent.position.z = minXZ.y;
+        agent.velocity.z = abs(agent.velocity.z) * 0.25;
+    }
+    else if (agent.position.z > maxXZ.y)
+    {
+        agent.position.z = maxXZ.y;
+        agent.velocity.z = -abs(agent.velocity.z) * 0.25;
+    }
+}
+
+void FaceDirection(inout AgentData agent, float2 direction)
+{
+    if (dot(direction, direction) <= 0.0001)
+        return;
+
+    agent.rotation.y = degrees(atan2(direction.x, direction.y));
+}
+
+float NormalizeAngleDeltaDegrees(float angle)
+{
+    return angle - 360.0 * floor((angle + 180.0) / 360.0);
+}
+
+void SmoothFaceDirectionDt(inout AgentData agent, float2 direction, float deadZoneDistance, float maxDegreesPerSecond, float dt)
+{
+    float lenSqr = dot(direction, direction);
+    float deadZoneSqr = deadZoneDistance * deadZoneDistance;
+    if (lenSqr <= max(0.0001, deadZoneSqr))
+        return;
+
+    float targetYaw = degrees(atan2(direction.x, direction.y));
+    float deltaYaw = NormalizeAngleDeltaDegrees(targetYaw - agent.rotation.y);
+    float maxStep = max(1.0, maxDegreesPerSecond) * dt;
+    agent.rotation.y += clamp(deltaYaw, -maxStep, maxStep);
+}
+
+void SmoothFaceDirection(inout AgentData agent, float2 direction, float deadZoneDistance, float maxDegreesPerSecond)
+{
+    SmoothFaceDirectionDt(agent, direction, deadZoneDistance, maxDegreesPerSecond, SafeDt());
+}
+
+// Alive test against last frame's hp snapshot. All kernels (including the combat kernel
+// when it inspects OTHER agents) use the snapshot; only the combat kernel resolves its
+// OWN hp for this frame. An agent killed this frame is therefore observed alive by its
+// neighbours until next frame — a deterministic one-frame latency.
+bool IsAliveIndex(uint index)
+{
+    return hpReadBuffer[index] > 0;
+}
+
+bool IsEnemy(uint selfIndex, uint otherIndex)
+{
+    if (combatEnabled == 0)
+        return false;
+
+    return teamIdReadBuffer[selfIndex] != teamIdReadBuffer[otherIndex];
+}
+
+int TeamStanceOf(uint index)
+{
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    if(HasLocalOrder(index))return SpecializedOrder(index).stance;
+#endif
+    int teamId = teamIdReadBuffer[index];
+    // A teamId outside the allocated range has no stance record. Advance matches what such
+    // an agent did before stances existed: it fell through to the attacker branch.
+    if (teamId < 0 || teamId >= teamCount)
+        return TEAM_STANCE_ADVANCE;
+
+    return teamStanceReadBuffer[teamId];
+}
+
+// Gated on combatEnabled so a crowd-only frame (combat disabled) leaves nobody
+// holding, exactly as the old defender predicate did.
+bool IsHoldStance(uint index)
+{
+    int stance = TeamStanceOf(index);
+    return combatEnabled != 0 && (stance == TEAM_STANCE_HOLD || stance == TEAM_STANCE_HOLD_HERE);
+}
+
+// retainExisting: true when validating an agent's CURRENT target (hysteresis applies),
+// false for fresh acquisition (strict gates). Hold defenders keep an engaged target out
+// to AttackExitRange, mirroring the attacker-side hysteresis — without it, crowd jitter
+// across the exact attackRange line produced systematic one-sided trades.
+bool TargetIsUsable(uint selfIndex, uint otherIndex, float distSqr, float3 selfPosition, bool retainExisting)
+{
+    // Explicit Move/Retreat must release existing enemies as well as reject new
+    // acquisition; otherwise front ranks keep fighting while only the rear obeys.
+    if (TeamStanceOf(selfIndex) == TEAM_STANCE_MOVE_ONLY) return false;
+
+    if (selfIndex == otherIndex || !IsAliveIndex(otherIndex) || !IsEnemy(selfIndex, otherIndex))
+        return false;
+
+    if (IsHoldStance(selfIndex))
+    {
+        float holdRange = retainExisting ? AttackExitRange(selfIndex) : GetAttackRange(selfIndex);
+        return distSqr <= holdRange * holdRange;
+    }
+
+    // Everyone not holding acquires on aggro radius alone - advancing defenders used to
+    // take a separate branch with identical arithmetic. No spawn-anchored chase leash
+    // here: it broke the doctrine outright (defenders relocated by their flow field could
+    // never acquire targets again); leashing belongs to an explicit order, not to this.
+    float acquireRadius = GetTargetAcquireRadius(selfIndex);
+    float acquireSqr = acquireRadius * acquireRadius;
+    return distSqr <= acquireSqr;
+}
+
+bool CurrentTargetIsValid(uint selfIndex, AgentData self, int targetIndex)
+{
+    if (targetIndex < 0)
+        return false;
+
+    uint otherIndex = (uint)targetIndex;
+    float2 delta = agentPositionReadBuffer[otherIndex] - self.position.xz;
+    bool retainExisting = self.currentState == STATE_ATTACK;
+#if defined(MASS_TERRAIN_ENABLED)
+    return TargetIsUsable(selfIndex, otherIndex, TerrainDistanceSquared(self.position, agentPositionReadBuffer[otherIndex]), self.position, retainExisting);
+#else
+    return TargetIsUsable(selfIndex, otherIndex, dot(delta, delta), self.position, retainExisting);
+#endif
+}
+
+float2 ConfiguredFlowTargetOffset(float2 position, int targetMode, float4 targetPoint, float4 targetArea)
+{
+    if (targetMode == FLOW_TARGET_POINT)
+        return targetPoint.xy - position;
+
+    if (targetMode == FLOW_TARGET_AREA)
+    {
+        float2 halfSize = max(targetArea.zw, 0.0) * 0.5;
+        float2 closest = clamp(position, targetArea.xy - halfSize, targetArea.xy + halfSize);
+        return closest - position;
+    }
+
+    return 0.0;
+}
+
+struct NeighborhoodQueryResult
+{
+    int bestEnemyIndex;
+    float bestEnemyScore;
+    float2 separation;
+    float2 contactSeparation;
+    bool friendlyAhead;
+};
+
+uint CurrentEngagementOccupancy(uint targetIndex, uint slot)
+{
+    uint packed = engagementSlotOccupancyReadBuffer[targetIndex * ENGAGEMENT_SLOT_COUNT + slot];
+    uint stamp = frameIndex & 0x00FFFFFFu;
+    return (packed >> 8) == stamp ? packed & 0xFFu : 0u;
+}
+
+uint CurrentTargetLoad(uint targetIndex)
+{
+    uint load = 0u;
+    [unroll]
+    for (uint slot = 0u; slot < ENGAGEMENT_SLOT_COUNT; slot++)
+        load += CurrentEngagementOccupancy(targetIndex, slot);
+    return load;
+}
+
+float TargetLoadCapacity(uint selfIndex, uint targetIndex)
+{
+    float selfRadius = max(0.05, GetAgentRadius(selfIndex));
+    float targetRadius = max(0.05, GetAgentRadius(targetIndex));
+    float attackRange = max(0.1, GetAttackRange(selfIndex));
+    float engagementRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
+    float circumference = 6.2831853 * max(engagementRadius, selfRadius + targetRadius);
+    float geometricCapacity = floor(circumference / max(0.1, selfRadius * 2.0));
+    return clamp(geometricCapacity, 1.0, (float)ENGAGEMENT_SLOT_COUNT);
+}
+
+float TargetLoadRatio(uint selfIndex, uint targetIndex)
+{
+    return (float)CurrentTargetLoad(targetIndex) / TargetLoadCapacity(selfIndex, targetIndex);
+}
+
+float TargetSelectionScore(uint selfIndex, uint targetIndex, float distSqr)
+{
+    float distanceScore = sqrt(max(0.0, distSqr)) / max(0.1, GetTargetAcquireRadius(selfIndex));
+    float loadRatio = TargetLoadRatio(selfIndex, targetIndex);
+    float loadPenalty = saturate(loadRatio) * 0.30 + max(0.0, loadRatio - 1.0) * 0.15;
+
+    // A stable per-agent affinity breaks up synchronized switching when many agents
+    // observe the same one-frame-old load snapshot. Distance still dominates when
+    // candidates are meaningfully separated.
+    float affinity = Hash01(selfIndex ^ (targetIndex * 0x9E3779B9u)) * 0.45;
+    return distanceScore + loadPenalty + affinity;
+}
+
+NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent, float maxTargetRadius, bool searchForEnemy, float2 travelForward)
+{
+    float2 selfPosition = agent.position.xz;
+    int2 homeCell = PositionXzToCell(selfPosition);
+    float selfRadius = GetAgentRadius(selfIndex);
+    int queryCellRadius = searchForEnemy ? GetLocalTargetSearchCellRadius(maxTargetRadius) : 1;
+
+    NeighborhoodQueryResult result;
+    result.bestEnemyIndex = -1;
+    result.bestEnemyScore = 1e20;
+    result.separation = 0.0;
+    result.contactSeparation = 0.0;
+    result.friendlyAhead = false;
+    float bodyRadius = selfRadius * max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
+    // Every team except the agent's own is hostile (no alliance concept yet), so the sweep
+    // walks all teamCount-1 opposing buckets instead of one fixed slot. This is the only
+    // place where widening the team dimension actually costs more work per agent. A teamId
+    // outside [0, teamCount) has no bucket of its own and disables the sweep rather than
+    // reading past the end of the team grid.
+    int selfTeamId = teamIdReadBuffer[selfIndex];
+    uint teamSlotCount = (uint)max(0, teamCount);
+    bool sweepEnemies = searchForEnemy && selfTeamId >= 0 && (uint)selfTeamId < teamSlotCount;
+
+    [loop]
+    for (int dz = -queryCellRadius; dz <= queryCellRadius; dz++)
+    {
+        [loop]
+        for (int dx = -queryCellRadius; dx <= queryCellRadius; dx++)
+        {
+            int2 cell = homeCell + int2(dx, dz);
+            if (cell.x < 0 || cell.y < 0 || cell.x >= gridResolution.x || cell.y >= gridResolution.y)
+                continue;
+
+            uint cellIndex = CellToIndex(cell);
+            if (sweepEnemies)
+            {
+                [loop]
+                for (uint enemyTeamSlot = 0; enemyTeamSlot < teamSlotCount; enemyTeamSlot++)
+                {
+                    if (enemyTeamSlot == (uint)selfTeamId)
+                        continue;
+
+                    uint enemyCellIndex = enemyTeamSlot * gridCellCount + cellIndex;
+                    uint enemyCount = min(teamGridCountsReadBuffer[enemyCellIndex], maxAgentsPerCell);
+                    for (uint i = 0; i < enemyCount; i++)
+                    {
+                        uint otherIndex = teamGridAgentIndicesReadBuffer[enemyCellIndex * maxAgentsPerCell + i];
+                        if (!IsAliveIndex(otherIndex))
+                            continue;
+
+                        float2 toOther = agentPositionReadBuffer[otherIndex] - selfPosition;
+#if defined(MASS_TERRAIN_ENABLED)
+                        float distSqr = TerrainDistanceSquared(agent.position, agentPositionReadBuffer[otherIndex]);
+#else
+                        float distSqr = dot(toOther, toOther);
+#endif
+                        if (TargetIsUsable(selfIndex, otherIndex, distSqr, agent.position, false))
+                        {
+                            float score = TargetSelectionScore(selfIndex, otherIndex, distSqr);
+                            if (score < result.bestEnemyScore)
+                            {
+                                result.bestEnemyScore = score;
+                                result.bestEnemyIndex = (int)otherIndex;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (abs(dx) > 1 || abs(dz) > 1)
+                continue;
+
+            uint occupantCount = min(gridCountsReadBuffer[cellIndex], maxAgentsPerCell);
+            for (uint i = 0; i < occupantCount; i++)
+            {
+                uint otherIndex = gridAgentIndicesReadBuffer[cellIndex * maxAgentsPerCell + i];
+                if (otherIndex == selfIndex || !IsAliveIndex(otherIndex))
+                    continue;
+
+                float2 otherPosition = agentPositionReadBuffer[otherIndex];
+                float2 toOther = otherPosition - selfPosition;
+                float distSqr = dot(toOther, toOther);
+                // Positions use the frame snapshot. Scale is immutable spawn data;
+                // no neighbor velocity/state is sampled while that neighbor is writing.
+                float3 otherScale = agentBuffer[otherIndex].scale;
+                float bodyDistance = bodyRadius + GetAgentRadius(otherIndex) * max(0.01, max(abs(otherScale.x), abs(otherScale.z)));
+                float forwardDistance = dot(toOther, travelForward);
+                float sideDistance = abs(toOther.x * travelForward.y - toOther.y * travelForward.x);
+                if (teamIdReadBuffer[otherIndex] == selfTeamId && forwardDistance > 0.001 &&
+                    forwardDistance < bodyDistance + max(0.15, bodyRadius * 0.5) && sideDistance < bodyDistance * 0.85)
+                    result.friendlyAhead = true;
+                if (distSqr < bodyDistance * bodyDistance * 0.81)
+                {
+                    float2 away = distSqr > 0.000001 ? -toOther * rsqrt(distSqr) : FallbackDirection(selfIndex);
+                    result.contactSeparation += away * (bodyDistance * 0.9 - sqrt(max(0.0, distSqr)));
+                }
+                float minDistance = selfRadius + GetAgentRadius(otherIndex);
+                float minDistanceSqr = minDistance * minDistance;
+                if (distSqr >= minDistanceSqr)
+                    continue;
+
+                float2 separationDelta = selfPosition - otherPosition;
+                if (distSqr < 0.000001)
+                {
+                    separationDelta = FallbackDirection(selfIndex) * 0.001;
+                    distSqr = dot(separationDelta, separationDelta);
+                }
+
+                float dist = max(sqrt(max(distSqr, 0.000001)), 0.0001);
+                result.separation += (separationDelta / dist) * (minDistance - dist);
+            }
+        }
+    }
+
+    return result;
+}
+
+// Classifies ONE unit type per dispatch (classifyUnitTypeIndex). Animation time is
+// advanced here exactly once per agent per frame because every agent belongs to exactly
+// one unit type.
+void AppendVisibleAgentForUnitType(uint index, inout AgentData agent)
+{
+    float3 offset = agent.position - lodCenter;
+    offset.y = 0.0;
+    float distSqr = dot(offset, offset);
+    bool isNear = distSqr <= nearLodRadiusSqr;
+    bool isMid = !isNear && distSqr <= midLodRadiusSqr;
+    int animationInterval = isNear ? nearAnimationInterval : (isMid ? midAnimationInterval : farAnimationInterval);
+    // Without farIncludeDead the mid->far boundary is a hard corpse pop line: bodies
+    // render inside it and vanish beyond it as the camera moves.
+    bool includeFar = farIncludeDead != 0 || IsAliveIndex(index);
+
+    UpdateAnimationTime(index, agent, animationInterval);
+
+    // Despawned corpses leave the render path entirely: no draw, no shadow, no animation
+    // fetch. Reached only on the frame the age first reaches its ceiling - from the next
+    // frame the classification kernel returns before it even calls this.
+    if (IsCorpseDespawned(agent))
+        return;
+
+    // The near ring is the only shadow-casting tier and the same visible list feeds
+    // every camera and the ShadowCaster pass: culling it against the main camera's
+    // frustum makes shadows of off-screen/behind-camera units pop at the screen edge.
+    // Its instance count is bounded by pi*nearRadius^2*density, so exempting it from
+    // both distance and frustum culling is cheap; mid/far stay culled.
+    if (!isNear)
+    {
+        // Visibility budget: on km-scale battlefields agents beyond this range are
+        // sub-pixel; dropping them caps the worst-case visible instance count.
+        if (maxRenderDistanceSqr > 0.0 && distSqr > maxRenderDistanceSqr)
+            return;
+
+        if (!IsInsideFrustum(agent.position))
+            return;
+    }
+
+    if (isNear)
+        nearVisibleAgentIndices.Append(index);
+    else if (isMid)
+        midVisibleAgentIndices.Append(index);
+    else if (includeFar)
+        farVisibleAgentIndices.Append(index);
+}
+
+
+
+#ifndef MASS_CONGESTION_WAITING_INCLUDED
+#define MASS_CONGESTION_WAITING_INCLUDED
+// Only the combat kernel uses these helpers. Sharing its existing slot-assignment
+// UAV keeps DX11's eight-UAV limit; each invocation owns only its own tail record.
+StructuredBuffer<int> movementCommandRevisionBuffer;
+struct CongestionWait
+{
+    float2 anchor;
+    float2 forward;
+    float observedSeconds;
+    float remainingSeconds;
+    float commandRevision;
+    float rangedStatus; // 0 unknown, 1 clear, -1/-2 blocked with stable left/right preference
+    float2 rangedAnchor;
+    float rangedSeconds;
+    int rangedTargetPlusOne;
+};
+uint CongestionOffset(uint index)
+{
+    uint count, stride; agentBuffer.GetDimensions(count, stride);
+    return count + index * 12u;
+}
+CongestionWait ReadCongestion(uint index)
+{
+    uint b = CongestionOffset(index);
+    CongestionWait s;
+    s.anchor = asfloat(int2(engagementSlotAssignmentBuffer[b], engagementSlotAssignmentBuffer[b+1]));
+    s.forward = asfloat(int2(engagementSlotAssignmentBuffer[b+2], engagementSlotAssignmentBuffer[b+3]));
+    s.observedSeconds = asfloat(engagementSlotAssignmentBuffer[b+4]);
+    s.remainingSeconds = asfloat(engagementSlotAssignmentBuffer[b+5]);
+    s.commandRevision = asfloat(engagementSlotAssignmentBuffer[b+6]);
+    s.rangedStatus = asfloat(engagementSlotAssignmentBuffer[b+7]);
+    s.rangedAnchor = asfloat(int2(engagementSlotAssignmentBuffer[b+8], engagementSlotAssignmentBuffer[b+9]));
+    s.rangedSeconds = asfloat(engagementSlotAssignmentBuffer[b+10]);
+    s.rangedTargetPlusOne = engagementSlotAssignmentBuffer[b+11];
+    return s;
+}
+void WriteCongestion(uint index, CongestionWait s)
+{
+    uint b = CongestionOffset(index);
+    engagementSlotAssignmentBuffer[b] = asint(s.anchor.x);
+    engagementSlotAssignmentBuffer[b+1] = asint(s.anchor.y);
+    engagementSlotAssignmentBuffer[b+2] = asint(s.forward.x);
+    engagementSlotAssignmentBuffer[b+3] = asint(s.forward.y);
+    engagementSlotAssignmentBuffer[b+4] = asint(s.observedSeconds);
+    engagementSlotAssignmentBuffer[b+5] = asint(s.remainingSeconds);
+    engagementSlotAssignmentBuffer[b+6] = asint(s.commandRevision);
+    engagementSlotAssignmentBuffer[b+7] = asint(s.rangedStatus);
+    engagementSlotAssignmentBuffer[b+8] = asint(s.rangedAnchor.x);
+    engagementSlotAssignmentBuffer[b+9] = asint(s.rangedAnchor.y);
+    engagementSlotAssignmentBuffer[b+10] = asint(s.rangedSeconds);
+    engagementSlotAssignmentBuffer[b+11] = s.rangedTargetPlusOne;
+}
+void ClearCongestion(uint index)
+{
+    CongestionWait s = (CongestionWait)0;
+    WriteCongestion(index, s);
+}
+bool TickCongestion(uint index, inout AgentData agent, inout CongestionWait s, float dt)
+{
+    int team = teamIdReadBuffer[index];
+    float revision = 0.0;
+    if (team >= 0 && team < teamCount) revision = (float)movementCommandRevisionBuffer[team];
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    if(HasLocalOrder(index))revision=-(float)SpecializedOrder(index).sequence;
+#endif
+    if (s.commandRevision != revision)
+    {
+        s = (CongestionWait)0; s.commandRevision = revision;
+        agent.velocity = 0.0;
+        WriteCongestion(index, s);
+        return true; // New order is honored even on a skipped LOD decision frame.
+    }
+    if (s.remainingSeconds <= 0.0) return false;
+    s.remainingSeconds = max(0.0, s.remainingSeconds - dt);
+    WriteCongestion(index, s);
+    return s.remainingSeconds <= 0.0; // Retry immediately at expiry, not one LOD beat later.
+}
+bool ResolveCongestion(uint index, AgentData agent, UnitTypeSettings settings, float2 direction,
+    bool friendlyAhead, bool eligible, float dtSim, inout CongestionWait s)
+{
+    if (!eligible || dot(direction, direction) < 0.0001)
+    {
+        s.observedSeconds = 0.0; s.remainingSeconds = 0.0; s.forward = 0.0;
+        WriteCongestion(index, s); return false;
+    }
+    if (s.remainingSeconds > 0.0) return true;
+    float2 forward = normalize(direction);
+    // Direction is the CURRENT navigation path, not the straight line to a clicked
+    // destination. Legitimate turns/detours restart the observation window.
+    if (!friendlyAhead || s.observedSeconds <= 0.0 || dot(forward, s.forward) < 0.5)
+    {
+        s.anchor = agent.position.xz; s.forward = forward; s.observedSeconds = 0.0;
+    }
+    if (friendlyAhead)
+    {
+        s.observedSeconds += dtSim;
+        if (s.observedSeconds >= 0.4)
+        {
+            float scale = max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
+            float minimumProgressSpeed = max(0.06 * scale, min(settings.maxSpeed * 0.2, 0.6 * scale));
+            float netProgress = max(0.0, dot(agent.position.xz - s.anchor, s.forward));
+            if (netProgress < minimumProgressSpeed * s.observedSeconds)
+                s.remainingSeconds = 1.1 + 0.9 * Hash01(index ^ 0x6C8E9CF5u);
+            s.anchor = agent.position.xz; s.forward = forward; s.observedSeconds = 0.0;
+        }
+    }
+    WriteCongestion(index, s);
+    return s.remainingSeconds > 0.0;
+}
+#endif
+
+
+#ifndef MASS_RANGED_CLEARANCE_INCLUDED
+#define MASS_RANGED_CLEARANCE_INCLUDED
+#ifndef MASS_PROJECTILE_GEOMETRY_INCLUDED
+#define MASS_PROJECTILE_GEOMETRY_INCLUDED
+// Earliest sphere entry, not closest approach: terrain behind the sphere's front
+// must not swallow a hit just because it lies before the sphere's centre.
+bool ProjectileSphereEntry(float3 start, float3 travel, float3 centre, float radius, out float hitT)
+{
+    hitT = 2.0;
+    float3 offset = start - centre;
+    float c = dot(offset, offset) - radius * radius;
+    if (c <= 0.0)
+    {
+        hitT = 0.0;
+        return true;
+    }
+    float a = dot(travel, travel);
+    float b = dot(offset, travel);
+    if (a == 0.0 || b >= 0.0)
+        return false;
+    float discriminant = b * b - a * c;
+    if (discriminant < 0.0)
+        return false;
+    hitT = c / (-b + sqrt(discriminant));
+    return hitT <= 1.0;
+}
+
+// 弹道数据结构（与 C# ProjectileGpuData 对齐，64 字节）
+struct ProjectileData
+{
+    float3 position;        // 当前位置 (12 bytes)
+    float launchTime;       // 发射时间 (4 bytes)
+
+    float3 velocity;        // 当前速度 (12 bytes)
+    float damage;           // 伤害值 (4 bytes)
+
+    int targetAgentIndex;   // 目标索引（-1 = 空闲槽位）(4 bytes)
+    int sourceTeamId;       // 发射方队伍 (4 bytes)
+    float hitRadius;        // 命中半径 (4 bytes)
+    float gravity;          // 重力加速度 (4 bytes)
+
+    float maxLifetime;      // 最大飞行时间 (4 bytes)
+    float trailLength;      // 曳光长度 (4 bytes)
+    int sourceAgentIndexPlusOne;
+    float splashRadius;     // 原 padding 槽位：落点溅射半径，0 = 单体（默认）(4 bytes)
+};
+
+bool ProjectileCapsuleEntry(float3 start, float3 travel, float3 lower, float3 upper, float radius, out float hitT)
+{
+    hitT = 2.0;
+    float t;
+    if (ProjectileSphereEntry(start, travel, lower, radius, t)) hitT = min(hitT, t);
+    if (ProjectileSphereEntry(start, travel, upper, radius, t)) hitT = min(hitT, t);
+    // Vertical cylinder between the two hemisphere centres, including initial overlap.
+    float2 offset = start.xz - lower.xz;
+    float c = dot(offset, offset) - radius * radius;
+    if (c <= 0.0 && start.y >= lower.y && start.y <= upper.y) hitT = 0.0;
+    float a = dot(travel.xz, travel.xz);
+    float b = dot(offset, travel.xz);
+    float d = b * b - a * c;
+    if (a > 1e-12 && d >= 0.0)
+    {
+        t = (-b - sqrt(d)) / a;
+        float y = start.y + travel.y * t;
+        if (t >= 0.0 && t <= 1.0 && y >= lower.y && y <= upper.y) hitT = min(hitT, t);
+    }
+    return hitT <= 1.0;
+}
+
+
+#endif
+
+// Runtime unit collision. ProjectileData and sphere entry are declared by the caller.
+float projectileQueryRadius;
+
+void ConsiderProjectileUnit(uint index, ProjectileData proj, float3 start, float3 travel,
+    inout float nearestT, inout int hitIndex)
+{
+    if ((int)index + 1 == proj.sourceAgentIndexPlusOne || hpReadBuffer[index] <= 0) return;
+    UnitTypeSettings settings = GetUnitSettings(index);
+    AgentData agent = agentBuffer[index];
+    float2 xz = agentPositionReadBuffer[index];
+    float ground = agent.position.y;
+#ifdef MASS_TERRAIN_ENABLED
+    float4 surface = SampleTerrainSurface(xz);
+    if (surface.w < 0.0) return;
+    ground = surface.x;
+#endif
+    float height = 2.0 * max(0.05, settings.projectileTargetHeight) * max(0.01, abs(agent.scale.y));
+    float bodyRadius = max(0.05, settings.agentRadius) * max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
+    float cap = min(bodyRadius, height * 0.5);
+    float3 lower = float3(xz.x, ground + cap, xz.y);
+    float3 upper = float3(xz.x, ground + height - cap, xz.y);
+    float t;
+    if (ProjectileCapsuleEntry(start, travel, lower, upper, bodyRadius + max(0.0, proj.hitRadius), t)
+        && (t < nearestT || (t == nearestT && hitIndex >= 0 && (int)index < hitIndex)))
+    {
+        nearestT = t;
+        hitIndex = (int)index;
+    }
+}
+
+void SweepProjectileUnits(ProjectileData proj, float3 start, float3 end, uint agentCount,
+    inout float nearestT, inout int hitIndex)
+{
+    float padding = max(0.0, projectileQueryRadius) + max(0.0, proj.hitRadius);
+    int2 first = PositionXzToCell(min(start.xz, end.xz) - padding);
+    int2 last = PositionXzToCell(max(start.xz, end.xz) + padding);
+    float3 travel = end - start;
+    bool overflow = false;
+    // Swept AABB covers all crossed cells and large bodies whose centres lie outside
+    // the segment. Typical frame steps touch only a handful of cells; no fixed cap.
+    [loop] for (int z = first.y; z <= last.y; z++)
+    [loop] for (int x = first.x; x <= last.x; x++)
+    {
+        uint cell = CellToIndex(int2(x, z));
+        uint count = gridCountsReadBuffer[cell];
+        overflow = overflow || count > maxAgentsPerCell;
+        [loop] for (uint slot = 0; slot < min(count, maxAgentsPerCell); slot++)
+        {
+            uint index = gridAgentIndicesReadBuffer[cell * maxAgentsPerCell + slot];
+            if (index < agentCount) ConsiderProjectileUnit(index, proj, start, travel, nearestT, hitIndex);
+        }
+    }
+    // Rare overloaded buckets must not silently make bodies non-solid. Existing
+    // spatialHashStats reports the overflow; pay an exact fallback only on affected
+    // sweeps, never on the normal path. No candidate truncation without a diagnostic.
+    if (overflow)
+    {
+        [loop] for (uint index = 0; index < agentCount; index++)
+            ConsiderProjectileUnit(index, proj, start, travel, nearestT, hitIndex);
+    }
+}
+
+// Optional impact splash (proj.splashRadius > 0; 0 = legacy single-target, returns immediately).
+// Living enemies whose XZ body circle overlaps the radius take the full shot damage once.
+// The direct-hit victim (already damaged) and the shooter are skipped; allies never take damage.
+void ConsiderSplashVictim(uint index, ProjectileData proj, float3 impact, int directHit)
+{
+    if ((int)index == directHit || (int)index + 1 == proj.sourceAgentIndexPlusOne) return;
+    if (hpReadBuffer[index] <= 0 || teamIdReadBuffer[index] == proj.sourceTeamId) return;
+    UnitTypeSettings settings = GetUnitSettings(index);
+    AgentData agent = agentBuffer[index];
+    float bodyRadius = max(0.05, settings.agentRadius) * max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
+    float2 offset = agentPositionReadBuffer[index] - impact.xz;
+    float reach = proj.splashRadius + bodyRadius;
+    if (dot(offset, offset) <= reach * reach)
+        InterlockedAdd(pendingDamageBuffer[index], (int)proj.damage);
+}
+
+void ApplyProjectileSplash(ProjectileData proj, float3 impact, int directHit, uint agentCount)
+{
+    if (!(proj.splashRadius > 0.0)) return;
+    float reach = proj.splashRadius + max(0.0, projectileQueryRadius);
+    int2 first = PositionXzToCell(impact.xz - reach);
+    int2 last = PositionXzToCell(impact.xz + reach);
+    bool overflow = false;
+    [loop] for (int oz = first.y; oz <= last.y; oz++)
+    [loop] for (int ox = first.x; ox <= last.x; ox++)
+        overflow = overflow || gridCountsReadBuffer[CellToIndex(int2(ox, oz))] > maxAgentsPerCell;
+    if (overflow)
+    {
+        // Same exact fallback policy as the sweep: overloaded buckets never hide victims.
+        [loop] for (uint index = 0; index < agentCount; index++)
+            ConsiderSplashVictim(index, proj, impact, directHit);
+        return;
+    }
+    [loop] for (int z = first.y; z <= last.y; z++)
+    [loop] for (int x = first.x; x <= last.x; x++)
+    {
+        uint cell = CellToIndex(int2(x, z));
+        uint count = gridCountsReadBuffer[cell];
+        [loop] for (uint slot = 0; slot < count; slot++)
+        {
+            uint index = gridAgentIndicesReadBuffer[cell * maxAgentsPerCell + slot];
+            // Grid cells are clamped (not hashed): each (x,z) is visited once and each agent lives in one cell,
+            // so no victim is counted twice. count <= maxAgentsPerCell here (overflow took the exact path).
+            if (index < agentCount)
+                ConsiderSplashVictim(index, proj, impact, directHit);
+        }
+    }
+}
+
+#ifdef MASS_TERRAIN_ENABLED
+#ifndef MASS_TERRAIN_COLLISION_INCLUDED
+#define MASS_TERRAIN_COLLISION_INCLUDED
+#ifndef MASS_TERRAIN_SURFACE_INCLUDED
+#define MASS_TERRAIN_SURFACE_INCLUDED
+StructuredBuffer<float> _SurfaceHeights;
+StructuredBuffer<uint> _SurfaceWalkable;
+int2 _SurfaceDimensions;
+float4 _SurfaceBounds; // origin XZ, size XZ
+
+// Returns height, gradient X, gradient Z, walkability (-1 means outside).
+float4 SampleTerrainSurface(float2 worldXZ)
+{
+    float2 local = worldXZ - _SurfaceBounds.xy;
+    if (any(!isfinite(worldXZ)) || any(local < 0) || any(local > _SurfaceBounds.zw))
+        return float4(0, 0, 0, -1);
+    float2 stepSize = _SurfaceBounds.zw / (_SurfaceDimensions - 1);
+    float2 grid = local / stepSize;
+    int2 cell = min((int2)floor(grid), _SurfaceDimensions - 2);
+    float2 uv = saturate(grid - cell);
+    int i = cell.y * _SurfaceDimensions.x + cell.x;
+    float a = _SurfaceHeights[i], b = _SurfaceHeights[i + 1];
+    float c = _SurfaceHeights[i + _SurfaceDimensions.x], d = _SurfaceHeights[i + _SurfaceDimensions.x + 1];
+    float2 gradient = uv.x >= uv.y ? float2(b - a, d - b) / stepSize : float2(d - c, c - a) / stepSize;
+    float height = a + dot(gradient, uv * stepSize);
+    return float4(height, gradient, _SurfaceWalkable[cell.y * (_SurfaceDimensions.x - 1) + cell.x]);
+}
+
+float3 TerrainSurfaceVelocity(float2 velocity, float2 gradient)
+{
+    float3 tangent = float3(velocity.x, dot(velocity, gradient), velocity.y);
+    return dot(tangent, tangent) > 0 ? normalize(tangent) * length(velocity) : 0;
+}
+#endif
+
+
+// Clip the swept segment to the finite heightfield's XZ rectangle (grid coordinates).
+bool TerrainClipSweepAxis(float start, float travel, float extent, inout float enterT, inout float exitT)
+{
+    if (travel == 0.0)
+        return start >= 0.0 && start <= extent;
+    float t0 = -start / travel;
+    float t1 = (extent - start) / travel;
+    enterT = max(enterT, min(t0, t1));
+    exitT = min(exitT, max(t0, t1));
+    return enterT <= exitT;
+}
+
+// Each cell is split a-b-d / a-d-c, exactly like SampleTerrainSurface and the mesh.
+// Clip to the triangle's diagonal half-space, then solve the linear signed height.
+// This is an exact segment/triangle interval test, not point sampling along the ray.
+bool TerrainTriangleSweep(float3 start, float3 travel, float2 gridStart, float2 gridTravel,
+    int2 cell, float a, float2 heightGradient, bool lower, float enterT, float exitT, out float hitT)
+{
+    hitT = 2.0;
+    float2 local = gridStart - cell;
+    float diagonalStart = local.x - local.y;
+    float diagonalTravel = gridTravel.x - gridTravel.y;
+    if (!lower)
+    {
+        diagonalStart = -diagonalStart;
+        diagonalTravel = -diagonalTravel;
+    }
+    if (diagonalTravel == 0.0)
+    {
+        if (diagonalStart < 0.0)
+            return false;
+    }
+    else
+    {
+        float diagonalT = -diagonalStart / diagonalTravel;
+        if (diagonalTravel > 0.0)
+            enterT = max(enterT, diagonalT);
+        else
+            exitT = min(exitT, diagonalT);
+    }
+    if (enterT > exitT)
+        return false;
+
+    float enterHeight = a + dot(heightGradient, local + gridTravel * enterT);
+    float enterClearance = start.y + travel.y * enterT - enterHeight;
+    // Starting on or below the solid heightfield also counts as an immediate collision.
+    if (enterClearance <= 0.0)
+    {
+        hitT = enterT;
+        return true;
+    }
+    float exitHeight = a + dot(heightGradient, local + gridTravel * exitT);
+    float exitClearance = start.y + travel.y * exitT - exitHeight;
+    if (exitClearance > 0.0)
+        return false;
+    hitT = lerp(enterT, exitT, enterClearance / (enterClearance - exitClearance));
+    return true;
+}
+
+// Earliest contact with the solid single-layer heightfield over previous->next.
+// DDA visits EVERY crossed cell, even when a frame crosses a one-cell-wide ridge.
+// No arbitrary step count or sampling spacing can turn a long sweep into a tunnel.
+bool SweepTerrainSurface(float3 previous, float3 next, out float hitT)
+{
+    hitT = 2.0;
+    if (any(!isfinite(previous)) || any(!isfinite(next)))
+        return false;
+    float3 travel = next - previous;
+    int2 cellCount = _SurfaceDimensions - 1;
+    float2 stepSize = _SurfaceBounds.zw / cellCount;
+    float2 gridStart = (previous.xz - _SurfaceBounds.xy) / stepSize;
+    float2 gridTravel = travel.xz / stepSize;
+    float enterT = 0.0;
+    float exitT = 1.0;
+    if (!TerrainClipSweepAxis(gridStart.x, gridTravel.x, cellCount.x, enterT, exitT) ||
+        !TerrainClipSweepAxis(gridStart.y, gridTravel.y, cellCount.y, enterT, exitT))
+        return false;
+
+    int2 cell = clamp((int2)floor(gridStart + gridTravel * enterT), int2(0, 0), cellCount - 1);
+    int2 direction = int2(gridTravel.x > 0.0 ? 1 : (gridTravel.x < 0.0 ? -1 : 0),
+                          gridTravel.y > 0.0 ? 1 : (gridTravel.y < 0.0 ? -1 : 0));
+    // A segment crosses at most Width+Depth grid boundaries, including a zero-length
+    // entry cell on a negative-direction grid edge. The bound scales with the actual grid.
+    [loop]
+    for (int visited = 0; visited < _SurfaceDimensions.x + _SurfaceDimensions.y; visited++)
+    {
+        float2 boundaryT = float2(1e30, 1e30);
+        if (direction.x != 0)
+            boundaryT.x = (cell.x + (direction.x > 0 ? 1 : 0) - gridStart.x) / gridTravel.x;
+        if (direction.y != 0)
+            boundaryT.y = (cell.y + (direction.y > 0 ? 1 : 0) - gridStart.y) / gridTravel.y;
+        float cellExitT = min(exitT, min(boundaryT.x, boundaryT.y));
+
+        int index = cell.y * _SurfaceDimensions.x + cell.x;
+        float a = _SurfaceHeights[index];
+        float b = _SurfaceHeights[index + 1];
+        float c = _SurfaceHeights[index + _SurfaceDimensions.x];
+        float d = _SurfaceHeights[index + _SurfaceDimensions.x + 1];
+        float lowerT, upperT;
+        bool lowerHit = TerrainTriangleSweep(previous, travel, gridStart, gridTravel,
+            cell, a, float2(b - a, d - b), true, enterT, cellExitT, lowerT);
+        bool upperHit = TerrainTriangleSweep(previous, travel, gridStart, gridTravel,
+            cell, a, float2(d - c, c - a), false, enterT, cellExitT, upperT);
+        if (lowerHit || upperHit)
+        {
+            hitT = min(lowerT, upperT);
+            return true;
+        }
+        if (cellExitT >= exitT)
+            return false;
+
+        // Advance both axes only on an exact corner: a tolerance here could skip a
+        // very short but real interval in an adjacent cell containing a sharp peak.
+        if (boundaryT.x <= boundaryT.y)
+            cell.x += direction.x;
+        if (boundaryT.y <= boundaryT.x)
+            cell.y += direction.y;
+        enterT = cellExitT;
+        if (any(cell < 0) || any(cell >= cellCount))
+            return false;
+    }
+    return false;
+}
+
+#endif
+
+#endif
+
+// Must match ProjectileBallistics.cs; native parity tests exercise both implementations.
+float RangedClearance(float sourceHalf, float sourceScale, float targetHalf, float targetScale, float horizontalDistance)
+{
+    float body = 2.0 * max(max(0.05, sourceHalf) * max(0.01, abs(sourceScale)),
+        max(0.05, targetHalf) * max(0.01, abs(targetScale)));
+    return clamp(max(body * 1.25, horizontalDistance * body * 0.2), 0.5, 12.0);
+}
+float RangedFlightTime(float3 origin, float3 aim, float speed, float gravity, float lifetime, float clearance)
+{
+    if (speed <= 0.0 || lifetime <= 0.0) return 0.0;
+    float time = (gravity < -0.01 ? length(aim.xz-origin.xz) : length(aim-origin)) / speed;
+    if (time > lifetime || time < 0.00001) return 0.0;
+    if (gravity < -0.01 && clearance > 0.0)
+    {
+        float apex = max(origin.y, aim.y) + clearance;
+        float loft = sqrt(2.0 * (apex-origin.y) / -gravity) + sqrt(2.0 * (apex-aim.y) / -gravity);
+        time = max(time, min(loft, lifetime * 0.95));
+    }
+    return time;
+}
+
+bool RangedPathClear(uint index, AgentData source, int target, UnitTypeSettings settings)
+{
+    AgentData victim = agentBuffer[target];
+    UnitTypeSettings targetSettings = GetUnitSettings((uint)target);
+    float2 targetXZ = agentPositionReadBuffer[target];
+    float3 origin = source.position;
+    float3 aim = float3(targetXZ.x, victim.position.y, targetXZ.y);
+#ifdef MASS_TERRAIN_ENABLED
+    float4 a = SampleTerrainSurface(origin.xz), b = SampleTerrainSurface(targetXZ);
+    if (a.w < 0.0 || b.w < 0.0) return false;
+    origin.y = a.x; aim.y = b.x;
+#endif
+    origin.y += max(0.05, settings.projectileOriginHeight) * max(0.01, abs(source.scale.y));
+    aim.y += max(0.05, targetSettings.projectileTargetHeight) * max(0.01, abs(victim.scale.y));
+    float2 direction = aim.xz - origin.xz;
+    float distance = length(direction);
+    if (distance < 0.001) return false;
+    float radius = max(0.05, settings.agentRadius) * max(abs(source.scale.x), abs(source.scale.z));
+    origin.xz += direction / distance * min(radius, distance * 0.25);
+    float clearance = RangedClearance(settings.projectileTargetHeight, source.scale.y,
+        targetSettings.projectileTargetHeight, victim.scale.y, distance);
+    float time = RangedFlightTime(origin, aim, settings.projectileSpeed, settings.projectileGravity,
+        settings.projectileMaxLifetime, clearance);
+    if (time <= 0.0) return false;
+    float3 velocity = (aim-origin) / time;
+    if (settings.projectileGravity < -0.01) velocity.y -= 0.5 * settings.projectileGravity * time;
+    ProjectileData shot = (ProjectileData)0;
+    shot.sourceAgentIndexPlusOne = (int)index + 1;
+    shot.hitRadius = settings.projectileHitRadius;
+    float padding = max(0.0, projectileQueryRadius) + max(0.0, shot.hitRadius);
+    uint agentCount, stride; agentBuffer.GetDimensions(agentCount, stride);
+    int segments = clamp((int)ceil(distance / max(0.5, cellSize)), 4, 16);
+    float3 start = origin;
+    uint inspected = 0;
+    [loop] for (int step = 1; step <= segments; step++)
+    {
+        float t = time * (float)step / (float)segments;
+        float3 end = origin + velocity*t + float3(0, 0.5*settings.projectileGravity*t*t, 0);
+        float nearest = 2.0; int hit = -1;
+#ifdef MASS_TERRAIN_ENABLED
+        float terrainT;
+        if (SweepTerrainSurface(start, end, terrainT)) nearest = terrainT;
+#else
+        if (min(start.y, end.y) <= 0.0) return false;
+#endif
+        int2 first = PositionXzToCell(min(start.xz,end.xz)-padding);
+        int2 last = PositionXzToCell(max(start.xz,end.xz)+padding);
+        // Readiness probes must never fall back to scanning the whole army. An
+        // overloaded/very large query waits; actual released shots retain exact collision.
+        if ((last.x-first.x+1)*(last.y-first.y+1) > 64) return false;
+        [loop] for (int z=first.y; z<=last.y; z++)
+        [loop] for (int x=first.x; x<=last.x; x++)
+        {
+            uint cell = CellToIndex(int2(x,z));
+            uint count = gridCountsReadBuffer[cell];
+            if (count > maxAgentsPerCell || inspected + count > 1024u) return false;
+            inspected += count;
+            [loop] for (uint slot=0; slot<count; slot++)
+            {
+                uint other = gridAgentIndicesReadBuffer[cell*maxAgentsPerCell+slot];
+                if (other < agentCount) ConsiderProjectileUnit(other, shot, start, end-start, nearest, hit);
+            }
+        }
+        if (nearest <= 1.0)
+        {
+            if (hit < 0) return false;
+            return teamIdReadBuffer[hit] != teamIdReadBuffer[index]; // An intervening enemy is a real valid hit.
+        }
+        start = end;
+    }
+    return true;
+}
+
+float RangedSideBudget(AgentData agent, UnitTypeSettings settings)
+{
+    float radius = max(0.05, settings.agentRadius) * max(0.01,max(abs(agent.scale.x),abs(agent.scale.z)));
+    return clamp(radius*4.0, 0.5, 4.0);
+}
+
+bool ResolveRangedClearance(uint index, AgentData agent, int target, UnitTypeSettings settings,
+    int simInterval, float dtSim, bool allowReposition, inout CongestionWait state)
+{
+    if (state.rangedTargetPlusOne != target+1)
+    {
+        state.rangedTargetPlusOne = target+1;
+        state.rangedStatus = 0.0; state.rangedSeconds = 0.0;
+        state.rangedAnchor = agent.position.xz;
+    }
+    uint period = max(1u, 24u / (uint)max(1,simInterval));
+    bool refresh = ((frameIndex / (uint)max(1,simInterval) + (index * 17u)) % period) == 0u;
+    if (state.rangedStatus == 0.0 || refresh)
+    {
+        bool clear = RangedPathClear(index, agent, target, settings);
+        if (clear) state.rangedStatus = 1.0;
+        else if (state.rangedStatus >= 0.0)
+        {
+            state.rangedStatus = (Hash01(index ^ 0xB5297A4Du) < 0.5) ? -1.0 : -2.0;
+            if (allowReposition)
+            {
+                float2 toTarget = agentPositionReadBuffer[target]-agent.position.xz;
+                if (dot(toTarget,toTarget)>0.0001)
+                {
+                    float2 side = normalize(float2(-toTarget.y,toTarget.x)) * (RangedSideBudget(agent,settings)*0.6);
+                    AgentData left=agent, right=agent;
+                    left.position.xz+=side; right.position.xz-=side;
+                    bool leftClear=true, rightClear=true;
+#ifdef MASS_TERRAIN_ENABLED
+                    leftClear=TerrainSegmentClear(agent.position.xz,left.position.xz);
+                    rightClear=TerrainSegmentClear(agent.position.xz,right.position.xz);
+#endif
+                    if (leftClear) leftClear=RangedPathClear(index,left,target,settings);
+                    if (rightClear) rightClear=RangedPathClear(index,right,target,settings);
+                    if (leftClear != rightClear) state.rangedStatus=leftClear ? -1.0 : -2.0;
+                }
+            }
+            state.rangedAnchor = agent.position.xz; state.rangedSeconds = 0.0;
+        }
+    }
+    if (state.rangedStatus < 0.0)
+    {
+        state.rangedSeconds += dtSim;
+        if (state.rangedSeconds >= 2.0 || length(agent.position.xz-state.rangedAnchor) >= RangedSideBudget(agent,settings))
+            state.rangedStatus = (state.rangedStatus == -1.0 || state.rangedStatus == -3.0) ? -3.0 : -4.0;
+    }
+    WriteCongestion(index, state);
+    return state.rangedStatus > 0.0;
+}
+float2 RangedSideDirection(AgentData agent, float2 target, UnitTypeSettings settings, CongestionWait state)
+{
+    if (state.rangedSeconds >= 2.0 || length(agent.position.xz-state.rangedAnchor) >= RangedSideBudget(agent,settings)) return 0.0;
+    float2 toTarget = target-agent.position.xz;
+    if (dot(toTarget,toTarget)<0.0001) return 0.0;
+    float2 side = normalize(float2(-toTarget.y,toTarget.x));
+    return state.rangedStatus == -1.0 ? side : -side;
+}
+// Applied on ordinary AND skipped-LOD integration. Momentum must not carry a
+// blocked shooter past the side-step budget while its next decision is deferred.
+void LimitRangedReposition(inout AgentData agent, UnitTypeSettings settings, CongestionWait state, float dt)
+{
+    if (state.rangedStatus >= 0.0) return;
+    float scale = max(0.01,max(abs(agent.scale.x),abs(agent.scale.z)));
+    float remaining = max(0.0, RangedSideBudget(agent,settings)-length(agent.position.xz-state.rangedAnchor));
+    float speed = state.rangedSeconds < 2.0 ? max(0.08*scale, min(0.8*scale, remaining/max(dt,0.0001))) : 0.08*scale;
+    float actual = length(agent.velocity.xz);
+    if (actual > speed) agent.velocity.xz *= speed / max(actual,0.0001);
+}
+#endif
+
+
+#if defined(MASS_MELEE_CHARGE)
+// Opt-in melee charge (CombatConfig.chargeDamageMultiplier > 1), per unit type:
+// x = damage multiplier, y = minimum approach speed as a fraction of maxSpeed.
+// Declared only in this variant so the legacy variant has no unbound buffer.
+StructuredBuffer<float2> unitTypeMeleeCharge;
+#endif
+
+void AdvanceRangedCycle(uint index, inout AgentData agent, UnitTypeSettings settings, int previousState)
+{
+    if (settings.projectileRange <= 0.01) return;
+    // Preserve the engine's 50ms safety cap: low FPS must not accelerate ranged DPS
+    // relative to melee/movement, which already use SafeDt().
+    float interval = max(0.01, settings.attackInterval);
+    float release = clamp(settings.attackReleasePhase, 0.05, 0.95);
+    float cooldown = attackCooldownBuffer[index];
+    bool attacking = agent.currentState == STATE_ATTACK && combatEnabled != 0;
+    int target = targetAgentIndexBuffer[index];
+    if (attacking && target >= 0)
+    {
+        attacking = IsAliveIndex((uint)target);
+        if (attacking) attacking = teamIdReadBuffer[target] != teamIdReadBuffer[index];
+        if (!attacking)
+        {
+            attackCooldownBuffer[index] = max(0.0, cooldown - SafeDt());
+            return;
+        }
+        float2 targetXZ = agentPositionReadBuffer[target];
+#if defined(MASS_TERRAIN_ENABLED)
+        float distanceSqr = TerrainDistanceSquared(agent.position, targetXZ);
+#else
+        float distanceSqr = dot(targetXZ - agent.position.xz, targetXZ - agent.position.xz);
+#endif
+        float range = settings.projectileRange + max(0.25, settings.agentRadius * 0.75);
+        attacking = attacking && distanceSqr <= range * range;
+    }
+    else attacking = false;
+    if (!attacking)
+    {
+        attackCooldownBuffer[index] = max(0.0, cooldown - SafeDt());
+        return;
+    }
+    if (previousState != STATE_ATTACK)
+        cooldown = max(cooldown, release * interval); // first-shot windup, no free re-entry shot
+    cooldown -= SafeDt();
+    if (cooldown <= 0.0)
+    {
+        int attacks = min(4, 1 + (int)floor(-cooldown / interval));
+        int ignored;
+        InterlockedAdd(launchRequestBuffer[index], attacks, ignored);
+        cooldown += attacks * interval;
+    }
+    attackCooldownBuffer[index] = cooldown;
+    agent.currentAnimationTime = frac(release - cooldown / interval + 1.0) * max(0.0001, settings.attackClipDuration);
+}
+
+void StoreAgent(uint index, AgentData agent)
+{
+#if defined(MASS_TERRAIN_ENABLED)
+    TerrainAnchor(agent);
+#endif
+    if (battleStarted != 0 && deltaTime > 0.0)
+    {
+        AgentData previous = agentBuffer[index];
+        UnitTypeSettings settings = GetUnitSettings(index);
+        UpdateLocomotionPresentation(agent, previous.position, settings);
+        // Waiting suppresses propulsion as well as Move animation. Tiny contact
+        // corrections are not a reason to wake the running cycle.
+        if (agent.currentState != STATE_ATTACK && agent.currentState != STATE_DEAD &&
+            (asfloat(engagementSlotAssignmentBuffer[CongestionOffset(index) + 5u]) > 0.0 ||
+             (asfloat(engagementSlotAssignmentBuffer[CongestionOffset(index) + 7u]) <= -3.0 &&
+              GetAgentFlowParams(index).modes.x == FLOW_TARGET_NONE)))
+        {
+            if (agent.presentationState != STATE_IDLE) agent.currentAnimationTime = 0.0;
+            agent.presentationState = STATE_IDLE;
+            agent.locomotionSpeed = 0.0;
+        }
+        if (agent.currentState != STATE_DEAD)
+            AdvanceRangedCycle(index, agent, settings, previous.currentState);
+    }
+    agentBuffer[index] = agent;
+    agentPositionBuffer[index] = agent.position.xz;
+}
+
+void IncrementEngagementOccupancy(uint targetIndex, uint slot)
+{
+    uint key = targetIndex * ENGAGEMENT_SLOT_COUNT + slot;
+    uint stamp = frameIndex & 0x00FFFFFFu;
+
+    // Frame stamp + saturating 8-bit counter removes a multi-million-entry clear
+    // dispatch. CAS also makes first-touch initialization safe under contention.
+    [loop]
+    for (int attempt = 0; attempt < 16; attempt++)
+    {
+        uint observed = engagementSlotOccupancyBuffer[key];
+        uint count = (observed >> 8) == stamp ? observed & 0xFFu : 0u;
+        uint desired = (stamp << 8) | min(255u, count + 1u);
+        uint original;
+        InterlockedCompareExchange(engagementSlotOccupancyBuffer[key], observed, desired, original);
+        if (original == observed)
+            return;
+    }
+}
+
+float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPosition, float2 targetPosition, UnitTypeSettings settings)
+{
+    float selfRadius = max(0.05, settings.agentRadius);
+    float targetRadius = max(0.05, GetAgentRadius(targetIndex));
+    // 统一使用有效射程：远程单位用 projectileRange，近战单位用 attackRange
+    float effectiveRange = settings.projectileRange > 0.01 ? settings.projectileRange : settings.attackRange;
+    float attackRange = max(0.1, effectiveRange);
+
+    // Prefer a deterministic sector, but select against the previous frame's actual
+    // assignments. Retaining the current slot receives hysteresis so rings do not
+    // oscillate merely because two neighboring counters differ by one.
+    float phase = Hash01(targetIndex ^ 0xB5297A4Du) * 6.2831853;
+    float2 radial = selfPosition - targetPosition;
+    float physicalAngle = atan2(radial.y, radial.x);
+    float normalizedSector = frac((physicalAngle - phase) / 6.2831853 + 1.0);
+    uint preferredSlot = (uint)floor(normalizedSector * (float)ENGAGEMENT_SLOT_COUNT + 0.5) % ENGAGEMENT_SLOT_COUNT;
+    int assignment = engagementSlotAssignmentBuffer[selfIndex];
+    bool assignmentMatchesTarget = assignment >= 0 && ((uint)assignment >> ENGAGEMENT_SLOT_SHIFT) == targetIndex;
+    uint currentSlot = assignmentMatchesTarget ? (uint)assignment & ENGAGEMENT_SLOT_MASK : preferredSlot;
+    uint bestSlot = preferredSlot;
+    float bestScore = 1e20;
+
+    [unroll]
+    for (uint slot = 0u; slot < ENGAGEMENT_SLOT_COUNT; slot++)
+    {
+        uint directDistance = slot > preferredSlot ? slot - preferredSlot : preferredSlot - slot;
+        uint circularDistance = min(directDistance, ENGAGEMENT_SLOT_COUNT - directDistance);
+        float score = (float)CurrentEngagementOccupancy(targetIndex, slot) + (float)circularDistance * 0.22;
+        score += Hash01(selfIndex ^ (targetIndex * 0x9E3779B9u) ^ (slot * 0x85EBCA6Bu)) * 0.03;
+        if (assignmentMatchesTarget && slot == currentSlot)
+            score -= 1.25;
+
+        if (score < bestScore)
+        {
+            bestScore = score;
+            bestSlot = slot;
+        }
+    }
+
+    engagementSlotAssignmentBuffer[selfIndex] = (int)((targetIndex << ENGAGEMENT_SLOT_SHIFT) | bestSlot);
+
+    // Slots sit safely inside attack range but outside the target's visual center.
+    float slotRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
+    float angle = phase + (float)bestSlot * (6.2831853 / (float)ENGAGEMENT_SLOT_COUNT);
+    return targetPosition + float2(cos(angle), sin(angle)) * slotRadius;
+}
+
+float2 BlendPursuitWithNavigation(uint selfIndex, float3 position, float2 pursuitDirection, float targetDistance, UnitTypeSettings settings)
+{
+    float2 navigationDirection = SampleFlowDirection(selfIndex, teamIdReadBuffer[selfIndex], position);
+#if defined(MASS_TERRAIN_ENABLED)
+    // Pursuit cannot bypass a blocked route. Local clear contact may bypass the
+    // coarse field, but an obstructed target must follow the real integration map.
+    if (!TerrainSegmentClear(position.xz, position.xz + pursuitDirection * targetDistance)) return navigationDirection;
+#endif
+    if (dot(navigationDirection, navigationDirection) <= 0.0001)
+        return pursuitDirection;
+
+    // Far inside the acquire radius, keep most of the congestion/obstacle-aware
+    // navigation intent. Only hand over strongly to the engagement slot near contact.
+    float approachRange = max(0.1, settings.targetAcquireRadius - settings.attackRange);
+    float nearContact = 1.0 - saturate((targetDistance - settings.attackRange) / approachRange);
+    float pursuitWeight = lerp(0.35, 0.88, nearContact);
+    float2 blended = navigationDirection * (1.0 - pursuitWeight) + pursuitDirection * pursuitWeight;
+    float lenSqr = dot(blended, blended);
+    return lenSqr > 0.0001 ? blended * rsqrt(lenSqr) : pursuitDirection;
+}
+
+[numthreads(8, 8, 1)]
+void ClearDensityMap(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= (uint)flowFieldResolution.x || id.y >= (uint)flowFieldResolution.y)
+        return;
+
+    int2 cell = int2(id.x, id.y);
+    densityMapWrite[cell] = 0u;
+    attackerDensityMapWrite[cell] = 0u;
+    defenderDensityMapWrite[cell] = 0u;
+}
+
+[numthreads(64, 1, 1)]
+void BuildDensityMap(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count || !IsAliveIndex(id.x))
+        return;
+
+    int2 cell = PositionToFlowFieldCell(agentBuffer[id.x].position);
+    uint original;
+    InterlockedAdd(densityMapWrite[cell], 1u, original);
+
+    int team = teamIdReadBuffer[id.x];
+    if (team == attackerTeamId)
+        InterlockedAdd(attackerDensityMapWrite[cell], 1u, original);
+    else if (team == defenderTeamId)
+        InterlockedAdd(defenderDensityMapWrite[cell], 1u, original);
+}
+
+[numthreads(64, 1, 1)]
+void BuildEngagementSlotOccupancy(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count || battleStarted == 0 || !IsAliveIndex(id.x))
+        return;
+
+    int targetIndex = targetAgentIndexBuffer[id.x];
+    int assignment = engagementSlotAssignmentBuffer[id.x];
+    if (targetIndex < 0 || assignment < 0 || !IsAliveIndex((uint)targetIndex) ||
+        teamIdReadBuffer[id.x] == teamIdReadBuffer[(uint)targetIndex])
+        return;
+
+    uint assignedTarget = (uint)assignment >> ENGAGEMENT_SLOT_SHIFT;
+    uint assignedSlot = (uint)assignment & ENGAGEMENT_SLOT_MASK;
+    if (assignedTarget == (uint)targetIndex)
+        IncrementEngagementOccupancy((uint)targetIndex, assignedSlot);
+}
+
+[numthreads(64, 1, 1)]
+void ClearPendingDamage(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    pendingDamageBuffer[id.x] = 0;
+}
+
+// Per-frame combat + locomotion resolution. hp is double buffered:
+// this kernel reads its OWN hp from hpReadBuffer (snapshot), applies the damage that was
+// accumulated for it LAST frame (pendingDamageReadBuffer), and writes the result to
+// hpBuffer. Every other hp lookup in the pipeline uses the snapshot.
+[numthreads(64, 1, 1)]
+void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    agentBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    // 发射请求累积模式：不自动清零，由 CPU 消费后派发清零 kernel
+    // （移除了原来的 launchRequestBuffer[id.x] = 0;）
+
+    LocalAgentOrder admitted = _LocalOrders[id.x];
+    if (admitted.slotPlusOne <= 0 || admitted.epoch != _LocalOrderEpoch) return;
+    if (admitted.stance != 4 || !(GetUnitSettings(id.x).projectileRange > 0.01)) return;
+    AgentData agent = agentBuffer[id.x];
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    localSelfSlot=HasLocalOrder(id.x)?_LocalOrders[id.x].slotPlusOne-1:-1;
+#endif
+
+    // A despawned corpse is finished, so it stops costing simulation work here. It has
+    // already left every visible list, it was never entered into the spatial hash
+    // (BuildSpatialHash skips dead agents), and nothing can target it. Its hp has been 0
+    // in BOTH hp buffers and its position identical in BOTH position mirrors since the
+    // second frame after death, and target/slot/cooldown were cleared on the death frame
+    // itself - so every write below would store the value that is already there.
+    // Returning changes no observable state; it only stops tens of thousands of bodies
+    // from re-writing their whole record every frame for the rest of the battle.
+    // corpseLingerSeconds = 0 disables despawn, and then nothing reaches this path.
+    if (IsCorpseDespawned(agent))
+        return;
+
+    float dt = SafeDt();
+    int hpSelf = hpReadBuffer[id.x];
+
+    if (battleStarted == 0)
+    {
+        // Pause is not a reset: retain the target, cycle phase and cached movement.
+        // Freshly spawned agents are already Idle. ResetScenario owns clearing state.
+        hpBuffer[id.x] = hpSelf;
+        if (hpSelf <= 0)
+        {
+            SetAgentState(agent, STATE_DEAD);
+            ClearCongestion(id.x);
+            agent.velocity = 0.0;
+            targetAgentIndexBuffer[id.x] = -1;
+            engagementSlotAssignmentBuffer[id.x] = -1;
+            attackCooldownBuffer[id.x] = 0.0;
+        }
+        StoreAgent(id.x, agent);
+        return;
+    }
+
+    int damage = pendingDamageReadBuffer[id.x];
+    if (damage > 0 && hpSelf > 0)
+        hpSelf = max(0, hpSelf - damage);
+    hpBuffer[id.x] = hpSelf;
+
+    if (hpSelf <= 0)
+    {
+        // Dead has absolute priority and is terminal.
+        SetAgentState(agent, STATE_DEAD);
+        ClearCongestion(id.x);
+        agent.velocity = 0.0;
+        targetAgentIndexBuffer[id.x] = -1;
+        engagementSlotAssignmentBuffer[id.x] = -1;
+        attackCooldownBuffer[id.x] = 0.0;
+        StoreAgent(id.x, agent);
+        return;
+    }
+
+    // ------------------------------------------------------------------
+    // LOD-scaled simulation cadence: mid/far agents run the expensive DECISION
+    // pass every 2nd/4th frame. Between decision frames the agent still settles
+    // damage (above), integrates its cached velocity (below) and writes itself
+    // through so positions stay per-frame smooth and the buffer swap stays sound.
+    // Rate-dependent quantities in the decision pass use dtSim = interval * dt,
+    // so attack DPS and steering rates match full-rate simulation.
+    // ------------------------------------------------------------------
+    CongestionWait congestion = ReadCongestion(id.x);
+    bool forceMovementDecision = TickCongestion(id.x, agent, congestion, dt);
+    int simInterval = GetSimulationInterval(agent.position);
+    bool cadenceFrame = IsSimulationActiveFrame(id.x, simInterval);
+    if (!forceMovementDecision && !cadenceFrame)
+    {
+        if (GetAgentFlowParams(id.x).modes.x == FLOW_TARGET_NONE)
+            LimitRangedReposition(agent, GetUnitSettings(id.x), congestion, dt);
+#if defined(MASS_TERRAIN_ENABLED)
+        TerrainIntegrate(agent, dt);
+#else
+        agent.position += agent.velocity * dt;
+        ApplyStaticObstacleBounds(id.x, agent);
+        ApplyBounds(agent);
+#endif
+        StoreAgent(id.x, agent);
+        return;
+    }
+    // A new order/expired wait may force a decision between normal LOD beats.
+    // That extra decision has no elapsed combat/steering budget: otherwise spammed
+    // orders could accelerate melee cooldowns and compound steering twice.
+    int elapsedIntervals = cadenceFrame ? simInterval : 0;
+    float dtSim = dt * elapsedIntervals;
+#if defined(MASS_TERRAIN_ENABLED)
+    TerrainRestoreIntentVelocity(agent);
+#endif
+
+    UnitTypeSettings settings = GetUnitSettings(id.x);
+    // Accumulator cooldown (carry the remainder instead of resetting) so the attack
+    // period stays exactly attackInterval at ANY simulation cadence.
+    float cooldown = attackCooldownBuffer[id.x] - dtSim;
+    int targetIndex = targetAgentIndexBuffer[id.x];
+    float searchRadius = settings.targetAcquireRadius;
+    bool targetIsValid = CurrentTargetIsValid(id.x, agent, targetIndex);
+    bool searchCadence = ShouldSearchForLocalTarget(id.x, simInterval);
+    bool targetIsOverloaded = targetIsValid && searchCadence && TargetLoadRatio(id.x, (uint)targetIndex) > 1.0;
+    bool searchForEnemy = searchCadence && (!targetIsValid || targetIsOverloaded);
+    NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy, congestion.forward);
+
+    if (!targetIsValid)
+    {
+        targetIndex = -1;
+        if (searchForEnemy)
+            targetIndex = neighborhood.bestEnemyIndex;
+    }
+    else if (searchForEnemy && neighborhood.bestEnemyIndex >= 0 && neighborhood.bestEnemyIndex != targetIndex)
+    {
+        float2 currentDelta = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
+#if defined(MASS_TERRAIN_ENABLED)
+        float currentScore = TargetSelectionScore(id.x, (uint)targetIndex, TerrainDistanceSquared(agent.position, agentPositionReadBuffer[(uint)targetIndex]));
+#else
+        float currentScore = TargetSelectionScore(id.x, (uint)targetIndex, dot(currentDelta, currentDelta));
+#endif
+        // Require a material improvement before abandoning a live target. This keeps
+        // load balancing responsive without making one-frame occupancy lag visible as
+        // target ping-pong.
+        //
+        // The margin is per-agent, not a shared constant. With a shared 0.18 the whole
+        // force decides identically: a saturated target costs 0.45 of load penalty while
+        // the distance term spreads far less than that, so every attacker in the group
+        // clears the same threshold on the same retarget beat and the army flips between
+        // two victims as one body, every LOCAL_TARGET_SEARCH_INTERVAL frames, forever.
+        // Spreading the threshold instead lets the cheapest movers leave first; the
+        // occupancy they free drops the ratio below 1.0 and the rest stay put. Derived
+        // from the agent index, so it stays deterministic and costs no extra buffer read.
+        float moveMargin = 0.18 + Hash01(id.x ^ 0x7F4A7C15u) * 0.55;
+        if (neighborhood.bestEnemyScore + moveMargin < currentScore)
+            targetIndex = neighborhood.bestEnemyIndex;
+    }
+
+    float2 desiredDirection = 0.0;
+    // Every team now reads its own flow field and its own flow configuration, so the
+    // attacker-or-defender split that used to live here is gone. Stance stays a separate
+    // question from navigation: a team can hold position with a flow field configured.
+    int selfTeamId = teamIdReadBuffer[id.x];
+    TeamFlowParams selfFlow = GetAgentFlowParams(id.x);
+    int teamStance = TeamStanceOf(id.x);
+    bool holdingPosition = IsHoldStance(id.x);
+    bool wasAttacking = agent.currentState == STATE_ATTACK;
+    bool inAttackHold = false;
+    bool hasEngageTarget = false;
+    bool rangedBlocked = false;
+
+    if (targetIndex >= 0 && IsAliveIndex((uint)targetIndex))
+    {
+        float2 targetPosition = agentPositionReadBuffer[(uint)targetIndex];
+        float2 toTarget = targetPosition - agent.position.xz;
+#if defined(MASS_TERRAIN_ENABLED)
+        float distSqr = TerrainDistanceSquared(agent.position, targetPosition);
+#else
+        float distSqr = dot(toTarget, toTarget);
+#endif
+        float targetDistance = sqrt(max(distSqr, 0.0001));
+
+        // 判定远程模式
+        bool isRanged = true;
+        float effectiveRange = isRanged ? settings.projectileRange : settings.attackRange;
+
+        float activeAttackRange = effectiveRange;
+        float attackRangeSqr = activeAttackRange * activeAttackRange;
+        float attackExitRange = activeAttackRange + max(0.25, settings.agentRadius * 0.75);
+        float attackExitRangeSqr = attackExitRange * attackExitRange;
+        float2 engagementPoint = ResolveEngagementSlot(id.x, (uint)targetIndex, agent.position.xz, targetPosition, settings);
+
+        // (chase-leash enforcement lives in TargetIsUsable / CurrentTargetIsValid)
+        {
+            inAttackHold = distSqr <= attackRangeSqr || (wasAttacking && distSqr <= attackExitRangeSqr);
+#if defined(MASS_TERRAIN_ENABLED)
+            if (!isRanged && !TerrainSegmentClear(agent.position.xz, targetPosition)) inAttackHold = false;
+#endif
+            if (isRanged && inAttackHold)
+            {
+                rangedBlocked = !ResolveRangedClearance(id.x, agent, targetIndex, settings, simInterval, dtSim,
+                    !holdingPosition && selfFlow.modes.x == FLOW_TARGET_NONE, congestion);
+                if (rangedBlocked) inAttackHold = false;
+            }
+            else if (congestion.rangedStatus != 0.0)
+            {
+                congestion.rangedStatus = 0.0; congestion.rangedTargetPlusOne = 0;
+                WriteCongestion(id.x, congestion);
+            }
+            if (inAttackHold)
+            {
+                SmoothFaceDirectionDt(agent, toTarget, max(0.2, settings.agentRadius * 0.5), 240.0, dtSim);
+                if (!isRanged && cooldown <= 0.0)
+                {
+                    // Settle EVERY elapsed attack period (LOD降频补偿)
+                    float interval = max(0.01, settings.attackInterval);
+                    int attacks = min(4, 1 + (int)floor(-cooldown / interval));
+
+                    // Melee settlement retains its original decision-frame cadence.
+                    int ignored;
+                    int meleeDamage = max(1, settings.attackDamage) * attacks;
+#if defined(MASS_MELEE_CHARGE)
+                    // Charge: the first hit on arrival (not attacking on the previous decision) while still
+                    // moving fast gets the bonus once; sustained melee afterwards is unchanged.
+                    float2 charge = unitTypeMeleeCharge[unitTypeIndexReadBuffer[id.x]];
+                    if (!wasAttacking && charge.x > 1.0 && length(agent.velocity.xz) >= charge.y * settings.maxSpeed)
+                        meleeDamage += (int)round(max(1, settings.attackDamage) * (charge.x - 1.0));
+#endif
+                    InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], meleeDamage, ignored);
+                    cooldown += attacks * interval;
+                }
+            }
+            else
+            {
+                hasEngageTarget = true;
+                if (!holdingPosition)
+                {
+                    if (rangedBlocked)
+                    {
+                        // Explicit Move/route keeps its own path. Automatic attack behavior alone
+                        // gets the bounded lateral search; Hold never enters this branch.
+                        desiredDirection = selfFlow.modes.x != FLOW_TARGET_NONE
+                            ? SampleFlowDirection(id.x, selfTeamId, agent.position)
+                            : RangedSideDirection(agent, targetPosition, settings, congestion);
+                    }
+                    else
+                    {
+                        float2 toSlot = engagementPoint - agent.position.xz;
+                        float2 pursuitDirection = dot(toSlot, toSlot) > 0.0001 ? normalize(toSlot) : normalize(toTarget);
+                        desiredDirection = BlendPursuitWithNavigation(id.x, agent.position, pursuitDirection, targetDistance, settings);
+                    }
+                }
+            }
+        }
+    }
+
+    if (targetIndex < 0)
+    {
+        congestion.rangedStatus = 0.0; congestion.rangedTargetPlusOne = 0;
+        WriteCongestion(id.x, congestion);
+        engagementSlotAssignmentBuffer[id.x] = -1;
+        if (holdingPosition)
+        {
+            // no locomotion goal; separation below still resolves overlap
+        }
+        else if (teamStance == TEAM_STANCE_GUARD_HOME)
+        {
+            // Nothing uploads GuardHome yet. It is the leash an explicit "defend this spot"
+            // order will use, kept reachable so the branch does not rot in the meantime.
+            float2 toHome = homePositionReadBuffer[id.x].xz - agent.position.xz;
+            if (dot(toHome, toHome) > defenderGuardRadius * defenderGuardRadius)
+                desiredDirection = normalize(toHome);
+        }
+        else
+        {
+            desiredDirection = SampleFlowDirection(id.x, selfTeamId, agent.position);
+#if !defined(MASS_TERRAIN_ENABLED)
+            if (dot(desiredDirection, desiredDirection) <= 0.0001 &&
+                selfFlow.modes.x != FLOW_TARGET_NONE &&
+                settings.attractionStrength > 0.0)
+            {
+                // Attraction fallback: when the flow field yields no direction (not yet
+                // generated, or outside coverage) steer straight at the configured target.
+                float2 toConfigured = ConfiguredFlowTargetOffset(agent.position.xz, selfFlow.modes.x, selfFlow.target, selfFlow.area);
+                float stopRadius = max(0.0, selfFlow.target.z);
+                if (dot(toConfigured, toConfigured) > max(stopRadius * stopRadius, 0.0001))
+                    desiredDirection = normalize(toConfigured) * saturate(settings.attractionStrength);
+            }
+#endif
+        }
+    }
+
+#if !defined(MASS_TERRAIN_ENABLED)
+    // Treat the current friendly-density map as a local dynamic navigation cost.
+    // This overlays the slowly rebuilt global flow field and lets columns select a
+    // neighboring low-load lane without paying for a full integration rebuild.
+    if (!inAttackHold && dot(desiredDirection, desiredDirection) > 0.0001)
+        desiredDirection = ApplyFriendlyDensityNavigation(id.x, agent.position, desiredDirection);
+
+    // Ordinary marching already samples the obstacle-aware flow field. Only direct
+    // enemy pursuit bypasses that field and needs a per-agent look-ahead detour; doing
+    // this for every marcher would multiply the obstacle scan by the full army size.
+    if (hasEngageTarget && dot(desiredDirection, desiredDirection) > 0.0001 && staticObstacleCount > 0)
+    {
+        float obstacleLookAhead = max(4.0, settings.agentRadius * 6.0);
+        float2 normalizedDesired = normalize(desiredDirection);
+        desiredDirection = StaticObstacleAwareDirection(
+            agent.position.xz,
+            agent.position.xz + normalizedDesired * obstacleLookAhead,
+            settings.agentRadius);
+    }
+
+#endif
+    bool hasMoveDirection = dot(desiredDirection, desiredDirection) > 0.0001;
+    int nextState = ResolveAliveState(inAttackHold, hasEngageTarget, hasMoveDirection);
+    SetCrowdState(agent, nextState);
+    if (!inAttackHold)
+        cooldown = max(0.0, cooldown);
+    if (settings.projectileRange <= 0.01) attackCooldownBuffer[id.x] = cooldown;
+    targetAgentIndexBuffer[id.x] = targetIndex;
+
+    float2 tacticalDirection = desiredDirection;
+    bool hasTacticalDirection = dot(tacticalDirection, tacticalDirection) > 0.0001;
+    DensityPressureSample densityPressure = ComputeDensityPressure(id.x, agent.position, desiredDirection);
+    // Density pressure is now FRIENDLY-only, so it remains fully active during pursuit:
+    // enemies no longer look like an avoidance wall, while rear ranks still spread.
+
+    // Deflect, never reverse: unbounded avoidance flipped rear ranks into full-speed
+    // retreat from the melee. Idle agents (no desired direction) keep full diffusion.
+    float desiredLenBefore = length(desiredDirection);
+    float avoidanceLen = length(densityPressure.avoidance);
+    float avoidanceCap = desiredLenBefore > 0.0001 ? 0.8 * desiredLenBefore : 1.0;
+    if (avoidanceLen > avoidanceCap)
+        densityPressure.avoidance *= avoidanceCap / max(avoidanceLen, 0.0001);
+    desiredDirection += densityPressure.avoidance;
+    float desiredLenSqr = dot(desiredDirection, desiredDirection);
+    if (desiredLenSqr > 1.0)
+        desiredDirection *= rsqrt(desiredLenSqr);
+
+    if (agent.currentState != STATE_DEAD && dot(desiredDirection, desiredDirection) > 0.0001)
+        desiredDirection = ApplyStableLaneBias(id.x, id.x, desiredDirection, densityPressure.pressure);
+
+    if (rangedBlocked) desiredDirection = tacticalDirection; // No density drift while waiting for a lane.
+    float2 separationForce = neighborhood.separation;
+    float contactSeparationScale = agent.currentState == STATE_ATTACK ? 0.62 : lerp(1.0, 1.7, saturate(densityPressure.centerPressure));
+    float2 separationVelocityDelta = separationForce * settings.separationStrength * contactSeparationScale * dtSim;
+
+    // Damping compounds EXACTLY like N per-frame applications; a linearized
+    // (1 - d*dtSim) drifted the damp/steer equilibrium ~20% between LOD cadences.
+    float dampPerFrame = saturate(1.0 - settings.velocityDamping * dt);
+    bool steersThisFrame = agent.currentState != STATE_ATTACK &&
+                           !holdingPosition &&
+                           dot(desiredDirection, desiredDirection) > 0.0001;
+    if (!steersThisFrame && elapsedIntervals > 0)
+        agent.velocity *= pow(dampPerFrame, (float)elapsedIntervals);
+
+    if (holdingPosition)
+    {
+        congestion.observedSeconds = 0.0; congestion.remainingSeconds = 0.0; congestion.forward = 0.0;
+        WriteCongestion(id.x, congestion);
+        // Hold-position defenders keep separation (overlap resolution) but never chase a
+        // locomotion goal; their displacement is clamped to the guard radius around home.
+        if (inAttackHold)
+            agent.velocity.xz *= saturate(1.0 - 28.0 * dtSim);
+
+        agent.velocity.xz += separationVelocityDelta;
+
+        float maxHoldSpeed = inAttackHold ? max(0.05, settings.maxSpeed * 0.18) : max(0.05, settings.maxSpeed * 0.25);
+        float holdSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
+        if (holdSpeedSqr > maxHoldSpeed * maxHoldSpeed)
+            agent.velocity.xz *= maxHoldSpeed * rsqrt(holdSpeedSqr);
+
+#if defined(MASS_TERRAIN_ENABLED)
+        float3 previousPosition = agent.position;
+        TerrainIntegrate(agent, dt);
+#else
+        agent.position += agent.velocity * dt;
+#endif
+
+        // Only the legacy spawn-anchored doctrine clamps to home. An explicit
+        // Hold issued after marching must not teleport units back to deployment.
+        if (teamStance == TEAM_STANCE_HOLD)
+        {
+            float2 fromHome = agent.position.xz - homePositionReadBuffer[id.x].xz;
+            float guardSqr = defenderGuardRadius * defenderGuardRadius;
+            float fromHomeSqr = dot(fromHome, fromHome);
+            if (fromHomeSqr > guardSqr && fromHomeSqr > 0.0001)
+            {
+                float2 clamped = fromHome * (defenderGuardRadius * rsqrt(fromHomeSqr));
+                agent.position.x = homePositionReadBuffer[id.x].x + clamped.x;
+                agent.position.z = homePositionReadBuffer[id.x].z + clamped.y;
+            }
+        }
+
+#if defined(MASS_TERRAIN_ENABLED)
+        TerrainConstrainPosition(previousPosition, agent);
+#else
+        ApplyStaticObstacleBounds(id.x, agent);
+        ApplyBounds(agent);
+#endif
+        StoreAgent(id.x, agent);
+        return;
+    }
+
+    bool waitingForSpace = ResolveCongestion(id.x, agent, settings, tacticalDirection,
+        neighborhood.friendlyAhead, !holdingPosition && agent.currentState != STATE_ATTACK && hasTacticalDirection,
+        dtSim, congestion);
+    if (waitingForSpace)
+    {
+        // No forward steering, density diffusion or cached running velocity. Resolve
+        // only real overlap, slowly, without turning every tiny shove into a run cycle.
+        float scale = max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
+        float2 correction = neighborhood.contactSeparation * 2.0;
+        float correctionLength = length(correction);
+        float correctionCap = 0.08 * scale;
+        if (correctionLength > correctionCap) correction *= correctionCap / correctionLength;
+        agent.velocity = float3(correction.x, 0.0, correction.y);
+    }
+    else if (agent.currentState == STATE_ATTACK)
+    {
+        agent.velocity.xz *= saturate(1.0 - 28.0 * dtSim);
+        // Apply contact separation AFTER attack damping. At reduced simulation cadence
+        // the old ordering could damp the entire correction to zero every decision.
+        agent.velocity.xz += separationVelocityDelta;
+        float maxContactSpeed = max(0.05, settings.maxSpeed * 0.18);
+        float contactSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
+        if (contactSpeedSqr > maxContactSpeed * maxContactSpeed)
+            agent.velocity.xz *= maxContactSpeed * rsqrt(contactSpeedSqr);
+    }
+    else if (dot(desiredDirection, desiredDirection) > 0.0001)
+    {
+        float steerRate = agent.currentState == STATE_ENGAGE
+            ? 10.0
+            : settings.flowFieldResponsiveness * saturate(settings.flowFieldWeight);
+        float queueSlowdown = agent.currentState == STATE_ENGAGE ? 0.35 : 0.75;
+        float minQueueSpeed = agent.currentState == STATE_ENGAGE ? 0.35 : 0.08;
+        float jamSpeedScale = max(minQueueSpeed, saturate(1.0 - densityPressure.aheadPressure * queueSlowdown));
+        float targetSpeed = settings.maxSpeed * AgentSpeedMultiplier(id.x, id.x) * densityPressure.speedScale * jamSpeedScale;
+
+        // Exact N-step composition of the per-frame (damp -> lerp) sequence:
+        // v' = alpha^N v + s*T*(1-alpha^N)/(1-alpha), alpha = damp*(1-s).
+        // At N=1 this is identical to the old damp-then-lerp; at any N the cruise
+        // equilibrium matches full rate exactly (travel-speed golden test).
+        float steerPerFrame = saturate(steerRate * dt);
+        float alpha = dampPerFrame * (1.0 - steerPerFrame);
+        float alphaN = 1.0;
+        if (elapsedIntervals > 0) alphaN = pow(alpha, (float)elapsedIntervals);
+        float gain = steerPerFrame * (alpha < 0.9999 ? (1.0 - alphaN) / max(1.0 - alpha, 0.0001) : (float)elapsedIntervals);
+        agent.velocity.xz = agent.velocity.xz * alphaN + desiredDirection * (targetSpeed * gain);
+        agent.velocity.y = 0.0;
+        SmoothFaceDirectionDt(agent, hasTacticalDirection ? tacticalDirection : desiredDirection, 0.05, 360.0, dtSim);
+        agent.velocity.xz += separationVelocityDelta;
+    }
+    else
+    {
+        // Idle agents still need to resolve spawn/contact overlap.
+        agent.velocity.xz += separationVelocityDelta;
+    }
+
+    agent.velocity = ClampVelocity(id.x, agent.velocity);
+    if (agent.currentState == STATE_MOVE || agent.currentState == STATE_ENGAGE)
+    {
+        float queueSlowdown = agent.currentState == STATE_ENGAGE ? 0.35 : 0.75;
+        float minQueueSpeed = agent.currentState == STATE_ENGAGE ? 0.35 : 0.08;
+        float jamSpeedScale = max(minQueueSpeed, saturate(1.0 - densityPressure.aheadPressure * queueSlowdown));
+        float maxLocomotionSpeed = settings.maxSpeed * max(0.08, densityPressure.speedScale * jamSpeedScale);
+        float locomotionSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
+        if (locomotionSpeedSqr > maxLocomotionSpeed * maxLocomotionSpeed)
+            agent.velocity.xz *= maxLocomotionSpeed * rsqrt(locomotionSpeedSqr);
+    }
+    if (rangedBlocked && selfFlow.modes.x == FLOW_TARGET_NONE)
+    {
+        if (congestion.rangedStatus <= -3.0)
+        {
+            float2 correction = neighborhood.contactSeparation * 2.0;
+            agent.velocity = float3(correction.x, 0.0, correction.y);
+        }
+        LimitRangedReposition(agent, settings, congestion, dt);
+    }
+#if defined(MASS_TERRAIN_ENABLED)
+    TerrainIntegrate(agent, dt);
+#else
+    agent.position += agent.velocity * dt;
+    ApplyStaticObstacleBounds(id.x, agent);
+    ApplyBounds(agent);
+#endif
+
+    if (!hasTacticalDirection && dot(agent.velocity.xz, agent.velocity.xz) > 0.25 && agent.currentState != STATE_ATTACK)
+        SmoothFaceDirectionDt(agent, agent.velocity.xz, 0.05, 180.0, dtSim);
+
+    StoreAgent(id.x, agent);
+}
+
+// 清零发射请求计数器（CPU 消费完成后调用，避免采样稀释）
+[numthreads(64, 1, 1)]
+void ClearLaunchRequests(uint3 id : SV_DispatchThreadID)
+{
+    uint count;
+    uint stride;
+    launchRequestBuffer.GetDimensions(count, stride);
+    if (id.x >= count)
+        return;
+
+    launchRequestBuffer[id.x] = 0;
+}
+
+
+// D3D11 combat already occupies all 8 UAV slots. Observe consumption in a separate, bounded-rate kernel.
+[numthreads(64,1,1)]
+void ObserveLocalOrders(uint3 id:SV_DispatchThreadID)
+{
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    uint count,stride;_LocalOrders.GetDimensions(count,stride);if(id.x>=count)return;
+    _LocalOrderAck[id.x]=0;if(!HasLocalOrder(id.x)||hpReadBuffer[id.x]<=0)return;
+    LocalAgentOrder o=_LocalOrders[id.x];int2 cell=TerrainNavCell(agentPositionReadBuffer[id.x]);
+    bool open=all(cell>=0)&&all(cell<flowFieldResolution);
+    if(open)open=_LocalOrderMask[(o.slotPlusOne-1)*_LocalOrderCellCount+cell.y*flowFieldResolution.x+cell.x]!=0;
+    float observedRevision=asfloat(engagementSlotAssignmentBuffer[count+id.x*12u+6u]);
+    _LocalOrderAck[id.x]=(uint)o.sequence | (battleStarted==0?0x80000000u:0u) | (!open?0x40000000u:0u) | (observedRevision!=-(float)o.sequence?0x20000000u:0u);
+#endif
+}

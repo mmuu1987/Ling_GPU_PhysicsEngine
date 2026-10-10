@@ -20,6 +20,19 @@ namespace MassEngine
         // largest supported radius across resets, rather than silently narrowing its nav mask.
         private float terrainClearanceFloor = .45f;
 
+        private float? deploymentRadiusClearance;
+        public float? DeploymentRadiusClearance => deploymentRadiusClearance;
+        /// <summary>Opt-in radius-edit boundary only. Caller must release old buffers first;
+        /// never changes a paused/live world's navigation in place. Null preserves legacy policy.</summary>
+        public void SetDeploymentRadiusClearance(float? radius)
+        {
+            if (bufferManager != null || unitTypeRegistry != null || IsBattleRunning)
+                throw new InvalidOperationException("Radius clearance can change only after releasing the previous deployment.");
+            if (radius.HasValue && (float.IsNaN(radius.Value) || float.IsInfinity(radius.Value) || radius.Value < .45f))
+                throw new ArgumentOutOfRangeException(nameof(radius));
+            deploymentRadiusClearance = radius; terrainContextChecked = false;
+        }
+
         public TerrainSurface TerrainSurface => terrainSurface;
         public TerrainNavigationGrid TerrainNavigation => terrainNavigation;
         public string TerrainError => terrainError ?? terrainContextError;
@@ -50,6 +63,7 @@ namespace MassEngine
 
         private float ResolveTerrainClearance()
         {
+            if (deploymentRadiusClearance.HasValue) return deploymentRadiusClearance.Value;
             float radius = .45f;
             if (scenarioConfig != null && scenarioConfig.unitTypes != null)
                 foreach (var unit in scenarioConfig.unitTypes)
@@ -100,15 +114,17 @@ namespace MassEngine
             return error == null;
         }
 
-        public TerrainNavigationGrid CreateTerrainNavigation(StaticObstacleRect[] obstacles, float padding)
+        public TerrainNavigationGrid CreateTerrainNavigation(StaticObstacleRect[] obstacles, float padding, float? candidateClearance = null)
         {
             if (!TryGetTerrainContext(out var surface, out _, out string error)) throw new InvalidOperationException(error);
-            return surface == null ? null : CreateTerrainNavigationCore(obstacles, padding);
+            if (candidateClearance.HasValue && (float.IsNaN(candidateClearance.Value) || float.IsInfinity(candidateClearance.Value) || candidateClearance.Value < .45f))
+                throw new ArgumentOutOfRangeException(nameof(candidateClearance));
+            return surface == null ? null : CreateTerrainNavigationCore(obstacles, padding, candidateClearance);
         }
 
-        private TerrainNavigationGrid CreateTerrainNavigationCore(StaticObstacleRect[] obstacles, float padding) =>
+        private TerrainNavigationGrid CreateTerrainNavigationCore(StaticObstacleRect[] obstacles, float padding, float? candidateClearance = null) =>
             new TerrainNavigationGrid(terrainSurface, Flow.flowFieldOrigin, Flow.flowFieldCellSize,
-                Flow.flowFieldResolution, Flow.flowFieldResolution, ResolveTerrainClearance(), Simulation.boundaryPadding, obstacles, padding);
+                Flow.flowFieldResolution, Flow.flowFieldResolution, candidateClearance ?? ResolveTerrainClearance(), Simulation.boundaryPadding, obstacles, padding);
 
         private StaticObstacleRect[] CurrentTerrainObstacles()
         {
@@ -137,10 +153,10 @@ namespace MassEngine
             if (!TryGetTerrainContext(out var surface, out var navigation, out _)) return false;
             if (surface == null)
             { terrainRuntime?.Dispose(); terrainRuntime = null; return true; }
-            if (terrainRuntime == null || terrainRuntime.Navigation != navigation)
+            if (terrainRuntime == null || terrainRuntime.Navigation != navigation || terrainRuntime.LaneApproach33 != Flow.terrainLaneApproach33)
             {
                 terrainRuntime?.Dispose(); terrainRuntime = null;
-                try { terrainRuntime = new TerrainNavigationRuntime(navigation, bufferManager.TeamCount); }
+                try { terrainRuntime = new TerrainNavigationRuntime(navigation, bufferManager.TeamCount, Flow.terrainLaneApproach33); }
                 catch (Exception exception) { terrainError = exception.Message; return false; }
                 MarkAllFlowFieldsDirty();
             }
@@ -195,3 +211,4 @@ namespace MassEngine
         }
     }
 }
+

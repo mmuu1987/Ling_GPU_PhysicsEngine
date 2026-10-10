@@ -57,11 +57,13 @@ namespace MassEngine.Game.Tests
         [Test] public void IsolatedTrialShowsTrueRobotPortraitWithoutAddingItToFormalV07()
         {
             var trial=Load<WarSandboxBattlefieldCatalog>(RobotExpressiveBuilder.Output+"/Trial/Catalog.asset");Assert.NotNull(trial);Assert.AreEqual(1,trial.entries.Length);Assert.AreEqual("robot-expressive-pilot",trial.defaultEntryId);Assert.NotNull(trial.templates[0].unitPreview);
-            var formal=Load<WarSandboxBattlefieldCatalog>("Assets/Game/OfficialRoster/Version07/Catalog.asset");Assert.AreEqual(28,formal.SelectableEntryCount);Assert.AreEqual(65,formal.templates.Count(t=>!t.hiddenFromSelection));Assert.IsFalse(formal.templates.Any(t=>t.templateId.Contains("robot-pilot")));
+            var formal=Load<WarSandboxBattlefieldCatalog>("Assets/Game/Content/Characters/OfficialRoster/Version07/Catalog.asset");Assert.AreEqual(28,formal.SelectableEntryCount);Assert.AreEqual(65,formal.templates.Count(t=>!t.hiddenFromSelection));Assert.IsFalse(formal.templates.Any(t=>t.templateId.Contains("robot-pilot")));
         }
         [Test] public void CapturedGpuFramesCoverAllFourStates()
         {
-            string capture="Logs/AgentRobotExpressive20261002/capture-03";
+            // Original capture retained by the retirement archive; never fabricate replacement evidence.
+            string capture="Logs/RetiredWorktree-20261003-01/Logs/AgentRobotExpressive20261002/capture-03";
+            Assert.IsTrue(Directory.Exists(capture), "Historical GPU evidence archive is required.");
             foreach(string state in new[]{"Idle","Move","Attack","Dead"})Assert.AreEqual(12,Directory.GetFiles(capture,"gpu-"+state+"-*.png").Length);
             Assert.IsTrue(File.Exists(capture+"/robot-full-body.png"));Assert.IsTrue(File.Exists(capture+"/gpu-side.png"));
         }

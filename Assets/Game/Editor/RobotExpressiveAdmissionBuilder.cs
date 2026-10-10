@@ -18,8 +18,8 @@ namespace MassEngine.Game.Editor
     /// <summary>One explicit human-approved admission; no rebake, no old content edits, no automatic art approval.</summary>
     public static class RobotExpressiveAdmissionBuilder
     {
-        public const string Root="Assets/Game/OfficialRoster/Version08";
-        public const string Previous="Assets/Game/OfficialRoster/Version07";
+        public const string Root="Assets/Game/Content/Characters/OfficialRoster/Version08";
+        public const string Previous="Assets/Game/Content/Characters/OfficialRoster/Version07";
         public const string CatalogPath=Root+"/Catalog.asset";
         public const string MenuScene=Root+"/LaunchMenu.unity";
         public const string BattleScene=Root+"/RobotBattlefield.unity";

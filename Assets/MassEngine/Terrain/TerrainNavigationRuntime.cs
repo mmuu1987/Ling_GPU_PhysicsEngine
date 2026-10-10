@@ -35,15 +35,14 @@ namespace MassEngine
         private readonly Vector2[] empty;
         private ComputeShader combatShader, projectileShader;
         private bool disposed;
-#if UNITY_EDITOR
         private TerrainNavigationBurstWorkspace burstWorkspace;
         private bool burstUnavailable;
-#endif
-#if UNITY_EDITOR
-        // Process-local Editor opt-in only; no preference or scene asset is written.
+        // P3-PERF-01 candidate (2026-10-10): Burst is the default in Editor and Player; --war-sandbox-nav-managed forces the managed solver.
+        // --war-sandbox-nav-burst is still accepted (no-op). No preference or scene asset is written.
         private static readonly bool reserveOptIn = Array.Exists(Environment.GetCommandLineArgs(), a => a == "--war-sandbox-nav-burst");
         private static readonly bool reserveManagedOnly = Array.Exists(Environment.GetCommandLineArgs(), a => a == "--war-sandbox-nav-managed");
-        public static bool BurstReserveRequested => reserveOptIn && !reserveManagedOnly;
+        public static bool BurstReserveRequested => !reserveManagedOnly;
+        public static bool BurstArgumentPresent => reserveOptIn;
         public string PreparationBlockReason { get; private set; }
         private P3PreparationGate preparation;
         private System.Runtime.ExceptionServices.ExceptionDispatchInfo preparationFault;
@@ -65,7 +64,7 @@ namespace MassEngine
         {
             preparationFault?.Throw();
             if (burstUnavailable) return;
-            if (!BurstReserveRequested) { PreparationBlockReason = reserveManagedOnly ? "ManagedOverride" : "DefaultOff"; burstUnavailable = true; return; }
+            if (!BurstReserveRequested) { PreparationBlockReason = "ManagedOverride"; burstUnavailable = true; return; }
             bool enabled = Unity.Burst.BurstCompiler.IsEnabled;
             bool forceSync = preparationForceSyncArgument || Unity.Burst.BurstCompiler.Options.EnableBurstCompileSynchronously;
             double now = Time.realtimeSinceStartupAsDouble;
@@ -104,7 +103,6 @@ namespace MassEngine
             ManagedSolveCount++;
             return Navigation.CreateFlowField(goals, radius);
         }
-#endif
 
 
         public TerrainNavigationRuntime(TerrainNavigationGrid navigation, int teamCount, bool laneApproach33 = false)
@@ -149,9 +147,7 @@ namespace MassEngine
         public void Tick(MassGpuBufferManager buffers, PipelineFrameContext context)
         {
             if (disposed) return;
-#if UNITY_EDITOR
             AdvancePreparation();
-#endif
             for (int team = 0; team < pending.Length; team++)
             {
                 if (!pending[team] || !requests[team].done) continue;
@@ -221,12 +217,7 @@ namespace MassEngine
         private void Upload(MassGpuBufferManager buffers, int team, float stopRadius, IReadOnlyList<Vector2> goals, bool dynamicEnemy = false)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-#if UNITY_EDITOR
             Vector2[] directions = SolvePreparedBackend(goals, stopRadius);
-#else
-            // Player/AOT is not qualified: retain the adopted managed backend unconditionally.
-            Vector2[] directions = Navigation.CreateFlowField(goals, stopRadius);
-#endif
             if(LaneApproach33 && dynamicEnemy) TerrainLaneApproach33.Apply(Navigation, goals, directions, stopRadius);
             LastSolveMilliseconds = (float)watch.Elapsed.TotalMilliseconds;
             TotalSolveMilliseconds += LastSolveMilliseconds;
@@ -239,12 +230,8 @@ namespace MassEngine
         {
             if (disposed) return;
             disposed = true;
-#if UNITY_EDITOR
             preparation?.Dispose(); preparation = null;
-#endif
-#if UNITY_EDITOR
             burstWorkspace?.Dispose(); burstWorkspace = null;
-#endif
             // Requests use polling, not callbacks: no completion can write into a replacement world's buffers.
             Array.Clear(pending, 0, pending.Length);
             Array.Clear(ready, 0, ready.Length);
@@ -256,7 +243,6 @@ namespace MassEngine
 }
 
 
-#if UNITY_EDITOR
 namespace MassEngine {
 [Unity.Burst.BurstCompile(CompileSynchronously=false,FloatMode=Unity.Burst.FloatMode.Strict,FloatPrecision=Unity.Burst.FloatPrecision.Standard)]
  internal struct TerrainNavigationSolveJob : Unity.Jobs.IJob {
@@ -395,14 +381,12 @@ namespace MassEngine {
 
   internal sealed class TerrainNavigationBurstWorkspace:IDisposable {
    public TerrainNavigationSolveJob job;public readonly TerrainNavigationGrid nav;public long PayloadBytes;bool disposed;
-#if UNITY_EDITOR
    private bool counted;
    public static int CreatedWorkspaces{get;private set;}
    public static int DisposedWorkspaces{get;private set;}
    public static int ActiveWorkspaces{get;private set;}
    public static int BurstCalls{get;private set;}
    public static int ManagedNativeCalls{get;private set;}
-#endif
    public bool IsDisposed=>disposed;
    public bool LastRunUsedBurst=>!disposed && job.proof[0]==1;
    Unity.Collections.NativeArray<T> Alloc<T>(int n) where T:struct => new Unity.Collections.NativeArray<T>(n,Unity.Collections.Allocator.Persistent,Unity.Collections.NativeArrayOptions.UninitializedMemory);
@@ -413,37 +397,27 @@ namespace MassEngine {
     job.uniformOutputDirections=Copy(uniformSource??new Vector2[0]);
     job.distances=Alloc<double>(n);job.nextCells=Alloc<int>(n);job.heap=Alloc<int>(n);job.heapPositions=Alloc<int>(n);job.result=Alloc<Vector2>(n);job.targetCells=Alloc<int>(n);job.proof=Alloc<int>(1);
     PayloadBytes=69L*n+8L*job.uniformOutputDirections.Length+4;
-#if UNITY_EDITOR
     counted=true;CreatedWorkspaces++;ActiveWorkspaces++;
-#endif
    }catch{Dispose();throw;}}
    void Prepare(IReadOnlyList<Vector2> goals,float radius){if(disposed)throw new ObjectDisposedException("Workspace");if(float.IsNaN(radius)||float.IsInfinity(radius)||radius<0)throw new ArgumentOutOfRangeException("stopRadius");job.stopRadius=radius;job.hasTargets=goals!=null;job.targetCount=goals==null?0:goals.Count;
     if(job.targetCount>job.targetCells.Length){job.targetCells.Dispose();job.targetCells=Alloc<int>(job.targetCount);}
     for(int i=0;i<job.targetCount;i++)job.targetCells[i]=nav.TryGetCell(goals[i],out int cell)?cell:-1;
    }
 
-#if UNITY_EDITOR
    // Same job entry and proof, but no grid initialization/copy. No solve scheduling changes.
    public bool ProbeCompilation(){if(disposed)throw new ObjectDisposedException("Workspace");var probe=job;probe.CellCount=0;probe.targetCount=0;probe.hasTargets=false;Unity.Jobs.IJobExtensions.Run(probe);if(job.proof[0]==1)BurstCalls++;else ManagedNativeCalls++;return LastRunUsedBurst;}
-#endif
    public Vector2[] Solve(IReadOnlyList<Vector2> goals,float radius){Prepare(goals,radius);var output=new Vector2[nav.CellCount];Unity.Jobs.IJobExtensions.Run(job);
-#if UNITY_EDITOR
     if(job.proof[0]==1)BurstCalls++;else ManagedNativeCalls++;
-#endif
     job.result.CopyTo(output);return output;}
    public void Dispose(){if(disposed)return;disposed=true;
-#if UNITY_EDITOR
     if(counted){counted=false;DisposedWorkspaces++;ActiveWorkspaces--;}
-#endif
 if(job.walkable.IsCreated)job.walkable.Dispose();if(job.neighbours.IsCreated)job.neighbours.Dispose();if(job.edgeCosts.IsCreated)job.edgeCosts.Dispose();if(job.uniformOutputDirections.IsCreated)job.uniformOutputDirections.Dispose();if(job.distances.IsCreated)job.distances.Dispose();if(job.nextCells.IsCreated)job.nextCells.Dispose();if(job.heap.IsCreated)job.heap.Dispose();if(job.heapPositions.IsCreated)job.heapPositions.Dispose();if(job.result.IsCreated)job.result.Dispose();if(job.targetCells.IsCreated)job.targetCells.Dispose();if(job.proof.IsCreated)job.proof.Dispose();}
   }
 
 }
 
-#endif
-#if UNITY_EDITOR
 namespace MassEngine {
- // Temporary independent diagnostic only. Not called by TerrainNavigationRuntime.Upload or scene code.
+ // Editor-only preparation policy owned by TerrainNavigationRuntime; normal solves do not probe compilation.
  public sealed class P3PreparationUnavailableException : System.Exception { public P3PreparationUnavailableException(string message):base(message){} }
  public sealed class P3PreparationGate : System.IDisposable {
   public enum Phase { Waiting, Ready, Unavailable, Faulted, Disposed }
@@ -482,4 +456,3 @@ namespace MassEngine {
   public void Dispose(){if(State==Phase.Disposed)return;State=Phase.Disposed;ReleaseOnce();}
  }
 }
-#endif

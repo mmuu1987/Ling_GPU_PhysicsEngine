@@ -293,6 +293,8 @@ namespace MassEngine
                 unitTypeIndexBuffer.SetData(unitTypeIndices);
         }
 
+        internal int LocalPartitionTypeMask { get; private set; }
+
         public void UploadUnitTypeSettings(UnitTypeGpuSettings[] settings)
         {
             if (unitTypeSettingsBuffer == null || settings == null || settings.Length != UnitTypeCount)
@@ -301,6 +303,13 @@ namespace MassEngine
             maxUnitRadius = 0.05f;
             foreach (var unit in settings) maxUnitRadius = Mathf.Max(maxUnitRadius, unit.agentRadius);
             unitTypeSettingsBuffer.SetData(settings);
+            int kinds=0;bool valid=true;
+            foreach(var unit in settings) {
+                float range=unit.projectileRange;
+                if(float.IsNaN(range)||float.IsInfinity(range)){valid=false;break;}
+                kinds|=range>0.01f?2:1;
+            }
+            LocalPartitionTypeMask=valid?kinds:0;
         }
 
         /// <summary>
@@ -373,6 +382,7 @@ namespace MassEngine
 
         public void ReleaseAll()
         {
+            LocalPartitionTypeMask=0;
             // Combat buffers first: if anything below throws, the plain buffers are the
             // least likely to leak (they are all released through the same helper).
             combatBuffers.ReleaseAll();
@@ -511,3 +521,4 @@ namespace MassEngine
         }
     }
 }
+

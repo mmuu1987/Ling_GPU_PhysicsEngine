@@ -16,16 +16,16 @@ namespace MassEngine.Game.Editor
     // roster and every earlier collection are read, never written: the new regular policy is a copy plus the new templates.
     public static class Troops4Builder
     {
-        const string Source="Assets/CharacterPilotSource/QuaterniusTroops4";
-        const string AtlasPath="Assets/CharacterPilotSource/QuaterniusMonsters/Atlas_Monsters.png";
+        const string Source="Assets/Art/Source/CharacterPilot/QuaterniusTroops4";
+        const string AtlasPath="Assets/Art/Source/CharacterPilot/QuaterniusMonsters/Atlas_Monsters.png";
         const string Log="Logs/AgentMonsters3";
-        public const string Prepared="Assets/Game/Troops4/Prepared01";
+        public const string Prepared="Assets/Game/Content/Characters/Troops4/Prepared01";
         public const string Integrated=Prepared+"/Integrated";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        public const string RegularScene="Assets/Game/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity";
-        public const string RegularPolicyPath="Assets/Game/UnifiedRoster/Version03/RegularPolicy.asset";
-        const string LibraryKnight="Assets/Game/UnifiedRoster/Version03/Library/knight.asset";
-        public const string BaseCatalog="Assets/Game/Giants3/Prepared02/Integrated/Catalog.asset";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        public const string RegularScene="Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity";
+        public const string RegularPolicyPath="Assets/Game/Content/Characters/UnifiedRoster/Version03/RegularPolicy.asset";
+        const string LibraryKnight="Assets/Game/Content/Characters/UnifiedRoster/Version03/Library/knight.asset";
+        public const string BaseCatalog="Assets/Game/Content/Characters/Giants3/Prepared02/Integrated/Catalog.asset";
         public static readonly string[] Names={"OrcSkull","Ninja","Tribal"};
         static readonly string[] Files={"Orc_Skull.fbx","Ninja.fbx","Tribal.fbx"};
         public static readonly string[] Keys={"orcskull","ninja","tribal"};

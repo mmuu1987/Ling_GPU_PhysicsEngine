@@ -25,11 +25,16 @@ namespace MassEngine.Game
         public string StatsWarning { get; private set; }
         public bool ConfirmationOpen { get; private set; }
         public bool SettingsOpen { get; private set; }
+        public bool HelpOpen { get; private set; }
+        private bool resumeAfterHelp30;
+        private int helpClosedFrame30 = -1;
+        public bool HelpInputBlocked30 => HelpOpen || Time.frameCount == helpClosedFrame30;
         public bool IsLoading => transitionInFlight || State == WarSandboxEntryState.Loading;
-        public bool InputBlocked => IsLoading || State != WarSandboxEntryState.Battle || ConfirmationOpen || SettingsOpen;
+        public bool InputBlocked => IsLoading || State != WarSandboxEntryState.Battle || ConfirmationOpen || SettingsOpen || HelpInputBlocked30;
         public bool RequiresEndConfirmation => Controller != null &&
             (Controller.Phase == WarSandboxBattlePhase.Running || Controller.Phase == WarSandboxBattlePhase.Paused ||
-             WarSandboxRuntimeDeployment.BlocksCommands(Controller));
+             WarSandboxRuntimeDeployment.BlocksCommands(Controller) ||
+             (PlanState28.For(Controller) != null && PlanState28.For(Controller).NeedsLeaveWarning));
 
         private string menuScenePath;
         private string pendingScenePath;
@@ -111,6 +116,7 @@ namespace MassEngine.Game
         {
             error = null;
             if (IsLoading) { error = "A scene is already loading."; return false; }
+            if (HelpOpen) { error = "Close help before changing battlefields."; return false; }
             if (SettingsOpen) { error = "Close settings before changing battlefields."; return false; }
             if (RequiresEndConfirmation && !confirmed) { error = "Confirm ending the current battle first."; return false; }
             return true;
@@ -118,7 +124,7 @@ namespace MassEngine.Game
 
         public void BeginConfirmation()
         {
-            if (IsLoading || ConfirmationOpen || SettingsOpen) return;
+            if (IsLoading || ConfirmationOpen || SettingsOpen || HelpOpen) return;
             resumeAfterConfirmation = Controller != null && Controller.Phase == WarSandboxBattlePhase.Running;
             if (resumeAfterConfirmation) Controller.PauseBattle();
             ConfirmationOpen = true;
@@ -136,7 +142,7 @@ namespace MassEngine.Game
 
         public void OpenSettings()
         {
-            if (IsLoading || ConfirmationOpen || SettingsOpen) return;
+            if (IsLoading || ConfirmationOpen || SettingsOpen || HelpOpen) return;
             resumeAfterSettings = Controller != null && Controller.Phase == WarSandboxBattlePhase.Running;
             if (resumeAfterSettings) Controller.PauseBattle();
             SettingsOpen = true; SetCameraInput(false);
@@ -148,6 +154,22 @@ namespace MassEngine.Game
             SettingsOpen = false; SetCameraInput(true);
             if (resumeAfterSettings && Controller != null) Controller.StartOrResumeBattle();
             resumeAfterSettings = false;
+        }
+
+        public void OpenHelp30()
+        {
+            if (Guide30.For(this) == null || IsLoading || ConfirmationOpen || SettingsOpen || HelpOpen) return;
+            resumeAfterHelp30 = Controller != null && Controller.Phase == WarSandboxBattlePhase.Running;
+            if (resumeAfterHelp30) Controller.PauseBattle();
+            HelpOpen = true; SetCameraInput(false);
+        }
+        public void CloseHelp30()
+        {
+            if (!HelpOpen) return;
+            HelpOpen = false; SetCameraInput(true);
+            if (resumeAfterHelp30 && Controller != null) Controller.StartOrResumeBattle();
+            helpClosedFrame30 = Time.frameCount; // Protect subsequent input, not the deliberate resume above.
+            resumeAfterHelp30 = false;
         }
 
         public void ClearError() => Error = null;
@@ -162,7 +184,7 @@ namespace MassEngine.Game
             ConfirmationOpen = false;
             resumeAfterConfirmation = false;
             receivedScene = false;
-            SettingsOpen = false; resumeAfterSettings = false;
+            SettingsOpen = false; resumeAfterSettings = false; HelpOpen = false; resumeAfterHelp30 = false;
             transitionInFlight = true;
             Time.timeScale = 1;
         }

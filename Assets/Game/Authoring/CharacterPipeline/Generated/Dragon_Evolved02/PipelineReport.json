@@ -1,0 +1,54 @@
+{
+    "status": "ready-for-human-review",
+    "output": "Assets/Game/Authoring/CharacterPipeline/Generated/Dragon_Evolved02",
+    "evidence": "Logs/CharacterPipeline/Dragon_Evolved02-afb1dd26",
+    "sourceModel": "Assets/Game/Content/Characters/Dragons/Prepared02/Dragon_Evolved/Prepared.prefab",
+    "sourceGuid": "9b898b2e3b524014097e47f18efdf45a",
+    "sourceDependencyHash": "07f7190bf34520504b427e5fcb1cdcbc",
+    "unityVersion": "6000.3.14f1",
+    "createdUtc": "2026-09-30T14:47:54.7275340Z",
+    "sourceBodyHeight": 4.214204788208008,
+    "targetBodyHeight": 4.214204788208008,
+    "bodyScaleFactor": 1.0,
+    "agentRadius": 4.199999809265137,
+    "maxPositionError": 0.002163328230381012,
+    "allowedPositionError": 0.0024999999441206457,
+    "fullVertices": 4352,
+    "lowVertices": 1994,
+    "totalFrames": 110,
+    "gpuSnapshots": 48,
+    "sourceReferenceSnapshots": 16,
+    "positionComparisons": 478720,
+    "textureBytes": 18022400,
+    "automatedPassed": true,
+    "humanAcceptance": false,
+    "sourcePreviewMethod": "Independent bone/bindpose/weight positions rendered through the same VAT GPU shader; topology/UV/normals shared. NOT a separate native SkinnedMeshRenderer/material acceptance.",
+    "actions": [
+        {
+            "action": "Idle",
+            "frames": 37,
+            "maximumPositionError": 0.002163328230381012
+        },
+        {
+            "action": "Move",
+            "frames": 20,
+            "maximumPositionError": 0.0021277153864502908
+        },
+        {
+            "action": "Attack",
+            "frames": 37,
+            "maximumPositionError": 0.002149546518921852
+        },
+        {
+            "action": "Death",
+            "frames": 16,
+            "maximumPositionError": 0.0020609707571566107
+        }
+    ],
+    "warnings": [
+        "Body height is measured on skinned bind geometry, excluding declared rigid attachments. Forward must already be +Z. Grounding is bind-pose only.",
+        "Visual size does not automatically tune collision, formation, attack reach, camera or large-creature behaviour. Agent radius is copied explicitly into a private config.",
+        "Human checklist: neck/shoulders, hand-to-weapon contact, feet/ground, all actions, palette/LOD continuity. Automated checks are not human acceptance.",
+        "PaletteGrid is an explicit authoring contract, not a universal texture simplifier. Inspect colour boundaries manually."
+    ]
+}

@@ -96,6 +96,26 @@ namespace MassEngine
             PrepareUniformOutputDirections();
         }
 
+        /// <summary>
+        /// Shares only the immutable navigation topology. Each returned grid owns its
+        /// Dijkstra scratch arrays, so separate grids may solve concurrently.
+        /// Does not rebuild terrain coverage, edges, or connectivity; no prewarming.
+        /// </summary>
+        public TerrainNavigationGrid CreateIndependentSolver() => new TerrainNavigationGrid(this);
+
+        private TerrainNavigationGrid(TerrainNavigationGrid source)
+        {
+            Surface = source.Surface; Origin = source.Origin; CellSize = source.CellSize;
+            ResolutionX = source.ResolutionX; ResolutionZ = source.ResolutionZ;
+            CellCount = source.CellCount; Clearance = source.Clearance;
+            maximumX = source.maximumX; maximumZ = source.maximumZ;
+            walkable = source.walkable; components = source.components;
+            neighbours = source.neighbours; edgeCosts = source.edgeCosts;
+            uniformOutputDirections = source.uniformOutputDirections;
+            distances = new double[CellCount]; nextCells = new int[CellCount];
+            heap = new int[CellCount]; heapPositions = new int[CellCount];
+        }
+
         /// <summary>Every step must be an existing legal cardinal graph edge, including terrain/obstacle clearance.</summary>
         public bool HasClearCardinalRoute33(int from,int to)
         {
@@ -112,10 +132,8 @@ namespace MassEngine
         public uint[] CopyWalkable() => (uint[])walkable.Clone();
 
         // Runtime owns/disposes the native snapshot; the managed grid remains independently usable.
-#if UNITY_EDITOR
         internal TerrainNavigationBurstWorkspace CreateBurstWorkspace() =>
             new TerrainNavigationBurstWorkspace(this, walkable, neighbours, edgeCosts, uniformOutputDirections);
-#endif
 
         /// <summary>Range only, including blocked cells. Positive grid edges are exclusive.</summary>
         public bool TryGetCell(Vector2 position, out int cell)
@@ -452,3 +470,4 @@ namespace MassEngine
         }
     }
 }
+

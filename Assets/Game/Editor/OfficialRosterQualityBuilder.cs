@@ -16,11 +16,11 @@ namespace MassEngine.Game.Editor
     /// <summary>Curates Version06 without rebaking or editing any previous content. All identities stay resolvable.</summary>
     public static class OfficialRosterQualityBuilder
     {
-        public const string Root = "Assets/Game/OfficialRoster/Version07";
+        public const string Root = "Assets/Game/Content/Characters/OfficialRoster/Version07";
         public const string CatalogPath = Root + "/Catalog.asset";
         public const string MenuScene = Root + "/LaunchMenu.unity";
         public const string Output = "Builds/OfficialRoster-20261002-02";
-        public const string Previous = "Assets/Game/OfficialRoster/Version06";
+        public const string Previous = "Assets/Game/Content/Characters/OfficialRoster/Version06";
         public const string SourceEvidence = "Logs/AgentContentQuality/source-03/source-review.json";
         public static readonly string[] WithdrawnTemplates = { "roster-platformer-enemy", "roster-platformer-skull" };
         public static readonly string[] WithdrawnBattlefields = { "troops6-enemy", "troops6-skull" };
@@ -83,7 +83,7 @@ namespace MassEngine.Game.Editor
                     features.Add(spec[0], ids.Distinct().ToArray());
                 }
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-                Require(!string.IsNullOrEmpty(AssetDatabase.CreateFolder("Assets/Game/OfficialRoster", "Version07")), "Cannot create fresh quality root."); made = true;
+                Require(!string.IsNullOrEmpty(AssetDatabase.CreateFolder("Assets/Game/Content/Characters/OfficialRoster", "Version07")), "Cannot create fresh quality root."); made = true;
                 AssetDatabase.CreateFolder(Root, "Previews"); AssetDatabase.CreateFolder(Root, "UnitPreviews");
                 old = Load<WarSandboxBattlefieldCatalog>(Previous + "/Catalog.asset");
                 var catalog = ScriptableObject.CreateInstance<WarSandboxBattlefieldCatalog>(); catalog.defaultEntryId = old.defaultEntryId;

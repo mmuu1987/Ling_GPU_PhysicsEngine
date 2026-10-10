@@ -22,7 +22,7 @@ namespace MassEngine.Game.Tests
     /// </summary>
     public sealed class WarSandboxUiStyleCaptureTests
     {
-        private const string Menu = "Assets/Game/OfficialRoster/Version03/LaunchMenu.unity";
+        private const string Menu = "Assets/Game/Content/Characters/OfficialRoster/Version03/LaunchMenu.unity";
         private float previousCaptureDelta;
         private string directory, shots;
         private WarSandboxSceneSession session;

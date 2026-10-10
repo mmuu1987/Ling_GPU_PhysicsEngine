@@ -149,12 +149,15 @@ namespace MassEngine.Game
             string note = placing ? "在下方点击，放置选中的编成" : "点击色块选择编成 · 小编成也可用左侧的布阵按钮选中";
             if (deployment.controller.manager.terrainSurfaceAsset != null && deployment.Draft.Count > 0 &&
                 deployment.controller.TryResolveGroundPoint(deployment.Draft[selected].center, out var ground, out _))
-                note = "地表高程 " + ground.y.ToString("F1") + "m · 完整脚印须可通行";
+                note = "地表高程 " + ground.y.ToString("F1") + "m · 浅色较高 / 深灰禁行 · 编成须完整放入可通行区";
+            if (FlowPolish23.Active(deployment)) note = FlowPolish23.MapHint(deployment, selected, placing, spatialSelection);
+            note = "拖色块平移 · 选中后拖边/角改尺寸 · Shift锁比例 · 松手校验 · Esc/移出取消";
             ui.Label("map-note", new Rect(area.x + 12, area.y + 48, area.width - 24, 30), note, 13, WarSandboxUGUI.Muted);
             Vector2 world = deployment.WorldSize; if (world.x <= 0 || world.y <= 0) return;
             float scale = Mathf.Min((area.width - 32) / world.x, (area.height - 106) / world.y);
             Rect map = new Rect(area.center.x - world.x * scale / 2, area.y + 86, world.x * scale, world.y * scale);
             ui.Panel("deployment-map-surface", map, WarSandboxUGUI.FieldFill, false, WarSandboxUGUI.Line);
+            DrawTerrainMap(ui, map);
             for (int i = 1; i < 8; i++)
             {
                 ui.Panel("map-grid-x-" + i, new Rect(map.x + map.width * i / 8, map.y, 1, map.height), WarSandboxUGUI.Line, false);
@@ -187,25 +190,8 @@ namespace MassEngine.Game
                 }
                 if (rect.width > 40 && rect.height > 24) ui.Label("map-number-" + i, rect, (i + 1).ToString(), 14, WarSandboxUGUI.Ink, true);
             }
-            ui.PointerArea("map-pointer", map, (normalized, button, shift) =>
-            {
-                if (button != 0 || !CommitFields()) return;
-                Vector2 point = new Vector2(map.x + normalized.x * map.width, map.y + normalized.y * map.height);
-                if (placing && draft.Count > 0)
-                {
-                    var entry = draft[selected]; var center = WarSandboxMinimapProjection.MapToWorld(point, world, map);
-                    if (!deployment.controller.TryResolveGroundPoint(center, out center, out string error)) { inputError = error; return; }
-                    // Authoring Y is not a terrain height array; the runtime presentation samples it on apply.
-                    entry.center = new Vector3(center.x, entry.center.y, center.z); draft.Set(selected, entry); placing = false; RefreshAfterUiChange();
-                }
-                else
-                {
-                    spatialSelection = false;
-                    for (int i = draft.Count - 1; i >= 0; i--)
-                        if (MapBounds(draft[i].Bounds, world, map).Contains(point)) { selected = i; spatialSelection = true; RefreshAfterUiChange(); break; }
-                    nextUiRefresh = 0;
-                }
-            });
+            BindTranslation(ui, map, world);
+            DrawResizeHandles(ui,map,world);
         }
         private void DrawUGUIPlans(WarSandboxUGUI ui)
         {
@@ -226,7 +212,7 @@ namespace MassEngine.Game
             else
             {
                 ui.Panel("plans-save-card", new Rect(x, 104, w, 152)); ui.Brackets("plans-save-card-br", new Rect(x, 104, w, 152), null, 10);
-                ui.Label("plans-save-heading", new Rect(x + 12, 112, w - 24, 28), "保存当前布阵", 18, null, true);
+                ui.Label("plans-save-heading", new Rect(x + 12, 112, w - 24, 28), PlanState28.For(deployment.controller) != null ? "保存当前草稿（不会自动应用到本局）" : "保存当前布阵", 18, null, true);
                 ui.Label("plans-slot-label", new Rect(x + 12, 150, 70, 34), "编号", 14, WarSandboxUGUI.Muted);
                 ui.Field("plans-slot", new Rect(x + 82, 150, 96, 34), planSlot, v => planSlot = v, WarSandboxLocalPlanStore.MaxSlotLength);
                 ui.Label("plans-name-label", new Rect(x + 188, 150, 62, 34), "名称", 14, WarSandboxUGUI.Muted);
@@ -256,7 +242,9 @@ namespace MassEngine.Game
                 ui.EndScroll();
                 ui.Button("plans-load", new Rect(x, h - 150, w, 40), "载入选中方案", () => { pendingPlanAction = "load"; pendingPlanSlot = selectedPlanSlot; clearFocusRequested = true; }, true, selectedPlanSlot != null);
             }
-            if (!string.IsNullOrEmpty(planMessage)) ui.Label("plans-message", new Rect(x, h - 106, w, 40), planMessage, 14, WarSandboxUGUI.Accent);
+            if (!string.IsNullOrEmpty(planMessage)) ui.Label("plans-message", new Rect(x, h - 106, w, 40), planMessage, 14, PlanState28.For(deployment.controller) != null && planActionFailed28 ? WarSandboxUGUI.Danger : WarSandboxUGUI.Accent);
         }
     }
 }
+
+

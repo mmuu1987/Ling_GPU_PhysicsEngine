@@ -14,7 +14,7 @@ namespace MassEngine.Game.Editor
 {
     public static class KnightNeckFixBuilder
     {
-        const string Root="Assets/Game/CharacterPilotPlayable";
+        const string Root="Assets/Game/Content/Characters/CharacterPilotPlayable";
         const string Dir=Root+"/NeckFix03";
         const string Log="Logs/AgentKnightNeck";
         [Serializable] class Measurement { public string action; public int frames,verticesPerFrame; public float oldMaximumError,newMaximumError; }

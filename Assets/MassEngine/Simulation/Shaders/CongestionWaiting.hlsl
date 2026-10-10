@@ -61,6 +61,9 @@ bool TickCongestion(uint index, inout AgentData agent, inout CongestionWait s, f
     int team = teamIdReadBuffer[index];
     float revision = 0.0;
     if (team >= 0 && team < teamCount) revision = (float)movementCommandRevisionBuffer[team];
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    if(HasLocalOrder(index))revision=-(float)LocalOrderFor(index).sequence;
+#endif
     if (s.commandRevision != revision)
     {
         s = (CongestionWait)0; s.commandRevision = revision;
@@ -106,3 +109,5 @@ bool ResolveCongestion(uint index, AgentData agent, UnitTypeSettings settings, f
     return s.remainingSeconds > 0.0;
 }
 #endif
+
+

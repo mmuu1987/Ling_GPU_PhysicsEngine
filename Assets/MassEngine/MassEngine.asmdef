@@ -1,7 +1,10 @@
 {
     "name": "MassEngine",
     "rootNamespace": "MassEngine",
-    "references": [],
+    "references": [
+        "Unity.Burst",
+        "Unity.Collections"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

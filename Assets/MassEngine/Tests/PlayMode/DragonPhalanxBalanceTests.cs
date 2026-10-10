@@ -24,7 +24,7 @@ namespace MassEngine.Tests
     /// </summary>
     public sealed class DragonPhalanxBalanceTests
     {
-        private const string Folder = "Assets/Game/Dragons/Prepared07/Integrated/";
+        private const string Folder = "Assets/Game/Content/Characters/Dragons/Prepared07/Integrated/";
         private static readonly FieldInfo FxField = typeof(MassEngineManager).GetField("projectileImpactFx", BindingFlags.Instance | BindingFlags.NonPublic);
 
         private struct Case
@@ -79,7 +79,7 @@ namespace MassEngine.Tests
             var rows = new List<string>();
             foreach (string key in new[] { "dragon", "dragon-evolved" })
             {
-                yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Game/Dragons/Prepared11/Integrated/" + key + "PhalanxBattlefield.unity", new LoadSceneParameters(LoadSceneMode.Single));
+                yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Game/Content/Characters/Dragons/Prepared11/Integrated/" + key + "PhalanxBattlefield.unity", new LoadSceneParameters(LoadSceneMode.Single));
                 MassEngineManager manager = null;
                 for (int i = 0; i < 300 && manager == null; i++) { manager = Object.FindFirstObjectByType<MassEngineManager>(); yield return null; }
                 Assert.IsNotNull(manager);
@@ -120,7 +120,7 @@ namespace MassEngine.Tests
             var rows = new List<string>();
             foreach (string key in new[] { "dragon-evolved", "dragon-evolved" })
             {
-                yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Game/Dragons/Prepared13/Integrated/" + key + "PhalanxBattlefield.unity", new LoadSceneParameters(LoadSceneMode.Single));
+                yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/" + key + "PhalanxBattlefield.unity", new LoadSceneParameters(LoadSceneMode.Single));
                 MassEngineManager manager = null;
                 for (int i = 0; i < 300 && manager == null; i++) { manager = Object.FindFirstObjectByType<MassEngineManager>(); yield return null; }
                 Assert.IsNotNull(manager);

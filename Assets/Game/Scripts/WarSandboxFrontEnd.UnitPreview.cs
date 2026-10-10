@@ -83,23 +83,30 @@ namespace MassEngine.Game
         }
         private void OpenUnitPreview(WarSandboxUnitTemplateEntry entry)
         {
-            if (entry == null || entry.unitPreview == null) return;
+            if (entry == null || entry.config == null) return;
             enlargedUnit = entry; unitPreviewOpen = true; nextRefresh = 0;
         }
         private void DrawExpandedUnitPreview()
         {
-            if (enlargedUnit == null || enlargedUnit.unitPreview == null) { unitPreviewOpen = false; return; }
+            if (enlargedUnit == null || enlargedUnit.config == null) { unitPreviewOpen = false; return; }
             ui.Panel("unit-zoom-shade", new Rect(0, 0, ui.Width, ui.Height), WarSandboxUGUI.Shade);
             float w = Mathf.Min(510, ui.Width - 40), h = Mathf.Min(600, ui.Height - 40);
             var panel = new Rect((ui.Width - w) * .5f, (ui.Height - h) * .5f, w, h);
             ui.Panel("unit-zoom-panel", panel); ui.Brackets("unit-zoom-brackets", panel);
             ui.Code("unit-zoom-code", new Rect(panel.x + 20, panel.y + 12, w - 110, 24), "UNIT // FULL BODY", 12, WarSandboxUGUI.Accent);
             ui.Button("unit-zoom-close", new Rect(panel.xMax - 86, panel.y + 12, 66, 28), "关闭", () => { unitPreviewOpen = false; nextRefresh = 0; });
-            ui.PictureFit("unit-zoom-image", new Rect(panel.x + 24, panel.y + 52, w - 48, h - 126), enlargedUnit.unitPreview);
-            ui.LabelAligned("unit-zoom-name", new Rect(panel.x + 20, panel.yMax - 66, w - 40, 30), enlargedUnit.config.unitTypeName,
+            var physical = LibraryRadius(enlargedUnit);
+            ui.ModelPreview("unit-zoom-image", new Rect(panel.x + 24, panel.y + 52, w - 48, h - 174), enlargedUnit.config, enlargedUnit.unitPreview, physical.Available ? (float?)physical.BaseRadius : null);
+            ui.LabelAligned("unit-zoom-name", new Rect(panel.x + 20, panel.yMax - 114, w - 40, 30), enlargedUnit.config.unitTypeName,
                 20, WarSandboxUGUI.Ink, true, TextAnchor.MiddleCenter);
-            ui.LabelAligned("unit-zoom-truth", new Rect(panel.x + 20, panel.yMax - 32, w - 40, 22), "现有 Full-LOD 模型 / 待机帧 / 统一光照 · 不是概念图", 12,
+            ui.LabelAligned("unit-zoom-radius", new Rect(panel.x + 20, panel.yMax - 82, w - 40, 24), physical.Summary + " · 预览", 13,
+                WarSandboxUGUI.Ink, false, TextAnchor.MiddleCenter);
+            ui.LabelAligned("unit-zoom-source", new Rect(panel.x + 20, panel.yMax - 57, w - 40, 24), "来源：" + physical.Source, 10,
+                WarSandboxUGUI.Muted, false, TextAnchor.MiddleCenter);
+            ui.LabelAligned("unit-zoom-truth", new Rect(panel.x + 20, panel.yMax - 32, w - 40, 22), UnitPreviewRadius.Legend, 12,
                 WarSandboxUGUI.Muted, false, TextAnchor.MiddleCenter);
         }
     }
 }
+
+

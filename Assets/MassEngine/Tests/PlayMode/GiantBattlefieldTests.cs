@@ -20,7 +20,7 @@ namespace MassEngine.Tests
     /// </summary>
     public sealed class GiantBattlefieldTests
     {
-        private const string Folder = "Assets/Game/Giants/Prepared01/Integrated/";
+        private const string Folder = "Assets/Game/Content/Characters/Giants/Prepared01/Integrated/";
         private static readonly string[] Keys = { "giant-demon", "giant-dino" };
         private static readonly int[] Sweep = { 24, 48, 96, 144 };
         private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "AgentGiants"));

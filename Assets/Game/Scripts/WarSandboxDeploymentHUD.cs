@@ -75,6 +75,7 @@ namespace MassEngine.Game
 
         private void Update()
         {
+            if (CheckTranslation()) return;
             if (WarSandboxSceneSession.Instance != null && WarSandboxSceneSession.Instance.InputBlocked) { runtimeUi?.SetVisible(false); return; }
             if (deployment == null) return;
             if (!Confirming && !deployment.IsEditing) { runtimeUi?.SetVisible(false); ReleaseCamera(); return; }
@@ -111,8 +112,8 @@ namespace MassEngine.Game
             resumeAfterConfirmation = false; ReleaseCamera();
         }
 
-        private void OnDisable() { Confirming = false; runtimeUi?.SetVisible(false); ReleaseCamera(); }
-        private void OnDestroy() { runtimeUi?.Dispose(); if (font != null) Destroy(font); }
+        private void OnDisable() { CancelTranslation(); Confirming = false; runtimeUi?.SetVisible(false); ReleaseCamera(); }
+        private void OnDestroy() { CancelTranslation(); ReleaseTerrainMap(); runtimeUi?.Dispose(); if (font != null) Destroy(font); }
 
         // Legacy reference only; the player uses the retained uGUI presenter.
         private void DrawLegacyEditor()
@@ -243,14 +244,22 @@ namespace MassEngine.Game
             var draft = deployment.Draft;
             if (draft == null || draft.Count == 0) { inputError = null; return true; }
             var e = draft[selected];
-            if (!int.TryParse(count, NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) ||
-                !Parse(x, out float px) || !Parse(z, out float pz) || !Parse(density, out float d) || !Parse(aspect, out float a) ||
+            if (!int.TryParse(count, NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) || n <= 0)
+            { inputError = "人数请输入大于0的整数；当前输入未写入草稿。"; return false; }
+            if (!Parse(x, out float px) || !Parse(z, out float pz) || !Parse(density, out float d) || !Parse(aspect, out float a) ||
                 (manual && (!Parse(depth, out _) || !Parse(width, out _))))
             { inputError = "请输入有效的有限数值。"; return false; }
+            if (!HasPendingInputs()) { inputError=null;return true; } // untouched manual records remain byte-for-byte values
+            var original=e;
+            if(d<.05f||d>SpawnConfig.PackingLimitPerSquareMeter||a<.1f||a>10){inputError="密度或宽深比超出范围；输入原文保留。";return false;}
             e.count = n; e.center = new Vector3(px, e.center.y, pz); e.density = d; e.aspect = a;
-            if (manual) { Parse(depth, out float sx); Parse(width, out float sz); e.manualSize = new Vector3(sx, e.manualSize.y, sz); }
+            if (manual) { Parse(depth, out float sx); Parse(width, out float sz); if(sx<=0||sz<=0){inputError="手工纵深、正面宽必须大于零。";return false;} e.manualSize = new Vector3(sx, e.manualSize.y, sz); }
             else e.manualSize = Vector3.zero;
-            draft.Set(selected, e); inputError = null; return true;
+            bool shape=n!=original.count||manual!=(original.manualSize.x>0&&original.manualSize.z>0)||
+                (manual?e.manualSize!=original.manualSize:d!=original.density||a!=original.aspect);
+            if(shape){if(!WarSandboxDeploymentResize.TryFromSize(e,e.center,new Vector2(e.Size.x,e.Size.z),out var converted,out inputError))return false;if(manual)e=converted;}
+            if(!deployment.TryEditFormation(draft,draft.Revision,selected,original,e,shape,out inputError))return false;
+            ReadFields();return true;
         }
 
         private void ReadFields()
@@ -266,7 +275,7 @@ namespace MassEngine.Game
         }
 
         private void ClampSelection() => selected = Mathf.Clamp(selected, 0, Mathf.Max(0, deployment.Draft.Count - 1));
-        private void RefreshAfterUiChange() { ReadFields(); clearFocusRequested = true; }
+        private void RefreshAfterUiChange() { CancelTranslation(); ReadFields(); clearFocusRequested = true; }
         private static string Format(float value) => value.ToString("R", CultureInfo.InvariantCulture);
         private static bool Parse(string text, out float value) => float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value) &&
             !float.IsNaN(value) && !float.IsInfinity(value);
@@ -386,3 +395,5 @@ namespace MassEngine.Game
         }
     }
 }
+
+

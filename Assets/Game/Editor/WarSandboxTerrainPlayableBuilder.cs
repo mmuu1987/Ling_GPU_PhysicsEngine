@@ -13,7 +13,7 @@ namespace MassEngine.Game.Editor
 {
     public static class WarSandboxTerrainPlayableBuilder
     {
-        public const string Root = "Assets/Game/M62TerrainPlayable";
+        public const string Root = "Assets/Game/Experiments/MountainPlayable";
         public const string BattleScene = Root + "/WarSandboxTerrain.unity";
         public const string MenuScene = Root + "/TerrainMenu.unity";
 
@@ -26,7 +26,7 @@ namespace MassEngine.Game.Editor
             var setup = EditorSceneManager.GetSceneManagerSetup();
             try
             {
-                AssetDatabase.CreateFolder("Assets/Game", "M62TerrainPlayable");
+                AssetDatabase.CreateFolder("Assets/Game/Experiments", "MountainPlayable");
                 AssetDatabase.CreateFolder(Root, "Settings");
                 var source = Load<ScenarioConfig>("Assets/Game/Settings/ScenarioConfig.asset");
                 var scenario = ScriptableObject.CreateInstance<ScenarioConfig>();
@@ -53,7 +53,7 @@ namespace MassEngine.Game.Editor
                 system.runtimeFlowConfig = flow;
                 AssetDatabase.CreateAsset(system, Root + "/Settings/System.asset");
 
-                CopyNew("Assets/Game/Scenes/WarSandbox.unity", BattleScene);
+                CopyNew("Assets/Game/Experiments/LegacyScenes/WarSandbox.unity", BattleScene);
                 var battle = EditorSceneManager.OpenScene(BattleScene, OpenSceneMode.Single);
                 var manager = Object.FindFirstObjectByType<MassEngineManager>();
                 if (manager == null) throw new BuildFailedException("Battlefield manager missing.");
@@ -88,7 +88,7 @@ namespace MassEngine.Game.Editor
                     new WarSandboxBattlefieldEntry { id = "mountain-battle", displayName = "山地三军 · 上下坡会战", scenePath = BattleScene,
                         terrainId = surface.Id, terrainVersion = surface.Version, terrainSurface = surface,
                         rules = Load<WarSandboxBattlefieldConfig>("Assets/Game/Settings/BattlefieldRules_A_Annihilation.asset") },
-                    new WarSandboxBattlefieldEntry { id = "open-battle", displayName = "原始平面 · 11万单位", scenePath = "Assets/Game/Scenes/WarSandbox.unity",
+                    new WarSandboxBattlefieldEntry { id = "open-battle", displayName = "原始平面 · 11万单位", scenePath = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity",
                         rules = Load<WarSandboxBattlefieldConfig>("Assets/Game/Settings/BattlefieldRules_A_Annihilation.asset") }
                 };
                 catalog.templates = scenario.unitTypes.Select((unit, i) => new WarSandboxUnitTemplateEntry
@@ -139,7 +139,7 @@ namespace MassEngine.Game.Editor
             var catalog = Load<WarSandboxBattlefieldCatalog>(Root + "/Settings/Catalog.asset");
             if (!catalog.TryValidate(p => Load<SceneAsset>(p) != null, out var error) || !catalog.TryValidateTemplates(out error))
                 throw new BuildFailedException(error);
-            string[] scenes = new[] { MenuScene, BattleScene, "Assets/Game/Scenes/WarSandbox.unity" };
+            string[] scenes = new[] { MenuScene, BattleScene, "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity" };
             var savedScenes = EditorBuildSettings.scenes;
             string output = Path.GetFullPath(outputDirectory);
             Directory.CreateDirectory(output);

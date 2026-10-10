@@ -64,6 +64,7 @@ namespace MassEngine.Game
 
         private void OnDisable()
         {
+            CloseSelectionPreview();
             runtimeUi?.SetVisible(false);
             if (legacyClickSetter != null)
                 legacyClickSetter.enabled = legacyClickSetterWasEnabled;
@@ -71,7 +72,10 @@ namespace MassEngine.Game
 
         private void Update()
         {
+            UpdateScopedOrdersP8();
+            UpdateSelectionPreviewP7();
             RefreshRuntimeUI();
+            if (BlockHotkeys26()) return;
             if (WarSandboxUGUI.IsTyping) return;
             if (WarSandboxSceneSession.Instance != null && WarSandboxSceneSession.Instance.InputBlocked) return;
             if (WarSandboxDeploymentHUD.BlocksInput(controller)) return;
@@ -99,13 +103,13 @@ namespace MassEngine.Game
             if (!cameraNavigation)
             {
                 if (Input.GetKeyDown(KeyCode.A))
-                    IssueAttack();
+                    PlayerOrderHotkeyP8(KeyCode.A);
                 if (Input.GetKeyDown(KeyCode.M))
-                    BeginMoveOrder();
+                    PlayerOrderHotkeyP8(KeyCode.M);
                 if (Input.GetKeyDown(KeyCode.H))
-                    IssueHold();
+                    PlayerOrderHotkeyP8(KeyCode.H);
                 if (Input.GetKeyDown(KeyCode.R))
-                    IssueRetreat();
+                    PlayerOrderHotkeyP8(KeyCode.R);
             }
             if (Input.GetKeyDown(KeyCode.Space))
                 controller.TogglePause();
@@ -134,10 +138,7 @@ namespace MassEngine.Game
                 return;
 
             Ray ray = targetCamera.ScreenPointToRay(Input.mousePosition);
-            if (!controller.TryRaycastGround(ray, Mathf.Max(1f, maxRayDistance), groundMask, out var point, out string error))
-            { SetFeedback(error); return; }
-
-            IssueMoveTo(point, Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
+            GroundMoveClickP8(ray, Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift));
         }
 
         private void OnGUI()
@@ -148,6 +149,7 @@ namespace MassEngine.Game
             if (controller == null)
                 return;
 
+            DrawSelectionRectangleP7();
             DrawWorldOrderMarkers();
         }
 
@@ -293,14 +295,20 @@ namespace MassEngine.Game
 
         private void IssueAttack()
         {
+            if (RejectSelectionOrderP7() || RejectInput26) return;
+            if (RoutePlayerOrderP8(ArmyOrderType.Attack,Vector3.zero,false,out _)) return;
             awaitingMoveTarget = false;
-            if (controller.IssueOrder(ArmyOrder.Attack(controller.selectedTeam)))
-                SetFeedback(FormatTeamName(controller.selectedTeam) + "：进攻");
+            bool paused = controller.Phase == WarSandboxBattlePhase.Paused;
+            bool success = controller.IssueOrder(ArmyOrder.Attack(controller.selectedTeam));
+            if (success) SetFeedback(FormatTeamName(controller.selectedTeam) + "：进攻");
             else SetFeedback(controller.CommandError ?? "当前无法进攻。");
+            RecordResult25(success, "进攻", paused);
         }
 
         private void BeginMoveOrder()
         {
+            if (RejectSelectionOrderP7() || RejectInput26) return;
+            if (!CaptureMoveIntentP8()) return;
             if (controller == null || controller.SelectedArmy == null || IsTerminalPhase(controller.Phase)) return;
             awaitingMoveTarget = true;
             nextUiRefresh = 0;
@@ -309,6 +317,9 @@ namespace MassEngine.Game
 
         private bool IssueMoveTo(Vector3 target, bool append = false)
         {
+            if (RejectSelectionOrderP7() || RejectInput26) return false;
+            if (RoutePlayerOrderP8(ArmyOrderType.Move,target,append,out bool scopedAccepted)) return scopedAccepted;
+            bool paused = controller.Phase == WarSandboxBattlePhase.Paused;
             ArmyRuntimeState selectedArmy = controller.SelectedArmy;
             bool actuallyAppending = append &&
                                      controller.GetMoveRoutePointCount(controller.selectedTeam) > 0 &&
@@ -317,28 +328,38 @@ namespace MassEngine.Game
             if (!controller.IssueMoveOrder(controller.selectedTeam, target, append))
             {
                 SetFeedback(controller.CommandError ?? "当前无法下达移动命令。");
+                RecordResult25(false, "移动", paused);
                 return false;
             }
 
             awaitingMoveTarget = false;
             SetFeedback(FormatTeamName(controller.selectedTeam) + (actuallyAppending ? "：已追加路线航点" : "：移动目标已更新"));
+            RecordResult25(true, "移动", paused, actuallyAppending);
             return true;
         }
 
         private void IssueHold()
         {
+            if (RejectSelectionOrderP7() || RejectInput26) return;
+            if (RoutePlayerOrderP8(ArmyOrderType.Hold,Vector3.zero,false,out _)) return;
             awaitingMoveTarget = false;
-            if (controller.IssueOrder(ArmyOrder.Hold(controller.selectedTeam)))
-                SetFeedback(FormatTeamName(controller.selectedTeam) + "：原地防守");
+            bool paused = controller.Phase == WarSandboxBattlePhase.Paused;
+            bool success = controller.IssueOrder(ArmyOrder.Hold(controller.selectedTeam));
+            if (success) SetFeedback(FormatTeamName(controller.selectedTeam) + "：原地防守");
             else SetFeedback(controller.CommandError ?? "当前无法防守。");
+            RecordResult25(success, "防守", paused);
         }
 
         private void IssueRetreat()
         {
+            if (RejectSelectionOrderP7() || RejectInput26) return;
+            if (RoutePlayerOrderP8(ArmyOrderType.Retreat,Vector3.zero,false,out _)) return;
             awaitingMoveTarget = false;
-            if (controller.IssueOrder(ArmyOrder.Retreat(controller.selectedTeam)))
-                SetFeedback(FormatTeamName(controller.selectedTeam) + "：撤回出生地");
+            bool paused = controller.Phase == WarSandboxBattlePhase.Paused;
+            bool success = controller.IssueOrder(ArmyOrder.Retreat(controller.selectedTeam));
+            if (success) SetFeedback(FormatTeamName(controller.selectedTeam) + "：撤回出生地");
             else SetFeedback(controller.CommandError ?? "当前无法撤退。");
+            RecordResult25(success, "撤退", paused);
         }
 
         private void ToggleStaticObstacles()
@@ -913,6 +934,7 @@ namespace MassEngine.Game
             if (targetCamera == null)
                 return;
 
+            if (Feedback25 != null) { DrawControlPointWorldMarker(targetCamera); return; }
             int armyCount = ResolveArmyCount();
             for (int teamId = 0; teamId < armyCount; teamId++)
                 DrawArmyMarker(targetCamera, controller.GetArmy(teamId), WarSandboxTeamPalette.Resolve(teamId));
@@ -985,6 +1007,7 @@ namespace MassEngine.Game
 
         private void SetFeedback(string text)
         {
+            if (Feedback25 != null) { Feedback25.Notice(text); nextUiRefresh = 0; }
             commandFeedback = text;
             feedbackUntil = Time.unscaledTime + 2f;
         }
@@ -1206,3 +1229,5 @@ namespace MassEngine.Game
         }
     }
 }
+
+

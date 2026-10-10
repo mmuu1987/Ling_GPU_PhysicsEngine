@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4834c3cb884f2ad4cb3269bda41e58cb, type: 3}
+  m_Name: RosterPolicy200K
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxRosterPolicy
+  templates:
+  - {fileID: 11400000, guid: 99c12aeb4c038f248978b541bc3ae047, type: 2}
+  - {fileID: 11400000, guid: 756314330e93f2f408e8e65d5491ebd8, type: 2}
+  - {fileID: 11400000, guid: 586f866abb118cd4fa299fcf0f038b78, type: 2}
+  - {fileID: 11400000, guid: c4a6c33b334ca394695979009d3ca405, type: 2}
+  - {fileID: 11400000, guid: 4acb492550470644080c62f585d70e6f, type: 2}
+  - {fileID: 11400000, guid: 28b07840a840b964cb171db429b99033, type: 2}
+  - {fileID: 11400000, guid: e6b35836d7124a94b9287fc745586b20, type: 2}
+  - {fileID: 11400000, guid: 1a6de4abf9de85e458c5b9aed9ee1bcf, type: 2}
+  - {fileID: 11400000, guid: e3e5759562b49894eb86ace6a2281a77, type: 2}
+  - {fileID: 11400000, guid: 594cbe86fbb8d0a478075dcd366a053f, type: 2}
+  - {fileID: 11400000, guid: c593eb608842f2740861801dc3135411, type: 2}
+  - {fileID: 11400000, guid: ce7956bd56bfa0645b90b6ffba779325, type: 2}
+  - {fileID: 11400000, guid: 656c3705bf2a07f48818055f042e5ab8, type: 2}
+  - {fileID: 11400000, guid: 2638133fdcdaf804d91b83a3a3935b5e, type: 2}
+  maximumUnits: 200000
+  maximumRadius: 0.8
+  useTemplateSpawnDefaults: 0
+  restrictLargeToTeamZero: 0
+  explanation: "200k \u538B\u529B\u6D4B\u8BD5\uFF1A\u9ED8\u8BA42048\u4EBA\u3002\u7D27\u5BC6\u9635\u578B0.7\u5BC6\u5EA6\uFF0C\u53CC\u65B9\u540410\u4E07\u4EBA\u3002\n1024\xD71024
+    \u5E73\u5766\u5730\u5F62\uFF0C\u7A7A\u95F4\u54C8\u5E0C cellSize=4m\uFF0C\u6D41\u573A256\xD7256\u3002"

@@ -5,6 +5,8 @@ namespace MassEngine
     [CreateAssetMenu(menuName = "MassEngine/Runtime Flow Config")]
     public sealed class RuntimeFlowConfig : ScriptableObject
     {
+        [Tooltip("Opt-in: preserve clear dynamic enemy approach lanes; existing scenes remain unchanged.")]
+        public bool terrainLaneApproach33;
         [Min(16)] public int flowFieldResolution = 128;
         [Min(0.1f)] public float flowFieldCellSize = 2f;
         public Vector2 flowFieldOrigin = new Vector2(-80f, -80f);

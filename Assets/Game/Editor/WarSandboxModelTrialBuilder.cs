@@ -15,11 +15,11 @@ namespace MassEngine.Game.Editor
     /// <summary>M5.4 fixed trial recipe. Uses the production baker/binder; never edits shipped content.</summary>
     public static class WarSandboxModelTrialBuilder
     {
-        private const string DefaultRoot = "Assets/Game/M54TrialPlayable";
-        private const string SourceScene = "Assets/Game/Scenes/WarSandbox.unity";
-        private const string ClipRoot = "Assets/RPG Tiny Hero Duo/Animation/SwordAndShield/";
-        private const string LicenseSource = "Assets/ModelTrialSource/UnityChan/License";
-        private const string PlayerReadmeSource = "Assets/方案设计/M5.4试玩验收清单.md";
+        private const string DefaultRoot = "Assets/Game/Content/Characters/M54TrialPlayable";
+        private const string SourceScene = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity";
+        private const string ClipRoot = "Assets/ThirdParty/RPG Tiny Hero Duo/Animation/SwordAndShield/";
+        private const string LicenseSource = "Assets/Art/Source/ModelTrials/UnityChan/License";
+        private const string PlayerReadmeSource = "Assets/Documentation/Design/M5.4试玩验收清单.md";
         private const string Notice = "M5.4 model trial (unofficial) | Unity-Chan © UTJ/UCL";
 
         [Serializable]

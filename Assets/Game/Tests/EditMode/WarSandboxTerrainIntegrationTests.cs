@@ -41,7 +41,7 @@ namespace MassEngine.Game.Tests
             deployment = root.AddComponent<WarSandboxRuntimeDeployment>(); deployment.controller = controller;
             var rules = Own<WarSandboxBattlefieldConfig>();
             battlefield = new WarSandboxBattlefieldEntry { id = "m62-test", displayName = "M62", contentVersion = 3,
-                scenePath = "Assets/Game/Scenes/M62Test.unity", terrainId = terrain.Id, terrainVersion = terrain.Version,
+                scenePath = "Assets/Game/Experiments/LegacyScenes/M62Test.unity", terrainId = terrain.Id, terrainVersion = terrain.Version,
                 terrainSurface = terrain, rules = rules };
             catalog = Own<WarSandboxBattlefieldCatalog>(); catalog.entries = new[] { battlefield }; catalog.defaultEntryId = battlefield.id;
             catalog.templates = new[] { new WarSandboxUnitTemplateEntry { templateId = "a", config = source.unitTypes[0] },
