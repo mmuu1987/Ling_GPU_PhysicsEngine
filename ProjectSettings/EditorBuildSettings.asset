@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Game/Scenes/Winter.unity
     guid: 79e3f0112228c0e43b73b4896d9488ff
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Map1024/Green1024.unity
+    guid: 7193f8ad7716d4d45aa83e3363f6fb06
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

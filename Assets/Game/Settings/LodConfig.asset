@@ -19,4 +19,4 @@ MonoBehaviour:
   farAnimationInterval: 4
   enableFrustumCulling: 1
   cullingRadius: 2
-  maxRenderDistance: 500
+  maxRenderDistance: 1800
