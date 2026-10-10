@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: Unit_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: 3b6b7bb1ca32acf42836159fecb02be8, type: 2}
-  nearMesh: {fileID: -8714412962809586598, guid: 8b47c76abd842ab488c045393d276339, type: 2}
-  midMesh: {fileID: 4903891167891221919, guid: 3b6b7bb1ca32acf42836159fecb02be8, type: 2}
-  farMesh: {fileID: 4903891167891221919, guid: 3b6b7bb1ca32acf42836159fecb02be8, type: 2}
+  vatProfile: {fileID: 11400000, guid: 305b12a574314a7499552d7ce7bc8405, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: 86e890386cc19584fb75139085778444, type: 2}
   midMaterial: {fileID: 2100000, guid: 4efd59114537f77449e464141bd52d50, type: 2}
   farMaterial: {fileID: 2100000, guid: 4efd59114537f77449e464141bd52d50, type: 2}

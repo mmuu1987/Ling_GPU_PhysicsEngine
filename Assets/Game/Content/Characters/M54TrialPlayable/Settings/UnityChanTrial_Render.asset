@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: UnityChanTrial_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: 2c67f7e678d02cc40a52884c8e5bbd60, type: 2}
-  nearMesh: {fileID: -9145794517154859005, guid: 2c67f7e678d02cc40a52884c8e5bbd60, type: 2}
-  midMesh: {fileID: -8779453613224099477, guid: 2c67f7e678d02cc40a52884c8e5bbd60, type: 2}
-  farMesh: {fileID: -8779453613224099477, guid: 2c67f7e678d02cc40a52884c8e5bbd60, type: 2}
+  vatProfile: {fileID: 11400000, guid: dfe8701910d6e264eb01ace4d1a3be49, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: 276471af2749aeb4f8beb430a2b42814, type: 2}
   midMaterial: {fileID: 2100000, guid: ef90c228494d0dd44b6b5ab512d3a1ab, type: 2}
   farMaterial: {fileID: 2100000, guid: ef90c228494d0dd44b6b5ab512d3a1ab, type: 2}

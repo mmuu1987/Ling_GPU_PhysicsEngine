@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: skeleton-warrior_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: 084b40d247eca80419fb50f78373f68b, type: 2}
-  nearMesh: {fileID: -8144486360885133529, guid: 72bc0c53d8ab53e458edde020adc36cf, type: 2}
-  midMesh: {fileID: -658814939076719341, guid: 084b40d247eca80419fb50f78373f68b, type: 2}
-  farMesh: {fileID: -658814939076719341, guid: 084b40d247eca80419fb50f78373f68b, type: 2}
+  vatProfile: {fileID: 11400000, guid: 2ac76fb263e30e84893283ad2558f4ff, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: 6eed519c804c6964fa847872cfbc134a, type: 2}
   midMaterial: {fileID: 2100000, guid: eb4493912f31d0e4b9dc9f3bdfb0bd2f, type: 2}
   farMaterial: {fileID: 2100000, guid: eb4493912f31d0e4b9dc9f3bdfb0bd2f, type: 2}

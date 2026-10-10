@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: troops6-skull_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: dd2bd9f9994dbaf499eacfeceac8c200, type: 2}
-  nearMesh: {fileID: 5257216443842547828, guid: 79a3507f5a0bc8541b1cef9eaac2bfeb, type: 2}
-  midMesh: {fileID: 3710403659315510653, guid: dd2bd9f9994dbaf499eacfeceac8c200, type: 2}
-  farMesh: {fileID: 3710403659315510653, guid: dd2bd9f9994dbaf499eacfeceac8c200, type: 2}
+  vatProfile: {fileID: 11400000, guid: bf0bf2cf786029e49821a4637adcb177, type: 2}
+  nearMesh: {fileID: 0}
+  midMesh: {fileID: 0}
+  farMesh: {fileID: 0}
   nearMaterial: {fileID: 2100000, guid: c87eae9fe2e46ec44a4f0a36bae423fa, type: 2}
   midMaterial: {fileID: 2100000, guid: 9e0fec50ab3c3a248afaa3e93e7736f4, type: 2}
   farMaterial: {fileID: 2100000, guid: 9e0fec50ab3c3a248afaa3e93e7736f4, type: 2}
