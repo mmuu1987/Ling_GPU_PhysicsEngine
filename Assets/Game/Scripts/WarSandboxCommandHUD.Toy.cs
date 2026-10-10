@@ -8,6 +8,8 @@ namespace MassEngine.Game
         private void RefreshRuntimeUI()
         {
             ResolveReferences();
+            SynchronizeDetails26();
+            ObserveSelection25();
             bool visible = controller != null && !WarSandboxDeploymentHUD.BlocksInput(controller) &&
                 (WarSandboxSceneSession.Instance == null || !WarSandboxSceneSession.Instance.InputBlocked);
             if (!diagnosticsCaptured && controller != null && controller.manager != null)
@@ -29,6 +31,7 @@ namespace MassEngine.Game
             ui.Panel("battle-title-bg", new Rect(16, 12, 300, 54), WarSandboxUGUI.Surface);
             ui.Label("battle-title", new Rect(24, 14, 284, 32), session != null ? session.CurrentDisplayName : "战争沙盒", 19, WarSandboxUGUI.Ink, true);
             ui.Label("battle-subtitle", new Rect(24, 44, 284, 20), FormatPhase(controller.Phase), 12, WarSandboxUGUI.Muted);
+            DrawSelectionPreviewP7(ui,w);
             if (controller.BattleResult.valid)
             { awaitingMoveTarget = false; DrawUGUIResult(ui); ui.End(); return; }
             float centerW = Mathf.Min(420, w - 580), centerX = (w - centerW) / 2;
@@ -46,7 +49,7 @@ namespace MassEngine.Game
             {
                 float bw = 500, bx = (w - bw) / 2;
                 ui.Panel("setup-actions", new Rect(bx, h - 110, bw, 90), WarSandboxUGUI.Surface);
-                ui.Label("setup-note", new Rect(bx + 14, h - 108, bw - 28, 28), "战前准备 · 调整军团，或使用当前部署直接开战", 14, WarSandboxUGUI.Muted);
+                ui.Label("setup-note", new Rect(bx + 14, h - 108, bw - 28, 28), PlanState28.SetupText(controller, FlowPolish23.Active(controller) ? "布阵已就绪 · 可继续修改，点击右侧开始战斗" : "战前准备 · 调整军团，或使用当前部署直接开战"), 14, WarSandboxUGUI.Muted);
                 ui.Button("edit", new Rect(bx + 16, h - 68, 206, 40), "配兵与布阵", () => editor.RequestEdit(), false, editor != null);
                 ui.Button("start", new Rect(bx + 238, h - 70, 246, 44), "开始战斗  Enter", ToggleBattleFromUI, true, string.IsNullOrEmpty(controller.BattlefieldRuleError));
             }
@@ -60,22 +63,24 @@ namespace MassEngine.Game
                 for (int i = 0; i < controller.ArmyCount; i++)
                 {
                     var army = controller.GetArmy(i); if (army == null || army.initialUnitCount <= 0) continue; int team = i;
-                    ui.Button("team-select-" + i, new Rect(bx + 12 + n % 4 * tabW, by + 10 + n / 4 * 28, tabW - 8, 26), FormatTeamName(i) + " " + controller.GetAliveUnitCount(i).ToString("N0"), () => controller.SelectArmy(team), false, true, controller.selectedTeam == team); n++;
+                    ui.Button("team-select-" + i, new Rect(bx + 12 + n % 4 * tabW, by + 10 + n / 4 * 28, tabW - 8, 26), (Feedback25 != null && controller.selectedTeam == i ? "已选 · " : "") + FormatTeamName(i) + " " + controller.GetAliveUnitCount(i).ToString("N0"), () => controller.SelectArmy(team), false, true, controller.selectedTeam == team); n++;
                 }
                 ui.Button("army-statistics", new Rect(bx + bw - 132, by + 10, 118, 28), "军团统计", () => armyStatisticsOpen = !armyStatisticsOpen);
                 float cy = by + (shown > 4 ? 66 : 48), b = (bw - 32) / 5;
-                bool orders = controller.SelectedArmy != null && controller.GetAliveUnitCount(controller.selectedTeam) > 0;
+                bool orders = (!selectionPreviewEnabled || playerScopeEnabled) && !PendingDecision26 && controller.SelectedArmy != null && controller.GetAliveUnitCount(controller.selectedTeam) > 0;
                 ui.Button("start", new Rect(bx + 12, cy, b - 6, 40), BattleActionLabel(), ToggleBattleFromUI, true);
                 ui.Button("attack", new Rect(bx + 12 + b, cy, b - 6, 40), "进攻  A", IssueAttack, false, orders);
                 ui.Button("move", new Rect(bx + 12 + b * 2, cy, b - 6, 40), awaitingMoveTarget ? "选择落点…" : "移动  M", BeginMoveOrder, false, orders, awaitingMoveTarget);
                 ui.Button("hold", new Rect(bx + 12 + b * 3, cy, b - 6, 40), "防守  H", IssueHold, false, orders);
                 ui.Button("retreat", new Rect(bx + 12 + b * 4, cy, b - 6, 40), "撤退  R", IssueRetreat, false, orders);
-                if (shown <= 4) ui.Label("order-status", new Rect(bx + 12, by + 94, bw - 24, 26), SelectedArmyTitle() + " · " + (controller.SelectedArmy != null && controller.SelectedArmy.hasOrder ? FormatOrder(controller.SelectedArmy.currentOrder.type) : "等待命令"), 13, WarSandboxUGUI.Muted);
+                if (shown <= 4) ui.Label("order-status", new Rect(bx + 12, by + 94, bw - 24, 26), Selection25(SelectedArmyTitle() + " · " + (controller.SelectedArmy != null && controller.SelectedArmy.hasOrder ? FormatOrder(controller.SelectedArmy.currentOrder.type) : "等待命令")), 13, WarSandboxUGUI.Muted);
                 string feedback = awaitingMoveTarget ? MoveTargetHint() : controller.CommandError ?? (Time.unscaledTime < feedbackUntil ? commandFeedback : "");
+                if (FlowPolish23.Active(controller) && controller.Phase == WarSandboxBattlePhase.Paused && !awaitingMoveTarget && string.IsNullOrEmpty(controller.CommandError)) feedback = "战斗已暂停 · 下达命令会恢复战斗；只查看信息不会继续";
+                feedback = FeedbackText26(FeedbackText25(feedback));
                 if (!string.IsNullOrEmpty(feedback))
                 {
                     ui.Panel("feedback", new Rect(bx, by - 80, bw, 68), WarSandboxUGUI.Surface);
-                    ui.Label("feedback-text", new Rect(bx + 10, by - 76, bw - 130, 60), feedback, 15, !string.IsNullOrEmpty(controller.CommandError) ? WarSandboxUGUI.Danger : WarSandboxUGUI.Ink);
+                    ui.Label("feedback-text", new Rect(bx + 10, by - 76, bw - 130, 60), feedback, 15, (Feedback25 != null ? Feedback25.Rejected : !string.IsNullOrEmpty(controller.CommandError)) ? WarSandboxUGUI.Danger : WarSandboxUGUI.Ink);
                     if (awaitingMoveTarget) ui.Button("move-cancel", new Rect(bx + bw - 110, by - 64, 96, 34), "取消 Esc", CancelMoveTarget);
                 }
             }
@@ -83,11 +88,11 @@ namespace MassEngine.Game
             {
                 ui.Panel("battle-tools-card", new Rect(16, 126, 268, 318));
                 ui.Button("tools-edit", new Rect(30, 142, 116, 36), "返回布阵", () => { battleToolsOpen = false; editor.RequestEdit(); }, false, editor != null);
-                ui.Button("reset", new Rect(156, 142, 114, 36), "原样重开", () => { awaitingMoveTarget = false; controller.ResetBattle(); });
-                ui.Button("end-battle", new Rect(30, 190, 240, 36), "结束本局（不判胜负）", () => { awaitingMoveTarget = false; controller.EndBattle(); }, false, !setup);
+                ui.Button("reset", new Rect(156, 142, 114, 36), Details26 != null ? "重置本局" : "原样重开", () => RequestDecision26(BattleDetails26.Decision.Reset));
+                ui.Button("end-battle", new Rect(30, 190, 240, 36), "结束本局（不判胜负）", () => RequestDecision26(BattleDetails26.Decision.End), false, !setup);
                 ui.Button("follow", new Rect(30, 238, 116, 34), "跟随 F", () => FocusArmy(controller.selectedTeam));
                 ui.Button("panorama", new Rect(156, 238, 114, 34), "全景 F3", FocusBattlefield);
-                ui.Button("help", new Rect(30, 284, 116, 34), "操作帮助", () => { helpOpen = !helpOpen; diagnosticsOpen = false; });
+                ui.Button("help", new Rect(30, 284, 116, 34), "操作帮助", () => { var guide = Guide30.For(WarSandboxSceneSession.Instance); if (guide != null) guide.Open(); else { helpOpen = !helpOpen; diagnosticsOpen = false; } });
                 ui.Button("diagnostics", new Rect(156, 284, 114, 34), "技术信息", () => { diagnosticsOpen = !diagnosticsOpen; helpOpen = false; });
                 float sy = 330; float[] speeds = { .5f, 1, 2, 4 };
                 for (int i = 0; i < speeds.Length; i++) { float speed = speeds[i]; ui.Button("speed-" + i, new Rect(30 + i * 62, sy, 56, 32), speed + "×", () => controller.SetSimulationSpeed(speed), false, true, Mathf.Approximately(controller.SimulationSpeed, speed)); }
@@ -110,7 +115,10 @@ namespace MassEngine.Game
             }
             if (showMinimap && battleToolsOpen) DrawUGUIMinimap(ui, w, h, 150, h - 170, w - 230);
             if (!string.IsNullOrEmpty(controller.BattlefieldRuleError)) ui.Label("rule-error", new Rect(30, h - 200, w - 60, 44), controller.BattlefieldRuleError, 16, WarSandboxUGUI.Danger);
+            DrawDecision26(ui);
             ui.End();
         }
     }
 }
+
+

@@ -16,7 +16,7 @@ namespace MassEngine.Game.Editor
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play Mode before building.");
             string profilePath = Argument("--vat-performance-profile=");
             var rebaked = AssetDatabase.LoadAssetAtPath<VATProfile>(profilePath ?? "");
-            var reference = AssetDatabase.LoadAssetAtPath<VATProfile>("Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Profile.asset");
+            var reference = AssetDatabase.LoadAssetAtPath<VATProfile>("Assets/Art/VAT/Characters/MaleCharacter_Stage5_MultiClip_Profile.asset");
             if (rebaked == null || reference == null || rebaked == reference)
                 throw new BuildFailedException("Specify the distinct persisted Male rebake with --vat-performance-profile=Assets/...asset.");
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
@@ -26,7 +26,7 @@ namespace MassEngine.Game.Editor
             string buildDirectory = Path.GetFullPath(Argument("--vat-performance-build=") ?? "Builds/M53Regression");
             try
             {
-                AssetDatabase.CreateFolder("Assets/Game", Path.GetFileName(directory));
+                AssetDatabase.CreateFolder(Path.GetDirectoryName(directory).Replace('\\', '/'), Path.GetFileName(directory));
                 if (!AssetDatabase.CopyAsset(WarSandboxEntryBuilder.MenuScenePath, scenePath))
                     throw new BuildFailedException("Cannot copy the menu into the temporary build folder.");
                 var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
@@ -40,7 +40,7 @@ namespace MassEngine.Game.Editor
                 Directory.CreateDirectory(buildDirectory);
                 BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                 {
-                    scenes = new[] { scenePath, "Assets/Game/Scenes/WarSandbox.unity" },
+                    scenes = new[] { scenePath, "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity" },
                     locationPathName = Path.Combine(buildDirectory, "VatPerformance.exe"),
                     target = BuildTarget.StandaloneWindows64,
                     options = BuildOptions.Development

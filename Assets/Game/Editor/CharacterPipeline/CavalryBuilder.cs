@@ -14,7 +14,7 @@ namespace MassEngine.Game.Editor
 {
     public static class CavalryBuilder
     {
-        const string Source="Assets/CharacterPilotSource/Cavalry01";
+        const string Source="Assets/Art/Source/CharacterPilot/Cavalry01";
         static string Log="Logs/AgentCavalry";
         public static void Inspect()
         {
@@ -43,11 +43,11 @@ namespace MassEngine.Game.Editor
             }
             File.WriteAllText(Log+"/import-inspection.txt",sb.ToString());Debug.Log("CAVALRY_IMPORT_READY");
         }
-        static string Prepared="Assets/Game/Cavalry/Prepared01";
+        static string Prepared="Assets/Game/Content/Characters/Cavalry/Prepared01";
         // Playtest 2 (defaults reproduce every earlier output): seat moved forward toward the withers, and a fitted leather saddle instead of the flat blue blanket.
         static float SeatForwardMeters=0f;static bool LeatherSaddle=false,NoSaddle=false;static string MountedOutput="MountedKnight02";
-        const string KnightSource="Assets/CharacterPilotSource/KayKitKnight";
-        const string Previous="Assets/Game/NonhumanBatch2/Prepared01/Integrated";
+        const string KnightSource="Assets/Art/Source/CharacterPilot/KayKitKnight";
+        const string Previous="Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated";
         static T Load<T>(string p)where T:Object{var v=AssetDatabase.LoadAssetAtPath<T>(p);CharacterGeometry.Require(v!=null,"Missing "+p);return v;}
         static AnimationClip Clip(string path,string suffix)=>AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>().Where(c=>!c.name.StartsWith("__preview__")).Single(c=>c.name==suffix||c.name.EndsWith("|"+suffix,StringComparison.Ordinal));
         static Transform Named(GameObject root,string name)=>root.GetComponentsInChildren<Transform>(true).Single(t=>t.name==name);
@@ -173,7 +173,7 @@ namespace MassEngine.Game.Editor
                 var palette=horseRaw.GetComponentsInChildren<Renderer>(true).SelectMany(r=>r.sharedMaterials).Select(m=>m.color).Distinct().ToList();int brown=palette.Count;palette.Add(new Color(.045f,.018f,.008f,1));int blue=palette.Count;palette.Add(LeatherSaddle?new Color(.15f,.045f,.03f,1):new Color(.01f,.10f,.28f,1));int leather=LeatherSaddle?palette.Count:-1;if(LeatherSaddle)palette.Add(new Color(.30f,.14f,.055f,1));int metal=palette.Count;palette.Add(new Color(.45f,.36f,.1f,1));CharacterGeometry.Require(palette.Count<=16,"Palette budget.");
                 var knightTexture=ReadTexture(Load<Texture2D>(KnightSource+"/knight_texture.png"));var atlas=new Texture2D(2048,1024,TextureFormat.RGBA32,false);try{var colors=new Color[2048*1024];for(int y=0;y<1024;y++)for(int x=0;x<2048;x++){if(x<1024)colors[y*2048+x]=knightTexture.GetPixelBilinear((x+.5f)/1024,(y+.5f)/1024);else{int tile=(y/256)*4+(x-1024)/256;colors[y*2048+x]=tile<palette.Count?palette[tile].gamma:Color.white;}}atlas.SetPixels(colors);atlas.Apply();File.WriteAllBytes(Prepared+"/MountedAtlas.png",atlas.EncodeToPNG());}finally{Object.DestroyImmediate(knightTexture);Object.DestroyImmediate(atlas);}
                 AssetDatabase.ImportAsset(Prepared+"/MountedAtlas.png");var ti=(TextureImporter)AssetImporter.GetAtPath(Prepared+"/MountedAtlas.png");ti.textureCompression=TextureImporterCompression.Uncompressed;ti.wrapMode=TextureWrapMode.Clamp;ti.filterMode=FilterMode.Bilinear;ti.SaveAndReimport();
-                var prior=Load<UnitTypeConfig>("Assets/Game/CharacterPipeline/Generated/Knight04/Unit.asset");var template=CharacterPipeline.CloneUnit(prior,Prepared,"Template");template.unitTypeName="剑盾骑兵（派生骑乘）";
+                var prior=Load<UnitTypeConfig>("Assets/Game/Authoring/CharacterPipeline/Generated/Knight04/Unit.asset");var template=CharacterPipeline.CloneUnit(prior,Prepared,"Template");template.unitTypeName="剑盾骑兵（派生骑乘）";
                 Material Mat(Material from,string name){var m=new Material(from){name=name,enableInstancing=true};m.SetTexture("_BaseMap",Load<Texture2D>(Prepared+"/MountedAtlas.png"));m.SetColor("_BaseColor",Color.white);AssetDatabase.CreateAsset(m,Prepared+"/"+name+".mat");return m;}
                 template.renderConfig.nearMaterial=Mat(prior.renderConfig.nearMaterial,"MountedNear");template.renderConfig.midMaterial=Mat(prior.renderConfig.midMaterial,"MountedMid");template.renderConfig.farMaterial=template.renderConfig.midMaterial;CharacterPipeline.Save(template.renderConfig);
                 var horse=Canonical(horseRaw,root,"Horse",hs,horseShift,template.renderConfig.nearMaterial,palette,true);var rider=Canonical(knightRaw,root,"Rider",rs,Vector3.zero,template.renderConfig.nearMaterial,palette,false);
@@ -255,21 +255,21 @@ namespace MassEngine.Game.Editor
         public static void Prepare02()
         {
             // User playtest: mount read about half-size next to the 1.95m rider. 3.5m (~1.94x) keeps every composite vertex below 4m so Half VAT rounding stays in the same precision band.
-            Prepared="Assets/Game/Cavalry/Prepared03";Log="Logs/AgentCavalryScale";CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");
+            Prepared="Assets/Game/Content/Characters/Cavalry/Prepared03";Log="Logs/AgentCavalryScale";CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");
             PrepareMounted("MountedKnight02",3.5f);CreateMatchedContext03();Debug.Log("CAVALRY_SCALE_READY");
         }
         public static void Prepare04()
         {
             // Playtest 2: rider sat over the rear of the back (Torso bone is at z=-0.97 of a -1.9..+0.8 body). Seat moves 0.62m forward to just behind the withers
             // (back profile Logs/AgentCavalrySeat/horse-profile.txt); flat blue blanket replaced by a fitted leather saddle. Horse/rider sizes unchanged.
-            Prepared="Assets/Game/Cavalry/Prepared04";Log="Logs/AgentCavalrySeat";CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");
+            Prepared="Assets/Game/Content/Characters/Cavalry/Prepared04";Log="Logs/AgentCavalrySeat";CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");
             SeatForwardMeters=.62f;LeatherSaddle=true;MountedOutput="MountedKnight03";
             PrepareMounted("MountedKnight03",3.5f);CreateMatchedContext03();Debug.Log("CAVALRY_SEAT_READY");
         }
         public static void Prepare05()
         {
             // Playtest 3: user prefers no saddle at all. Same forward seat as Prepare04; no blanket/seat/pommel/cantle geometry.
-            Prepared="Assets/Game/Cavalry/Prepared05";Log="Logs/AgentCavalrySeat/prepare05";Directory.CreateDirectory(Log);CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");
+            Prepared="Assets/Game/Content/Characters/Cavalry/Prepared05";Log="Logs/AgentCavalrySeat/prepare05";Directory.CreateDirectory(Log);CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");
             SeatForwardMeters=.62f;NoSaddle=true;MountedOutput="MountedKnight04";
             PrepareMounted("MountedKnight04",3.5f);CreateMatchedContext03();Debug.Log("CAVALRY_NOSADDLE_READY");
         }
@@ -281,14 +281,14 @@ namespace MassEngine.Game.Editor
         static int StrongDamage=0;
         public static void Prepare07()
         {
-            Prepared="Assets/Game/Cavalry/Prepared07";Log="Logs/AgentGiants/cavalry07";Directory.CreateDirectory(Log);CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");CharacterPipeline.EnsureFolder(Prepared);
+            Prepared="Assets/Game/Content/Characters/Cavalry/Prepared07";Log="Logs/AgentGiants/cavalry07";Directory.CreateDirectory(Log);CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");CharacterPipeline.EnsureFolder(Prepared);
             SeatForwardMeters=.62f;NoSaddle=true;MountedOutput="MountedKnight04";Charge=true;StrongDamage=45;
             var r=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(CharacterPipeline.Root+"/Generated/"+MountedOutput+"/PipelineReport.json"));CharacterGeometry.Require(r.automatedPassed,"Mounted model must be accepted.");
             CreateMatchedContext03();Debug.Log("CAVALRY_STRONG_READY");
         }
         public static void Prepare06()
         {
-            Prepared="Assets/Game/Cavalry/Prepared06";Log="Logs/AgentCharge/prepare06";Directory.CreateDirectory(Log);CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");CharacterPipeline.EnsureFolder(Prepared);
+            Prepared="Assets/Game/Content/Characters/Cavalry/Prepared06";Log="Logs/AgentCharge/prepare06";Directory.CreateDirectory(Log);CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh cavalry output required.");CharacterPipeline.EnsureFolder(Prepared);
             SeatForwardMeters=.62f;NoSaddle=true;MountedOutput="MountedKnight04";Charge=true;
             var r=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(CharacterPipeline.Root+"/Generated/"+MountedOutput+"/PipelineReport.json"));CharacterGeometry.Require(r.automatedPassed,"Mounted model must be accepted.");
             CreateMatchedContext03();Debug.Log("CAVALRY_CHARGE_READY");
@@ -331,7 +331,7 @@ namespace MassEngine.Game.Editor
         }
         public static void Build03()
         {
-            string dest="Builds/UnifiedCavalry-20260930-03",folder="Assets/Game/Cavalry/Prepared03/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite build.");var r=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(CharacterPipeline.Root+"/Generated/MountedKnight02/PipelineReport.json"));CharacterGeometry.Require(r.automatedPassed,"Scaled cavalry not validated.");var cat=Load<WarSandboxBattlefieldCatalog>(folder+"/Catalog.asset");var b=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{folder+"/Menu.unity"}.Concat(cat.entries.Select(e=>e.scenePath)).ToArray(),locationPathName=dest+"/UnifiedRoster.exe",target=BuildTarget.StandaloneWindows64,options=BuildOptions.Development});if(b.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Scaled cavalry build failed.");File.WriteAllText(dest+"/Start-Roster.cmd","@echo off\r\nstart \"\" /D \"%~dp0\" \"%~dp0UnifiedRoster.exe\" -screen-fullscreen 0 -screen-width 1280 -screen-height 720 --war-sandbox-settings-file=\"%~dp0PilotData\\settings.json\"\r\n");
+            string dest="Builds/UnifiedCavalry-20260930-03",folder="Assets/Game/Content/Characters/Cavalry/Prepared03/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite build.");var r=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(CharacterPipeline.Root+"/Generated/MountedKnight02/PipelineReport.json"));CharacterGeometry.Require(r.automatedPassed,"Scaled cavalry not validated.");var cat=Load<WarSandboxBattlefieldCatalog>(folder+"/Catalog.asset");var b=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{folder+"/Menu.unity"}.Concat(cat.entries.Select(e=>e.scenePath)).ToArray(),locationPathName=dest+"/UnifiedRoster.exe",target=BuildTarget.StandaloneWindows64,options=BuildOptions.Development});if(b.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Scaled cavalry build failed.");File.WriteAllText(dest+"/Start-Roster.cmd","@echo off\r\nstart \"\" /D \"%~dp0\" \"%~dp0UnifiedRoster.exe\" -screen-fullscreen 0 -screen-width 1280 -screen-height 720 --war-sandbox-settings-file=\"%~dp0PilotData\\settings.json\"\r\n");
         }
         public static void Build01()
         {

@@ -61,7 +61,43 @@ namespace MassEngine.Game.Tests
                 Assert.That(JsonUtility.ToJson(copy.spawnConfig), Is.EqualTo(JsonUtility.ToJson(source.spawnConfig)));
                 Assert.That(copy.teamId, Is.EqualTo(source.teamId));
                 Assert.That(copy.combatConfig, Is.SameAs(source.combatConfig));
-                Assert.That(copy.renderConfig, Is.SameAs(source.renderConfig));
+                var originalRender = source.renderConfig;
+                var launchRender = copy.renderConfig;
+                var originalProfile = originalRender.vatProfile as VATProfile;
+                var farVariant = Load<VATProfile>(WarSandboxFarLodBuilder.ProfilePath);
+                Assert.That(originalProfile, Is.Not.Null);
+                Assert.That(farVariant, Is.Not.Null);
+                if (AssetDatabase.GetAssetPath(originalProfile) == "Assets/Art/VAT/Characters/MaleCharacter_Stage5_MultiClip_Profile.asset")
+                {
+                    // M7.3 deliberately owns a cheaper FAR variant, not a byte-identical RenderConfig.
+                    Assert.That(launchRender, Is.Not.SameAs(originalRender));
+                    StringAssert.StartsWith(WarSandboxFarLodBuilder.Root + "/", AssetDatabase.GetAssetPath(launchRender));
+                    Assert.That(launchRender.vatProfile, Is.SameAs(farVariant));
+                    Assert.That(launchRender.nearMesh, Is.SameAs(originalRender.nearMesh));
+                    Assert.That(launchRender.midMesh, Is.SameAs(originalRender.midMesh));
+                    Assert.That(launchRender.farMesh, Is.SameAs(farVariant.lowLodMesh));
+                    Assert.That(launchRender.farMesh.vertexCount, Is.InRange(1, 128));
+                    Assert.That(farVariant.positionTexture, Is.SameAs(originalProfile.positionTexture));
+                    Assert.That(farVariant.normalTexture, Is.SameAs(originalProfile.normalTexture));
+                    // The reducer promotes an original LOW tier to MID when no explicit MID existed.
+                    Assert.That(farVariant.midLodMesh, Is.SameAs(originalProfile.HasMidLod ? originalProfile.midLodMesh : originalProfile.lowLodMesh));
+                    Assert.That(farVariant.midLodPositionTexture, Is.SameAs(originalProfile.HasMidLod ? originalProfile.midLodPositionTexture : originalProfile.lowLodPositionTexture));
+                    Assert.That(farVariant.midLodNormalTexture, Is.SameAs(originalProfile.HasMidLod ? originalProfile.midLodNormalTexture : originalProfile.lowLodNormalTexture));
+                    Assert.That(farVariant.midLodTextureWidth, Is.EqualTo(originalProfile.HasMidLod ? originalProfile.midLodTextureWidth : originalProfile.lowLodTextureWidth));
+                    Assert.That(farVariant.midLodTextureHeight, Is.EqualTo(originalProfile.HasMidLod ? originalProfile.midLodTextureHeight : originalProfile.lowLodTextureHeight));
+                    Assert.That(farVariant.midLodRowsPerFrame, Is.EqualTo(originalProfile.HasMidLod ? originalProfile.midLodRowsPerFrame : originalProfile.lowLodRowsPerFrame));
+                    Assert.That(farVariant.totalFrameCount, Is.EqualTo(originalProfile.totalFrameCount));
+                    Assert.That(launchRender.nearMaterial, Is.SameAs(originalRender.nearMaterial));
+                    Assert.That(launchRender.midMaterial, Is.SameAs(originalRender.midMaterial));
+                    Assert.That(launchRender.farMaterial, Is.SameAs(originalRender.farMaterial));
+                    Assert.That(launchRender.nearShadowCasting, Is.EqualTo(originalRender.nearShadowCasting));
+                    Assert.That(launchRender.nearReceiveShadows, Is.EqualTo(originalRender.nearReceiveShadows));
+                    Assert.That(launchRender.midShadowCasting, Is.EqualTo(originalRender.midShadowCasting));
+                    Assert.That(launchRender.midReceiveShadows, Is.EqualTo(originalRender.midReceiveShadows));
+                    Assert.That(launchRender.farShadowCasting, Is.EqualTo(originalRender.farShadowCasting));
+                    Assert.That(launchRender.farReceiveShadows, Is.EqualTo(originalRender.farReceiveShadows));
+                }
+                else Assert.That(launchRender, Is.SameAs(originalRender));
             }
             var units = catalog.entries.SelectMany(e => Load<ScenarioConfig>(Root + "/" + e.id + "/Scenario.asset").unitTypes).ToArray();
             Assert.That(units.Distinct().Count(), Is.EqualTo(units.Length), "Presets must own their unit configuration.");

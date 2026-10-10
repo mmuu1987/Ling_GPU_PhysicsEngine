@@ -28,7 +28,7 @@ namespace MassEngine.Game.Editor
 
     public static class CharacterPipeline
     {
-        public const string Root = "Assets/Game/CharacterPipeline";
+        public const string Root = "Assets/Game/Authoring/CharacterPipeline";
         public static string Output(CharacterRecipe r) => Root + "/Generated/" + r.outputName;
 
         /// <summary>Header sniff to reject HTTP-200 error pages before import; Unity remains responsible for full FBX parsing.</summary>

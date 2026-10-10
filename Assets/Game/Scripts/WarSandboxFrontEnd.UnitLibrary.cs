@@ -70,6 +70,20 @@ namespace MassEngine.Game
             LibraryGuard(CloseLibrary);
         }
 
+        private UnitPreviewRadius LibraryRadius(WarSandboxUnitTemplateEntry entry)
+        {
+            var info = UnitPreviewRadius.Read(entry.config);
+            bool hasSaved = LibraryStore.Current.TryGet(entry.templateId, WarSandboxUnitStat.AgentRadius, out float saved);
+            if (libraryOpen && libraryPendingId == entry.templateId && libraryPending != null)
+            {
+                bool hasPending = libraryPending.TryGet(WarSandboxUnitStat.AgentRadius, out float pending);
+                bool changed = hasPending != hasSaved || (hasPending && pending != saved);
+                if (hasPending) return info.WithValue(pending, changed ? "待保存全局 · 仅预览，尚未进入战场" : "已保存全局 · 下次入场/应用时校验");
+                return changed ? info.WithValue(info.BaseRadius, "官方回退（待保存）") : info;
+            }
+            return hasSaved ? info.WithValue(saved, "已保存全局 · 下次入场/应用时校验") : info;
+        }
+
         private void DrawLibrary()
         {
             float w = ui.Width, h = ui.Height;
@@ -135,13 +149,22 @@ namespace MassEngine.Game
             float sliderW = Mathf.Max(60, innerW - labelW - fieldW - chipW - resetW - 4 * gap);
             bool twoRows = innerW < 790;
             float footerTop = bottom - (twoRows ? 158 : 110), tableTop = top + 86;
-            if (portraitColumn) DrawUnitPortrait("lib-unit", new Rect(rx + rw - 20 - portraitW, tableTop, portraitW, footerTop - tableTop - 6), entry);
+            var physical = LibraryRadius(entry);
+            if (portraitColumn && !unitPreviewOpen) ui.ModelPreview("lib-unit", new Rect(rx + rw - 20 - portraitW, tableTop, portraitW, footerTop - tableTop - 6), entry.config, entry.unitPreview, physical.Available ? (float?)physical.BaseRadius : null);
             var rows = new List<WarSandboxStatDefinition>();
-            foreach (var d in WarSandboxUnitStats.Definitions) if (WarSandboxUnitStats.Applies(template, d)) rows.Add(d);
-            string group = null; float content = 0;
+            foreach (var d in WarSandboxUnitStats.Definitions) if (WarSandboxUnitStats.Applies(template, d)) { if (d.UsesFlocking) rows.Insert(0, d); else rows.Add(d); }
+            string group = null; float content = 106;
             foreach (var d in rows) { if (d.Group != group) { content += 30; group = d.Group; } content += 46; }
             ui.TintScroll("lib-table", new Rect(rx + 20, tableTop, innerW, footerTop - tableTop - 6), content, WarSandboxStatTheme.Alpha(WarSandboxStatTheme.Row, 0f));
-            float y = 0; group = null; int row = 0;
+            // Effective preview readout; editing remains an explicit pending stat below.
+            ui.LabelAligned("lib-radius-value", new Rect(6, 0, innerW - 12, 30), physical.Summary + "  ·  预览", 14,
+                WarSandboxStatTheme.Bright, true, TextAnchor.MiddleLeft);
+            ui.LabelAligned("lib-radius-source", new Rect(6, 32, innerW - 12, 36), "来源：" + physical.Source, 11,
+                WarSandboxStatTheme.Muted, false, TextAnchor.UpperLeft);
+            ui.LabelAligned("lib-radius-legend", new Rect(6, 70, innerW - 12, 30), UnitPreviewRadius.Legend, 11,
+                new Color32(133, 76, 12, 255), false, TextAnchor.MiddleLeft);
+            ui.Panel("lib-radius-line", new Rect(0, 104, innerW, 1), WarSandboxStatTheme.Line, false);
+            float y = 106; group = null; int row = 0;
             foreach (var d in rows)
             {
                 if (d.Group != group)
@@ -210,7 +233,8 @@ namespace MassEngine.Game
             float fx = labelW + sliderW + 2 * gap;
             ui.TintField(k + "-field", new Rect(fx, y + 5, fieldW, 32), d.Format(effective), text =>
             {
-                if (!WarSandboxStatTheme.TryParse(text, out float typed)) { LibraryNotice(d.Label + "：请输入数字。", true); return; }
+                if (!WarSandboxStatTheme.TryParse(text, out float typed)) { LibraryNotice(d.Label + "：请输入有限数字。", true); return; }
+                if (d.UsesFlocking && !d.Accepts(typed)) { LibraryNotice("半径必须为 0.05–4.8 米；实际入场还需通过网格、间距和地形校验。", true); return; }
                 float clamped = d.Clamp(typed);
                 if (WarSandboxUnitStats.Same(clamped, effective) && clamped == typed) return;
                 libraryPending.Set(d.Stat, clamped);
@@ -268,3 +292,5 @@ namespace MassEngine.Game
         }
     }
 }
+
+

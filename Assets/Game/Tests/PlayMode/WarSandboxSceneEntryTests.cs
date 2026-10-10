@@ -13,8 +13,8 @@ namespace MassEngine.Game.Tests
 {
     public sealed class WarSandboxSceneEntryTests
     {
-        private const string Menu = "Assets/Game/Scenes/WarSandboxMenu.unity";
-        private const string Battlefield = "Assets/Game/Scenes/WarSandbox.unity";
+        private const string Menu = "Assets/Game/Experiments/LegacyScenes/WarSandboxMenu.unity";
+        private const string Battlefield = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity";
         private float previousCaptureDelta;
         private WarSandboxBattlefieldCatalog copy;
         private WarSandboxSceneSession session;

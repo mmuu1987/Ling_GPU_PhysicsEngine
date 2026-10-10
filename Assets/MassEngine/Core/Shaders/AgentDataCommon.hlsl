@@ -20,6 +20,8 @@
 #define TEAM_STANCE_HOLD 0
 #define TEAM_STANCE_ADVANCE 1
 #define TEAM_STANCE_GUARD_HOME 2
+#define TEAM_STANCE_MOVE_ONLY 3
+#define TEAM_STANCE_HOLD_HERE 4
 #define FLOW_TARGET_NONE 0
 #define FLOW_TARGET_POINT 1
 #define FLOW_TARGET_AREA 2
@@ -256,6 +258,7 @@ int localTargetSearchCellRadius;
 float defenderGuardRadius;
 
 #if defined(MASS_TERRAIN_ENABLED)
+#include "LocalOrders.hlsl"
 #include "../../Terrain/Shaders/TerrainNavigation.hlsl"
 #endif
 
@@ -679,8 +682,42 @@ TeamFlowParams GetTeamFlowParams(int teamId)
     return disabled;
 }
 
+// Effective command params never change the raw team id used by enemy tests/statistics.
+TeamFlowParams GetAgentFlowParams(uint index)
+{
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    if(HasLocalOrder(index))
+    {
+        LocalAgentOrder o=LocalOrderFor(index);TeamFlowParams p;
+        p.modes=o.stance==TEAM_STANCE_ADVANCE?int4(FLOW_TARGET_NONE,1,1,0):int4(FLOW_TARGET_POINT,o.stance==TEAM_STANCE_MOVE_ONLY?1:0,0,0);
+        p.target=float4(o.arrival,o.stopRadius,0);p.area=0;return p;
+    }
+#endif
+    return GetTeamFlowParams(teamIdReadBuffer[index]);
+}
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+float2 SampleLocalOrderFlow(uint index,float3 position)
+{
+    LocalAgentOrder o=LocalOrderFor(index);if((o.stance!=TEAM_STANCE_MOVE_ONLY && o.stance!=TEAM_STANCE_ADVANCE) || GetUnitSettings(index).flowFieldWeight<=0)return 0;
+    if(!TerrainNavPointOpen(position.xz))return 0;
+    float2 to=o.arrival-position.xz;float d2=dot(to,to);
+    if(o.stance==TEAM_STANCE_MOVE_ONLY && d2<=o.stopRadius*o.stopRadius)return 0;
+    // Only the clear terminal region uses local distributed arrival steering. Never cross an obstacle by chasing a point.
+    if(o.stance==TEAM_STANCE_MOVE_ONLY && d2<=o.arrivalRegionRadius*o.arrivalRegionRadius && TerrainSegmentClear(position.xz,o.arrival))return normalize(to);
+    int2 here=TerrainNavCell(position.xz);uint cell=here.y*flowFieldResolution.x+here.x;
+    float2 direction=_LocalOrderFlow[(o.slotPlusOne-1)*_LocalOrderCellCount+cell];if(dot(direction,direction)<.0001)return 0;
+    int2 next=here+(int2)sign(direction);float2 center=flowFieldOrigin+(next+.5)*flowFieldCellSize;
+    if(!TerrainSegmentClear(position.xz,center))return 0;float2 offset=center-position.xz;return dot(offset,offset)>.000001?normalize(offset):0;
+}
+#endif
+
+int terrainLaneApproach33; // Defaults off; explicitly set on every terrain binding.
+
 float2 SampleFlowDirection(uint index, int teamId, float3 position)
 {
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    if(HasLocalOrder(index))return SampleLocalOrderFlow(index,position);
+#endif
     if (teamId < 0 || teamId >= teamCount)
         return 0.0;
 
@@ -704,6 +741,15 @@ float2 SampleFlowDirection(uint index, int teamId, float3 position)
             return dot(offset, offset) > max(p.target.z * p.target.z, 0.0001) ? normalize(offset) : 0;
         }
         return 0;
+    }
+    // Candidate direction is used only when its full one-cell sweep is clear.
+    // The actual integrator still checks every movement segment; otherwise use the
+    // original safe neighbour-center route (never unconditional interpolation).
+    if (terrainLaneApproach33 != 0 && GetTeamFlowParams(teamId).modes.x == FLOW_TARGET_NONE)
+    {
+        float2 forward = normalize(direction);
+        if (TerrainSegmentClear(position.xz, position.xz + forward * flowFieldCellSize))
+            return forward;
     }
     int2 next = here + (int2)sign(direction);
     float2 nextCenter = flowFieldOrigin + (next + .5) * flowFieldCellSize;
@@ -1125,6 +1171,9 @@ bool IsEnemy(uint selfIndex, uint otherIndex)
 
 int TeamStanceOf(uint index)
 {
+#if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
+    if(HasLocalOrder(index))return LocalOrderFor(index).stance;
+#endif
     int teamId = teamIdReadBuffer[index];
     // A teamId outside the allocated range has no stance record. Advance matches what such
     // an agent did before stances existed: it fell through to the attacker branch.
@@ -1138,7 +1187,8 @@ int TeamStanceOf(uint index)
 // holding, exactly as the old defender predicate did.
 bool IsHoldStance(uint index)
 {
-    return combatEnabled != 0 && TeamStanceOf(index) == TEAM_STANCE_HOLD;
+    int stance = TeamStanceOf(index);
+    return combatEnabled != 0 && (stance == TEAM_STANCE_HOLD || stance == TEAM_STANCE_HOLD_HERE);
 }
 
 // retainExisting: true when validating an agent's CURRENT target (hysteresis applies),
@@ -1147,6 +1197,10 @@ bool IsHoldStance(uint index)
 // across the exact attackRange line produced systematic one-sided trades.
 bool TargetIsUsable(uint selfIndex, uint otherIndex, float distSqr, float3 selfPosition, bool retainExisting)
 {
+    // Explicit Move/Retreat must release existing enemies as well as reject new
+    // acquisition; otherwise front ranks keep fighting while only the rear obeys.
+    if (TeamStanceOf(selfIndex) == TEAM_STANCE_MOVE_ONLY) return false;
+
     if (selfIndex == otherIndex || !IsAliveIndex(otherIndex) || !IsEnemy(selfIndex, otherIndex))
         return false;
 
@@ -1412,3 +1466,6 @@ void AppendVisibleAgentForUnitType(uint index, inout AgentData agent)
     else if (includeFar)
         farVisibleAgentIndices.Append(index);
 }
+
+
+

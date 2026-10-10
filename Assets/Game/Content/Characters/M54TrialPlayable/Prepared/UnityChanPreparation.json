@@ -1,0 +1,927 @@
+{
+    "sourceModel": "Assets/Art/Source/ModelTrials/UnityChan/Models/unitychan.fbx",
+    "avatar": "Assets/Art/Source/ModelTrials/UnityChan/Models/unitychan.fbx",
+    "atlasPath": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanAtlas.png",
+    "materialPath": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanPreparedPreview.mat",
+    "prefabPath": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanPrepared.prefab",
+    "atlasSize": 4096,
+    "paddingPixels": 8,
+    "preparedVertexCount": 13369,
+    "simplifications": [
+        "Fixed material-name mapping reads the original _MainTex color sources, not empty _BaseMap or missing toon shaders.",
+        "Cheek renderer and mat_cheek submeshes are disabled/omitted; hierarchy transforms are retained.",
+        "Left/right iris RGB is composited over white using source alpha. All atlas pixels are opaque; no runtime cutout/transparency.",
+        "Other base textures keep RGB and discard alpha. Toon ramps, specular, normal maps, outline, spring bones and facial animation are not reproduced.",
+        "Every non-cheek MeshRenderer is retained with its existing enabled/active state; pass active ones explicitly to VatBaker as extras.",
+        "Source transforms, skeleton, Avatar, arbitrary bone influences and all blendshape frames/weights are retained.",
+        "All triangle-referenced UV0 values are measured per submesh and combined per atlas slot. Each axis inside [0,1] keeps that domain; otherwise its measured domain (minimum span 1) is baked with the original texture wrap modes.",
+        "UV0 remapping is affine across the entire source domain, never per-vertex clamp/modulo. Cross-integer triangle interpolation is preserved; finite resampling/mip detail remains approximate. Absolute UV coordinates above 32 or slot spans above 8 are rejected.",
+        "Color atlas is persisted as lossless 4096 PNG and synchronously imported as sRGB, Clamp, mipmapped, uncompressed RGBA32. Preview material references the imported persistent Texture2D; VAT data remains unchanged.",
+        "Mesh vertices are separated per original submesh, atlas UV0 is remapped, then triangles are merged into submesh 0. Higher UV channels and vertex colors are copied when present.",
+        "Preview uses an opaque back-face-culled material, not the source double-sided toon appearance. VAT shaders must be assigned separately by the caller.",
+        "Full/Low VAT is NOT generated here. Existing spatial Low clustering can average UVs across atlas islands; inspect Low appearance before accepting it."
+    ],
+    "renderers": [
+        {
+            "path": "Character1_Reference/Character1_Hips/Character1_Spine/Character1_Spine1/Character1_Spine2/Character1_Neck/Character1_Head/BLW_DEF",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "BLW_DEF",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_00.asset",
+            "omitted": "",
+            "sourceVertexCount": 40,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 40,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 6,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 4,
+                    "material": "eyeline",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.017090000212192537,
+                        "y": 0.6455700397491455
+                    },
+                    "uvMax": {
+                        "x": 0.6527699828147888,
+                        "y": 0.9574900269508362
+                    }
+                }
+            ]
+        },
+        {
+            "path": "Character1_Reference/Character1_Hips/Character1_Spine/Character1_Spine1/Character1_Spine2/Character1_Neck/Character1_Head/eye_base_old",
+            "rendererType": "MeshRenderer",
+            "sourceMesh": "eye_base_old",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_01.asset",
+            "omitted": "",
+            "sourceVertexCount": 74,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 74,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 4,
+                    "material": "eyebase",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.7667199969291687,
+                        "y": 0.8014100193977356
+                    },
+                    "uvMax": {
+                        "x": 0.9624300003051758,
+                        "y": 0.9714000225067139
+                    }
+                }
+            ]
+        },
+        {
+            "path": "Character1_Reference/Character1_Hips/Character1_Spine/Character1_Spine1/Character1_Spine2/Character1_Neck/Character1_Head/EYE_DEF",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "EYE_DEF",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_02.asset",
+            "omitted": "",
+            "sourceVertexCount": 420,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 420,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 7,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 2,
+                    "material": "face",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.12293999642133713,
+                        "y": 0.37321001291275027
+                    },
+                    "uvMax": {
+                        "x": 0.8770599961280823,
+                        "y": 0.751800000667572
+                    }
+                }
+            ]
+        },
+        {
+            "path": "Character1_Reference/Character1_Hips/Character1_Spine/Character1_Spine1/Character1_Spine2/Character1_Neck/Character1_Head/EYE_DEF/EL_DEF",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "EL_DEF",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_03.asset",
+            "omitted": "",
+            "sourceVertexCount": 421,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 421,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 7,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 4,
+                    "material": "eyeline",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.02775000035762787,
+                        "y": 0.02929997444152832
+                    },
+                    "uvMax": {
+                        "x": 0.9981099963188171,
+                        "y": 0.5879600048065186
+                    }
+                }
+            ]
+        },
+        {
+            "path": "Character1_Reference/Character1_Hips/Character1_Spine/Character1_Spine1/Character1_Spine2/Character1_Neck/Character1_Head/eye_L_old",
+            "rendererType": "MeshRenderer",
+            "sourceMesh": "eye_L_old",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_04.asset",
+            "omitted": "",
+            "sourceVertexCount": 24,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 24,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 5,
+                    "material": "eye_L1",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.13073000311851502,
+                        "y": 0.22887998819351197
+                    },
+                    "uvMax": {
+                        "x": 0.8831999897956848,
+                        "y": 0.8513799905776978
+                    }
+                }
+            ]
+        },
+        {
+            "path": "Character1_Reference/Character1_Hips/Character1_Spine/Character1_Spine1/Character1_Spine2/Character1_Neck/Character1_Head/eye_R_old",
+            "rendererType": "MeshRenderer",
+            "sourceMesh": "eye_R_old",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_05.asset",
+            "omitted": "",
+            "sourceVertexCount": 24,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 24,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 6,
+                    "material": "eye_R1",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.11587999761104584,
+                        "y": 0.22887998819351197
+                    },
+                    "uvMax": {
+                        "x": 0.8683599829673767,
+                        "y": 0.8513799905776978
+                    }
+                }
+            ]
+        },
+        {
+            "path": "Character1_Reference/Character1_Hips/Character1_Spine/Character1_Spine1/Character1_Spine2/Character1_Neck/Character1_Head/head_back",
+            "rendererType": "MeshRenderer",
+            "sourceMesh": "head_back",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_06.asset",
+            "omitted": "",
+            "sourceVertexCount": 136,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 136,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 2,
+                    "material": "face",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.011470000259578228,
+                        "y": 0.8512799739837647
+                    },
+                    "uvMax": {
+                        "x": 0.993149995803833,
+                        "y": 0.990369975566864
+                    }
+                }
+            ]
+        },
+        {
+            "path": "Character1_Reference/Character1_Hips/Character1_Spine/Character1_Spine1/Character1_Spine2/Character1_Neck/Character1_Head/MTH_DEF",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "MTH_DEF",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_07.asset",
+            "omitted": "",
+            "sourceVertexCount": 845,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 845,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 11,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 2,
+                    "material": "face",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.005249999929219484,
+                        "y": 0.005930006504058838
+                    },
+                    "uvMax": {
+                        "x": 0.9947500228881836,
+                        "y": 0.9910899996757507
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/button",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "button",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_08.asset",
+            "omitted": "",
+            "sourceVertexCount": 276,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 276,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.3718099892139435,
+                        "y": 0.8774099946022034
+                    },
+                    "uvMax": {
+                        "x": 0.5299100279808044,
+                        "y": 0.9907699823379517
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/cheek",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "cheek",
+            "preparedMesh": "",
+            "omitted": "cheek transparent overlay",
+            "sourceVertexCount": 22,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 0,
+            "preparedSubmeshCount": 0,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": []
+        },
+        {
+            "path": "mesh_root/hair_accce",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "hair_accce",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_09.asset",
+            "omitted": "",
+            "sourceVertexCount": 188,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 188,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.5716300010681152,
+                        "y": 0.944570004940033
+                    },
+                    "uvMax": {
+                        "x": 0.6465299725532532,
+                        "y": 0.9885500073432922
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/hair_front",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "hair_front",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_10.asset",
+            "omitted": "",
+            "sourceVertexCount": 277,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 277,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 1,
+                    "material": "hair",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.17204999923706056,
+                        "y": 0.12477999925613404
+                    },
+                    "uvMax": {
+                        "x": 0.47328999638557436,
+                        "y": 0.943149983882904
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/hair_frontside",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "hair_frontside",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_11.asset",
+            "omitted": "",
+            "sourceVertexCount": 612,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 612,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 1,
+                    "material": "hair",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.15801000595092774,
+                        "y": 0.03558999300003052
+                    },
+                    "uvMax": {
+                        "x": 0.6949700117111206,
+                        "y": 0.9201400279998779
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/hairband",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "hairband",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_12.asset",
+            "omitted": "",
+            "sourceVertexCount": 149,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 149,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.18497000634670258,
+                        "y": 0.00923997163772583
+                    },
+                    "uvMax": {
+                        "x": 0.3860200047492981,
+                        "y": 0.21969997882843018
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/Leg",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "Leg",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_13.asset",
+            "omitted": "",
+            "sourceVertexCount": 1771,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 1771,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.006920000072568655,
+                        "y": 0.005249977111816406
+                    },
+                    "uvMax": {
+                        "x": 0.9929400086402893,
+                        "y": 0.5877200365066528
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/Shirts",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "Shirts",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_14.asset",
+            "omitted": "",
+            "sourceVertexCount": 384,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 384,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.2555199861526489,
+                        "y": 0.34091001749038699
+                    },
+                    "uvMax": {
+                        "x": 0.740149974822998,
+                        "y": 0.6203800439834595
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/shirts_sode",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "shirts_sode",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_15.asset",
+            "omitted": "",
+            "sourceVertexCount": 998,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 998,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.005520000122487545,
+                        "y": 0.10544002056121826
+                    },
+                    "uvMax": {
+                        "x": 0.9942700266838074,
+                        "y": 0.8995500206947327
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/shirts_sode_BK",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "shirts_sode_BK",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_16.asset",
+            "omitted": "",
+            "sourceVertexCount": 288,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 288,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.005750000011175871,
+                        "y": 0.9113399982452393
+                    },
+                    "uvMax": {
+                        "x": 0.9950699806213379,
+                        "y": 0.994920015335083
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/skin",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "skin",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_17.asset",
+            "omitted": "",
+            "sourceVertexCount": 2546,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 2546,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 3,
+                    "material": "skin1",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.006120000034570694,
+                        "y": 0.009670019149780274
+                    },
+                    "uvMax": {
+                        "x": 0.9944300055503845,
+                        "y": 0.9860100150108337
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/tail",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "tail",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_18.asset",
+            "omitted": "",
+            "sourceVertexCount": 1288,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 1288,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 1,
+                    "material": "hair",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": -1.655210018157959,
+                        "y": 0.009739995002746582
+                    },
+                    "uvMax": {
+                        "x": 2.460050106048584,
+                        "y": 1.8985700607299805
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/tail_bottom",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "tail_bottom",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_19.asset",
+            "omitted": "",
+            "sourceVertexCount": 798,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 798,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 1,
+                    "material": "hair",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.1395999938249588,
+                        "y": 0.018459975719451906
+                    },
+                    "uvMax": {
+                        "x": 0.7116299867630005,
+                        "y": 1.0073299407958985
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/uwagi",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "uwagi",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_20.asset",
+            "omitted": "",
+            "sourceVertexCount": 777,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 777,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.2568199932575226,
+                        "y": 0.6290799975395203
+                    },
+                    "uvMax": {
+                        "x": 0.7440400123596191,
+                        "y": 0.9950900077819824
+                    }
+                }
+            ]
+        },
+        {
+            "path": "mesh_root/uwagi_BK",
+            "rendererType": "SkinnedMeshRenderer",
+            "sourceMesh": "uwagi_BK",
+            "preparedMesh": "Assets/Game/Content/Characters/M54TrialPlayable/Prepared/UnityChanMesh_21.asset",
+            "omitted": "",
+            "sourceVertexCount": 1033,
+            "sourceSubmeshCount": 1,
+            "preparedVertexCount": 1033,
+            "preparedSubmeshCount": 1,
+            "blendShapeCount": 0,
+            "enabled": true,
+            "activeSelf": true,
+            "materials": [
+                {
+                    "submesh": 0,
+                    "atlasSlot": 0,
+                    "material": "body",
+                    "hasUvRange": true,
+                    "uvMin": {
+                        "x": 0.7964000105857849,
+                        "y": 0.0044100284576416019
+                    },
+                    "uvMax": {
+                        "x": 0.9955999851226807,
+                        "y": 0.10343998670578003
+                    }
+                }
+            ]
+        }
+    ],
+    "atlasSlots": [
+        {
+            "slot": 0,
+            "sourceWidth": 1024,
+            "sourceHeight": 1024,
+            "sampledCellSize": 1008,
+            "sourceTexture": "Assets/Art/Source/ModelTrials/UnityChan/Models/Texture/body_01.tga",
+            "wrapU": "Repeat",
+            "wrapV": "Repeat",
+            "sourceUvMin": {
+                "x": 0.005520000122487545,
+                "y": 0.0044100284576416019
+            },
+            "sourceUvMax": {
+                "x": 0.9955999851226807,
+                "y": 0.9950900077819824
+            },
+            "uvRect": {
+                "serializedVersion": "2",
+                "x": 0.001953125,
+                "y": 0.001953125,
+                "width": 0.24609375,
+                "height": 0.24609375
+            },
+            "sampledSourceRect": {
+                "serializedVersion": "2",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 1.0,
+                "height": 1.0
+            },
+            "irisWhiteComposite": false
+        },
+        {
+            "slot": 1,
+            "sourceWidth": 1024,
+            "sourceHeight": 1024,
+            "sampledCellSize": 1008,
+            "sourceTexture": "Assets/Art/Source/ModelTrials/UnityChan/Models/Texture/hair_01.tga",
+            "wrapU": "Repeat",
+            "wrapV": "Repeat",
+            "sourceUvMin": {
+                "x": -1.655210018157959,
+                "y": 0.009739995002746582
+            },
+            "sourceUvMax": {
+                "x": 2.460050106048584,
+                "y": 1.8985700607299805
+            },
+            "uvRect": {
+                "serializedVersion": "2",
+                "x": 0.251953125,
+                "y": 0.001953125,
+                "width": 0.24609375,
+                "height": 0.24609375
+            },
+            "sampledSourceRect": {
+                "serializedVersion": "2",
+                "x": -1.655210018157959,
+                "y": 0.009739995002746582,
+                "width": 4.115260124206543,
+                "height": 1.8888300657272339
+            },
+            "irisWhiteComposite": false
+        },
+        {
+            "slot": 2,
+            "sourceWidth": 1024,
+            "sourceHeight": 1024,
+            "sampledCellSize": 1008,
+            "sourceTexture": "Assets/Art/Source/ModelTrials/UnityChan/Models/Texture/face_00.tga",
+            "wrapU": "Repeat",
+            "wrapV": "Repeat",
+            "sourceUvMin": {
+                "x": 0.005249999929219484,
+                "y": 0.005930006504058838
+            },
+            "sourceUvMax": {
+                "x": 0.9947500228881836,
+                "y": 0.9910899996757507
+            },
+            "uvRect": {
+                "serializedVersion": "2",
+                "x": 0.501953125,
+                "y": 0.001953125,
+                "width": 0.24609375,
+                "height": 0.24609375
+            },
+            "sampledSourceRect": {
+                "serializedVersion": "2",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 1.0,
+                "height": 1.0
+            },
+            "irisWhiteComposite": false
+        },
+        {
+            "slot": 3,
+            "sourceWidth": 512,
+            "sourceHeight": 512,
+            "sampledCellSize": 1008,
+            "sourceTexture": "Assets/Art/Source/ModelTrials/UnityChan/Models/Texture/skin_01.tga",
+            "wrapU": "Repeat",
+            "wrapV": "Repeat",
+            "sourceUvMin": {
+                "x": 0.006120000034570694,
+                "y": 0.009670019149780274
+            },
+            "sourceUvMax": {
+                "x": 0.9944300055503845,
+                "y": 0.9860100150108337
+            },
+            "uvRect": {
+                "serializedVersion": "2",
+                "x": 0.751953125,
+                "y": 0.001953125,
+                "width": 0.24609375,
+                "height": 0.24609375
+            },
+            "sampledSourceRect": {
+                "serializedVersion": "2",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 1.0,
+                "height": 1.0
+            },
+            "irisWhiteComposite": false
+        },
+        {
+            "slot": 4,
+            "sourceWidth": 512,
+            "sourceHeight": 512,
+            "sampledCellSize": 1008,
+            "sourceTexture": "Assets/Art/Source/ModelTrials/UnityChan/Models/Texture/eyeline_00.tga",
+            "wrapU": "Repeat",
+            "wrapV": "Repeat",
+            "sourceUvMin": {
+                "x": 0.017090000212192537,
+                "y": 0.02929997444152832
+            },
+            "sourceUvMax": {
+                "x": 0.9981099963188171,
+                "y": 0.9714000225067139
+            },
+            "uvRect": {
+                "serializedVersion": "2",
+                "x": 0.001953125,
+                "y": 0.251953125,
+                "width": 0.24609375,
+                "height": 0.24609375
+            },
+            "sampledSourceRect": {
+                "serializedVersion": "2",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 1.0,
+                "height": 1.0
+            },
+            "irisWhiteComposite": false
+        },
+        {
+            "slot": 5,
+            "sourceWidth": 512,
+            "sourceHeight": 512,
+            "sampledCellSize": 1008,
+            "sourceTexture": "Assets/Art/Source/ModelTrials/UnityChan/Models/Texture/eye_iris_L_00.tga",
+            "wrapU": "Repeat",
+            "wrapV": "Repeat",
+            "sourceUvMin": {
+                "x": 0.13073000311851502,
+                "y": 0.22887998819351197
+            },
+            "sourceUvMax": {
+                "x": 0.8831999897956848,
+                "y": 0.8513799905776978
+            },
+            "uvRect": {
+                "serializedVersion": "2",
+                "x": 0.251953125,
+                "y": 0.251953125,
+                "width": 0.24609375,
+                "height": 0.24609375
+            },
+            "sampledSourceRect": {
+                "serializedVersion": "2",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 1.0,
+                "height": 1.0
+            },
+            "irisWhiteComposite": true
+        },
+        {
+            "slot": 6,
+            "sourceWidth": 512,
+            "sourceHeight": 512,
+            "sampledCellSize": 1008,
+            "sourceTexture": "Assets/Art/Source/ModelTrials/UnityChan/Models/Texture/eye_iris_R_00.tga",
+            "wrapU": "Repeat",
+            "wrapV": "Repeat",
+            "sourceUvMin": {
+                "x": 0.11587999761104584,
+                "y": 0.22887998819351197
+            },
+            "sourceUvMax": {
+                "x": 0.8683599829673767,
+                "y": 0.8513799905776978
+            },
+            "uvRect": {
+                "serializedVersion": "2",
+                "x": 0.501953125,
+                "y": 0.251953125,
+                "width": 0.24609375,
+                "height": 0.24609375
+            },
+            "sampledSourceRect": {
+                "serializedVersion": "2",
+                "x": 0.0,
+                "y": 0.0,
+                "width": 1.0,
+                "height": 1.0
+            },
+            "irisWhiteComposite": true
+        }
+    ]
+}

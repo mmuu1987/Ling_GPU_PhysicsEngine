@@ -32,7 +32,7 @@ namespace MassEngine.Game.Tests
             directory = Path.Combine(Path.GetTempPath(), "WarSandboxUnitStats-" + Guid.NewGuid().ToString("N"));
             melee = Unit("Knight", 0, -40, 0); ranged = Unit("Dragon", 1, 40, 14); stranger = Unit("Unlisted", 1, 0, 0);
             rulesConfig = ScriptableObject.CreateInstance<WarSandboxBattlefieldConfig>();
-            battlefield = new WarSandboxBattlefieldEntry { id = "test-field", displayName = "Test", scenePath = "Assets/Game/Scenes/WarSandbox.unity", rules = rulesConfig };
+            battlefield = new WarSandboxBattlefieldEntry { id = "test-field", displayName = "Test", scenePath = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity", rules = rulesConfig };
             catalog = ScriptableObject.CreateInstance<WarSandboxBattlefieldCatalog>();
             catalog.entries = new[] { battlefield }; catalog.defaultEntryId = battlefield.id;
             catalog.templates = new[]

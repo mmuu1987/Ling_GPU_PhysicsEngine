@@ -16,7 +16,7 @@ namespace MassEngine.Tests
     /// </summary>
     public sealed class WarSandboxSmokeTests
     {
-        private const string ScenePath = "Assets/Game/Scenes/WarSandbox.unity";
+        private const string ScenePath = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity";
         private const int InitializeFrameBudget = 900;
         private const int BattleFrameBudget = 900;
         private const float FrameDt = 0.02f;

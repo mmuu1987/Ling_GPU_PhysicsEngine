@@ -37,3 +37,85 @@ sysinfo.txt
 # Build outputs in nested asset/tool folders
 [Bb]in/
 [Oo]bj/
+
+# Large files (>50 MB) kept local, not committed (2026-10-10)
+/Assets/Game/Authoring/CharacterPipeline/Generated/MountedKnight01/Full.asset
+/Assets/Game/Authoring/CharacterPipeline/Generated/MountedKnight01/Full.asset.meta
+/Assets/Game/Authoring/CharacterPipeline/Generated/MountedKnight02/Full.asset
+/Assets/Game/Authoring/CharacterPipeline/Generated/MountedKnight02/Full.asset.meta
+/Assets/Game/Authoring/CharacterPipeline/Generated/MountedKnight03/Full.asset
+/Assets/Game/Authoring/CharacterPipeline/Generated/MountedKnight03/Full.asset.meta
+/Assets/Game/Authoring/CharacterPipeline/Generated/MountedKnight04/Full.asset
+/Assets/Game/Authoring/CharacterPipeline/Generated/MountedKnight04/Full.asset.meta
+/Assets/Game/Authoring/CharacterPipeline/Generated/Ranger01/Full.asset
+/Assets/Game/Authoring/CharacterPipeline/Generated/Ranger01/Full.asset.meta
+/Assets/Game/Authoring/CharacterPipeline/Generated/Ranger02/Full.asset
+/Assets/Game/Authoring/CharacterPipeline/Generated/Ranger02/Full.asset.meta
+/Assets/Game/Content/Characters/RobotExpressivePilot/Version01/Prepared02/Idle.anim
+/Assets/Game/Content/Characters/RobotExpressivePilot/Version01/Prepared02/Idle.anim.meta
+/Assets/Game/Content/Characters/RobotExpressivePilot/Version01/Prepared03/Idle.anim
+/Assets/Game/Content/Characters/RobotExpressivePilot/Version01/Prepared03/Idle.anim.meta
+/Assets/Game/Content/Characters/RobotExpressivePilot/Version01/Prepared04/Idle.anim
+/Assets/Game/Content/Characters/RobotExpressivePilot/Version01/Prepared04/Idle.anim.meta
+/Assets/ThirdParty/Pure Poly/Free Low Poly Nature Pack/Terrain/Terrain.asset
+/Assets/ThirdParty/Pure Poly/Free Low Poly Nature Pack/Terrain/Terrain.asset.meta
+/Assets/ThirdParty/TriForge Assets/Fantasy Worlds - DEMO Content/Textures/Terrain/T_fwOF_GrassTerrain_01_BC.png
+/Assets/ThirdParty/TriForge Assets/Fantasy Worlds - DEMO Content/Textures/Terrain/T_fwOF_GrassTerrain_01_BC.png.meta
+/Assets/ThirdParty/TriForge Assets/Fantasy Worlds - DEMO Content/Textures/Terrain/T_fwOF_GrassTerrain_01_N.png
+/Assets/ThirdParty/TriForge Assets/Fantasy Worlds - DEMO Content/Textures/Terrain/T_fwOF_GrassTerrain_01_N.png.meta
+
+# Models / meshes / textures kept local, not committed (user 2026-10-10)
+/Assets/**/*.fbx
+/Assets/**/*.fbx.meta
+/Assets/**/*.obj
+/Assets/**/*.obj.meta
+/Assets/**/*.blend
+/Assets/**/*.blend.meta
+/Assets/**/*.dae
+/Assets/**/*.dae.meta
+/Assets/**/*.3ds
+/Assets/**/*.3ds.meta
+/Assets/**/*.max
+/Assets/**/*.max.meta
+/Assets/**/*.ma
+/Assets/**/*.ma.meta
+/Assets/**/*.mb
+/Assets/**/*.mb.meta
+/Assets/**/*.gltf
+/Assets/**/*.gltf.meta
+/Assets/**/*.glb
+/Assets/**/*.glb.meta
+/Assets/**/*.stl
+/Assets/**/*.stl.meta
+/Assets/**/*.ply
+/Assets/**/*.ply.meta
+/Assets/**/*.abc
+/Assets/**/*.abc.meta
+/Assets/**/*.png
+/Assets/**/*.png.meta
+/Assets/**/*.jpg
+/Assets/**/*.jpg.meta
+/Assets/**/*.jpeg
+/Assets/**/*.jpeg.meta
+/Assets/**/*.tga
+/Assets/**/*.tga.meta
+/Assets/**/*.psd
+/Assets/**/*.psd.meta
+/Assets/**/*.tif
+/Assets/**/*.tif.meta
+/Assets/**/*.tiff
+/Assets/**/*.tiff.meta
+/Assets/**/*.exr
+/Assets/**/*.exr.meta
+/Assets/**/*.hdr
+/Assets/**/*.hdr.meta
+/Assets/**/*.bmp
+/Assets/**/*.bmp.meta
+/Assets/**/*.gif
+/Assets/**/*.gif.meta
+/Assets/**/*.dds
+/Assets/**/*.dds.meta
+/Assets/**/*.ktx
+/Assets/**/*.ktx.meta
+/Assets/**/*.webp
+/Assets/**/*.webp.meta

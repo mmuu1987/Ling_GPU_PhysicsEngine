@@ -14,7 +14,7 @@ namespace MassEngine.Game.Editor
     /// <summary>Fixed UnityChan input preparation for M5.4, not a general importer or a VAT baker.</summary>
     public static class UnityChanTrialImporter
     {
-        public const string SourceDirectory = "Assets/ModelTrialSource/UnityChan/Models";
+        public const string SourceDirectory = "Assets/Art/Source/ModelTrials/UnityChan/Models";
         public const string SourceModelPath = SourceDirectory + "/unitychan.fbx";
         private const int AtlasSize = 4096;
         private const int CellSize = 1024;
@@ -47,7 +47,7 @@ namespace MassEngine.Game.Editor
             if (!outputDirectory.StartsWith("Assets/", StringComparison.Ordinal) ||
                 outputDirectory.Contains("/../") || outputDirectory.Contains("/./") ||
                 !AssetDatabase.IsValidFolder(outputDirectory) ||
-                outputDirectory.StartsWith("Assets/ModelTrialSource", StringComparison.OrdinalIgnoreCase))
+                outputDirectory.StartsWith("Assets/Art/Source/ModelTrials", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Use an existing, separate Assets output folder, not the source folder.", nameof(outputDirectory));
             if (SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null || SystemInfo.maxTextureSize < AtlasSize)
                 throw new InvalidOperationException("UnityChan atlas preparation requires a graphics device supporting 4096 textures.");

@@ -74,14 +74,16 @@ namespace MassEngine.Game.Tests
         }
 
         [Test]
-        public void OfficialMenuAndBuildSettingsPointAtOfficialCatalog()
+        public void HistoricalOfficialMenuRetainsItsCatalogAndAuthoredScenes()
         {
+            // V07 is preserved authoring/history, not the current four-scene shipping entry.
             string guid = AssetDatabase.AssetPathToGUID(OfficialRosterBuilder.CatalogPath);
-            Assert.That(File.ReadAllText(OfficialRosterBuilder.MenuScene), Does.Contain("guid: " + guid), "Menu session must reference the official catalog.");
-            var scenes = EditorBuildSettings.scenes;
-            Assert.That(scenes[0].path, Is.EqualTo(OfficialRosterBuilder.MenuScene));
-            Assert.That(scenes.Select(s => s.path), Is.EqualTo(OfficialRosterBuilder.Scenes(Official)));
-            Assert.That(scenes.All(s => s.enabled), Is.True);
+            Assert.That(guid, Is.Not.Empty);
+            Assert.That(File.ReadAllText(OfficialRosterBuilder.MenuScene), Does.Contain("guid: " + guid));
+            foreach (string path in OfficialRosterBuilder.Scenes(Official))
+                Assert.That(AssetDatabase.LoadAssetAtPath<SceneAsset>(path), Is.Not.Null, path);
+            Assert.That(EditorBuildSettings.scenes.Any(s => s.enabled && s.path == OfficialRosterBuilder.MenuScene), Is.False,
+                "Historical catalogs must not replace the formal MainMenu entry.");
         }
 
         [TestCase(OfficialRosterBuilder.Version01Root)]

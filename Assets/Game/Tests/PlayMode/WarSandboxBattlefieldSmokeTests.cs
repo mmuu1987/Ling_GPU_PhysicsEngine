@@ -29,7 +29,7 @@ namespace MassEngine.Game.Tests
             for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
             {
                 Scene scene = SceneManager.GetSceneAt(i);
-                if (scene != empty && scene.path == "Assets/Game/Scenes/WarSandbox.unity")
+                if (scene != empty && scene.path == "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity")
                     yield return SceneManager.UnloadSceneAsync(scene);
             }
         }
@@ -42,7 +42,7 @@ namespace MassEngine.Game.Tests
             var b = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldConfig>(RulesB);
             Assert.That(a, Is.Not.Null); Assert.That(b, Is.Not.Null);
             string originalA = EditorJsonUtility.ToJson(a), originalB = EditorJsonUtility.ToJson(b);
-            yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Game/Scenes/WarSandbox.unity", new LoadSceneParameters(LoadSceneMode.Single));
+            yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Game/Experiments/LegacyScenes/WarSandbox.unity", new LoadSceneParameters(LoadSceneMode.Single));
             var manager = Object.FindFirstObjectByType<MassEngineManager>(); Assert.That(manager, Is.Not.Null);
             var controller = manager.GetComponent<WarSandboxBattleController>();
             if (controller == null) controller = manager.gameObject.AddComponent<WarSandboxBattleController>();

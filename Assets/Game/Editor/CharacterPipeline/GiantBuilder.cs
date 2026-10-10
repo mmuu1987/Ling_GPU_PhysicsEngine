@@ -17,13 +17,13 @@ namespace MassEngine.Game.Editor
     // DragonBuilder unchanged except source folder, clip names, stats and log names, so the accepted dragon path is untouched.
     public static class GiantBuilder
     {
-        const string Source="Assets/CharacterPilotSource/QuaterniusGiants";
-        const string AtlasPath="Assets/CharacterPilotSource/QuaterniusMonsters/Atlas_Monsters.png";
+        const string Source="Assets/Art/Source/CharacterPilot/QuaterniusGiants";
+        const string AtlasPath="Assets/Art/Source/CharacterPilot/QuaterniusMonsters/Atlas_Monsters.png";
         static string Log="Logs/AgentGiants";
-        static string Prepared="Assets/Game/Giants/Prepared01";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        const string LargeScene="Assets/Game/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity";
-        static string Base="Assets/Game/Dragons/Prepared12/Integrated";static string Dest="Builds/UnifiedRoster-20260930-13";
+        static string Prepared="Assets/Game/Content/Characters/Giants/Prepared01";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        const string LargeScene="Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity";
+        static string Base="Assets/Game/Content/Characters/Dragons/Prepared12/Integrated";static string Dest="Builds/UnifiedRoster-20260930-13";
         static readonly string[] Names={"Demon","Dino"};
         static readonly string[] Keys={"giant-demon","giant-dino"};
         static readonly string[] Titles={"巨型恶魔（超大）","巨型暴龙（超大）"};
@@ -229,8 +229,8 @@ namespace MassEngine.Game.Editor
         }
 
         // Giants (kept as the "crushing" showcase, user decision) on top of Dragons/Prepared13: phalanx 150, stronger cavalry.
-        public static void Integrate02(){Base="Assets/Game/Dragons/Prepared13/Integrated";Prepared="Assets/Game/Giants/Prepared02";Log="Logs/AgentGiants/int02";Directory.CreateDirectory(Log);Integrate01();}
-        public static void Build02(){Prepared="Assets/Game/Giants/Prepared02";Dest="Builds/UnifiedRoster-20260930-14";Build01();}
+        public static void Integrate02(){Base="Assets/Game/Content/Characters/Dragons/Prepared13/Integrated";Prepared="Assets/Game/Content/Characters/Giants/Prepared02";Log="Logs/AgentGiants/int02";Directory.CreateDirectory(Log);Integrate01();}
+        public static void Build02(){Prepared="Assets/Game/Content/Characters/Giants/Prepared02";Dest="Builds/UnifiedRoster-20260930-14";Build01();}
         public static void Build01()
         {
             string dest=Dest,folder=Prepared+"/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite player.");

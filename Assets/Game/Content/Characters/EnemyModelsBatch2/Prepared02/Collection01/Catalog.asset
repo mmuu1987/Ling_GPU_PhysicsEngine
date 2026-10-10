@@ -1,0 +1,104 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eba0d73f2f554964a3dc6fd4563ccccf, type: 3}
+  m_Name: Catalog
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxBattlefieldCatalog
+  defaultEntryId: enemy-batch2-orc
+  entries:
+  - id: enemy-batch2-orc
+    displayName: "\u517D\u4EBA \xB7 \u7B2C\u4E8C\u6279"
+    scenePath: Assets/Game/Content/Characters/EnemyModelsBatch2/Prepared02/Collection01/OrcBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 1d2f62a3bfaad8a409f80454f77321e5, type: 3}
+    description: "\u4E0D\u540C\u8F6E\u5ED3\u602A\u7269\uFF0C\u81EA\u5E26\u52A8\u4F5C\uFF0C\u590D\u7528\u65E2\u6709\u8FD1\u6218\u3002"
+    briefing: "\u653B\u65B9\u517D\u4EBA\uFF0C\u5B88\u65B9\u9A91\u58EB\uFF1B\u8C03\u6574\u955C\u5934\u770B\u56DB\u52A8\u4F5C/\u4F53\u578B/LOD\u3002\u672C\u6279\u4E0D\u662F\u65B0\u6280\u80FD\u6216\u914D\u5E73\u4E13\u9879\u3002"
+  - id: enemy-batch2-yeti
+    displayName: "\u96EA\u602A \xB7 \u7B2C\u4E8C\u6279"
+    scenePath: Assets/Game/Content/Characters/EnemyModelsBatch2/Prepared02/Collection01/YetiBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 633466a70b7e9ed43961a2aa2fe4d0cc, type: 3}
+    description: "\u4E0D\u540C\u8F6E\u5ED3\u602A\u7269\uFF0C\u81EA\u5E26\u52A8\u4F5C\uFF0C\u590D\u7528\u65E2\u6709\u8FD1\u6218\u3002"
+    briefing: "\u653B\u65B9\u96EA\u602A\uFF0C\u5B88\u65B9\u9A91\u58EB\uFF1B\u8C03\u6574\u955C\u5934\u770B\u56DB\u52A8\u4F5C/\u4F53\u578B/LOD\u3002\u672C\u6279\u4E0D\u662F\u65B0\u6280\u80FD\u6216\u914D\u5E73\u4E13\u9879\u3002"
+  - id: enemy-batch2-mushroom
+    displayName: "\u8611\u83C7\u602A \xB7 \u7B2C\u4E8C\u6279"
+    scenePath: Assets/Game/Content/Characters/EnemyModelsBatch2/Prepared02/Collection01/MushroomKingBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: a8651aa4cbf86cb46a7c0f021020ae7a, type: 3}
+    description: "\u4E0D\u540C\u8F6E\u5ED3\u602A\u7269\uFF0C\u81EA\u5E26\u52A8\u4F5C\uFF0C\u590D\u7528\u65E2\u6709\u8FD1\u6218\u3002"
+    briefing: "\u653B\u65B9\u8611\u83C7\u602A\uFF0C\u5B88\u65B9\u9A91\u58EB\uFF1B\u8C03\u6574\u955C\u5934\u770B\u56DB\u52A8\u4F5C/\u4F53\u578B/LOD\u3002\u672C\u6279\u4E0D\u662F\u65B0\u6280\u80FD\u6216\u914D\u5E73\u4E13\u9879\u3002"
+  - id: enemy-model-warrior
+    displayName: "\u65A7\u76FE\u9AB7\u9AC5 \xB7 \u6A21\u578B\u5C55\u793A"
+    scenePath: Assets/Game/Content/Characters/EnemyModelsBatch/Collection01/WarriorBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 2057145594cdc3d4794182f0c469cf94, type: 3}
+    description: "\u65B0\u589E\u72EC\u7ACB\u654C\u65B9\u5916\u89C2\uFF1B\u590D\u7528\u73B0\u6709\u8FD1\u6218\u884C\u4E3A\u3002"
+    briefing: "\u653B\u65B9\u4E3A\u65A7\u76FE\u9AB7\u9AC5\uFF0C\u5B88\u65B9\u9A91\u58EB\u4F5C\u5BF9\u7167\u3002\u62C9\u8FD1\u67E5\u770B\u9AA8\u9ABC\u3001\u6B66\u5668\u3001\u52A8\u4F5C\u4E0ELOD\uFF1B\u672C\u8F6E\u4E0D\u505A\u5175\u79CD\u914D\u5E73\u3002"
+  - id: enemy-model-rogue
+    displayName: "\u53CC\u5203\u9AB7\u9AC5 \xB7 \u6A21\u578B\u5C55\u793A"
+    scenePath: Assets/Game/Content/Characters/EnemyModelsBatch/Collection01/RogueBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: ae768c674598fe1408e31cf481476c4d, type: 3}
+    description: "\u65B0\u589E\u72EC\u7ACB\u654C\u65B9\u5916\u89C2\uFF1B\u590D\u7528\u73B0\u6709\u8FD1\u6218\u884C\u4E3A\u3002"
+    briefing: "\u653B\u65B9\u4E3A\u53CC\u5203\u9AB7\u9AC5\uFF0C\u5B88\u65B9\u9A91\u58EB\u4F5C\u5BF9\u7167\u3002\u62C9\u8FD1\u67E5\u770B\u9AA8\u9ABC\u3001\u6B66\u5668\u3001\u52A8\u4F5C\u4E0ELOD\uFF1B\u672C\u8F6E\u4E0D\u505A\u5175\u79CD\u914D\u5E73\u3002"
+  - id: enemy-model-mage
+    displayName: "\u6301\u6756\u9AB7\u9AC5 \xB7 \u6A21\u578B\u5C55\u793A"
+    scenePath: Assets/Game/Content/Characters/EnemyModelsBatch/Collection01/MageBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 586d572af23517e45acc89ff2f561b8c, type: 3}
+    description: "\u65B0\u589E\u72EC\u7ACB\u654C\u65B9\u5916\u89C2\uFF1B\u590D\u7528\u73B0\u6709\u8FDC\u7A0B\u6295\u5C04\u884C\u4E3A\u3002"
+    briefing: "\u653B\u65B9\u4E3A\u6301\u6756\u9AB7\u9AC5\uFF0C\u5B88\u65B9\u9A91\u58EB\u4F5C\u5BF9\u7167\u3002\u62C9\u8FD1\u67E5\u770B\u9AA8\u9ABC\u3001\u6B66\u5668\u3001\u52A8\u4F5C\u4E0ELOD\uFF1B\u672C\u8F6E\u4E0D\u505A\u5175\u79CD\u914D\u5E73\u3002"
+  templates:
+  - templateId: monster-orc
+    revision: 1
+    config: {fileID: 11400000, guid: cca9a7f58da29f045a17eddb48a21df3, type: 2}
+  - templateId: monster-yeti
+    revision: 1
+    config: {fileID: 11400000, guid: 275a95dd6623def4683719b106612794, type: 2}
+  - templateId: monster-mushroom
+    revision: 1
+    config: {fileID: 11400000, guid: 0892221e39f7967439a26cae5999f331, type: 2}
+  - templateId: skeleton-warrior
+    revision: 1
+    config: {fileID: 11400000, guid: 37e392bbd2ada2f4d9685fdbf47fb943, type: 2}
+  - templateId: skeleton-rogue
+    revision: 1
+    config: {fileID: 11400000, guid: 40705ff26b6f0b341b3c69428bafc323, type: 2}
+  - templateId: skeleton-mage
+    revision: 1
+    config: {fileID: 11400000, guid: c805c3e913fafbc419a8bc7de9597044, type: 2}
+  - templateId: enemy-collection-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: b0ab4f04c53ffef4fb62778deda4bdfd, type: 2}

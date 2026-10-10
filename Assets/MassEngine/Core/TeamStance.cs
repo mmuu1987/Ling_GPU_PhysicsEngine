@@ -21,6 +21,12 @@ namespace MassEngine
         /// Stay within defenderGuardRadius of the spawn anchor. No producer yet; this is the
         /// leash an explicit "defend this spot" order will use.
         /// </summary>
-        GuardHome = 2
+        GuardHome = 2,
+
+        /// <summary>Explicit Move/Retreat: follow the order, do not acquire or retain enemies.</summary>
+        MoveOnly = 3,
+
+        /// <summary>Explicit Hold at the current location, without a spawn-anchor clamp.</summary>
+        HoldHere = 4
     }
 }

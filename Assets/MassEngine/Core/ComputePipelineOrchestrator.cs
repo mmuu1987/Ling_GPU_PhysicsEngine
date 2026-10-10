@@ -25,6 +25,13 @@ namespace MassEngine
         private readonly MassGpuShaderSet shaders;
         private readonly MassGpuBufferManager buffers;
         private readonly IDispatchListener dispatchListener;
+
+        /// <summary>
+        /// Combat dispatch runs every N frames. 1 = every frame (default),
+        /// 2 = every other frame. Spatial hash, flow, projectile, and LOD still run every frame.
+        /// </summary>
+        public int CombatDispatchInterval { get; set; } = 1;
+
         private readonly HashSet<string> reportedMissingKernels = new HashSet<string>();
         /// <summary>Reused upload staging for the per-team flow records; resized only when the team count changes.</summary>
         private TeamFlowParams[] teamFlowParamsScratch = System.Array.Empty<TeamFlowParams>();
@@ -36,6 +43,9 @@ namespace MassEngine
         public MassEngine.Projectiles.ProjectileImpactFx ImpactFx { get; set; }
         // Opt-in melee charge table; null keeps SimulateCombatAndAccumulateDamage on its legacy variant.
         public MeleeChargeParams MeleeCharge { get; set; }
+        public LocalOrderChannel LocalCommands { get; set; }
+        private bool localPartitionActive;
+        private static readonly string[] LocalLabels={"SimulateLocalAttackMelee","SimulateLocalAttackRanged","SimulateLocalMoveMelee","SimulateLocalMoveRanged","SimulateLocalHoldMelee","SimulateLocalHoldRanged"};
 
         public ComputePipelineOrchestrator(MassGpuShaderSet shaders, MassGpuBufferManager buffers, IDispatchListener dispatchListener = null)
         {
@@ -49,6 +59,11 @@ namespace MassEngine
             if (buffers == null || !buffers.IsAllocated)
                 return;
 
+            LocalCommands?.Tick();
+            if(shaders.CombatSimulationShader!=null)shaders.CombatSimulationShader.DisableKeyword(LocalOrderChannel.Keyword);
+            if(shaders.CombatSimulationShader!=null)shaders.CombatSimulationShader.SetInt("_LocalPartitionCount",0);
+            localPartitionActive=frameContext.terrain!=null && LocalCommands!=null && LocalCommands.TryBindPartition(shaders);
+            if(frameContext.terrain!=null && !localPartitionActive)LocalCommands?.Bind(shaders);
             TerrainNavigationRuntime.SetVariant(shaders, frameContext.terrain != null);
             UploadFrameConstants(frameContext);
             BindComputeBuffers();
@@ -70,6 +85,9 @@ namespace MassEngine
             DispatchProjectileActiveList(frameContext);
             DispatchLodClassification(frameContext);
             buffers.SwapSimulationBuffers();
+            if(frameContext.frameIndex%Mathf.Max(1,CombatDispatchInterval)==0)LocalCommands?.AfterDispatch(shaders);
+            if(shaders.CombatSimulationShader!=null)shaders.CombatSimulationShader.DisableKeyword(LocalOrderChannel.Keyword);
+            if(shaders.CombatSimulationShader!=null)shaders.CombatSimulationShader.SetInt("_LocalPartitionCount",0);
         }
 
         private void DispatchSpatialHash(PipelineFrameContext context)
@@ -143,6 +161,10 @@ namespace MassEngine
 
         private void DispatchCombatSimulation(PipelineFrameContext context)
         {
+            int interval = Mathf.Max(1, CombatDispatchInterval);
+            if (interval > 1 && (context.frameIndex % interval) != 0)
+                return;
+
             Dispatch(shaders.CombatSimulationShader, shaders.BuildEngagementSlotOccupancy, Mathf.Max(1, context.agentThreadGroupsX), "BuildEngagementSlotOccupancy");
             Dispatch(shaders.CombatSimulationShader, shaders.ClearPendingDamage, Mathf.Max(1, context.agentThreadGroupsX), "ClearPendingDamage");
             bool charge = MeleeCharge != null && MeleeCharge.IsValid && shaders.CombatSimulationShader != null;
@@ -150,6 +172,17 @@ namespace MassEngine
                 MeleeCharge.Bind(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage);
             else if (shaders.CombatSimulationShader != null)
                 MeleeChargeParams.Unbind(shaders.CombatSimulationShader);
+            if(localPartitionActive) {
+                for(int role=0;role<6;role++) {
+                    if(!LocalCommands.UsesPartition(role))continue;
+                    int kernel=shaders.LocalKernel(role);
+                    BindSimulationBuffers(kernel);
+                    context.terrain.Bind(shaders.ForSimulationKernel(kernel));
+                    LocalCommands.BindPartitionKernel(shaders.CombatSimulationShader,kernel);
+                    if(charge)MeleeCharge.Bind(shaders.CombatSimulationShader,kernel);
+                    Dispatch(shaders.CombatSimulationShader,kernel,Mathf.Max(1,context.agentThreadGroupsX),LocalLabels[role]);
+                }
+            }
             Dispatch(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage, Mathf.Max(1, context.agentThreadGroupsX), "SimulateCombatAndAccumulateDamage");
             // The compute asset is shared (kernel tests dispatch it directly): never leave the keyword on.
             if (charge)
@@ -420,7 +453,12 @@ namespace MassEngine
             // Null-tolerant like SetBuffer/SetTexture: dispatch-order tests run with null shaders.
             if (combat != null)
                 combat.SetFloat("projectileQueryRadius", buffers.ProjectileQueryRadius);
-            int simulate = shaders.SimulateCombatAndAccumulateDamage;
+            BindSimulationBuffers(shaders.SimulateCombatAndAccumulateDamage);
+        }
+
+        private void BindSimulationBuffers(int simulate)
+        {
+            ComputeShader combat=shaders.CombatSimulationShader;
             SetBuffer(combat, simulate, AgentBufferId, buffers.agentBuffer);
             SetBuffer(combat, simulate, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
             SetBuffer(combat, simulate, AgentPositionBufferId, buffers.agentPositionWriteBuffer);
@@ -543,3 +581,5 @@ namespace MassEngine
         }
     }
 }
+
+

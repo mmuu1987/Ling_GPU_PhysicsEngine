@@ -16,7 +16,7 @@ namespace MassEngine.Editor
     /// M5.3 reproducible appearance regression. Run with a graphics device (never -nographics):
     /// -executeMethod MassEngine.Editor.VatAppearanceRegression.Run
     /// --vat-appearance-output=Logs/M53Appearance
-    /// Optional: --vat-appearance-rebaked-male=Assets/VAT_Data/M53Verification_GUID/MaleRebaked.asset
+    /// Optional: --vat-appearance-rebaked-male=Assets/Art/VAT/Characters/M53Verification_GUID/MaleRebaked.asset
     /// The first run creates a UNIQUE persistent Male asset, suitable for a later player performance build.
     /// No source assets are changed; the caller owns cleanup of exactly the directory named in the manifest.
     /// </summary>
@@ -24,8 +24,8 @@ namespace MassEngine.Editor
     {
         public const string MaleUnitPath = "Assets/Game/Settings/AttackerUnitConfig.asset";
         public const string FemaleUnitPath = "Assets/Game/Settings/DefenderUnitConfig.asset";
-        public const string MalePrefabPath = "Assets/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab";
-        private const string ClipFolder = "Assets/RPG Tiny Hero Duo/Animation/SwordAndShield";
+        public const string MalePrefabPath = "Assets/ThirdParty/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab";
+        private const string ClipFolder = "Assets/ThirdParty/RPG Tiny Hero Duo/Animation/SwordAndShield";
         private static readonly AgentState[] States = { AgentState.Idle, AgentState.Move, AgentState.Attack, AgentState.Dead };
         private static readonly string[] ClipNames = { "idle", "move", "attack", "death" };
         private static readonly string[] LodNames = { "near", "mid", "far" };
@@ -168,9 +168,9 @@ namespace MassEngine.Editor
                 {
                     manifest.rebakedThisRun = true;
                     string folderName = "M53Verification_" + Guid.NewGuid().ToString("N");
-                    if (string.IsNullOrEmpty(AssetDatabase.CreateFolder("Assets/VAT_Data", folderName)))
+                    if (string.IsNullOrEmpty(AssetDatabase.CreateFolder("Assets/Art/VAT/Characters", folderName)))
                         throw new IOException("Could not create a unique M5.3 verification asset folder.");
-                    manifest.verificationAssetDirectory = "Assets/VAT_Data/" + folderName;
+                    manifest.verificationAssetDirectory = "Assets/Art/VAT/Characters/" + folderName;
                     manifest.rebakedMaleAssetPath = manifest.verificationAssetDirectory + "/MaleRebaked.asset";
                     Debug.Log("[M5.3 GPU VAT] Rebaking Male; persistent output: " + manifest.rebakedMaleAssetPath);
                     using (VatBakeResult result = VatBaker.Bake(request))

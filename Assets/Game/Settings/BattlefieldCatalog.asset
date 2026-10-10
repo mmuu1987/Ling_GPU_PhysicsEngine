@@ -16,7 +16,7 @@ MonoBehaviour:
   entries:
   - id: open-battle
     displayName: "\u5F00\u9614\u4F1A\u6218"
-    scenePath: Assets/Game/Scenes/WarSandbox.unity
+    scenePath: Assets/Game/Experiments/LegacyScenes/WarSandbox.unity
     contentVersion: 1
     terrainId: flat-ground
     terrainVersion: 1
@@ -24,7 +24,7 @@ MonoBehaviour:
     preview: {fileID: 2800000, guid: 8fa877d194112fd4d820540051426d46, type: 3}
   - id: walled-point
     displayName: "\u53CC\u5899\u636E\u70B9"
-    scenePath: Assets/Game/Scenes/WarSandbox.unity
+    scenePath: Assets/Game/Experiments/LegacyScenes/WarSandbox.unity
     contentVersion: 1
     terrainId: flat-ground
     terrainVersion: 1

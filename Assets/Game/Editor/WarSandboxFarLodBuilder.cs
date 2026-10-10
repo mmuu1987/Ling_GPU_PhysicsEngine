@@ -12,9 +12,9 @@ namespace MassEngine.Game.Editor
     /// <summary>New launch-only render assets. Historical scenes and VAT data stay intact.</summary>
     public static class WarSandboxFarLodBuilder
     {
-        public const string Root = "Assets/Game/M73RenderBudget";
+        public const string Root = "Assets/Game/Content/Battlefields/RenderBudget";
         public const string ProfilePath = Root + "/MaleFar128.asset";
-        private const string SourcePath = "Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Profile.asset";
+        private const string SourcePath = "Assets/Art/VAT/Characters/MaleCharacter_Stage5_MultiClip_Profile.asset";
 
         public static void CreateVerifyAndBuild()
         {
@@ -39,7 +39,7 @@ namespace MassEngine.Game.Editor
             if (source == null || units.Length == 0 || units.Any(u => !AssetDatabase.GetAssetPath(u).StartsWith(WarSandboxLaunchPresetsBuilder.Root + "/", StringComparison.Ordinal)))
                 throw new InvalidOperationException("Expected launch-owned Male templates.");
             var originals = units.ToDictionary(u => u, u => u.renderConfig);
-            AssetDatabase.CreateFolder("Assets/Game", "M73RenderBudget");
+            AssetDatabase.CreateFolder("Assets/Game/Content/Battlefields", "RenderBudget");
             try
             {
                 VATProfile profile = VatLodReducer.CreateFarVariant(source, ProfilePath, 128);

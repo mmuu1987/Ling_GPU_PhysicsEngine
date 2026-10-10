@@ -125,6 +125,14 @@ namespace MassEngine.Game
         private bool TryResolveMoveTarget(int teamId, Vector3 point, out Vector3 target, out string error)
         {
             target = point; error = null;
+            // Reject before projection or obstacle adjustment can hide/propagate invalid input.
+            if (float.IsNaN(point.x) || float.IsInfinity(point.x) ||
+                float.IsNaN(point.y) || float.IsInfinity(point.y) ||
+                float.IsNaN(point.z) || float.IsInfinity(point.z))
+            {
+                error = "命令被拒绝：目标坐标必须为有限数值。";
+                return false;
+            }
             ResolveManager();
             if (manager == null) { error = "战场尚未就绪。"; return false; }
             if (!manager.TryGetTerrainContext(out var surface, out var navigation, out error)) return false;
@@ -355,6 +363,7 @@ namespace MassEngine.Game
                 return RejectCommand("路线已达到航点上限。");
 
             CommandError = null;
+            if(manager!=null&&manager.LocalOrders!=null)manager.NotifyMovementCommand(teamId);
             route.Add(target);
             FeedbackRequested?.Invoke(WarSandboxSoundCue.Command);
             return true;
@@ -493,7 +502,7 @@ namespace MassEngine.Game
             return true;
         }
 
-        private bool IssueOrderInternal(ArmyOrder order, bool replaceRoute)
+        private bool IssueOrderInternal(ArmyOrder order, bool replaceRoute, bool allowCombatAlongRoute = false)
         {
             if (IsTerminalPhase(phase) || !WarSandboxSceneSession.AllowsBattleCommands(this)) return false;
             if (!EnsureBattlefieldRules()) return false;
@@ -535,7 +544,10 @@ namespace MassEngine.Game
                 case ArmyOrderType.Move:
                     if (!order.hasTarget)
                         return false;
-                    ApplyTeamNavigation(order.teamId, true, false);
+                    // Default objective advance may fight while retaining its point target.
+                    // Explicit player Move/Retreat keep MoveOnly; the point override still
+                    // takes priority over dynamic enemy goals in BuildTeamFlowSettings.
+                    ApplyTeamNavigation(order.teamId, true, allowCombatAlongRoute);
                     break;
 
                 case ArmyOrderType.Hold:
@@ -556,6 +568,7 @@ namespace MassEngine.Game
             army.currentOrder = order;
             army.hasOrder = true;
             bool firstOrder = phase == WarSandboxBattlePhase.Setup;
+            playbackRevision++;
             manager.StartBattle();
             phase = WarSandboxBattlePhase.Running;
             FeedbackRequested?.Invoke(firstOrder ? WarSandboxSoundCue.Start : WarSandboxSoundCue.Command);
@@ -581,7 +594,7 @@ namespace MassEngine.Game
                 if (armies[teamId].initialUnitCount > 0)
                 {
                     issuedAnyOrder |= gameMode == WarSandboxGameMode.ControlPoint
-                        ? IssueMoveOrder(teamId, controlPointCenter, false)
+                        ? IssueOrderInternal(ArmyOrder.Move(teamId, controlPointCenter), true, allowCombatAlongRoute: true)
                         : IssueOrder(ArmyOrder.Attack(teamId));
                 }
             }
@@ -623,6 +636,7 @@ namespace MassEngine.Game
                 !TryValidateTerrainDeployment(CaptureBattlefieldRules(), out string error)) { RejectCommand(error); return; }
             CommandError = null;
             bool firstStart = phase == WarSandboxBattlePhase.Setup;
+            playbackRevision++;
             manager.StartBattle();
             phase = WarSandboxBattlePhase.Running;
             if (firstStart) FeedbackRequested?.Invoke(WarSandboxSoundCue.Start);
@@ -636,12 +650,17 @@ namespace MassEngine.Game
             return true;
         }
 
+        private int playbackRevision;
+        public int PlaybackRevision=>playbackRevision;
+        public void NotifyLocalOrderCommitted()=>FeedbackRequested?.Invoke(WarSandboxSoundCue.Command);
+
         public void PauseBattle()
         {
             ResolveManager();
             if (manager == null)
                 return;
 
+            playbackRevision++;
             manager.PauseBattle();
             if (!IsTerminalPhase(phase))
                 phase = WarSandboxBattlePhase.Paused;
@@ -677,6 +696,7 @@ namespace MassEngine.Game
 
             manager.PauseBattle();
             if (restoreRules && initialBattlefieldRules.HasValue) ApplyBattlefieldRules(initialBattlefieldRules.Value);
+            playbackRevision++;
             manager.ResetScenario();
             manager.PauseBattle();
 
@@ -841,6 +861,8 @@ namespace MassEngine.Game
             int winnerTeamId = -1)
         {
             if (battleResult.valid) return;
+            playbackRevision++;
+            manager.DisableLocalOrderPrototype();
             phase = resultPhase;
             battleResult = WarSandboxBattleResult.Capture(phase, armies, snapshot, victoryReason, winnerTeamId);
             manager.PauseBattle();
@@ -961,3 +983,4 @@ namespace MassEngine.Game
         }
     }
 }
+

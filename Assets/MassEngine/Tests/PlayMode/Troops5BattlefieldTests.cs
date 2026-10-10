@@ -22,7 +22,7 @@ namespace MassEngine.Tests
     /// </summary>
     public sealed class Troops5BattlefieldTests
     {
-        private const string Folder = "Assets/Game/Troops5/Prepared01/Integrated/";
+        private const string Folder = "Assets/Game/Content/Characters/Troops5/Prepared01/Integrated/";
         private static readonly bool[] Ranged = { true, false, false };
         private static readonly string[] Keys = { "cactoro", "frog", "monkroose" };
         private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "AgentMonsters3"));

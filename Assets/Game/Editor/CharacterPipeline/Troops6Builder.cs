@@ -17,14 +17,14 @@ namespace MassEngine.Game.Editor
     // The current official Version05 catalog is never switched here. Stats below are unverified initial proposals.
     public static class Troops6Builder
     {
-        public const string SourceDirectory="Assets/CharacterPilotSource/QuaterniusTroops6";
+        public const string SourceDirectory="Assets/Art/Source/CharacterPilot/QuaterniusTroops6";
         const string Source=SourceDirectory;
-        const string AtlasPath="Assets/CharacterPilotSource/QuaterniusMonsters/Atlas_Monsters.png";
+        const string AtlasPath="Assets/Art/Source/CharacterPilot/QuaterniusMonsters/Atlas_Monsters.png";
         const string Log="Logs/AgentTroops6";
         public const string Prepared="Assets/Game/Troops6/Prepared01";
         public const string Integrated=Prepared+"/Integrated";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        public const string RegularScene="Assets/Game/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        public const string RegularScene="Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity";
         public const string RegularPolicyPath=Troops5Builder.Integrated+"/RegularPolicy.asset";
         public const string KnightLegion=Troops5Builder.KnightLegion;
         public const string BaseCatalog=Troops5Builder.Integrated+"/Catalog.asset";

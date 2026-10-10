@@ -10,9 +10,10 @@ namespace MassEngine.Game
         private TerrainNavigationGrid contextNavigation;
         private int cachedHash;
         private WarSandboxBattlefieldRules cachedRules;
+        private float? cachedClearance;
 
         public bool TryValidate(MassEngineManager manager, WarSandboxDeploymentDraft candidate,
-            out TerrainSurface surface, out string error)
+            out TerrainSurface surface, out string error, float? candidateClearance = null)
         {
             surface = null; error = null;
             if (manager == null || candidate == null) { error = "地形部署上下文缺失。"; return false; }
@@ -20,16 +21,16 @@ namespace MassEngine.Game
             if (surface == null) return true; // Explicit legacy plane; never a failed terrain fallback.
             var rules = candidate.Rules;
             int hash = RulesHash(rules);
-            if (cachedNavigation == null || contextNavigation != navigation || cachedHash != hash || !SameRules(cachedRules, rules))
+            if (cachedNavigation == null || contextNavigation != navigation || cachedHash != hash || cachedClearance != candidateClearance || !SameRules(cachedRules, rules))
             {
                 try
                 {
                     cachedNavigation = manager.CreateTerrainNavigation(
-                        rules.staticObstaclesEnabled ? rules.staticObstacles : null, rules.staticObstacleClearance);
+                        rules.staticObstaclesEnabled ? rules.staticObstacles : null, rules.staticObstacleClearance, candidateClearance);
                 }
                 catch (ArgumentException ex) { error = "候选地形导航无效：" + ex.Message; return false; }
                 catch (InvalidOperationException ex) { error = "候选地形导航无效：" + ex.Message; return false; }
-                contextNavigation = navigation; cachedHash = hash; cachedRules = rules.Copy();
+                cachedClearance = candidateClearance; contextNavigation = navigation; cachedHash = hash; cachedRules = rules.Copy();
             }
             if (cachedNavigation == null) { error = "地形导航缺失，不能回退到平地。"; return false; }
             return ValidateFootprints(candidate, surface, cachedNavigation, out error);
@@ -78,3 +79,4 @@ namespace MassEngine.Game
         }
     }
 }
+

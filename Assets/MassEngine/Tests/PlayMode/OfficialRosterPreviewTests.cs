@@ -24,43 +24,43 @@ namespace MassEngine.Tests
         private const int W = 1280, H = 592;
         private static readonly string[][] Scenes =
         {
-            new[] { "cavalry-mounted-knight", "Assets/Game/Cavalry/Prepared07/Integrated/Battlefield.unity" },
-            new[] { "dragons-dragon", "Assets/Game/Dragons/Prepared13/Integrated/dragonBattlefield.unity" },
-            new[] { "dragons-dragon-phalanx", "Assets/Game/Dragons/Prepared13/Integrated/dragonPhalanxBattlefield.unity" },
-            new[] { "dragons-dragon-evolved", "Assets/Game/Dragons/Prepared13/Integrated/dragon-evolvedBattlefield.unity" },
-            new[] { "dragons-dragon-evolved-phalanx", "Assets/Game/Dragons/Prepared13/Integrated/dragon-evolvedPhalanxBattlefield.unity" },
-            new[] { "giants-demon", "Assets/Game/Giants/Prepared02/Integrated/giant-demonBattlefield.unity" },
-            new[] { "giants-dino", "Assets/Game/Giants/Prepared02/Integrated/giant-dinoBattlefield.unity" },
-            new[] { "nonhuman2-triceratops", "Assets/Game/NonhumanBatch2/Prepared01/Integrated/triceratopsBattlefield.unity" },
-            new[] { "nonhuman2-stegosaurus", "Assets/Game/NonhumanBatch2/Prepared01/Integrated/stegosaurusBattlefield.unity" },
-            new[] { "nonhuman2-spider", "Assets/Game/NonhumanBatch2/Prepared01/Integrated/spiderBattlefield.unity" },
-            new[] { "unified-regular", "Assets/Game/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity" },
-            new[] { "unified-all-regular", "Assets/Game/UnifiedRoster/Version03/Scenes/AllRegularBattlefield.unity" },
-            new[] { "unified-large", "Assets/Game/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity" },
+            new[] { "cavalry-mounted-knight", "Assets/Game/Content/Characters/Cavalry/Prepared07/Integrated/Battlefield.unity" },
+            new[] { "dragons-dragon", "Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/dragonBattlefield.unity" },
+            new[] { "dragons-dragon-phalanx", "Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/dragonPhalanxBattlefield.unity" },
+            new[] { "dragons-dragon-evolved", "Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/dragon-evolvedBattlefield.unity" },
+            new[] { "dragons-dragon-evolved-phalanx", "Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/dragon-evolvedPhalanxBattlefield.unity" },
+            new[] { "giants-demon", "Assets/Game/Content/Characters/Giants/Prepared02/Integrated/giant-demonBattlefield.unity" },
+            new[] { "giants-dino", "Assets/Game/Content/Characters/Giants/Prepared02/Integrated/giant-dinoBattlefield.unity" },
+            new[] { "nonhuman2-triceratops", "Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/triceratopsBattlefield.unity" },
+            new[] { "nonhuman2-stegosaurus", "Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/stegosaurusBattlefield.unity" },
+            new[] { "nonhuman2-spider", "Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/spiderBattlefield.unity" },
+            new[] { "unified-regular", "Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity" },
+            new[] { "unified-all-regular", "Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/AllRegularBattlefield.unity" },
+            new[] { "unified-large", "Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity" },
         };
         /// <summary>Battlefields added in official v2 (giant batch 3); captured on their own so v1 previews are not re-shot.</summary>
         private static readonly string[][] ScenesV2 =
         {
-            new[] { "giants-yeti", "Assets/Game/Giants3/Prepared01/Integrated/giant-yetiBattlefield.unity" },
+            new[] { "giants-yeti", "Assets/Game/Content/Characters/Giants3/Prepared01/Integrated/giant-yetiBattlefield.unity" },
         };
         private static readonly string[][] ScenesV3 =
         {
-            new[] { "giants-bluedemon", "Assets/Game/Giants3/Prepared02/Integrated/giant-bluedemonBattlefield.unity" },
-            new[] { "giants-alien", "Assets/Game/Giants3/Prepared02/Integrated/giant-alienBattlefield.unity" },
+            new[] { "giants-bluedemon", "Assets/Game/Content/Characters/Giants3/Prepared02/Integrated/giant-bluedemonBattlefield.unity" },
+            new[] { "giants-alien", "Assets/Game/Content/Characters/Giants3/Prepared02/Integrated/giant-alienBattlefield.unity" },
         };
         /// <summary>Official v4 (new-unit batch 4: regular-size skull orc, ninja, tribal warrior vs the knight legion).</summary>
         private static readonly string[][] ScenesV4 =
         {
-            new[] { "troops4-orcskull", "Assets/Game/Troops4/Prepared01/Integrated/orcskullBattlefield.unity" },
-            new[] { "troops4-ninja", "Assets/Game/Troops4/Prepared01/Integrated/ninjaBattlefield.unity" },
-            new[] { "troops4-tribal", "Assets/Game/Troops4/Prepared01/Integrated/tribalBattlefield.unity" },
+            new[] { "troops4-orcskull", "Assets/Game/Content/Characters/Troops4/Prepared01/Integrated/orcskullBattlefield.unity" },
+            new[] { "troops4-ninja", "Assets/Game/Content/Characters/Troops4/Prepared01/Integrated/ninjaBattlefield.unity" },
+            new[] { "troops4-tribal", "Assets/Game/Content/Characters/Troops4/Prepared01/Integrated/tribalBattlefield.unity" },
         };
 
         private static readonly string[][] ScenesV5 =
         {
-            new[] { "troops5-cactoro", "Assets/Game/Troops5/Prepared01/Integrated/cactoroBattlefield.unity" },
-            new[] { "troops5-frog", "Assets/Game/Troops5/Prepared01/Integrated/frogBattlefield.unity" },
-            new[] { "troops5-monkroose", "Assets/Game/Troops5/Prepared01/Integrated/monkrooseBattlefield.unity" },
+            new[] { "troops5-cactoro", "Assets/Game/Content/Characters/Troops5/Prepared01/Integrated/cactoroBattlefield.unity" },
+            new[] { "troops5-frog", "Assets/Game/Content/Characters/Troops5/Prepared01/Integrated/frogBattlefield.unity" },
+            new[] { "troops5-monkroose", "Assets/Game/Content/Characters/Troops5/Prepared01/Integrated/monkrooseBattlefield.unity" },
         };
         private static string dir = "shots-03";
         private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "OfficialRoster", dir));

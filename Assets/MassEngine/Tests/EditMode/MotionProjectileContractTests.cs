@@ -14,7 +14,7 @@ namespace MassEngine.Tests
         public void ActualM7VatDrawUsesPresentationNotTacticalEngage(int lod)
         {
             // Ten tiny in-memory draws total, no baking, screenshots, scenes or browsers.
-            var unit = AssetDatabase.LoadAssetAtPath<UnitTypeConfig>("Assets/Game/M71LaunchPresets/launch-open/Unit1.asset");
+            var unit = AssetDatabase.LoadAssetAtPath<UnitTypeConfig>("Assets/Game/Content/Battlefields/LaunchPresets/launch-open/Unit1.asset");
             Assert.NotNull(unit);
             var profile = unit.renderConfig.vatProfile as VATProfile;
             Assert.NotNull(profile);

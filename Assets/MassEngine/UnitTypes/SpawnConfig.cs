@@ -24,6 +24,10 @@ namespace MassEngine
         [Tooltip("Front width (Z) : depth (X) ratio. 2 = wide battle line, 0.5 = deep column. Armies face each other along X in the default scenario.")]
         [Range(0.1f, 10f)] public float formationAspect = 2f;
 
+        [Header("Spawn lattice")]
+        [Tooltip("Fraction of lattice step used for deterministic jitter. Existing scenes retain 0.08; dense trial templates use 0.02 to preserve physical separation.")]
+        [Range(0f, .08f)] public float formationJitterFraction = .08f;
+
         [Header("Manual Override")]
         [Tooltip("If BOTH x and z are > 0 this exact footprint is used and density is ignored. Leave zero for auto.")]
         public Vector3 spawnSize = Vector3.zero;

@@ -15,7 +15,7 @@ namespace MassEngine.Game.Tests
     /// </summary>
     public sealed class Troops5CatalogTests
     {
-        private const string Source = "Assets/CharacterPilotSource/QuaterniusTroops5/";
+        private const string Source = "Assets/Art/Source/CharacterPilot/QuaterniusTroops5/";
         private const string Legion = Troops5Builder.KnightLegion;
 
         [TestCase("Cactoro.fbx", "109561ce7e6db75f5f5238215fed0fbfceb171151db6dae5d02997523b8a95ae")]
@@ -86,7 +86,7 @@ namespace MassEngine.Game.Tests
         {
             string policyGuid = AssetDatabase.AssetPathToGUID(Troops5Builder.Integrated + "/RegularPolicy.asset");
             var policy = Load<WarSandboxRosterPolicy>(Troops5Builder.Integrated + "/RegularPolicy.asset");
-            var simulation = Load<SimulationConfig>("Assets/Game/UnifiedRoster/Version03/Scenes/RegularSimulation.asset");
+            var simulation = Load<SimulationConfig>("Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularSimulation.asset");
             for (int i = 0; i < Troops5Builder.Keys.Length; i++)
             {
                 string scene = Troops5Builder.Battlefield(i), scenarioPath = Troops5Builder.Integrated + "/" + Troops5Builder.Keys[i] + "Scenario.asset";

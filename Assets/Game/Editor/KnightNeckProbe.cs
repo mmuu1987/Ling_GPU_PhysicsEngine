@@ -10,8 +10,8 @@ namespace MassEngine.Game.Editor
 {
     public static class KnightNeckProbe
     {
-        const string Src = "Assets/CharacterPilotSource/KayKitKnight";
-        const string Prepared = "Assets/Game/CharacterPilotPlayable/Prepared";
+        const string Src = "Assets/Art/Source/CharacterPilot/KayKitKnight";
+        const string Prepared = "Assets/Game/Content/Characters/CharacterPilotPlayable/Prepared";
         const string Output = "Logs/AgentKnightNeck";
         [Serializable] class Part { public string name; public Vector3 min,max; public float bakeVsLinearSkinMaxError; }
         [Serializable] class Shape { public string stage,action; public float time; public List<Part> parts = new List<Part>(); public Vector3[] vertices,linearVertices; public Vector2[] uv; public int[] triangles; }
@@ -25,7 +25,7 @@ namespace MassEngine.Game.Editor
             string[] names={"Idle","Move","Attack","Death"};
             string[] sourceNames={"Idle_A","Running_A","Melee_1H_Attack_Chop","Death_A"};
             string[] files={"General","MovementBasic","CombatMelee","General"};
-            var profile=AssetDatabase.LoadAssetAtPath<VATProfile>("Assets/Game/CharacterPilotPlayable/KnightPaletteSafeVAT.asset");
+            var profile=AssetDatabase.LoadAssetAtPath<VATProfile>("Assets/Game/Content/Characters/CharacterPilotPlayable/KnightPaletteSafeVAT.asset");
             Color[] vat=profile.positionTexture.GetPixels();
             var windows=new[]{profile.idle,profile.move,profile.attack,profile.death};
             for(int action=0;action<4;action++)

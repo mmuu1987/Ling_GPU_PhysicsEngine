@@ -18,7 +18,7 @@ namespace MassEngine.Tests
     /// No fixed winner or deep balance claim; no save/reload or standalone-release acceptance is implied.</summary>
     public sealed class PlatformerBatch6BattlefieldTests
     {
-        private const string Folder = "Assets/Game/PlatformerBatch6/Prepared01/Integrated/";
+        private const string Folder = "Assets/Game/Content/Characters/PlatformerBatch6/Prepared01/Integrated/";
         private static readonly bool[] Ranged = { false, false, false };
         private static readonly string[] Keys = { "crab", "enemy", "skull" };
         private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "AgentPlatformer6"));

@@ -53,12 +53,12 @@ namespace MassEngine.Game.Editor
             Require(!string.IsNullOrWhiteSpace(output), "Runner must supply a fresh quality output directory.");
             Require(!File.Exists(Path.Combine(output, "source-review.json")), "Never overwrite source-review evidence.");
             Directory.CreateDirectory(output);
-            var catalog = Load<WarSandboxBattlefieldCatalog>("Assets/Game/OfficialRoster/Version06/Catalog.asset");
+            var catalog = Load<WarSandboxBattlefieldCatalog>("Assets/Game/Content/Characters/OfficialRoster/Version06/Catalog.asset");
             var report = new SourceReport { graphicsDevice = SystemInfo.graphicsDeviceType + " / " + SystemInfo.graphicsDeviceName };
             var units = new List<SourceUnit>();
             foreach (string name in new[] { "Crab", "Enemy", "Skull" })
             {
-                string key = name.ToLowerInvariant(), source = "Assets/CharacterPilotSource/QuaterniusPlatformerBatch6/" + name + ".fbx";
+                string key = name.ToLowerInvariant(), source = "Assets/Art/Source/CharacterPilot/QuaterniusPlatformerBatch6/" + name + ".fbx";
                 string id = "roster-platformer-" + key;
                 var config = catalog.templates.First(t => t.templateId == id).config;
                 var runtime = ResolvedUnitTypeRuntime.Resolve(config, 1f);

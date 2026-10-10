@@ -110,15 +110,15 @@ namespace MassEngine.Game
             {
                 selected = 0; plansOpen = false; ReadFields();
             }
-            else planMessage = error;
+            else { planMessage = error; planActionFailed28 = true; }
             clearFocusRequested = true;
         }
 
         private void SavePlan(string slot, string name, bool overwrite)
         {
             if (deployment.TrySavePlan(slot, name, overwrite, out var error))
-            { planMessage = "已保存：" + slot; RefreshPlans(); selectedPlanSlot = slot; }
-            else planMessage = error;
+            { planActionFailed28 = false; planMessage = PlanState28.For(deployment.controller) != null ? "已保存到本地：" + slot + " · 未自动应用或开战" : "已保存：" + slot; RefreshPlans(); selectedPlanSlot = slot; }
+            else { planMessage = error; planActionFailed28 = true; }
         }
     }
 }

@@ -22,6 +22,7 @@ namespace MassEngine.Game
         {
             // A small, consistent system strip; it never covers the main legion editor.
             var r = NavigationLayout(ui.Width);
+            if (Guide30.For(session) != null) { ui.Button("nav-help", new Rect(r.x, r.y, 56, r.height), "帮助", OpenHelp30); r.x += 60; }
             ui.Button("nav-settings", new Rect(r.x, r.y, 56, r.height), "设置", session.OpenSettings);
             ui.Button("nav-menu", new Rect(r.x + 60, r.y, 88, r.height), "战场目录", () => { homeOpen = false; RequestReturn(); });
             ui.Button("nav-quit", new Rect(r.x + 152, r.y, 52, r.height), "退出", RequestQuit);
@@ -44,6 +45,7 @@ namespace MassEngine.Game
             ui.Button("menu-library", new Rect(72, y + 74, 132, 42), "兵种图鉴", OpenLibrary);
             ui.Button("menu-settings", new Rect(220, y + 74, 132, 42), "设置", session.OpenSettings);
             ui.Button("menu-quit", new Rect(72, y + 130, 280, 38), "退出游戏", RequestQuit);
+            if (Guide30.For(session) != null) ui.Button("menu-help", new Rect(370, y + 74, 132, 42), "操作帮助", OpenHelp30);
             var t = session.catalog != null ? session.catalog.FindTemplate("roster-robot-expressive") : null;
             var rect = new Rect(w * .59f, h * .14f, w * .31f, h * .64f);
             ui.Panel("home-portrait-card", rect, WarSandboxUGUI.Surface);
@@ -61,6 +63,7 @@ namespace MassEngine.Game
             ui.LabelAligned("catalog-title", new Rect(170, 20, w - 560, 48), "选择战场", 30, WarSandboxUGUI.Ink, true, TextAnchor.MiddleLeft);
             ui.Button("menu-library", new Rect(w - 286, 26, 136, 38), "兵种图鉴", OpenLibrary);
             ui.Button("menu-settings", new Rect(w - 138, 26, 110, 38), "设置", session.OpenSettings);
+            if (Guide30.For(session) != null) ui.Button("catalog-help", new Rect(w - 390, 26, 96, 38), "帮助", OpenHelp30);
             var entries = session.catalog != null ? session.catalog.entries : null;
             if (entries == null || entries.Length == 0)
             { ui.Label("catalog-empty", new Rect(40, 110, w - 80, 80), "没有可用战场，请检查战场目录。", 20, WarSandboxUGUI.Danger); return; }

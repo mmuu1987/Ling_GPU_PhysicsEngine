@@ -14,7 +14,7 @@ namespace MassEngine.Game.Tests
     /// </summary>
     public sealed class Troops4CatalogTests
     {
-        private const string Source = "Assets/CharacterPilotSource/QuaterniusTroops4/";
+        private const string Source = "Assets/Art/Source/CharacterPilot/QuaterniusTroops4/";
         private const string Legion = Troops4Builder.Integrated + "/Library/" + Troops4Builder.KnightLegionKey + ".asset";
 
         [TestCase("Orc_Skull.fbx", "9724b8659bda67fb8664af54467014c19517f3773e5224f1d09ca5da880d44dc")]
@@ -73,7 +73,7 @@ namespace MassEngine.Game.Tests
         {
             string policyGuid = AssetDatabase.AssetPathToGUID(Troops4Builder.Integrated + "/RegularPolicy.asset");
             var policy = Load<WarSandboxRosterPolicy>(Troops4Builder.Integrated + "/RegularPolicy.asset");
-            var simulation = Load<SimulationConfig>("Assets/Game/UnifiedRoster/Version03/Scenes/RegularSimulation.asset");
+            var simulation = Load<SimulationConfig>("Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularSimulation.asset");
             for (int i = 0; i < Troops4Builder.Keys.Length; i++)
             {
                 string scene = Troops4Builder.Battlefield(i), scenarioPath = Troops4Builder.Integrated + "/" + Troops4Builder.Keys[i] + "Scenario.asset";

@@ -14,7 +14,7 @@ namespace MassEngine.Game.Editor
 {
     public static class LargeBeastBuilder
     {
-        const string Source="Assets/CharacterPilotSource/LargeBeasts";
+        const string Source="Assets/Art/Source/CharacterPilot/LargeBeasts";
         const string Log="Logs/AgentLargeBeasts";
         public static void Inspect()
         {
@@ -43,9 +43,9 @@ namespace MassEngine.Game.Editor
             }
             File.WriteAllText(Log+"/import-inspection.txt",sb.ToString());Debug.Log("LARGE_BEAST_IMPORT_READY");
         }
-        const string Prepared="Assets/Game/LargeBeasts/Prepared02";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        const string Previous="Assets/Game/EnemyModelsBatch2/Prepared02/Collection01";
+        const string Prepared="Assets/Game/Content/Characters/LargeBeasts/Prepared02";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        const string Previous="Assets/Game/Content/Characters/EnemyModelsBatch2/Prepared02/Collection01";
         static readonly string[] Keys={"wolf","bull","spider"};
         static readonly string[] Names={"Wolf","Bull","Spider"};
         static readonly string[] Titles={"巨狼","重型公牛","巨型蜘蛛"};

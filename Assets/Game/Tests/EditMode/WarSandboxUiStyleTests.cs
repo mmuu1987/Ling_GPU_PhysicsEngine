@@ -65,10 +65,37 @@ namespace MassEngine.Game.Tests
         {
             Rect screen = WarSandboxFrontEnd.NavigationRect(width, height);
             Assert.That(screen.yMin, Is.LessThan(height * 0.1f)); Assert.That(screen.xMax, Is.GreaterThan(width * 0.9f));
-            float scale = Mathf.Clamp(Mathf.Min(width / 1280f, height / 720f), 0.85f, 1.5f);
-            Rect ui = WarSandboxFrontEnd.NavigationLayout(width / scale);
-            Assert.That(ui.x * scale, Is.EqualTo(screen.x).Within(0.01f)); Assert.That(ui.y * scale, Is.EqualTo(screen.y).Within(0.01f));
-            Assert.That(ui.width * scale, Is.EqualTo(screen.width).Within(0.01f)); Assert.That(ui.height * scale, Is.EqualTo(screen.height).Within(0.01f));
+            Vector2? previous = WarSandboxUGUI.ScreenSizeOverride;
+            var owner = new GameObject("Navigation layout scale contract");
+            WarSandboxUGUI uiSurface = null;
+            try
+            {
+                WarSandboxUGUI.ScreenSizeOverride = new Vector2(width, height);
+                uiSurface = new WarSandboxUGUI(owner.transform, "navigation-layout-test", 0);
+                float scale = uiSurface.Scale;
+                Assert.That(scale, Is.EqualTo(Mathf.Clamp(Mathf.Min(width / 1280f, height / 720f), 0.5f, 1.5f)));
+                Rect ui = WarSandboxFrontEnd.NavigationLayout(uiSurface.Width);
+                Assert.That(ui.x * scale, Is.EqualTo(screen.x).Within(0.01f)); Assert.That(ui.y * scale, Is.EqualTo(screen.y).Within(0.01f));
+                Assert.That(ui.width * scale, Is.EqualTo(screen.width).Within(0.01f)); Assert.That(ui.height * scale, Is.EqualTo(screen.height).Within(0.01f));
+                Assert.That(screen.xMax, Is.EqualTo(width - 16 * scale).Within(0.01f));
+            }
+            finally
+            {
+                WarSandboxUGUI.ScreenSizeOverride = previous;
+                Object.DestroyImmediate(owner);
+                if (uiSurface != null)
+                {
+                    // Dispose is a Play-mode API (deferred Destroy). Reclaim this fixture's
+                    // native allocations immediately, then let Dispose unregister the instance.
+                    foreach (string field in new[] { "font", "mono", "roundedSprite", "roundedTexture" })
+                    {
+                        var resource = (Object)typeof(WarSandboxUGUI).GetField(field,
+                            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).GetValue(uiSurface);
+                        if (resource != null) Object.DestroyImmediate(resource);
+                    }
+                    uiSurface.Dispose();
+                }
+            }
         }
     }
 }

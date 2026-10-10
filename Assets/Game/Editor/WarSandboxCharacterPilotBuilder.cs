@@ -17,9 +17,9 @@ namespace MassEngine.Game.Editor
     /// <summary>KayKit Knight isolated recipe. Uses the production baker/binder; never edits shipped content.</summary>
     public static class WarSandboxCharacterPilotBuilder
     {
-        private const string DefaultRoot = "Assets/Game/CharacterPilotPlayable";
-        private const string SourceScene = "Assets/Game/Scenes/WarSandbox.unity";
-        public const string Source = "Assets/CharacterPilotSource/KayKitKnight";
+        private const string DefaultRoot = "Assets/Game/Content/Characters/CharacterPilotPlayable";
+        private const string SourceScene = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity";
+        public const string Source = "Assets/Art/Source/CharacterPilot/KayKitKnight";
         public const string Evidence = "Logs/AgentCharacterPilot";
         private const string Notice = "Knight pilot | KayKit by Kay Lousberg (CC0) | isolated 64 vs 64 | 30 FPS functional preview";
 

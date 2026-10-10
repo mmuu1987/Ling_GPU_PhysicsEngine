@@ -120,6 +120,17 @@ namespace MassEngine
         public UnitTypeRegistry UnitTypes { get { return unitTypeRegistry; } }
         public MassGpuBufferManager Buffers { get { return bufferManager; } }
         public BattleTelemetry Telemetry { get { return telemetry; } }
+
+        /// <summary>
+        /// Combat dispatch interval: 1 = every frame (default), 2 = every other frame.
+        /// Higher values trade combat accuracy for FPS. Set before StartBattle.
+        /// </summary>
+        public int CombatDispatchInterval
+        {
+            get => pipelineOrchestrator?.CombatDispatchInterval ?? 1;
+            set { if (pipelineOrchestrator != null) pipelineOrchestrator.CombatDispatchInterval = value; }
+        }
+
         public bool IsBattleRunning { get { return battleStarted; } }
         public int StaticObstacleCount { get { return activeStaticObstacleCount; } }
         public float StaticObstaclePadding { get { return activeStaticObstaclePadding; } }
@@ -398,7 +409,7 @@ namespace MassEngine
         /// Use StopBattle when orders should be cleared as well.
         /// </summary>
         /// <summary>Accepted new order/route leg: wake only that team's congestion waits.</summary>
-        public void NotifyMovementCommand(int teamId) => bufferManager?.combatBuffers.NotifyMovementCommand(teamId);
+        public void NotifyMovementCommand(int teamId) { localOrders?.ClearTeam(teamId); bufferManager?.combatBuffers.NotifyMovementCommand(teamId); }
 
         public void PauseBattle()
         {
@@ -593,6 +604,7 @@ namespace MassEngine
 
         public void Release()
         {
+            DisableLocalOrderPrototype();
             ReleaseTerrain();
             if (unitTypeRegistry != null)
                 unitTypeRegistry.ReleaseAll();
@@ -707,9 +719,8 @@ namespace MassEngine
         }
 
         /// <summary>
-        /// Rebuilds the per-team stance table and pushes it to the GPU. Reproduces exactly what
-        /// the old defenderMovementMode uniform expressed, only per team instead of only for
-        /// the defender, so a two-team frame behaves bit-for-bit as before.
+        /// Rebuilds the per-team stance table and pushes it to the GPU. Explicit orders take priority;
+        /// teams without a runtime order retain the legacy navigation-config fallback.
         /// </summary>
         private void RefreshAndUploadTeamStances()
         {
@@ -727,13 +738,23 @@ namespace MassEngine
         }
 
         /// <summary>
-        /// Only the defender ever stood its ground: its flow toggle doubled as "advance or hold".
-        /// Every other team advanced regardless of any toggle, because the attacker locomotion
-        /// branch sampled its flow field unconditionally. That asymmetry stays until explicit
-        /// orders own the stance instead of the navigation config.
+        /// Explicit navigation orders already distinguish combat advance, move-only and hold.
+        /// A point target alone must NOT imply MoveOnly: default control-point advance keeps
+        /// dynamicTargeting=true so soldiers can fight while following that fixed objective.
         /// </summary>
         private TeamStance ResolveTeamStance(int teamId)
         {
+            if (teamId >= 0 && teamId < teamNavigationOverrides.Length)
+            {
+                TeamNavigationOverride order = teamNavigationOverrides[teamId];
+                if (order.active)
+                {
+                    if (!order.enabled) return TeamStance.HoldHere;
+                    return order.dynamicTargeting ? TeamStance.Advance : TeamStance.MoveOnly;
+                }
+            }
+
+            // No explicit order: preserve the authored defender/attacker defaults.
             if (teamId == DefenderTeamId)
                 return ResolveTeamFlowEnabled(teamId) ? TeamStance.Advance : TeamStance.Hold;
 
@@ -1245,3 +1266,4 @@ namespace MassEngine
         }
     }
 }
+

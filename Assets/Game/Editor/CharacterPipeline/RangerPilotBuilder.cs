@@ -13,7 +13,7 @@ namespace MassEngine.Game.Editor
 {
     public static class RangerPilotBuilder
     {
-        const string Source="Assets/CharacterPilotSource/KayKitRanger";
+        const string Source="Assets/Art/Source/CharacterPilot/KayKitRanger";
         const string Log="Logs/AgentRangerPilot";
         public static void Inspect()
         {
@@ -34,9 +34,9 @@ namespace MassEngine.Game.Editor
             }
             File.WriteAllText(Log+"/import-inspection.txt",sb.ToString());Debug.Log("RANGER_IMPORT_INSPECTION_READY");
         }
-        const string Prepared="Assets/Game/RangerPilot";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        const string RecipePath="Assets/Game/CharacterPipeline/Recipes/Ranger.asset";
+        const string Prepared="Assets/Game/Content/Characters/RangerPilot";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        const string RecipePath="Assets/Game/Authoring/CharacterPipeline/Recipes/Ranger.asset";
         static T Load<T>(string p) where T:Object {var o=AssetDatabase.LoadAssetAtPath<T>(p);CharacterGeometry.Require(o!=null,"Missing "+p);return o;}
         static AnimationClip Clip(string file,string name) => AssetDatabase.LoadAllAssetsAtPath(file).OfType<AnimationClip>().Single(c=>c.name==name);
         static string PathOf(Transform t,Transform root)=>AnimationUtility.CalculateTransformPath(t,root);
@@ -77,8 +77,8 @@ namespace MassEngine.Game.Editor
                 var draw=Clip(Source+"/Rig_Medium_CombatRanged.fbx","Ranged_Bow_Draw");var release=Clip(Source+"/Rig_Medium_CombatRanged.fbx","Ranged_Bow_Release");
                 attack=MapClip(draw,release,"Attack",body);
                 var idle=MapClip(Clip(Source+"/Rig_Medium_CombatRanged.fbx","Ranged_Bow_Idle"),null,"Idle",body);
-                var move=MapClip(Clip("Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_MovementBasic.fbx","Running_A"),null,"Move",body);
-                var death=MapClip(Clip("Assets/CharacterPilotSource/KayKitKnight/Rig_Medium_General.fbx","Death_A"),null,"Death",body);
+                var move=MapClip(Clip("Assets/Art/Source/CharacterPilot/KayKitKnight/Rig_Medium_MovementBasic.fbx","Running_A"),null,"Move",body);
+                var death=MapClip(Clip("Assets/Art/Source/CharacterPilot/KayKitKnight/Rig_Medium_General.fbx","Death_A"),null,"Death",body);
                 foreach(var c in new[]{idle,move,death})
                 {SetMorph(c,bowPath,"Draw",new[]{new Keyframe(0,0),new Keyframe(c.length,0)});SetMorph(c,arrowPath,"Hidden",new[]{new Keyframe(0,100),new Keyframe(c.length,100)});}
                 float seam=draw.length,releaseTime=seam+.08f;

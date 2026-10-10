@@ -13,7 +13,7 @@ namespace MassEngine.Game.Editor
     /// <summary>Bounded batch reproduction using exactly the same core as the editor window. Not an NUnit suite.</summary>
     public static class CharacterPipelineVerification
     {
-        const string Prior="Assets/Game/CharacterPilotPlayable";
+        const string Prior="Assets/Game/Content/Characters/CharacterPilotPlayable";
         const string RecipePath=CharacterPipeline.Root+"/Recipes/Knight.asset";
         const string Log="Logs/AgentCharacterPipeline";
         [Serializable] class Checks {public bool passed;public List<string> checks=new List<string>();public string output,evidence;public float versus03MaximumPositionDifference;public bool humanAcceptance=false;}
