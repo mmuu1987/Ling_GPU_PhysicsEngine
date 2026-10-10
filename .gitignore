@@ -119,3 +119,13 @@ sysinfo.txt
 /Assets/**/*.ktx.meta
 /Assets/**/*.webp
 /Assets/**/*.webp.meta
+
+# Mesh .asset and .anim kept local, not committed (user 2026-10-10)
+/Assets/Game/Content/Battlefields/ForestTerrain/Backdrop.asset
+/Assets/Game/Content/Battlefields/ForestTerrain/Backdrop.asset.meta
+/Assets/Game/Content/Battlefields/ForestTerrain/GroundMesh.asset
+/Assets/Game/Content/Battlefields/ForestTerrain/GroundMesh.asset.meta
+/Assets/Game/Experiments/ForestPrototype/GroundMesh.asset
+/Assets/Game/Experiments/ForestPrototype/GroundMesh.asset.meta
+/Assets/Game/Experiments/TerrainAtmosphere/Backdrop.asset
+/Assets/Game/Experiments/TerrainAtmosphere/Backdrop.asset.meta
