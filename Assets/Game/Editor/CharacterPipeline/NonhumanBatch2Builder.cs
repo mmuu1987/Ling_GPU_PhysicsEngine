@@ -14,7 +14,7 @@ namespace MassEngine.Game.Editor
 {
     public static class NonhumanBatch2Builder
     {
-        const string Source="Assets/CharacterPilotSource/NonhumanBatch2";
+        const string Source="Assets/Art/Source/CharacterPilot/NonhumanBatch2";
         const string Log="Logs/AgentNonhumanBatch2";
         public static void Inspect()
         {
@@ -47,7 +47,7 @@ namespace MassEngine.Game.Editor
         {public string method="One bounded read-only full bake plus independent expected positions; no output asset/old recipe edits.";public float maxError,maxAbsCoordinate,maxMathHalfError;public string action;public int frame,vertex;public Vector3 expected,encoded,mathHalf;public bool encodedMatchesMathHalf;}
         static void ReviewSpider()
         {
-            var r=AssetDatabase.LoadAssetAtPath<CharacterRecipe>("Assets/Game/CharacterPipeline/Recipes/LargeSpider03.asset");var result=new SpiderReview();var parent=new GameObject("Read-only spider review");parent.SetActive(false);
+            var r=AssetDatabase.LoadAssetAtPath<CharacterRecipe>("Assets/Game/Authoring/CharacterPipeline/Recipes/LargeSpider03.asset");var result=new SpiderReview();var parent=new GameObject("Read-only spider review");parent.SetActive(false);
             try
             {
                 using(var baked=VatBaker.Bake(new VatBakeRequest{model=r.model,idle=r.idle,move=r.move,attack=r.attack,death=r.death,frameRate=r.frameRate,bakeLowLod=false}))
@@ -69,9 +69,9 @@ namespace MassEngine.Game.Editor
             }finally{Object.DestroyImmediate(parent);}
             File.WriteAllText(Log+"/spider-review.json",JsonUtility.ToJson(result,true));
         }
-        const string Prepared="Assets/Game/NonhumanBatch2/Prepared01";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        const string Previous="Assets/Game/UnifiedRoster/Version03";
+        const string Prepared="Assets/Game/Content/Characters/NonhumanBatch2/Prepared01";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        const string Previous="Assets/Game/Content/Characters/UnifiedRoster/Version03";
         static readonly string[] Keys={"triceratops","stegosaurus"};
         static readonly string[] Names={"Triceratops","Stegosaurus"};
         static readonly string[] Titles={"三角龙","剑龙"};
@@ -201,7 +201,7 @@ namespace MassEngine.Game.Editor
             var r=Object.Instantiate(Load<CharacterRecipe>(CharacterPipeline.Root+"/Recipes/LargeSpider03.asset"));r.name="LargeSpider04";r.outputName="LargeSpider04";r.sizeRootPath="";r.targetBodyHeight=CharacterGeometry.BoundsOf(CharacterGeometry.Positions(r.model,r,true)).size.y;r.groundBindFeet=false;r.createTrial=false;
             AssetDatabase.CreateAsset(r,CharacterPipeline.Root+"/Recipes/LargeSpider04.asset");var report=CharacterPipeline.Run(r);File.WriteAllText(Log+"/spider-report-04.json",JsonUtility.ToJson(report,true));
         }
-        static readonly string LibrarySource="Assets/Game/UnifiedRoster/Version03";
+        static readonly string LibrarySource="Assets/Game/Content/Characters/UnifiedRoster/Version03";
         public static void CreateIntegratedCollection()
         {
             string folder=Prepared+"/Integrated",lib=folder+"/Library";CharacterGeometry.Require(!Directory.Exists(folder),"Fresh integrated directory required.");CharacterPipeline.EnsureFolder(folder);CharacterPipeline.EnsureFolder(lib);

@@ -110,7 +110,7 @@ namespace MassEngine.Game.Tests
         {
             var policyPath = PlatformerBatch6Builder.Integrated + "/RegularPolicy.asset";
             var policy = Load<WarSandboxRosterPolicy>(policyPath);
-            var simulation = Load<SimulationConfig>("Assets/Game/UnifiedRoster/Version03/Scenes/RegularSimulation.asset");
+            var simulation = Load<SimulationConfig>("Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularSimulation.asset");
             for (int i = 0; i < 3; i++)
             {
                 var scenarioPath = PlatformerBatch6Builder.Integrated + "/" + PlatformerBatch6Builder.Keys[i] + "Scenario.asset";

@@ -33,8 +33,9 @@ namespace MassEngine
             int rows = Mathf.CeilToInt(spawnedCount / (float)columns);
             float stepX = rows > 1 ? size.x / (rows - 1) : 0f;
             float stepZ = columns > 1 ? size.z / (columns - 1) : 0f;
-            float jitterX = stepX * 0.08f;
-            float jitterZ = stepZ * 0.08f;
+            float jitterFraction = Config != null ? Mathf.Clamp(Config.formationJitterFraction, 0f, .08f) : .08f;
+            float jitterX = stepX * jitterFraction;
+            float jitterZ = stepZ * jitterFraction;
 
             for (int i = offset; i < end; i++)
             {

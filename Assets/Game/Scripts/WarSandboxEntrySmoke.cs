@@ -168,7 +168,7 @@ namespace MassEngine.Game
             session.catalog.defaultEntryId = "bad";
             Require(!session.TryEnterBattlefield("bad", false, out _) && session.State == WarSandboxEntryState.Menu,
                 "Pre-load failure did not preserve the menu.");
-            session.catalog.entries[0].scenePath = "Assets/Game/Scenes/WarSandboxMenu.unity";
+            session.catalog.entries[0].scenePath = "Assets/Game/Experiments/LegacyScenes/WarSandboxMenu.unity";
             Require(session.TryEnterBattlefield("bad", false, out _), "Post-load failure fixture did not load.");
             yield return WaitForLoad();
             Require(session.State == WarSandboxEntryState.Failed && session.InputBlocked, "Missing manager was not rejected.");
@@ -186,7 +186,7 @@ namespace MassEngine.Game
 
             stage = "direct-scene-load";
             var runtimeCatalog = session.catalog;
-            yield return SceneManager.LoadSceneAsync("Assets/Game/Scenes/WarSandbox.unity", LoadSceneMode.Single);
+            yield return SceneManager.LoadSceneAsync("Assets/Game/Experiments/LegacyScenes/WarSandbox.unity", LoadSceneMode.Single);
             yield return null; yield return null;
             Require(WarSandboxSceneSession.Instance == null, "Direct load retained a stale session.");
             var direct = FindFirstObjectByType<WarSandboxBattleController>();

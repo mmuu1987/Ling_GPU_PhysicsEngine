@@ -22,7 +22,7 @@ namespace MassEngine.Game.Editor
     /// </summary>
     public static class OfficialRosterBuilder
     {
-        public const string Parent = "Assets/Game/OfficialRoster";
+        public const string Parent = "Assets/Game/Content/Characters/OfficialRoster";
         /// <summary>Current official content: v7 curates v6 and adds truthful static unit previews. All earlier assets and IDs remain read-only.</summary>
         public const string Root = Parent + "/Version07";
         public const string Version01Root = Parent + "/Version01";
@@ -36,7 +36,7 @@ namespace MassEngine.Game.Editor
         public const string CatalogPath = Root + "/Catalog.asset";
         public const string MenuScene = Root + "/LaunchMenu.unity";
         /// <summary>Collection extends batch 5 with the three author-official Platformer enemies.</summary>
-        public const string SourceCatalog = "Assets/Game/PlatformerBatch6/Prepared01/Integrated/Catalog.asset";
+        public const string SourceCatalog = "Assets/Game/Content/Characters/PlatformerBatch6/Prepared01/Integrated/Catalog.asset";
         public const string PreviewSource = "Logs/OfficialRoster/previews";
         public const string Output01 = "Builds/OfficialRoster-20261001-01";
         public const string Output02 = "Builds/OfficialRoster-20261001-02";

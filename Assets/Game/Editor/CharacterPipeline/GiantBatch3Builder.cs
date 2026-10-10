@@ -19,15 +19,15 @@ namespace MassEngine.Game.Editor
     // CC0 sources are imported into QuaterniusGiants3.
     public static class GiantBatch3Builder
     {
-        const string AtlasPath="Assets/CharacterPilotSource/QuaterniusMonsters/Atlas_Monsters.png";
-        const string Source3="Assets/CharacterPilotSource/QuaterniusGiants3";
+        const string AtlasPath="Assets/Art/Source/CharacterPilot/QuaterniusMonsters/Atlas_Monsters.png";
+        const string Source3="Assets/Art/Source/CharacterPilot/QuaterniusGiants3";
         static string Log="Logs/AgentMonsters3";
-        static string Prepared="Assets/Game/Giants3/Prepared01";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        const string LargeScene="Assets/Game/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity";
-        const string KnightControl="Assets/Game/Dragons/Prepared13/Integrated/Library/DragonSizedKnight.asset";
-        static string Base="Assets/Game/Giants/Prepared02/Integrated";
-        static readonly string[] Sources={"Assets/CharacterPilotSource/QuaterniusMonsters/Yeti.fbx",Source3+"/BlueDemon.fbx",Source3+"/Alien.fbx"};
+        static string Prepared="Assets/Game/Content/Characters/Giants3/Prepared01";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        const string LargeScene="Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity";
+        const string KnightControl="Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/Library/DragonSizedKnight.asset";
+        static string Base="Assets/Game/Content/Characters/Giants/Prepared02/Integrated";
+        static readonly string[] Sources={"Assets/Art/Source/CharacterPilot/QuaterniusMonsters/Yeti.fbx",Source3+"/BlueDemon.fbx",Source3+"/Alien.fbx"};
         static readonly string[] Names={"Yeti","BlueDemon","Alien"};
         static readonly string[] Keys={"giant-yeti","giant-bluedemon","giant-alien"};
         static readonly string[] Titles={"巨型雪人（超大）","巨型蓝魔（超大）","巨型外星人（超大）"};
@@ -253,6 +253,6 @@ namespace MassEngine.Game.Editor
         /// <summary>Yeti only (the other two sources are not imported yet).</summary>
         public static void IntegrateYeti01()=>Integrate(new[]{0});
         /// <summary>BlueDemon + Alien on top of the Yeti collection, once their sources are prepared.</summary>
-        public static void IntegrateBlueDemonAlien02(){Base="Assets/Game/Giants3/Prepared01/Integrated";Prepared="Assets/Game/Giants3/Prepared02";Integrate(new[]{1,2});}
+        public static void IntegrateBlueDemonAlien02(){Base="Assets/Game/Content/Characters/Giants3/Prepared01/Integrated";Prepared="Assets/Game/Content/Characters/Giants3/Prepared02";Integrate(new[]{1,2});}
     }
 }

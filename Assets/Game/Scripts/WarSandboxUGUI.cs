@@ -222,6 +222,18 @@ namespace MassEngine.Game
             node.input.customCaretColor = true; node.input.caretColor = Accent; node.input.selectionColor = new Color(Accent.r, Accent.g, Accent.b, 0.3f);
             if (node.input.text != (value ?? "")) node.input.SetTextWithoutNotify(value ?? "");
         }
+        // Presentation-only: no callbacks, no authoring text mutations, no full layout rebuild.
+        public void PreviewField(string id,string value,bool preview)
+        { if(nodes.TryGetValue(id,out var node)&&node.input!=null){node.input.SetTextWithoutNotify(value??"");node.input.readOnly=preview;} }
+        public void PreviewRect(string id,Rect rect){if(nodes.TryGetValue(id,out var node))Place(node.rect,rect);}
+        public void PreviewLabel(string id,string value)
+        { if(nodes.TryGetValue(id,out var node)&&node.text!=null)node.text.text=value; }
+        public WarSandboxDeploymentMapPointer DeploymentPointerArea(string id, Rect rect)
+        {
+            var node=Get(id,rect); Image(node).color=Color.clear;
+            var pointer=node.rect.GetComponent<WarSandboxDeploymentMapPointer>();
+            return pointer!=null ? pointer : node.rect.gameObject.AddComponent<WarSandboxDeploymentMapPointer>();
+        }
         public void PointerArea(string id, Rect rect, Action<Vector2, int, bool> action)
         {
             var node = Get(id, rect); node.pointer = action;
@@ -311,6 +323,25 @@ namespace MassEngine.Game
             Scroll(id, rect, contentHeight);
             nodes[id].image.color = fill;
         }
+        /// <summary>Drop-in live VAT preview. All pages share this lifecycle and interaction contract.</summary>
+        public void ModelPreview(string id, Rect rect, UnitTypeConfig config, Texture fallback, float? previewRadius = null)
+        {
+            // Independent, quiet blue-grey stage; toolbar stays outside the model viewport.
+            Panel(id + "-stage", rect, new Color32(164, 190, 202, 255), false, new Color32(126, 155, 170, 255));
+            Panel(id + "-toolbar", new Rect(rect.x + 3, rect.yMax - 29, rect.width - 6, 26), new Color32(204, 221, 229, 255), false);
+            var content = new Rect(rect.x + 6, rect.y + 6, Mathf.Max(1, rect.width - 12), Mathf.Max(1, rect.height - 38));
+            var node = Get(id, content);
+            if (node.raw == null) node.raw = node.rect.gameObject.AddComponent<RawImage>();
+            var preview = node.rect.GetComponent<UnitModelPreviewWidget>();
+            if (preview == null) preview = node.rect.gameObject.AddComponent<UnitModelPreviewWidget>();
+            preview.Bind(config, fallback, previewRadius);
+            if (!preview.IsLive && fallback != null) Place(node.rect, AspectFit(content, fallback.width, fallback.height));
+            LabelAligned(id + "-help", new Rect(rect.x, rect.yMax - 24, Mathf.Max(1, rect.width - 52), 22), preview.Status,
+                rect.width < 240 ? 10 : 12, Muted, false, TextAnchor.MiddleCenter);
+            TintButton(id + "-reset", new Rect(rect.xMax - 50, rect.yMax - 24, 48, 22), "复位", preview.ResetView,
+                Raised, Accent, preview.IsLive, false, 11);
+        }
+
         public void Picture(string id, Rect rect, Texture texture)
         {
             var node = Get(id, rect);
@@ -400,3 +431,6 @@ namespace MassEngine.Game
         }
     }
 }
+
+
+

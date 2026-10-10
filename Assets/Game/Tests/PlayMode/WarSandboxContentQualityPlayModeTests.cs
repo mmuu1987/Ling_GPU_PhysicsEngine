@@ -18,7 +18,7 @@ namespace MassEngine.Game.Tests
     /// <summary>Actual retained UI callbacks/PNG renders; not OS input, human art acceptance or a new balance test.</summary>
     public sealed class WarSandboxContentQualityPlayModeTests
     {
-        private const string Menu = "Assets/Game/OfficialRoster/Version07/LaunchMenu.unity";
+        private const string Menu = "Assets/Game/Content/Characters/OfficialRoster/Version07/LaunchMenu.unity";
         private string temporary, evidence;
         private float oldDelta;
         private WarSandboxSceneSession session;

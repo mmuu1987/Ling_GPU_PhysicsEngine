@@ -17,13 +17,13 @@ namespace MassEngine.Game.Editor
     // Does not switch the official catalog or modify existing units/scenes.
     public static class PlatformerBatch6Builder
     {
-        public const string SourceDirectory="Assets/CharacterPilotSource/QuaterniusPlatformerBatch6";
+        public const string SourceDirectory="Assets/Art/Source/CharacterPilot/QuaterniusPlatformerBatch6";
         const string Source=SourceDirectory;
         const string Log="Logs/AgentPlatformer6";
-        public const string Prepared="Assets/Game/PlatformerBatch6/Prepared01";
+        public const string Prepared="Assets/Game/Content/Characters/PlatformerBatch6/Prepared01";
         public const string Integrated=Prepared+"/Integrated";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        public const string RegularScene="Assets/Game/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        public const string RegularScene="Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity";
         public const string RegularPolicyPath=Troops5Builder.Integrated+"/RegularPolicy.asset";
         public const string KnightLegion=Troops5Builder.KnightLegion;
         public const string BaseCatalog=Troops5Builder.Integrated+"/Catalog.asset";

@@ -11,7 +11,8 @@ namespace MassEngine.Game
     public enum WarSandboxUnitStat
     {
         MaxHp, AttackDamage, AttackInterval, AttackRange, TargetAcquireRadius, MaxSpeed,
-        ChargeDamageMultiplier, ChargeMinSpeedFraction, ProjectileRange, ProjectileSpeed, ProjectileSplashRadius
+        ChargeDamageMultiplier, ChargeMinSpeedFraction, ProjectileRange, ProjectileSpeed, ProjectileSplashRadius,
+        AgentRadius // Persisted append-only: indices 0..10 and their keys must not change.
     }
 
     public enum WarSandboxStatRole { All, MeleeOnly, RangedOnly }
@@ -29,6 +30,9 @@ namespace MassEngine.Game
         public bool Integer { get; }
         public WarSandboxStatRole Role { get; }
         public bool UsesMovement { get; }
+        public bool UsesFlocking { get; }
+        private readonly Func<FlockingConfig, float> readFlocking;
+        private readonly Action<FlockingConfig, float> writeFlocking;
         private readonly Func<CombatConfig, MovementConfig, float> read;
         private readonly Action<CombatConfig, MovementConfig, float> write;
 
@@ -39,6 +43,14 @@ namespace MassEngine.Game
             Stat = stat; Key = key; Label = label; Unit = unit; Group = group; Min = min; Max = max; Integer = integer;
             Role = role; UsesMovement = usesMovement; this.read = read; this.write = write;
         }
+
+        internal WarSandboxStatDefinition(WarSandboxUnitStat stat, string key, string label, string group,
+            float min, float max, Func<FlockingConfig, float> read, Action<FlockingConfig, float> write)
+        {
+            Stat = stat; Key = key; Label = label; Unit = "米"; Group = group; Min = min; Max = max;
+            Role = WarSandboxStatRole.All; UsesFlocking = true; readFlocking = read; writeFlocking = write;
+        }
+        public bool Accepts(float value) => !float.IsNaN(value) && !float.IsInfinity(value) && value >= Min && value <= Max;
 
         /// <summary>Limits a player value to the supported range. Non-finite input collapses to Min.</summary>
         public float Clamp(float value)
@@ -56,12 +68,13 @@ namespace MassEngine.Game
             return Clamp(Mathf.Round(value * digits) / digits);
         }
 
-        public string Format(float value) => Integer
+        public string Format(float value) => UsesFlocking ? value.ToString("R", CultureInfo.InvariantCulture) : Integer
             ? Mathf.RoundToInt(value).ToString(CultureInfo.InvariantCulture)
             : value.ToString("0.##", CultureInfo.InvariantCulture);
 
-        internal float Read(UnitTypeConfig template) => read(template.combatConfig, template.movementConfig);
-        internal void Write(CombatConfig combat, MovementConfig movement, float value) => write(combat, movement, value);
+        internal float Read(UnitTypeConfig template) => UsesFlocking ? readFlocking(template.flockingConfig) : read(template.combatConfig, template.movementConfig);
+        internal void Write(CombatConfig combat, MovementConfig movement, float value, FlockingConfig flocking = null)
+        { if (UsesFlocking) writeFlocking(flocking, value); else write(combat, movement, value); }
     }
 
     /// <summary>Field table, applicability and runtime-copy construction for unit stat overrides.</summary>
@@ -96,6 +109,8 @@ namespace MassEngine.Game
                 (c, m) => c.projectileSpeed, (c, m, v) => c.projectileSpeed = v),
             new WarSandboxStatDefinition(WarSandboxUnitStat.ProjectileSplashRadius, "projectileSplashRadius", "溅射半径", "米", GroupProjectile, 0, 20, false, WarSandboxStatRole.RangedOnly, false,
                 (c, m) => c.projectileSplashRadius, (c, m, v) => c.projectileSplashRadius = v),
+            new WarSandboxStatDefinition(WarSandboxUnitStat.AgentRadius, "agentRadius", "物理基准半径", "物理体积",
+                WarSandboxRadiusPolicy.Min, WarSandboxRadiusPolicy.Max, f => f.agentRadius, (f, v) => f.agentRadius = v),
         };
 
         public static WarSandboxStatDefinition Get(WarSandboxUnitStat stat) => Definitions[(int)stat];
@@ -114,6 +129,7 @@ namespace MassEngine.Game
         public static bool Applies(UnitTypeConfig template, WarSandboxStatDefinition definition)
         {
             if (template == null || definition == null) return false;
+            if (definition.UsesFlocking) return template.flockingConfig != null && UnitPreviewRadius.Read(template).Available;
             if (definition.UsesMovement) return template.movementConfig != null;
             if (template.combatConfig == null) return false;
             bool ranged = IsRanged(template);
@@ -143,7 +159,10 @@ namespace MassEngine.Game
 
         public bool Set(WarSandboxUnitStat stat, float value)
         {
-            value = WarSandboxUnitStats.Get(stat).Clamp(value);
+            var definition = WarSandboxUnitStats.Get(stat);
+            // Radius has an explicit safety domain; invalid input never silently becomes a minimum/maximum.
+            if (definition.UsesFlocking && !definition.Accepts(value)) return false;
+            value = definition.Clamp(value);
             if (values.TryGetValue(stat, out float old) && old == value) return false;
             values[stat] = value; return true;
         }
@@ -177,7 +196,8 @@ namespace MassEngine.Game
             foreach (var item in source)
             {
                 if (item == null || !WarSandboxUnitStats.TryGet(item.stat, out var definition) ||
-                    float.IsNaN(item.value) || float.IsInfinity(item.value)) { skipped++; continue; }
+                    float.IsNaN(item.value) || float.IsInfinity(item.value) ||
+                    (definition.UsesFlocking && !definition.Accepts(item.value))) { skipped++; continue; }
                 set.Set(definition.Stat, item.value);
             }
             return set;
@@ -203,6 +223,8 @@ namespace MassEngine.Game
         public bool Set(UnitTypeConfig template, WarSandboxUnitStat stat, float value)
         {
             if (template == null) return false;
+            var definition = WarSandboxUnitStats.Get(stat);
+            if (definition.UsesFlocking && !definition.Accepts(value)) return false;
             if (!sets.TryGetValue(template, out var set)) sets[template] = set = new WarSandboxStatSet();
             return set.Set(stat, value);
         }
@@ -427,3 +449,4 @@ namespace MassEngine.Game
         public string lastChangeUtc;
     }
 }
+

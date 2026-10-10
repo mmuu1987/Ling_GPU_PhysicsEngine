@@ -11,7 +11,7 @@ namespace MassEngine.Game.Editor
 {
     public static class WarSandboxTerrainPrototypeBuilder
     {
-        public const string Root = "Assets/Game/M61TerrainPrototype";
+        public const string Root = "Assets/Game/Content/Battlefields/TerrainPrototype";
         public const string ScenePath = Root + "/TerrainPrototype.unity";
 
         public static void PrepareAndBuildWindows()
@@ -30,7 +30,7 @@ namespace MassEngine.Game.Editor
             var setup = EditorSceneManager.GetSceneManagerSetup();
             try
             {
-                AssetDatabase.CreateFolder("Assets/Game", "M61TerrainPrototype");
+                AssetDatabase.CreateFolder("Assets/Game/Content/Battlefields", "TerrainPrototype");
                 var asset = TerrainPrototype.CreateAsset();
                 if (!asset.TryCreateSurface(out var surface, out var error)) throw new InvalidOperationException(error);
                 AssetDatabase.CreateAsset(asset, Root + "/Surface.asset");
@@ -84,7 +84,7 @@ namespace MassEngine.Game.Editor
             if (report.summary.result != BuildResult.Succeeded) throw new BuildFailedException("Terrain prototype build failed.");
             File.WriteAllText(Path.Combine(directory, "Start-Terrain.cmd"), "@echo off\r\ncd /d \"%~dp0\"\r\nstart \"\" \"TerrainPrototype.exe\" -screen-fullscreen 0 -screen-width 1280 -screen-height 720\r\n", new UTF8Encoding(false));
             File.WriteAllText(Path.Combine(directory, "说明.txt"),
-                "M6.1 连续地表原型：48米高地、西侧坡道、东侧窄坡道和峡谷。\r\n红色表示陡坡或人工禁行区，绿/黄色表示可通行表面。\r\n右键+WASD移动，滚轮缩放。此包用于地形观察，完整单位导航与战斗在M6.2接入。\r\n保留同目录数据和DLL。测量命令见工程Assets/方案设计/M6.1连续地表原型.md。\r\n", Encoding.UTF8);
+                "M6.1 连续地表原型：48米高地、西侧坡道、东侧窄坡道和峡谷。\r\n红色表示陡坡或人工禁行区，绿/黄色表示可通行表面。\r\n右键+WASD移动，滚轮缩放。此包用于地形观察，完整单位导航与战斗在M6.2接入。\r\n保留同目录数据和DLL。测量命令见工程Assets/Documentation/Design/M6.1连续地表原型.md。\r\n", Encoding.UTF8);
             Debug.Log("M6.1 viewer built: " + directory);
         }
     }

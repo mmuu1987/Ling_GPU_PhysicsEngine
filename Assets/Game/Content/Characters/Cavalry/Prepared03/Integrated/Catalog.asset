@@ -1,0 +1,174 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eba0d73f2f554964a3dc6fd4563ccccf, type: 3}
+  m_Name: Catalog
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxBattlefieldCatalog
+  defaultEntryId: cavalry-mounted-knight
+  entries:
+  - id: cavalry-mounted-knight
+    displayName: "\u5251\u76FE\u9A91\u5175 \xB7 \u6807\u51C6\u9A6C\u4F53\uFF083.5m\uFF09"
+    scenePath: Assets/Game/Content/Characters/Cavalry/Prepared03/Integrated/Battlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 0}
+    description: "\u6309\u8BD5\u73A9\u53CD\u9988\u628A\u9A6C\u653E\u5927\u7EA61.94\u500D\uFF08\u6574\u9A6C\u9AD83.5m\uFF09\uFF0C\u9A91\u624B\u5C3A\u5BF8\u4E0D\u53D8\uFF1B\u6D3E\u751F\u5750\u59FF/\u968F\u52A8/\u653B\u51FB/\u6574\u4F53\u5012\u5730\u3002"
+    briefing: "\u9A91\u624B\u548C\u5750\u9A91\u7EDF\u4E00VAT\uFF0C\u73B0\u6709\u5730\u9762\u8FD1\u6218\u3002\u4E0D\u662F\u53D6\u5F97\u539F\u5382\u6210\u5957\u9A91\u5175\u52A8\u753B\uFF0C\u4E5F\u4E0D\u505A\u843D\u9A6C/\u51B2\u950B\u673A\u5236\u3002"
+  - id: nonhuman2-triceratops
+    displayName: "\u4E09\u89D2\u9F99 \xB7 \u975E\u4EBA\u5F62\u7B2C\u4E8C\u6279"
+    scenePath: Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/triceratopsBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 0}
+    description: "\u76F4\u63A5\u52A0\u5165\u7EDF\u4E00\u5927\u578B\u89D2\u8272\u83DC\u5355\uFF0C\u53EF\u9009\u65E2\u6709\u5DE8\u72FC/\u516C\u725B\u548C\u672C\u6279\u65B0\u6A21\u578B\u3002"
+    briefing: "\u5927\u578B\u4ECD\u4E3A\u4FDD\u5B88\u5706\u4E0E\u4E2D\u5FC3\u8DDD\u79BB\u8FD1\u6218\uFF0C\u975E\u65B0\u6280\u80FD/\u771F\u5B9E\u7532\u58F3\u78B0\u649E\u3002"
+  - id: nonhuman2-stegosaurus
+    displayName: "\u5251\u9F99 \xB7 \u975E\u4EBA\u5F62\u7B2C\u4E8C\u6279"
+    scenePath: Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/stegosaurusBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 0}
+    description: "\u76F4\u63A5\u52A0\u5165\u7EDF\u4E00\u5927\u578B\u89D2\u8272\u83DC\u5355\uFF0C\u53EF\u9009\u65E2\u6709\u5DE8\u72FC/\u516C\u725B\u548C\u672C\u6279\u65B0\u6A21\u578B\u3002"
+    briefing: "\u5927\u578B\u4ECD\u4E3A\u4FDD\u5B88\u5706\u4E0E\u4E2D\u5FC3\u8DDD\u79BB\u8FD1\u6218\uFF0C\u975E\u65B0\u6280\u80FD/\u771F\u5B9E\u7532\u58F3\u78B0\u649E\u3002"
+  - id: nonhuman2-spider
+    displayName: "\u5DE8\u578B\u8718\u86DB \xB7 \u975E\u4EBA\u5F62\u7B2C\u4E8C\u6279"
+    scenePath: Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/spiderBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 0}
+    description: "\u76F4\u63A5\u52A0\u5165\u7EDF\u4E00\u5927\u578B\u89D2\u8272\u83DC\u5355\uFF0C\u53EF\u9009\u65E2\u6709\u5DE8\u72FC/\u516C\u725B\u548C\u672C\u6279\u65B0\u6A21\u578B\u3002"
+    briefing: "\u5927\u578B\u4ECD\u4E3A\u4FDD\u5B88\u5706\u4E0E\u4E2D\u5FC3\u8DDD\u79BB\u8FD1\u6218\uFF0C\u975E\u65B0\u6280\u80FD/\u771F\u5B9E\u7532\u58F3\u78B0\u649E\u3002"
+  - id: unified-regular
+    displayName: "\u81EA\u7531\u7F16\u6210 \xB7 12\u79CD\u5E38\u89C4\u89D2\u8272"
+    scenePath: Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 0}
+    description: "\u521D\u59CB\u53EA\u6709\u7537\u5973\u89D2\u8272\uFF0C\u5E03\u9635\u5175\u79CD\u83DC\u5355\u53EF\u9009\u5168\u90E812\u5E38\u89C4\u6A21\u578B\u3002"
+    briefing: "\u6A21\u578B\u6574\u5408\u9884\u89C8\uFF0C\u975E\u5175\u79CD\u914D\u5E73\u6216100k\u6027\u80FD\u9A8C\u6536\u3002UnityChan\u4F9DUCL\u4F7F\u7528\uFF0C\u4E0D\u662F\u6574\u5305CC0\u3002"
+  - id: unified-all-regular
+    displayName: "\u5168\u89D2\u8272\u793A\u4F8B \xB7 \u65B0\u65E7\u540C\u573A"
+    scenePath: Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/AllRegularBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 0}
+    description: "12\u79CD\u89D2\u8272\u76F4\u63A5\u540C\u573A\uFF1B\u53EF\u81EA\u7531\u6539\u7F16\u6210\u5E76\u4FDD\u5B58\u91CD\u8F7D\u3002"
+    briefing: "\u6A21\u578B\u6574\u5408\u9884\u89C8\uFF0C\u975E\u5175\u79CD\u914D\u5E73\u6216100k\u6027\u80FD\u9A8C\u6536\u3002UnityChan\u4F9DUCL\u4F7F\u7528\uFF0C\u4E0D\u662F\u6574\u5305CC0\u3002"
+  - id: unified-large
+    displayName: "\u5927\u578B\u9002\u914D \xB7 \u53D7\u9650\u89D2\u8272\u5E93"
+    scenePath: Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 0}
+    description: "\u5DE8\u72FC/\u516C\u725B\u4E0E\u9002\u914D\u9A91\u58EB\uFF1B\u79C1\u6709\u7F51\u683C\u3001\u5360\u5730\u548C\u63A5\u654C\u9650\u5236\u3002"
+    briefing: "\u6A21\u578B\u6574\u5408\u9884\u89C8\uFF0C\u975E\u5175\u79CD\u914D\u5E73\u6216100k\u6027\u80FD\u9A8C\u6536\u3002UnityChan\u4F9DUCL\u4F7F\u7528\uFF0C\u4E0D\u662F\u6574\u5305CC0\u3002"
+  - id: enemy-model-warrior
+    displayName: "\u65A7\u76FE\u9AB7\u9AC5 \xB7 \u6A21\u578B\u5C55\u793A"
+    scenePath: Assets/Game/Content/Characters/EnemyModelsBatch/Collection01/WarriorBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 2057145594cdc3d4794182f0c469cf94, type: 3}
+    description: "\u65B0\u589E\u72EC\u7ACB\u654C\u65B9\u5916\u89C2\uFF1B\u590D\u7528\u73B0\u6709\u8FD1\u6218\u884C\u4E3A\u3002"
+    briefing: "\u653B\u65B9\u4E3A\u65A7\u76FE\u9AB7\u9AC5\uFF0C\u5B88\u65B9\u9A91\u58EB\u4F5C\u5BF9\u7167\u3002\u62C9\u8FD1\u67E5\u770B\u9AA8\u9ABC\u3001\u6B66\u5668\u3001\u52A8\u4F5C\u4E0ELOD\uFF1B\u672C\u8F6E\u4E0D\u505A\u5175\u79CD\u914D\u5E73\u3002"
+  templates:
+  - templateId: roster-male
+    revision: 1
+    config: {fileID: 11400000, guid: 6913b856d6328ea4da13d18b17d8ca85, type: 2}
+  - templateId: roster-female
+    revision: 1
+    config: {fileID: 11400000, guid: 351be090e6836554dbab626e11eb501a, type: 2}
+  - templateId: roster-unitychan
+    revision: 1
+    config: {fileID: 11400000, guid: 9b68da1b4ce8123419e6363d73b6e8c7, type: 2}
+  - templateId: roster-legacy-skeleton
+    revision: 1
+    config: {fileID: 11400000, guid: dbf3354863973bf4c9585ec4dffae2c7, type: 2}
+  - templateId: roster-knight
+    revision: 1
+    config: {fileID: 11400000, guid: 909a3900d94e25e49a08367fda1b4a0e, type: 2}
+  - templateId: roster-ranger
+    revision: 1
+    config: {fileID: 11400000, guid: 2b30e1c88323280488da9be049354fa2, type: 2}
+  - templateId: roster-skeleton-warrior
+    revision: 1
+    config: {fileID: 11400000, guid: 08ea7092940f9bd409195be721f25f0b, type: 2}
+  - templateId: roster-skeleton-rogue
+    revision: 1
+    config: {fileID: 11400000, guid: 7e73a563bd7a9704b86501ff5da24bad, type: 2}
+  - templateId: roster-skeleton-mage
+    revision: 1
+    config: {fileID: 11400000, guid: afcd3adf6c9dee8488fe5123be9e89ae, type: 2}
+  - templateId: roster-orc
+    revision: 1
+    config: {fileID: 11400000, guid: 95b78e2db4069a54e9b87f3441314d87, type: 2}
+  - templateId: roster-yeti
+    revision: 1
+    config: {fileID: 11400000, guid: b221e9ce1db1e25499da2eaaa8d2d18a, type: 2}
+  - templateId: roster-mushroom
+    revision: 1
+    config: {fileID: 11400000, guid: 5dc34b09c9af1144da419543f27020b1, type: 2}
+  - templateId: roster-large-wolf
+    revision: 1
+    config: {fileID: 11400000, guid: ba3d8aa5e62d8504ba85005f88eab1e9, type: 2}
+  - templateId: roster-large-bull
+    revision: 1
+    config: {fileID: 11400000, guid: af14931012c34694a8992e6102bcb8e6, type: 2}
+  - templateId: roster-large-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 579b052463e2f5146a8ee14061cfa9f0, type: 2}
+  - templateId: skeleton-warrior
+    revision: 1
+    config: {fileID: 11400000, guid: 37e392bbd2ada2f4d9685fdbf47fb943, type: 2}
+  - templateId: enemy-collection-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: b0ab4f04c53ffef4fb62778deda4bdfd, type: 2}
+  - templateId: nonhuman2-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 382cd1a14ae2c8d428214c4af5287cf0, type: 2}
+  - templateId: roster-triceratops
+    revision: 1
+    config: {fileID: 11400000, guid: e479a92458964df4f917d8d0e04ec059, type: 2}
+  - templateId: roster-stegosaurus
+    revision: 1
+    config: {fileID: 11400000, guid: 1b5fb98e6fdb92c4493ce5ef27497dce, type: 2}
+  - templateId: roster-spider
+    revision: 1
+    config: {fileID: 11400000, guid: a889200539954184d905ec2dc784ac72, type: 2}
+  - templateId: roster-mounted-knight
+    revision: 1
+    config: {fileID: 11400000, guid: a50e6cc25889245479f280b0f210ea62, type: 2}
+  - templateId: cavalry-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 9d47b5f670e738b46b56e319de95660c, type: 2}

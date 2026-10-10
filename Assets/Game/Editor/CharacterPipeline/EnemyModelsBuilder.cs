@@ -15,7 +15,7 @@ namespace MassEngine.Game.Editor
 {
     public static class EnemyModelsBuilder
     {
-        const string Source="Assets/CharacterPilotSource/KayKitSkeletons";
+        const string Source="Assets/Art/Source/CharacterPilot/KayKitSkeletons";
         const string Log="Logs/AgentEnemyModels";
         public static void Inspect()
         {
@@ -36,8 +36,8 @@ namespace MassEngine.Game.Editor
             }
             File.WriteAllText(Log+"/import-inspection.txt",sb.ToString());Debug.Log("ENEMY_IMPORT_INSPECTION_READY");
         }
-        const string Prepared="Assets/Game/EnemyModelsBatch";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
+        const string Prepared="Assets/Game/Content/Characters/EnemyModelsBatch";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
         static readonly string[] Keys={"warrior","rogue","mage"};
         static readonly string[] Models={"Warrior","Rogue","Mage"};
         static readonly string[] Titles={"斧盾骷髅","双刃骷髅","持杖骷髅"};
@@ -68,8 +68,8 @@ namespace MassEngine.Game.Editor
                 if(index==0){Attach("handslot.r","Skeleton_Axe","Axe");Attach("handslot.l","Skeleton_Shield_Large_A","Shield");}
                 else if(index==1){Attach("handslot.r","Skeleton_Blade","BladeRight");Attach("handslot.l","Skeleton_Blade","BladeLeft");}
                 else Attach("handslot.r","Skeleton_Staff","Staff");
-                string common="Assets/CharacterPilotSource/KayKitKnight/";
-                var attack= index==2?Clip("Assets/CharacterPilotSource/KayKitRanger/Rig_Medium_CombatRanged.fbx","Ranged_Magic_Shoot") : Clip(common+"Rig_Medium_CombatMelee.fbx",index==0?"Melee_1H_Attack_Chop":"Melee_Dualwield_Attack_Slice");
+                string common="Assets/Art/Source/CharacterPilot/KayKitKnight/";
+                var attack= index==2?Clip("Assets/Art/Source/CharacterPilot/KayKitRanger/Rig_Medium_CombatRanged.fbx","Ranged_Magic_Shoot") : Clip(common+"Rig_Medium_CombatMelee.fbx",index==0?"Melee_1H_Attack_Chop":"Melee_Dualwield_Attack_Slice");
                 var sources=new[]{Clip(common+"Rig_Medium_General.fbx","Idle_A"),Clip(common+"Rig_Medium_MovementBasic.fbx","Running_A"),attack,Clip(common+"Rig_Medium_General.fbx","Death_A")};
                 string[] names={"Idle","Move","Attack","Death"};clips=new AnimationClip[4];
                 for(int j=0;j<4;j++)

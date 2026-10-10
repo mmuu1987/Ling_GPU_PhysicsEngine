@@ -21,7 +21,7 @@ namespace MassEngine.Game.Tests
             Assert.That(Troops6Builder.SourceIds.Distinct().Count(), Is.EqualTo(3));
             var outputs = Enumerable.Range(0, 3).Select(Troops6Builder.Output).ToArray();
             Assert.That(outputs.Distinct().Count(), Is.EqualTo(3));
-            Assert.That(outputs.All(p => p.StartsWith("Assets/Game/CharacterPipeline/Generated/", StringComparison.Ordinal)), Is.True);
+            Assert.That(outputs.All(p => p.StartsWith("Assets/Game/Authoring/CharacterPipeline/Generated/", StringComparison.Ordinal)), Is.True);
             CollectionAssert.AreEqual(new[] { "roster-birb", "roster-bunny", "roster-fish" }, Enumerable.Range(0, 3).Select(Troops6Builder.TemplateId));
             CollectionAssert.AreEqual(new[] { "troops6-birb", "troops6-bunny", "troops6-fish" }, Enumerable.Range(0, 3).Select(Troops6Builder.EntryId));
         }
@@ -88,7 +88,7 @@ namespace MassEngine.Game.Tests
         [Test]
         public void ExistingVersion05StillContainsOnlyItsCompletedContent()
         {
-            const string catalogPath = "Assets/Game/OfficialRoster/Version05/Catalog.asset";
+            const string catalogPath = "Assets/Game/Content/Characters/OfficialRoster/Version05/Catalog.asset";
             var before = File.ReadAllBytes(catalogPath);
             var catalog = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>(catalogPath);
             Assert.That(catalog, Is.Not.Null);

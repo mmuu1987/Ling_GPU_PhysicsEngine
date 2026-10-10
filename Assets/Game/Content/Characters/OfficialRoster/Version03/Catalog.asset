@@ -1,0 +1,442 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eba0d73f2f554964a3dc6fd4563ccccf, type: 3}
+  m_Name: Catalog
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxBattlefieldCatalog
+  defaultEntryId: launch-open
+  entries:
+  - id: launch-open
+    displayName: "\u5F00\u9614\u5BF9\u51B2 \xB7 \u5FEB\u901F\u4E0A\u624B"
+    scenePath: Assets/Game/Content/Battlefields/LaunchPresets/launch-open/WarSandbox.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: 9e9f311ff3a5843469f94d7b207db076, type: 2}
+    preview: {fileID: 2800000, guid: fef835696f0d31248a9769915c24fc88, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 512 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u8FD1\u6218\u5728\u524D\u3001\u8FDC\u7A0B\u5728\u540E\uFF0C\u9002\u5408\u7B2C\u4E00\u6B21\u5F00\u6218\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u5148\u89C2\u6218\uFF0C\u4E5F\u53EF\u9009\u62E9\u519B\u56E2\u4E0B\u4EE4\u3002"
+  - id: launch-mountain
+    displayName: "\u5C71\u5730\u7ED5\u884C"
+    scenePath: Assets/Game/Content/Battlefields/LaunchPresets/launch-mountain/WarSandbox.unity
+    contentVersion: 1
+    terrainId: m61-plateau-canyon
+    terrainVersion: 1
+    terrainSurface: {fileID: 11400000, guid: 3c8e1c3735882444e9b135140fbed991, type: 2}
+    rules: {fileID: 11400000, guid: d1b021e9f82369a45b5ee628106d12d9, type: 2}
+    preview: {fileID: 2800000, guid: b84c1dd92bdb27940bc456a6424d302a, type: 3}
+    description: "3 \u652F\u519B\u56E2 \xB7 384 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u897F\u4FA7\u5BBD\u5761\u3001\u4E1C\u4FA7\u9698\u53E3\uFF0C\u7ED5\u8FC7\u9661\u5761\u63A5\u654C\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u5916\u4E24\u652F\u519B\u56E2\u3002\n\u897F\u5761\u548C\u4E1C\u4FA7\u9698\u53E3\u53EF\u4EE5\u901A\u884C\uFF1B\u9661\u5761\u4E0D\u53EF\u7A7F\u8D8A\u3002\u9009\u4E2D\u519B\u56E2\u540E\u6309
+      M\uFF0C\u518D\u70B9\u51FB\u5730\u9762\u79FB\u52A8\u3002"
+  - id: launch-point
+    displayName: "\u4E2D\u592E\u4E89\u593A"
+    scenePath: Assets/Game/Content/Battlefields/LaunchPresets/launch-point/WarSandbox.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: 0dd66dcad881b2b409084888e25bfffb, type: 2}
+    preview: {fileID: 2800000, guid: 8dbc1962b2ae69d4ba5e4a350258b98a, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 512 \u4EBA \xB7 \u636E\u70B9\u6218\n\u62A2\u5148\u8FDB\u5165\u4E2D\u592E\u636E\u70B9\uFF0C\u72EC\u5360
+      15 \u79D2\u83B7\u80DC\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u72EC\u5360\u4E2D\u592E\u636E\u70B9 15 \u79D2\uFF0C\u6216\u6D88\u706D\u654C\u519B\u3002\n\u7EA2\u519B\u8F83\u8FD1\u3001\u84DD\u519B\u4ECE\u540E\u65B9\u8D76\u6765\uFF1B\u53CC\u65B9\u8FDB\u5165\u65F6\u4E89\u593A\u6682\u505C\u3002"
+  - id: launch-three
+    displayName: "\u4E09\u65B9\u6DF7\u7F16"
+    scenePath: Assets/Game/Content/Battlefields/LaunchPresets/launch-three/WarSandbox.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: 7a40a668c71abbd43ae85da19e20ae49, type: 2}
+    preview: {fileID: 2800000, guid: d6228c3ee9fb0f242bae3878775cbeb7, type: 3}
+    description: "3 \u652F\u519B\u56E2 \xB7 768 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u591A\u65B9\u5411\u6DF7\u7F16\u4F1A\u6218\uFF0C\u53EF\u5207\u6362\u6307\u6325\u4EFB\u4E00\u519B\u56E2\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6210\u4E3A\u6700\u540E\u5B58\u6D3B\u7684\u519B\u56E2\u3002\n\u4E09\u65B9\u76F8\u4E92\u654C\u5BF9\u3002\u9009\u62E9\u4E0D\u540C\u519B\u56E2\uFF0C\u5C1D\u8BD5\u8FDB\u653B\u3001\u9632\u5B88\u6216\u7ED5\u5230\u4FA7\u9762\u3002"
+  - id: launch-standard
+    displayName: "\u5F00\u9614\u5BF9\u51B2 \xB7 \u6807\u51C6\u89C4\u6A21"
+    scenePath: Assets/Game/Content/Battlefields/LaunchPresets/launch-standard/WarSandbox.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: a0a7261128553774289625cbc164e51c, type: 2}
+    preview: {fileID: 2800000, guid: 542bf77fda12ec44aa8cd3e3294026a8, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 100,000 \u4EBA \xB7 \u6B7C\u706D\u6218\n50k
+      \u5BF9 50k \u6807\u51C6\u6863\uFF0C\u8FD0\u884C\u8D1F\u8F7D\u8F83\u9AD8\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u8FD9\u662F
+      10 \u4E07\u4EBA\u7684\u6807\u51C6\u89C4\u6A21\u9009\u9879\uFF1B\u9996\u6B21\u4F53\u9A8C\u53EF\u8FD4\u56DE\u76EE\u5F55\u9009\u62E9\u5FEB\u901F\u4E0A\u624B\u3002"
+  - id: cavalry-mounted-knight
+    displayName: "\u9A91\u5175\u51B2\u950B"
+    scenePath: Assets/Game/Content/Characters/Cavalry/Prepared07/Integrated/Battlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: e850bb739cad83747947b0f2f9f4314c, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u5251\u76FE\u9A91\u5175\u5BF9\u9635\u6B65\u5175\uFF1B\u9A91\u5175\u9996\u6B21\u63A5\u654C\u7684\u51B2\u950B\u9020\u6210\u4E09\u500D\u4F24\u5BB3\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: dragons-dragon
+    displayName: "\u98DE\u9F99\u6765\u88AD"
+    scenePath: Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/dragonBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 7f6fea443edf22e4e9d2c3731d3f0190, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u98DE\u9F99\u4F4E\u7A7A\u76D8\u65CB\u55B7\u5410\u706B\u7403\uFF0C\u7206\u70B8\u6E85\u5C04\u53EF\u4EE5\u4E00\u6B21\u6CE2\u53CA\u591A\u540D\u654C\u4EBA\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: dragons-dragon-phalanx
+    displayName: "\u98DE\u9F99 vs \u5BC6\u96C6\u65B9\u9635"
+    scenePath: Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/dragonPhalanxBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: f0d2635e0f0e91748914653da5e846f1, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 92 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u5BC6\u96C6\u65B9\u9635\u6B63\u9762\u8FCE\u51FB\u98DE\u9F99\uFF0C\u9635\u578B\u8D8A\u5BC6\uFF0C\u706B\u7403\u6E85\u5C04\u8D8A\u81F4\u547D\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: dragons-dragon-evolved
+    displayName: "\u8FDB\u5316\u5DE8\u9F99"
+    scenePath: Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/dragon-evolvedBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 4bc90b23b6286414989e5214539de78d, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u4F53\u578B\u66F4\u5927\u3001\u706B\u529B\u66F4\u5F3A\u7684\u8FDB\u5316\u5DE8\u9F99\uFF0C\u706B\u7403\u7206\u70B8\u8303\u56F4\u66F4\u5E7F\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: dragons-dragon-evolved-phalanx
+    displayName: "\u8FDB\u5316\u5DE8\u9F99 vs \u5BC6\u96C6\u65B9\u9635"
+    scenePath: Assets/Game/Content/Characters/Dragons/Prepared13/Integrated/dragon-evolvedPhalanxBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 5b16982ce588cd6429a503f81fccf020, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 152 \u4EBA \xB7 \u6B7C\u706D\u6218\n150
+      \u540D\u9A91\u58EB\u7EC4\u6210\u65B9\u9635\u56F4\u653B\u8FDB\u5316\u5DE8\u9F99\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: giants-demon
+    displayName: "\u5DE8\u578B\u6076\u9B54"
+    scenePath: Assets/Game/Content/Characters/Giants/Prepared02/Integrated/giant-demonBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 39ca98479a0cce44fa2cfd7bc8d2cee3, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u4E24\u5934\u5DE8\u578B\u6076\u9B54\u51B2\u51FB\u9A91\u58EB\u961F\u5217\uFF0C\u751F\u547D\u4E0E\u653B\u51FB\u8FDC\u8D85\u5E38\u89C4\u5175\u79CD\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: giants-dino
+    displayName: "\u5DE8\u578B\u66B4\u9F99"
+    scenePath: Assets/Game/Content/Characters/Giants/Prepared02/Integrated/giant-dinoBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: db4f58ae662a5974db6cc1d8392f21b2, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u4E24\u5934\u5DE8\u578B\u66B4\u9F99\u6495\u5F00\u9A91\u58EB\u9635\u7EBF\uFF0C\u4F53\u578B\u5DE8\u5927\u3001\u96BE\u4EE5\u5408\u56F4\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: giants-yeti
+    displayName: "\u5DE8\u578B\u96EA\u4EBA"
+    scenePath: Assets/Game/Content/Characters/Giants3/Prepared01/Integrated/giant-yetiBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 1bef4fdf7c08ea34892947392d52e883, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u4E24\u5934\u5DE8\u578B\u96EA\u4EBA\u6325\u62F3\u6A2A\u626B\u9A91\u58EB\u961F\u5217\uFF0C\u76AE\u7CD9\u8089\u539A\u3001\u529B\u5927\u65E0\u7A77\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: giants-bluedemon
+    displayName: "\u5DE8\u578B\u84DD\u9B54"
+    scenePath: Assets/Game/Content/Characters/Giants3/Prepared02/Integrated/giant-bluedemonBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 30e681e5810cd214fa393c41766f9309, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u4E24\u5934\u5DE8\u578B\u84DD\u9B54\u731B\u6251\u9A91\u58EB\u961F\u5217\uFF0C\u653B\u51FB\u51F6\u731B\u3001\u51FA\u624B\u6C89\u91CD\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: giants-alien
+    displayName: "\u5916\u661F\u5DE8\u4EBA"
+    scenePath: Assets/Game/Content/Characters/Giants3/Prepared02/Integrated/giant-alienBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: ff73b6caf8473864d9569e74921e098e, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u4E24\u540D\u5916\u661F\u5DE8\u4EBA\u8FDC\u8DDD\u79BB\u53D1\u5C04\u80FD\u91CF\u5F39\uFF0C\u9A91\u58EB\u5FC5\u987B\u9876\u7740\u706B\u529B\u51B2\u5230\u8FD1\u524D\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: nonhuman2-triceratops
+    displayName: "\u4E09\u89D2\u9F99\u51B2\u9635"
+    scenePath: Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/triceratopsBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 229059438611e7e43affc53af6658249, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u4F53\u578B\u5E9E\u5927\u7684\u4E09\u89D2\u9F99\u6295\u5165\u6218\u573A\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: nonhuman2-stegosaurus
+    displayName: "\u5251\u9F99\u9632\u7EBF"
+    scenePath: Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/stegosaurusBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 542b52d5be5156c47883e6e4e1af8a29, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u80CC\u8D1F\u9AA8\u677F\u7684\u5251\u9F99\u6295\u5165\u6218\u573A\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: nonhuman2-spider
+    displayName: "\u5DE8\u578B\u8718\u86DB"
+    scenePath: Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated/spiderBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 2d47ab8af6a022c458ba30d95cdcb200, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u6210\u7FA4\u7684\u5DE8\u578B\u8718\u86DB\u6295\u5165\u6218\u573A\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: unified-regular
+    displayName: "\u81EA\u7531\u7F16\u6210 \xB7 \u5E38\u89C4\u5175\u79CD"
+    scenePath: Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/RegularBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 353ee726aae20214e9f3157951a707b2, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 12 \u4EBA \xB7 \u6B7C\u706D\u6218\n12
+      \u79CD\u5E38\u89C4\u5175\u79CD\uFF0C\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u81EA\u7531\u7EC4\u5408\u53CC\u65B9\u519B\u56E2\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: unified-all-regular
+    displayName: "\u5168\u5175\u79CD\u540C\u573A"
+    scenePath: Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/AllRegularBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 940236fd91a867c47aa7d0e37bc3fff9, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 72 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u65B0\u65E7\u5175\u79CD\u540C\u573A\u5C55\u793A\uFF0C\u9002\u5408\u6311\u9009\u559C\u6B22\u7684\u5175\u79CD\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  - id: unified-large
+    displayName: "\u81EA\u7531\u7F16\u6210 \xB7 \u5927\u578B\u5175\u79CD"
+    scenePath: Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: 7e8283ae5a4170249b6790ed032fa023, type: 3}
+    description: "2 \u652F\u519B\u56E2 \xB7 18 \u4EBA \xB7 \u6B7C\u706D\u6218\n\u9762\u5411\u5927\u578B\u5175\u79CD\u7684\u914D\u5175\u6218\u573A\uFF0C\u53EF\u7F16\u5165\u4F53\u578B\u8F83\u5927\u7684\u5355\u4F4D\u3002"
+    briefing: "\u76EE\u6807\uFF1A\u6D88\u706D\u53E6\u4E00\u652F\u519B\u56E2\u3002\n\u6309
+      Enter \u5F00\u6218\uFF0CSpace \u6682\u505C\uFF1B\u53EF\u5728\u914D\u5175\u5E03\u9635\u4E2D\u8C03\u6574\u5175\u79CD\u4E0E\u4EBA\u6570\uFF0C\u5E76\u4FDD\u5B58\u81EA\u5DF1\u7684\u65B9\u6848\u3002"
+  templates:
+  - templateId: launch-open-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: 89618f9d73d69ef48bff878f09b11b28, type: 2}
+  - templateId: launch-open-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: 6ad8171c095cda74da755c06189f55f6, type: 2}
+  - templateId: launch-open-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: e3069e72dba4b2945ad6499a3b548430, type: 2}
+  - templateId: launch-open-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: f82cd80bdf2f0fa48b8efc8a4f546ba3, type: 2}
+  - templateId: launch-mountain-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: ac21fd4c1509c5646b796b224e257312, type: 2}
+  - templateId: launch-mountain-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: 88da02bf9ece2eb4d9b06dfd08ed690f, type: 2}
+  - templateId: launch-mountain-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: 6005527998b49b049ab9efc90b532995, type: 2}
+  - templateId: launch-mountain-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: 86c9b1a256fd46c48bdc1302d0d327d5, type: 2}
+  - templateId: launch-mountain-unit-4
+    revision: 1
+    config: {fileID: 11400000, guid: 9af64726e5cfb664b9800cc220e8d63e, type: 2}
+  - templateId: launch-mountain-unit-5
+    revision: 1
+    config: {fileID: 11400000, guid: 6f8735738e99028418a955e10175450e, type: 2}
+  - templateId: launch-point-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: b96b506476cd6f04c8d09622c74b43b7, type: 2}
+  - templateId: launch-point-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: 551b04d444a907143afb0b55c182ed9f, type: 2}
+  - templateId: launch-point-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: bab4ff51e5586484bbf92a72b6ee13e3, type: 2}
+  - templateId: launch-point-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: ea6276b75d467c540949213891643f20, type: 2}
+  - templateId: launch-three-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: 07c271bbea582d24aab249719c6bbb05, type: 2}
+  - templateId: launch-three-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: d8c39e18f733d19478b7f151ec4a29fa, type: 2}
+  - templateId: launch-three-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: e221f8d02cfa3134f87982ac9186b781, type: 2}
+  - templateId: launch-three-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: 4754300882a992f4bb1cabb8870c06a6, type: 2}
+  - templateId: launch-three-unit-4
+    revision: 1
+    config: {fileID: 11400000, guid: 90ffb4915b3679348b3f1f0e33026487, type: 2}
+  - templateId: launch-three-unit-5
+    revision: 1
+    config: {fileID: 11400000, guid: 72f9ae6c755f71e48878b3fb217e937f, type: 2}
+  - templateId: launch-standard-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: af2f9d6b1617f60458c86aae6d847837, type: 2}
+  - templateId: launch-standard-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: f0dd5d1cacfae43479249d31433802f9, type: 2}
+  - templateId: launch-standard-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: ecea2e563b88f9a4c9876d6fce3b0e32, type: 2}
+  - templateId: launch-standard-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: 5af6e6c36dd33334ea5b750e3fc3c044, type: 2}
+  - templateId: roster-male
+    revision: 1
+    config: {fileID: 11400000, guid: 6913b856d6328ea4da13d18b17d8ca85, type: 2}
+  - templateId: roster-female
+    revision: 1
+    config: {fileID: 11400000, guid: 351be090e6836554dbab626e11eb501a, type: 2}
+  - templateId: roster-unitychan
+    revision: 1
+    config: {fileID: 11400000, guid: 9b68da1b4ce8123419e6363d73b6e8c7, type: 2}
+  - templateId: roster-legacy-skeleton
+    revision: 1
+    config: {fileID: 11400000, guid: dbf3354863973bf4c9585ec4dffae2c7, type: 2}
+  - templateId: roster-knight
+    revision: 1
+    config: {fileID: 11400000, guid: 909a3900d94e25e49a08367fda1b4a0e, type: 2}
+  - templateId: roster-ranger
+    revision: 1
+    config: {fileID: 11400000, guid: 2b30e1c88323280488da9be049354fa2, type: 2}
+  - templateId: roster-skeleton-warrior
+    revision: 1
+    config: {fileID: 11400000, guid: 08ea7092940f9bd409195be721f25f0b, type: 2}
+  - templateId: roster-skeleton-rogue
+    revision: 1
+    config: {fileID: 11400000, guid: 7e73a563bd7a9704b86501ff5da24bad, type: 2}
+  - templateId: roster-skeleton-mage
+    revision: 1
+    config: {fileID: 11400000, guid: afcd3adf6c9dee8488fe5123be9e89ae, type: 2}
+  - templateId: roster-orc
+    revision: 1
+    config: {fileID: 11400000, guid: 95b78e2db4069a54e9b87f3441314d87, type: 2}
+  - templateId: roster-yeti
+    revision: 1
+    config: {fileID: 11400000, guid: b221e9ce1db1e25499da2eaaa8d2d18a, type: 2}
+  - templateId: roster-mushroom
+    revision: 1
+    config: {fileID: 11400000, guid: 5dc34b09c9af1144da419543f27020b1, type: 2}
+  - templateId: roster-large-wolf
+    revision: 1
+    config: {fileID: 11400000, guid: ba3d8aa5e62d8504ba85005f88eab1e9, type: 2}
+  - templateId: roster-large-bull
+    revision: 1
+    config: {fileID: 11400000, guid: af14931012c34694a8992e6102bcb8e6, type: 2}
+  - templateId: roster-large-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 579b052463e2f5146a8ee14061cfa9f0, type: 2}
+  - templateId: skeleton-warrior
+    revision: 1
+    config: {fileID: 11400000, guid: 37e392bbd2ada2f4d9685fdbf47fb943, type: 2}
+  - templateId: enemy-collection-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: b0ab4f04c53ffef4fb62778deda4bdfd, type: 2}
+  - templateId: nonhuman2-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 382cd1a14ae2c8d428214c4af5287cf0, type: 2}
+  - templateId: roster-triceratops
+    revision: 1
+    config: {fileID: 11400000, guid: e479a92458964df4f917d8d0e04ec059, type: 2}
+  - templateId: roster-stegosaurus
+    revision: 1
+    config: {fileID: 11400000, guid: 1b5fb98e6fdb92c4493ce5ef27497dce, type: 2}
+  - templateId: roster-spider
+    revision: 1
+    config: {fileID: 11400000, guid: a889200539954184d905ec2dc784ac72, type: 2}
+  - templateId: roster-mounted-knight
+    revision: 1
+    config: {fileID: 11400000, guid: bb9ede6e3c3011546b07e7fa4fa424fc, type: 2}
+  - templateId: cavalry-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 003d95f018b568848a148fe64563b3e8, type: 2}
+  - templateId: dragons-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: ae25f113ceb8f7e479fcbb47d190da72, type: 2}
+  - templateId: roster-dragon
+    revision: 1
+    config: {fileID: 11400000, guid: be2c2bda6adcfbb41a1da6fc81ca0678, type: 2}
+  - templateId: roster-dragon-evolved
+    revision: 1
+    config: {fileID: 11400000, guid: 29aedb0cf41ee8e4c8a5698a95a516cc, type: 2}
+  - templateId: dragons-phalanx-knight-90
+    revision: 1
+    config: {fileID: 11400000, guid: c7b33954c725b4b49b19e27113443b94, type: 2}
+  - templateId: dragons-phalanx-knight-150
+    revision: 1
+    config: {fileID: 11400000, guid: f0a38e712b74d5640bdc99793e8b2c2b, type: 2}
+  - templateId: roster-giant-demon
+    revision: 1
+    config: {fileID: 11400000, guid: 542a266b831e6ab4794f67d0a6f2046d, type: 2}
+  - templateId: roster-giant-dino
+    revision: 1
+    config: {fileID: 11400000, guid: ccc7b1b9d4402b14cb0f0d78ddcd0da8, type: 2}
+  - templateId: roster-giant-yeti
+    revision: 1
+    config: {fileID: 11400000, guid: 0f956bc584647d94ca324fd1f84d434a, type: 2}
+  - templateId: roster-giant-bluedemon
+    revision: 1
+    config: {fileID: 11400000, guid: d811f4bc652401a48823fce5878144ce, type: 2}
+  - templateId: roster-giant-alien
+    revision: 1
+    config: {fileID: 11400000, guid: 56a1ddc75a531bf429dd21bf09fde16e, type: 2}

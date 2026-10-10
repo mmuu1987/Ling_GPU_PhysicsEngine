@@ -339,7 +339,7 @@ namespace MassEngine.Tests
         {
             // 回归：prefab 作为资产加载时整棵树 activeInHierarchy == false，
             // 早先的渲染器筛选会因此判定"没有蒙皮渲染器"，把 M5 最主要的输入挡在门外。
-            const string prefabPath = "Assets/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab";
+            const string prefabPath = "Assets/MassEngine/Tests/Editor/LegacyHumanoid/Prefab/MaleCharacterPBR.prefab";
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             Assert.IsNotNull(prefab, "测试前提：源模型 prefab 必须存在。");
             Assert.IsFalse(prefab.activeInHierarchy, "测试前提：资产形态的 prefab 不在任何活动场景里。");
@@ -364,14 +364,14 @@ namespace MassEngine.Tests
             // 与采样结果无关。若 SampleAnimation 静默失效（Humanoid clip + 未激活实例是已知坑），
             // 烘出来的会是一份"每一帧都等于绑定姿态"的纹理 —— 尺寸全对、校验全过、画面完全不动。
             // 所以必须真的解码纹素，确认帧与帧之间顶点位置确实变了。
-            const string prefabPath = "Assets/RPG Tiny Hero Duo/Prefab/MaleCharacterPBR.prefab";
+            const string prefabPath = "Assets/MassEngine/Tests/Editor/LegacyHumanoid/Prefab/MaleCharacterPBR.prefab";
             var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
             Assert.IsNotNull(prefab, "测试前提：源模型 prefab 必须存在。");
 
             var idle = AssetDatabase.LoadAssetAtPath<AnimationClip>(
-                "Assets/RPG Tiny Hero Duo/Animation/SwordAndShield/Idle_Normal_SwordAndShield.fbx");
+                "Assets/MassEngine/Tests/Editor/LegacyHumanoid/Animation/SwordAndShield/Idle_Normal_SwordAndShield.fbx");
             var death = AssetDatabase.LoadAssetAtPath<AnimationClip>(
-                "Assets/RPG Tiny Hero Duo/Animation/SwordAndShield/Die01_SwordAndShield.fbx");
+                "Assets/MassEngine/Tests/Editor/LegacyHumanoid/Animation/SwordAndShield/Die01_SwordAndShield.fbx");
             Assert.IsNotNull(idle, "测试前提：Idle clip 必须存在。");
             Assert.IsNotNull(death, "测试前提：Death clip 必须存在。");
 
@@ -584,7 +584,7 @@ namespace MassEngine.Tests
             Assert.Throws<ArgumentException>(() => VatBakeResult.ValidateNewPath("Assets/VatBakerTestTemp/NoExtension"));
             Assert.Throws<ArgumentException>(() => VatBakeResult.ValidateNewPath("Assets/MissingFolderHere/New.asset"));
             Assert.Throws<ArgumentException>(() => VatBakeResult.ValidateNewPath(
-                "Assets/VAT_Data/MaleCharacter_Stage5_MultiClip_Profile.asset"), "已存在的 profile 必须拒绝覆盖。");
+                "Assets/Art/VAT/Characters/MaleCharacter_Stage5_MultiClip_Profile.asset"), "已存在的 profile 必须拒绝覆盖。");
         }
 
         // ------------------------------------------------------------------
@@ -616,7 +616,7 @@ namespace MassEngine.Tests
             // 回归：源素材里 0.5333s 的 clip，float 下 length*30 落在 16.0，double 下是 16.0000008。
             // 用 double 取上整会多出 1 帧，逐段累积后整份 profile 的帧窗口全部错位。
             // 这条必须用真实 FBX：合成 clip 的长度落不到这个临界点上，复现不出差异。
-            const string clipPath = "Assets/RPG Tiny Hero Duo/Animation/SwordAndShield/Attack01_SwordAndShiled.fbx";
+            const string clipPath = "Assets/MassEngine/Tests/Editor/LegacyHumanoid/Animation/SwordAndShield/Attack01_SwordAndShiled.fbx";
             var clip = AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
             Assert.IsNotNull(clip, "测试前提：源动画 clip 必须存在。");
 

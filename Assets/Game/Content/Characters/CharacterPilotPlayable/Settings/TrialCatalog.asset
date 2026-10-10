@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eba0d73f2f554964a3dc6fd4563ccccf, type: 3}
+  m_Name: TrialCatalog
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxBattlefieldCatalog
+  defaultEntryId: kaykit-knight-pilot
+  entries:
+  - id: kaykit-knight-pilot
+    displayName: "KayKit \u5251\u76FE\u9A91\u58EB \xB7 \u72EC\u7ACB\u8BD5\u70B9"
+    scenePath: Assets/Game/Content/Characters/CharacterPilotPlayable/ModelTrialBattlefield.unity
+    contentVersion: 1
+    terrainId: flat-ground
+    terrainVersion: 1
+    terrainSurface: {fileID: 0}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 0}
+    description: 
+    briefing: 
+  templates:
+  - templateId: kaykit-knight-v1
+    revision: 3
+    config: {fileID: 11400000, guid: b57972855a0520d408be409a7cf7fbf3, type: 2}
+  - templateId: kaykit-knight-opponent
+    revision: 2
+    config: {fileID: 11400000, guid: 1901ab29f81cf284e9ed5b755cecfcdc, type: 2}

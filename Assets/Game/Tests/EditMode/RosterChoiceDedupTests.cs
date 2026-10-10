@@ -11,7 +11,7 @@ namespace MassEngine.Game.Tests
 {
     public sealed class RosterChoiceDedupTests
     {
-        private static WarSandboxBattlefieldCatalog Catalog => AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>("Assets/Game/OfficialRoster/Version08/Catalog.asset");
+        private static WarSandboxBattlefieldCatalog Catalog => AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>("Assets/Game/Content/Characters/OfficialRoster/Version08/Catalog.asset");
         [Test] public void LibraryShows33RepresentativesButKeepsAll68Identities()
         {
             var catalog = Catalog; string before = EditorJsonUtility.ToJson(catalog);

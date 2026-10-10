@@ -13,7 +13,7 @@ namespace MassEngine.Game.Editor
 {
     public static class WarSandboxEntryBuilder
     {
-        public const string MenuScenePath = "Assets/Game/Scenes/WarSandboxMenu.unity";
+        public const string MenuScenePath = "Assets/Game/Experiments/LegacyScenes/WarSandboxMenu.unity";
         public const string CatalogPath = "Assets/Game/Settings/BattlefieldCatalog.asset";
 
         [MenuItem("MassEngine/Create Battlefield Entry")]
@@ -57,7 +57,7 @@ namespace MassEngine.Game.Editor
             return new WarSandboxBattlefieldEntry
             {
                 id = id, displayName = name,
-                scenePath = "Assets/Game/Scenes/WarSandbox.unity",
+                scenePath = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity",
                 rules = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldConfig>("Assets/Game/Settings/" + ruleAsset + ".asset")
             };
         }
@@ -86,7 +86,7 @@ namespace MassEngine.Game.Editor
             AssetDatabase.Refresh();
             foreach (var entry in catalog.entries)
             {
-                string path = "Assets/Game/Previews/" + entry.id + ".png";
+                string path = "Assets/Game/Content/UI/Previews/" + entry.id + ".png";
                 var importer = AssetImporter.GetAtPath(path) as TextureImporter;
                 if (importer == null) throw new BuildFailedException("Missing battlefield preview: " + path);
                 importer.mipmapEnabled = false;

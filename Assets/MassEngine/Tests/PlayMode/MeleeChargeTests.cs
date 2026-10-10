@@ -23,7 +23,7 @@ namespace MassEngine.Tests
     /// </summary>
     public sealed class MeleeChargeTests
     {
-        private const string Scene = "Assets/Game/Cavalry/Prepared05/Integrated/Battlefield.unity";
+        private const string Scene = "Assets/Game/Content/Characters/Cavalry/Prepared05/Integrated/Battlefield.unity";
         private const string CombatShaderPath = "Assets/MassEngine/Simulation/Shaders/AgentCombatSimulation.compute";
         private static readonly FieldInfo ChargeField = typeof(MassEngineManager).GetField("meleeCharge", BindingFlags.Instance | BindingFlags.NonPublic);
 
@@ -154,7 +154,7 @@ namespace MassEngine.Tests
 
         [UnityTest, Timeout(900000)] public IEnumerator ShippedChargeBattlefield()
         {
-            const string Shipped = "Assets/Game/Cavalry/Prepared06/Integrated/Battlefield.unity";
+            const string Shipped = "Assets/Game/Content/Characters/Cavalry/Prepared06/Integrated/Battlefield.unity";
             Step(" shipped load-scene");
             loadedBattlefield = true;
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode(Shipped, new LoadSceneParameters(LoadSceneMode.Single));

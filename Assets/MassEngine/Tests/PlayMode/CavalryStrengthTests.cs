@@ -42,12 +42,12 @@ namespace MassEngine.Tests
             }
         }
 
-        [UnityTest, Timeout(1500000)] public IEnumerator Sweep() { yield return Run("Assets/Game/Cavalry/Prepared06/Integrated/Battlefield.unity", "cavalry-strength-sweep", Matrix, 1); }
+        [UnityTest, Timeout(1500000)] public IEnumerator Sweep() { yield return Run("Assets/Game/Content/Characters/Cavalry/Prepared06/Integrated/Battlefield.unity", "cavalry-strength-sweep", Matrix, 1); }
 
         /// <summary>Shipped Prepared07 (damage 45) as authored, three runs: cavalry must win every time.</summary>
         [UnityTest, Timeout(900000)] public IEnumerator ShippedStrongCavalry()
         {
-            yield return Run("Assets/Game/Cavalry/Prepared07/Integrated/Battlefield.unity", "cavalry-strength-shipped07", new[] { new Case("shipped07", 1f, 0, 0f) }, 3);
+            yield return Run("Assets/Game/Content/Characters/Cavalry/Prepared07/Integrated/Battlefield.unity", "cavalry-strength-shipped07", new[] { new Case("shipped07", 1f, 0, 0f) }, 3);
             string json = File.ReadAllText(Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "AgentGiants", "cavalry-strength-shipped07.json")));
             Assert.AreEqual(3, System.Text.RegularExpressions.Regex.Matches(json, "\"winner\":\"cavalry\"").Count, json);
             StringAssert.Contains("\"cavDamage\":45", json);

@@ -36,6 +36,7 @@ namespace MassEngine.Game
         }
         private void CancelMoveTarget()
         {
+            moveIntent=null;
             if (!awaitingMoveTarget) return;
             awaitingMoveTarget = false;
             SetFeedback("已取消选点，原命令和航点不变");
@@ -43,6 +44,7 @@ namespace MassEngine.Game
         }
         private string MoveTargetHint()
         {
+            if(moveIntent!=null&&moveIntent.Scope==MemberSelectionScope.Local)return "局部 "+moveIntent.Count+" 人 · 点击单一目标\n不支持Shift追加；Esc取消选点，保留当前选区/旧命令";
             if (!string.IsNullOrEmpty(controller.CommandError))
                 return controller.CommandError.Replace("命令被拒绝：", "") + "\n原命令保留，可重新选点或取消";
             if (controller.Phase == WarSandboxBattlePhase.Paused)
@@ -69,3 +71,4 @@ namespace MassEngine.Game
         }
     }
 }
+

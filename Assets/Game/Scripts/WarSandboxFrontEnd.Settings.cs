@@ -11,6 +11,8 @@ namespace MassEngine.Game
 
         private void DrawSettings()
         {
+            var safety = SettingsSafety29.For(session);
+            if (safety != null) { DrawSettings29(safety); return; }
             var audio = WarSandboxAudio.Ensure(); var settings = audio.Settings;
             ui.Panel("settings-shade", new Rect(0, 0, ui.Width, ui.Height), session.State == WarSandboxEntryState.Battle ? WarSandboxUGUI.Shade : WarSandboxUGUI.Background);
             float w = Mathf.Min(500, ui.Width - 40), x = (ui.Width - w) / 2, y = Mathf.Max(12, (ui.Height - 480) / 2);

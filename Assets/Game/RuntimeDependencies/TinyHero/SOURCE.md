@@ -1,0 +1,6 @@
+# 运行时必需资源：TinyHero颜色图
+本目录不是下载缓存、商店示例或可随意清理的源模型目录。
+Albedo.png 是原工程 Assets/ThirdParty/RPG Tiny Hero Duo/Texture/Albedo.png 的逐字节副本，保留原有512导入设置。原图从Git aea369904b87aca537a2d2ba32c2d449167df6ac恢复，SHA256 d0e04a6b74dbc3728ff5f2912a2f89c562c7129581a0d6e11c558ae28c7ab216。
+四个VAT角色材质的颜色贴图明确引用本目录，避免源模型包清理导致白人。遵循原RPG Tiny Hero Duo适用许可，非CC0，不公开分发原图。
+清理前请检查 Logs/WhiteActorFix-20261004/actor-dependency-manifest.json；它是本次依赖快照，新增资源后须重新生成。构建期ActorMaterialBuildGuard会重新检查实际打包场景的角色依赖，不能用过时快照代替。
+不要修改VAT位置/法线数据纹理来处理颜色图问题，也不要把VAT数据纹理按普通装饰贴图压缩。

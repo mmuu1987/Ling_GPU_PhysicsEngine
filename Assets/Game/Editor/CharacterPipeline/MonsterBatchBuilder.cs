@@ -14,7 +14,7 @@ namespace MassEngine.Game.Editor
 {
     public static class MonsterBatchBuilder
     {
-        const string Source="Assets/CharacterPilotSource/QuaterniusMonsters";
+        const string Source="Assets/Art/Source/CharacterPilot/QuaterniusMonsters";
         const string Log="Logs/AgentEnemyBatch2";
         public static void Inspect()
         {
@@ -43,9 +43,9 @@ namespace MassEngine.Game.Editor
             }
             File.WriteAllText(Log+"/import-inspection.txt",sb.ToString());Debug.Log("MONSTER_IMPORT_INSPECTION_READY");
         }
-        const string Prepared="Assets/Game/EnemyModelsBatch2/Prepared02";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        const string Previous="Assets/Game/EnemyModelsBatch/Collection01";
+        const string Prepared="Assets/Game/Content/Characters/EnemyModelsBatch2/Prepared02";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        const string Previous="Assets/Game/Content/Characters/EnemyModelsBatch/Collection01";
         static readonly string[] Keys={"orc","yeti","mushroom"};
         static readonly string[] Names={"Orc","Yeti","MushroomKing"};
         static readonly string[] Titles={"兽人","雪怪","蘑菇怪"};

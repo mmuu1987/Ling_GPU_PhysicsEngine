@@ -309,7 +309,7 @@ namespace MassEngine.Game.Editor
         private void OpenDefaultScene()
         {
             if (ReadOnly || !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
-            EditorSceneManager.OpenScene("Assets/Game/Scenes/WarSandbox.unity"); ResolveManager(); RefreshPage();
+            EditorSceneManager.OpenScene("Assets/Game/Experiments/LegacyScenes/WarSandbox.unity"); ResolveManager(); RefreshPage();
         }
     }
 }

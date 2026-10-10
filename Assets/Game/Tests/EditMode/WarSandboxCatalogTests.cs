@@ -99,11 +99,20 @@ namespace MassEngine.Game.Tests
         [Test]
         public void ShippingCatalogAndEntrySceneAreIncludedAndHaveUniqueIds()
         {
-            var shipped = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>(WarSandboxEntryBuilder.CatalogPath);
+            const string menu = "Assets/Game/Scenes/MainMenu.unity";
+            const string catalogPath = "Assets/Game/Scenes/Catalog.asset";
+            string[] formal = { menu, "Assets/Game/Scenes/Green.unity", "Assets/Game/Scenes/Autumn.unity", "Assets/Game/Scenes/Winter.unity" };
+            CollectionAssert.AreEqual(formal, System.Array.ConvertAll(EditorBuildSettings.scenes, s => s.path));
+            Assert.That(System.Array.TrueForAll(EditorBuildSettings.scenes, s => s.enabled), Is.True);
+            var shipped = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>(catalogPath);
             Assert.That(shipped, Is.Not.Null);
             Assert.That(shipped.TryValidate(WarSandboxEntryBuilder.IsIncludedScene, out var error), Is.True, error);
-            Assert.That(EditorBuildSettings.scenes[0].path, Is.EqualTo(WarSandboxEntryBuilder.MenuScenePath));
-            Assert.That(EditorBuildSettings.scenes[0].enabled, Is.True);
+            Assert.That(shipped.TryValidateTemplates(out error), Is.True, error);
+            Assert.That(shipped.defaultEntryId, Is.EqualTo("forest-green22"));
+            CollectionAssert.AreEqual(new[] { formal[1], formal[2], formal[3] }, System.Array.ConvertAll(shipped.entries, e => e.scenePath));
+            string guid = AssetDatabase.AssetPathToGUID(catalogPath);
+            Assert.That(guid, Is.Not.Empty);
+            StringAssert.Contains("catalog: {fileID: 11400000, guid: " + guid, System.IO.File.ReadAllText(menu));
         }
 
         [TestCase(560, 800)]
@@ -117,6 +126,6 @@ namespace MassEngine.Game.Tests
         }
 
         private WarSandboxBattlefieldEntry Entry(string id) => new WarSandboxBattlefieldEntry
-        { id = id, displayName = "Battle " + id, scenePath = "Assets/Game/Scenes/WarSandbox.unity", rules = rules };
+        { id = id, displayName = "Battle " + id, scenePath = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity", rules = rules };
     }
 }

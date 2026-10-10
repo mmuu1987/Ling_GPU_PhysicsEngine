@@ -15,10 +15,10 @@ namespace MassEngine.Game.Editor
     /// <summary>New authored content only. Existing scenes, templates and player plans are preserved.</summary>
     public static class WarSandboxLaunchPresetsBuilder
     {
-        public const string Root = "Assets/Game/M71LaunchPresets";
+        public const string Root = "Assets/Game/Content/Battlefields/LaunchPresets";
         public const string MenuScene = Root + "/LaunchMenu.unity";
         public const string CatalogPath = Root + "/Catalog.asset";
-        private const string FlatScene = "Assets/Game/Scenes/WarSandbox.unity";
+        private const string FlatScene = "Assets/Game/Experiments/LegacyScenes/WarSandbox.unity";
         private static readonly string[] Ids = { "launch-open", "launch-mountain", "launch-point", "launch-three", "launch-standard" };
         private static readonly string[] Names = { "开阔对冲 · 快速上手", "山地绕行", "中央争夺", "三方混编", "开阔对冲 · 标准规模" };
         private static readonly string[] Descriptions = {
@@ -45,7 +45,7 @@ namespace MassEngine.Game.Editor
             var setup = EditorSceneManager.GetSceneManagerSetup();
             try
             {
-                AssetDatabase.CreateFolder("Assets/Game", "M71LaunchPresets");
+                AssetDatabase.CreateFolder("Assets/Game/Content/Battlefields", "LaunchPresets");
                 AssetDatabase.CreateFolder(Root, "Previews");
                 var original = Load<ScenarioConfig>("Assets/Game/Settings/ScenarioConfig.asset");
                 var mountain = Load<ScenarioConfig>(WarSandboxTerrainPlayableBuilder.Root + "/Settings/Scenario.asset");

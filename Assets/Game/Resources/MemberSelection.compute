@@ -1,0 +1,30 @@
+#pragma kernel SelectMembers
+#pragma kernel RefreshMembers
+#include "MemberSelectionBuffers.hlsl"
+StructuredBuffer<AgentData> _Agents;
+StructuredBuffer<int> _Teams, _Hp;
+RWStructuredBuffer<uint> _Mask, _Counts;
+AppendStructuredBuffer<uint> _SelectedIndices;
+int _Count, _Team, _Whole;
+float4x4 _View, _VP;
+float4 _Viewport, _Box, _Clip;
+bool Inside(float3 p)
+{
+    if (_Viewport.z<=0 || _Viewport.w<=0 || _Box.z<=_Box.x || _Box.w<=_Box.y) return false;
+    float4 h=float4(p,1); float depth=-mul(_View,h).z; float4 clip=mul(_VP,h);
+    if (!all(isfinite(clip)) || clip.w<=0 || depth<_Clip.x || depth>_Clip.y) return false;
+    float2 uv=clip.xy/clip.w*.5+.5;
+    float2 screen=_Viewport.xy+uv*_Viewport.zw;
+    return all(uv>=0)&&all(uv<=1)&&all(screen>=_Box.xy)&&all(screen<=_Box.zw);
+}
+void Process(uint i,bool replace)
+{
+    if(i>=(uint)_Count)return;
+    bool alive=_Hp[i]>0&&_Teams[i]==_Team;
+    if(alive)InterlockedAdd(_Counts[1],1);
+    bool selected=alive&&_Whole==0&&(replace?Inside(_Agents[i].position):_Mask[i]!=0);
+    _Mask[i]=selected?1:0;
+    if(selected){InterlockedAdd(_Counts[0],1);_SelectedIndices.Append(i);}
+}
+[numthreads(64,1,1)] void SelectMembers(uint3 id:SV_DispatchThreadID){Process(id.x,true);}
+[numthreads(64,1,1)] void RefreshMembers(uint3 id:SV_DispatchThreadID){Process(id.x,false);}

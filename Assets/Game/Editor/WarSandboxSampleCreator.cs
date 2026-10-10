@@ -14,7 +14,7 @@ namespace MassEngine.Game.Editor
     public static class WarSandboxSampleCreator
     {
         private const string SettingsDirectory = "Assets/Game/Settings";
-        private const string SceneDirectory = "Assets/Game/Scenes";
+        private const string SceneDirectory = "Assets/Game/Experiments/LegacyScenes";
         private const string SampleScenePath = SceneDirectory + "/WarSandboxSample.unity";
 
         [MenuItem("MassEngine/Create Sample Configs And Scene")]

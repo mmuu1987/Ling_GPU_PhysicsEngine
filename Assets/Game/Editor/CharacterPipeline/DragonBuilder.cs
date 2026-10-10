@@ -17,14 +17,14 @@ namespace MassEngine.Game.Editor
     // no shared pipeline, engine, or old asset is modified.
     public static class DragonBuilder
     {
-        const string Source="Assets/CharacterPilotSource/QuaterniusDragons";
-        const string AtlasPath="Assets/CharacterPilotSource/QuaterniusMonsters/Atlas_Monsters.png";
+        const string Source="Assets/Art/Source/CharacterPilot/QuaterniusDragons";
+        const string AtlasPath="Assets/Art/Source/CharacterPilot/QuaterniusMonsters/Atlas_Monsters.png";
         static string Log="Logs/AgentDragons";
-        static string Prepared="Assets/Game/Dragons/Prepared02";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
-        const string LargeLibrary="Assets/Game/NonhumanBatch2/Prepared01/Integrated";
-        const string LargeScene="Assets/Game/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity";
-        static string Newest="Assets/Game/Cavalry/Prepared03/Integrated";
+        static string Prepared="Assets/Game/Content/Characters/Dragons/Prepared02";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
+        const string LargeLibrary="Assets/Game/Content/Characters/NonhumanBatch2/Prepared01/Integrated";
+        const string LargeScene="Assets/Game/Content/Characters/UnifiedRoster/Version03/Scenes/LargeBattlefield.unity";
+        static string Newest="Assets/Game/Content/Characters/Cavalry/Prepared03/Integrated";
         // Playtest 2: fireball with impact splash (user-approved opt-in core field CombatConfig.projectileSplashRadius). Off = earlier melee dragons.
         static bool Fireball=false;static float FireGravity=-4f,FireSpeed=16f;static readonly float[] SplashRadii={3f,3.5f};static readonly float[] MouthHeights={3.8f,3.4f};
         static void ConfigureFireball(UnitTypeConfig u,int i)
@@ -34,19 +34,19 @@ namespace MassEngine.Game.Editor
         }
         public static void IntegrateFire01()
         {
-            Prepared="Assets/Game/Dragons/Prepared03";Newest="Assets/Game/Cavalry/Prepared04/Integrated";Log="Logs/AgentDragonFire";Fireball=true;
+            Prepared="Assets/Game/Content/Characters/Dragons/Prepared03";Newest="Assets/Game/Content/Characters/Cavalry/Prepared04/Integrated";Log="Logs/AgentDragonFire";Fireball=true;
             CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh dragon fire integration required.");CharacterPipeline.EnsureFolder(Prepared);CreateIntegratedCollection();Debug.Log("DRAGON_FIRE_READY");
         }
         public static void IntegrateFire02()
         {
             // Fire01 lobbed (gravity -4 => engine loft apex ~10m, ~2.8s flight): charging knights left the 3m splash before impact, so kills were slower than melee.
             // Fire02: flat direct fireball (~0.8s at 14m); a miss continues into the ground and still splashes.
-            Prepared="Assets/Game/Dragons/Prepared04";Newest="Assets/Game/Cavalry/Prepared04/Integrated";Log="Logs/AgentDragonFire/fire02";Fireball=true;FireGravity=0f;FireSpeed=18f;
+            Prepared="Assets/Game/Content/Characters/Dragons/Prepared04";Newest="Assets/Game/Content/Characters/Cavalry/Prepared04/Integrated";Log="Logs/AgentDragonFire/fire02";Fireball=true;FireGravity=0f;FireSpeed=18f;
             CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh dragon fire integration required.");Directory.CreateDirectory(Log);CharacterPipeline.EnsureFolder(Prepared);CreateIntegratedCollection();Debug.Log("DRAGON_FIRE_READY");
         }
         public static void BuildFire02()
         {
-            string dest="Builds/UnifiedRoster-20260930-05",folder="Assets/Game/Dragons/Prepared04/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite player.");
+            string dest="Builds/UnifiedRoster-20260930-05",folder="Assets/Game/Content/Characters/Dragons/Prepared04/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite player.");
             foreach(string g in new[]{"Dragon02","Dragon_Evolved02","MountedKnight03"}){var r=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(CharacterPipeline.Root+"/Generated/"+g+"/PipelineReport.json"));CharacterGeometry.Require(r.automatedPassed,"Unaccepted model must not be built: "+g);}
             var cat=Load<WarSandboxBattlefieldCatalog>(folder+"/Catalog.asset");var b=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{folder+"/Menu.unity"}.Concat(cat.entries.Select(e=>e.scenePath)).ToArray(),locationPathName=dest+"/UnifiedRoster.exe",target=BuildTarget.StandaloneWindows64,options=BuildOptions.Development});if(b.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Fire integration build failed.");
             File.WriteAllText(dest+"/Start-Roster.cmd","@echo off\r\nstart \"\" /D \"%~dp0\" \"%~dp0UnifiedRoster.exe\" -screen-fullscreen 0 -screen-width 1280 -screen-height 720 --war-sandbox-settings-file=\"%~dp0PilotData\\settings.json\"\r\n");Debug.Log("FIRE_BUILD_SUCCEEDED");
@@ -56,20 +56,20 @@ namespace MassEngine.Game.Editor
         static void UseYoungSlot(){ModelSource=new[]{1,1};OutputNames=new[]{YoungOutput,"Dragon_Evolved02"};TargetHeights[0]=YoungHeight;}
         public static void PrepareYoung03()
         {
-            Prepared="Assets/Game/Dragons/Prepared05";Log="Logs/AgentDragonFire/young03";UseYoungSlot();
+            Prepared="Assets/Game/Content/Characters/Dragons/Prepared05";Log="Logs/AgentDragonFire/young03";UseYoungSlot();
             CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh dragon preparation required.");CharacterGeometry.Require(!File.Exists(CharacterPipeline.Root+"/Recipes/"+YoungOutput+".asset"),"Never overwrite recipe.");
             Directory.CreateDirectory(Log);CharacterPipeline.EnsureFolder(Prepared);PrepareOne(0);Debug.Log("DRAGON_YOUNG_READY");
         }
         public static void IntegrateFire03()
         {
-            Prepared="Assets/Game/Dragons/Prepared05";Newest="Assets/Game/Cavalry/Prepared05/Integrated";Log="Logs/AgentDragonFire/young03";UseYoungSlot();Fireball=true;FireGravity=0f;FireSpeed=18f;
+            Prepared="Assets/Game/Content/Characters/Dragons/Prepared05";Newest="Assets/Game/Content/Characters/Cavalry/Prepared05/Integrated";Log="Logs/AgentDragonFire/young03";UseYoungSlot();Fireball=true;FireGravity=0f;FireSpeed=18f;
             var young=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(Output(0)+"/PipelineReport.json"));var adult=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(Output(1)+"/PipelineReport.json"));
             MouthHeights[0]=MouthHeights[1]*young.targetBodyHeight/adult.targetBodyHeight;Debug.Log("YOUNG_MOUTH "+MouthHeights[0].ToString("F3"));
             CreateIntegratedCollection();Debug.Log("DRAGON_FIRE_READY");
         }
         public static void BuildFire03()
         {
-            string dest="Builds/UnifiedRoster-20260930-06",folder="Assets/Game/Dragons/Prepared05/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite player.");
+            string dest="Builds/UnifiedRoster-20260930-06",folder="Assets/Game/Content/Characters/Dragons/Prepared05/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite player.");
             foreach(string g in new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"}){var r=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(CharacterPipeline.Root+"/Generated/"+g+"/PipelineReport.json"));CharacterGeometry.Require(r.automatedPassed,"Unaccepted model must not be built: "+g);}
             var cat=Load<WarSandboxBattlefieldCatalog>(folder+"/Catalog.asset");var b=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{folder+"/Menu.unity"}.Concat(cat.entries.Select(e=>e.scenePath)).ToArray(),locationPathName=dest+"/UnifiedRoster.exe",target=BuildTarget.StandaloneWindows64,options=BuildOptions.Development});if(b.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Fire integration build failed.");
             File.WriteAllText(dest+"/Start-Roster.cmd","@echo off\r\nstart \"\" /D \"%~dp0\" \"%~dp0UnifiedRoster.exe\" -screen-fullscreen 0 -screen-width 1280 -screen-height 720 --war-sandbox-settings-file=\"%~dp0PilotData\\settings.json\"\r\n");Debug.Log("FIRE_BUILD_SUCCEEDED");
@@ -80,33 +80,33 @@ namespace MassEngine.Game.Editor
         // Fire05: same integration with the LDR fire palette (readable without bloom) and a longer 0.9 s ring.
         public static void IntegrateFire05()
         {
-            Prepared="Assets/Game/Dragons/Prepared07";Newest="Assets/Game/Cavalry/Prepared05/Integrated";Log="Logs/AgentImpactFx/fire05";UseYoungSlot();Fireball=true;FireGravity=0f;FireSpeed=18f;ImpactDuration=.9f;
+            Prepared="Assets/Game/Content/Characters/Dragons/Prepared07";Newest="Assets/Game/Content/Characters/Cavalry/Prepared05/Integrated";Log="Logs/AgentImpactFx/fire05";UseYoungSlot();Fireball=true;FireGravity=0f;FireSpeed=18f;ImpactDuration=.9f;
             CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh dragon integration required.");Directory.CreateDirectory(Log);CharacterPipeline.EnsureFolder(Prepared);
             var young=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(Output(0)+"/PipelineReport.json"));var adult=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(Output(1)+"/PipelineReport.json"));
             MouthHeights[0]=MouthHeights[1]*young.targetBodyHeight/adult.targetBodyHeight;
             var shader=Load<Shader>("Assets/MassEngine/Projectiles/Shaders/ProjectileImpact.shader");ImpactMaterial=new Material(shader){name="DragonFireImpact",enableInstancing=true};ImpactMaterial.SetFloat("_ProjectileImpactDuration",ImpactDuration);AssetDatabase.CreateAsset(ImpactMaterial,Prepared+"/DragonFireImpact.mat");
             CreateIntegratedCollection();Debug.Log("DRAGON_FIRE_FX_READY");
         }
-        public static void BuildFire05(){BuildRoster("Builds/UnifiedRoster-20260930-08","Assets/Game/Dragons/Prepared07/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
+        public static void BuildFire05(){BuildRoster("Builds/UnifiedRoster-20260930-08","Assets/Game/Content/Characters/Dragons/Prepared07/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
         // Overnight task 3: "dragon vs dense phalanx" battlefields. Break-even measured by DragonPhalanxBalanceTests
         // (2 dragons vs a 0.8/m2 knight block, both armies on the HUD default Attack order): young ~90-95, evolved ~160-170.
         // Own roster policy (256 units) and per-cell capacity 256 = the unit cap, so the grid can never overflow
         // (the shipped 64/64 pair is safe only because the dragon menus stop at 64 units).
         static int[] PhalanxKnights={90,160};
-        public static void IntegrateFire06(){IntegratePhalanx("Assets/Game/Dragons/Prepared09","Logs/AgentPhalanx/fire06b");}
+        public static void IntegrateFire06(){IntegratePhalanx("Assets/Game/Content/Characters/Dragons/Prepared09","Logs/AgentPhalanx/fire06b");}
         // Fire07 = Fire06 with the briefing matching the shipped-scene measurement (knights win narrowly, 3 and 15 left).
-        public static void IntegrateFire07(){IntegratePhalanx("Assets/Game/Dragons/Prepared10","Logs/AgentPhalanx/fire07");}
+        public static void IntegrateFire07(){IntegratePhalanx("Assets/Game/Content/Characters/Dragons/Prepared10","Logs/AgentPhalanx/fire07");}
         // Fire08: at break-even the GPU outcome flips between runs (Fire07 scenes: dragons won with 1 left / knights won with 3-21 left),
         // so the briefing states that instead of naming a winner.
-        public static void IntegrateFire08(){IntegratePhalanx("Assets/Game/Dragons/Prepared11","Logs/AgentPhalanx/fire08");}
-        public static void BuildFire08(){BuildRoster("Builds/UnifiedRoster-20260930-11","Assets/Game/Dragons/Prepared11/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
-        public static void BuildFire07(){BuildRoster("Builds/UnifiedRoster-20260930-10","Assets/Game/Dragons/Prepared10/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
+        public static void IntegrateFire08(){IntegratePhalanx("Assets/Game/Content/Characters/Dragons/Prepared11","Logs/AgentPhalanx/fire08");}
+        public static void BuildFire08(){BuildRoster("Builds/UnifiedRoster-20260930-11","Assets/Game/Content/Characters/Dragons/Prepared11/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
+        public static void BuildFire07(){BuildRoster("Builds/UnifiedRoster-20260930-10","Assets/Game/Content/Characters/Dragons/Prepared10/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
         // Fire09 (overnight task 6): same collection on top of the charging cavalry (Cavalry/Prepared06).
-        public static void IntegrateFire09(){IntegratePhalanx("Assets/Game/Dragons/Prepared12","Logs/AgentCharge/fire09","Assets/Game/Cavalry/Prepared06/Integrated");}
+        public static void IntegrateFire09(){IntegratePhalanx("Assets/Game/Content/Characters/Dragons/Prepared12","Logs/AgentCharge/fire09","Assets/Game/Content/Characters/Cavalry/Prepared06/Integrated");}
         // User decision 2026-10-01: evolved-dragon phalanx 160 -> 150 knights (knights won narrowly three times at 160); cavalry = Prepared07 (damage 45).
-        public static void IntegrateFire10(){PhalanxKnights=new[]{90,150};IntegratePhalanx("Assets/Game/Dragons/Prepared13","Logs/AgentGiants/fire10","Assets/Game/Cavalry/Prepared07/Integrated");}
-        public static void BuildFire09(){BuildRoster("Builds/UnifiedRoster-20260930-12","Assets/Game/Dragons/Prepared12/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
-        static void IntegratePhalanx(string prepared,string log,string newest="Assets/Game/Cavalry/Prepared05/Integrated")
+        public static void IntegrateFire10(){PhalanxKnights=new[]{90,150};IntegratePhalanx("Assets/Game/Content/Characters/Dragons/Prepared13","Logs/AgentGiants/fire10","Assets/Game/Content/Characters/Cavalry/Prepared07/Integrated");}
+        public static void BuildFire09(){BuildRoster("Builds/UnifiedRoster-20260930-12","Assets/Game/Content/Characters/Dragons/Prepared12/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
+        static void IntegratePhalanx(string prepared,string log,string newest="Assets/Game/Content/Characters/Cavalry/Prepared05/Integrated")
         {
             Prepared=prepared;Newest=newest;Log=log;UseYoungSlot();Fireball=true;FireGravity=0f;FireSpeed=18f;ImpactDuration=.9f;
             CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh dragon integration required.");Directory.CreateDirectory(Log);CharacterPipeline.EnsureFolder(Prepared);
@@ -158,10 +158,10 @@ namespace MassEngine.Game.Editor
             CharacterGeometry.Require(catalog.TryValidate(p=>File.Exists(p),out string error)&&catalog.TryValidateTemplates(out error),error);
             File.WriteAllText(Log+"/phalanx-ready.json","{\"passed\":true,\"scenes\":2,\"knights\":["+PhalanxKnights[0]+","+PhalanxKnights[1]+"],\"maximumUnits\":256,\"maxAgentsPerCell\":256,\"catalogEntries\":"+catalog.entries.Length+"}");
         }
-        public static void BuildFire06(){BuildRoster("Builds/UnifiedRoster-20260930-09","Assets/Game/Dragons/Prepared09/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
+        public static void BuildFire06(){BuildRoster("Builds/UnifiedRoster-20260930-09","Assets/Game/Content/Characters/Dragons/Prepared09/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
         public static void IntegrateFire04()
         {
-            Prepared="Assets/Game/Dragons/Prepared06";Newest="Assets/Game/Cavalry/Prepared05/Integrated";Log="Logs/AgentImpactFx/fire04";UseYoungSlot();Fireball=true;FireGravity=0f;FireSpeed=18f;
+            Prepared="Assets/Game/Content/Characters/Dragons/Prepared06";Newest="Assets/Game/Content/Characters/Cavalry/Prepared05/Integrated";Log="Logs/AgentImpactFx/fire04";UseYoungSlot();Fireball=true;FireGravity=0f;FireSpeed=18f;
             CharacterGeometry.Require(!Directory.Exists(Prepared),"Fresh dragon integration required.");Directory.CreateDirectory(Log);CharacterPipeline.EnsureFolder(Prepared);
             var young=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(Output(0)+"/PipelineReport.json"));var adult=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(Output(1)+"/PipelineReport.json"));
             MouthHeights[0]=MouthHeights[1]*young.targetBodyHeight/adult.targetBodyHeight;
@@ -175,10 +175,10 @@ namespace MassEngine.Game.Editor
             var cat=Load<WarSandboxBattlefieldCatalog>(folder+"/Catalog.asset");var b=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{folder+"/Menu.unity"}.Concat(cat.entries.Select(e=>e.scenePath)).ToArray(),locationPathName=dest+"/UnifiedRoster.exe",target=BuildTarget.StandaloneWindows64,options=BuildOptions.Development});if(b.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Roster build failed.");
             File.WriteAllText(dest+"/Start-Roster.cmd","@echo off\r\nstart \"\" /D \"%~dp0\" \"%~dp0UnifiedRoster.exe\" -screen-fullscreen 0 -screen-width 1280 -screen-height 720 --war-sandbox-settings-file=\"%~dp0PilotData\\settings.json\"\r\n");Debug.Log("FIRE_BUILD_SUCCEEDED");
         }
-        public static void BuildFire04(){BuildRoster("Builds/UnifiedRoster-20260930-07","Assets/Game/Dragons/Prepared06/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
+        public static void BuildFire04(){BuildRoster("Builds/UnifiedRoster-20260930-07","Assets/Game/Content/Characters/Dragons/Prepared06/Integrated",new[]{YoungOutput,"Dragon_Evolved02","MountedKnight04"});}
         public static void BuildFire01()
         {
-            string dest="Builds/UnifiedRoster-20260930-04",folder="Assets/Game/Dragons/Prepared03/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite player.");
+            string dest="Builds/UnifiedRoster-20260930-04",folder="Assets/Game/Content/Characters/Dragons/Prepared03/Integrated";CharacterGeometry.Require(!Directory.Exists(dest),"Never overwrite player.");
             foreach(string g in new[]{"Dragon02","Dragon_Evolved02","MountedKnight03"}){var r=JsonUtility.FromJson<CharacterPipelineReport>(File.ReadAllText(CharacterPipeline.Root+"/Generated/"+g+"/PipelineReport.json"));CharacterGeometry.Require(r.automatedPassed,"Unaccepted model must not be built: "+g);}
             var cat=Load<WarSandboxBattlefieldCatalog>(folder+"/Catalog.asset");var b=BuildPipeline.BuildPlayer(new BuildPlayerOptions{scenes=new[]{folder+"/Menu.unity"}.Concat(cat.entries.Select(e=>e.scenePath)).ToArray(),locationPathName=dest+"/UnifiedRoster.exe",target=BuildTarget.StandaloneWindows64,options=BuildOptions.Development});if(b.summary.result!=BuildResult.Succeeded)throw new BuildFailedException("Fire integration build failed.");
             File.WriteAllText(dest+"/Start-Roster.cmd","@echo off\r\nstart \"\" /D \"%~dp0\" \"%~dp0UnifiedRoster.exe\" -screen-fullscreen 0 -screen-width 1280 -screen-height 720 --war-sandbox-settings-file=\"%~dp0PilotData\\settings.json\"\r\n");

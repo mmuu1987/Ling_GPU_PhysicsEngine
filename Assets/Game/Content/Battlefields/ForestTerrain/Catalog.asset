@@ -1,0 +1,441 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eba0d73f2f554964a3dc6fd4563ccccf, type: 3}
+  m_Name: Catalog
+  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxBattlefieldCatalog
+  defaultEntryId: forest-hills-scale15
+  entries:
+  - id: forest-hills-scale15
+    displayName: "\u6797\u5730\u4E18\u9675 \xB7 512\u6269\u56FE"
+    scenePath: Assets/Game/Content/Battlefields/ForestTerrain/ForestHills.unity
+    contentVersion: 1
+    terrainId: forest-hills-scale15
+    terrainVersion: 1
+    terrainSurface: {fileID: 11400000, guid: 418055dad5d4a3147802a57ffed58dd8, type: 2}
+    rules: {fileID: 11400000, guid: cad7c803bf2d4453b007490397aa7f42, type: 2}
+    preview: {fileID: 2800000, guid: ea99c9e087f037e489ba16e782a67368, type: 3}
+    description: "512\xD7512\u771F\u5B9E\u53EF\u73A9\u5730\u5F62 \xB7 \u5F00\u9614\u5E03\u9635\u533A\n\u9ED8\u8BA42048\u4EBA\uFF0C\u8BD5\u9A8C\u4E0A\u96505\u4E07\u4EBA\uFF1B\u4E0D\u662F\u4E8C\u5341\u4E07\u4EBA\u9A8C\u6536\u3002"
+    briefing: "\u4E24\u4FA7\u5F00\u9614\u5E03\u9635\uFF0C\u4E2D\u592E\u4FDD\u7559\u63A8\u8FDB\u7A7A\u95F4\uFF1B\u6811\u6797\u548C\u5CA9\u7FA4\u79FB\u81F3\u5916\u56F4\u7981\u884C\u5E26\u3002\n\u89D2\u8272\u4E0E\u6811\u6728\u4F53\u578B\u4E0D\u53D8\uFF0C\u5BFC\u822A\u7CBE\u5EA6\u4FDD\u63012\u7C73\u3002\u53CC\u65B9\u5404\u5341\u4E07\u5728\u6B63\u5E38\u5BC6\u5EA6\u4E0B\u4ECD\u653E\u4E0D\u4E0B\uFF0C\u9700\u66F4\u5927\u5730\u56FE\u3002"
+    hiddenFromSelection: 0
+    selectionNote: 
+    featuredTemplateIds:
+    - roster-male
+    - roster-knight
+  templates:
+  - templateId: launch-open-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: 89618f9d73d69ef48bff878f09b11b28, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-open-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: 6ad8171c095cda74da755c06189f55f6, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-open-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: e3069e72dba4b2945ad6499a3b548430, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-open-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: f82cd80bdf2f0fa48b8efc8a4f546ba3, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-mountain-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: ac21fd4c1509c5646b796b224e257312, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-mountain-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: 88da02bf9ece2eb4d9b06dfd08ed690f, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-mountain-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: 6005527998b49b049ab9efc90b532995, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-mountain-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: 86c9b1a256fd46c48bdc1302d0d327d5, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-mountain-unit-4
+    revision: 1
+    config: {fileID: 11400000, guid: 9af64726e5cfb664b9800cc220e8d63e, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-mountain-unit-5
+    revision: 1
+    config: {fileID: 11400000, guid: 6f8735738e99028418a955e10175450e, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-point-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: b96b506476cd6f04c8d09622c74b43b7, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-point-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: 551b04d444a907143afb0b55c182ed9f, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-point-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: bab4ff51e5586484bbf92a72b6ee13e3, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-point-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: ea6276b75d467c540949213891643f20, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-three-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: 07c271bbea582d24aab249719c6bbb05, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-three-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: d8c39e18f733d19478b7f151ec4a29fa, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-three-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: e221f8d02cfa3134f87982ac9186b781, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-three-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: 4754300882a992f4bb1cabb8870c06a6, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-three-unit-4
+    revision: 1
+    config: {fileID: 11400000, guid: 90ffb4915b3679348b3f1f0e33026487, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-three-unit-5
+    revision: 1
+    config: {fileID: 11400000, guid: 72f9ae6c755f71e48878b3fb217e937f, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-standard-unit-0
+    revision: 1
+    config: {fileID: 11400000, guid: af2f9d6b1617f60458c86aae6d847837, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-standard-unit-1
+    revision: 1
+    config: {fileID: 11400000, guid: f0dd5d1cacfae43479249d31433802f9, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 6db2d74482259c144807afab55873c38, type: 3}
+  - templateId: launch-standard-unit-2
+    revision: 1
+    config: {fileID: 11400000, guid: ecea2e563b88f9a4c9876d6fce3b0e32, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: launch-standard-unit-3
+    revision: 1
+    config: {fileID: 11400000, guid: 5af6e6c36dd33334ea5b750e3fc3c044, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: roster-male
+    revision: 1
+    config: {fileID: 11400000, guid: d8b1203d26d60b442a89652a4fa2f934, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: ff35588ae2761364c941c682af953f90, type: 3}
+  - templateId: roster-female
+    revision: 1
+    config: {fileID: 11400000, guid: 351be090e6836554dbab626e11eb501a, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 50bd16cdc3fda8d479269559a641812a, type: 3}
+  - templateId: roster-unitychan
+    revision: 1
+    config: {fileID: 11400000, guid: 9b68da1b4ce8123419e6363d73b6e8c7, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: e39fec2900f75a847af1eb5b89732e5d, type: 3}
+  - templateId: roster-legacy-skeleton
+    revision: 1
+    config: {fileID: 11400000, guid: dbf3354863973bf4c9585ec4dffae2c7, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: e209cfb506e2e77429e04e8ab8520fde, type: 3}
+  - templateId: roster-knight
+    revision: 1
+    config: {fileID: 11400000, guid: d57cc004f8c01104083c91b74026a276, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: roster-ranger
+    revision: 1
+    config: {fileID: 11400000, guid: 2b30e1c88323280488da9be049354fa2, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 974908093e46b25408d4862a5c3b2dea, type: 3}
+  - templateId: roster-skeleton-warrior
+    revision: 1
+    config: {fileID: 11400000, guid: 08ea7092940f9bd409195be721f25f0b, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: b3eb09838a647b245bc4b84c75a5516b, type: 3}
+  - templateId: roster-skeleton-rogue
+    revision: 1
+    config: {fileID: 11400000, guid: 7e73a563bd7a9704b86501ff5da24bad, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 1ed565847be627f469c5c3ef58dce64a, type: 3}
+  - templateId: roster-skeleton-mage
+    revision: 1
+    config: {fileID: 11400000, guid: afcd3adf6c9dee8488fe5123be9e89ae, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 0e2d2e1f2d536a64898973124e01abae, type: 3}
+  - templateId: roster-orc
+    revision: 1
+    config: {fileID: 11400000, guid: 95b78e2db4069a54e9b87f3441314d87, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 18f5c90646560f14f835c3dc538ad3c7, type: 3}
+  - templateId: roster-yeti
+    revision: 1
+    config: {fileID: 11400000, guid: b221e9ce1db1e25499da2eaaa8d2d18a, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 1f4c980b5f62d0d43b4ba178265263d0, type: 3}
+  - templateId: roster-mushroom
+    revision: 1
+    config: {fileID: 11400000, guid: 5dc34b09c9af1144da419543f27020b1, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 7af1c9ca1a914b348bd4ea6a9cc3a82b, type: 3}
+  - templateId: roster-large-wolf
+    revision: 1
+    config: {fileID: 11400000, guid: ba3d8aa5e62d8504ba85005f88eab1e9, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 1e24225aeb4b1e045b5dd52d4562cb10, type: 3}
+  - templateId: roster-large-bull
+    revision: 1
+    config: {fileID: 11400000, guid: af14931012c34694a8992e6102bcb8e6, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 0cf62ed6c3ad8fe40a06e6ef95e0a152, type: 3}
+  - templateId: roster-large-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 579b052463e2f5146a8ee14061cfa9f0, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: skeleton-warrior
+    revision: 1
+    config: {fileID: 11400000, guid: 37e392bbd2ada2f4d9685fdbf47fb943, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: b3eb09838a647b245bc4b84c75a5516b, type: 3}
+  - templateId: enemy-collection-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: b0ab4f04c53ffef4fb62778deda4bdfd, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: nonhuman2-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 382cd1a14ae2c8d428214c4af5287cf0, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: roster-triceratops
+    revision: 1
+    config: {fileID: 11400000, guid: e479a92458964df4f917d8d0e04ec059, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5c21deee79a5cc048b87496202d9be1f, type: 3}
+  - templateId: roster-stegosaurus
+    revision: 1
+    config: {fileID: 11400000, guid: 1b5fb98e6fdb92c4493ce5ef27497dce, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: a76ca49c885807f4882c0ae74712d191, type: 3}
+  - templateId: roster-spider
+    revision: 1
+    config: {fileID: 11400000, guid: a889200539954184d905ec2dc784ac72, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: e51f2cad430f16c4e8b052768b0c9198, type: 3}
+  - templateId: roster-mounted-knight
+    revision: 1
+    config: {fileID: 11400000, guid: bb9ede6e3c3011546b07e7fa4fa424fc, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: e5709fe3209d5774eac6e0a4746df201, type: 3}
+  - templateId: cavalry-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: 003d95f018b568848a148fe64563b3e8, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: dragons-knight-control
+    revision: 1
+    config: {fileID: 11400000, guid: ae25f113ceb8f7e479fcbb47d190da72, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: roster-dragon
+    revision: 1
+    config: {fileID: 11400000, guid: be2c2bda6adcfbb41a1da6fc81ca0678, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: f457f9fbbba2ed049ac908fb828fd83c, type: 3}
+  - templateId: roster-dragon-evolved
+    revision: 1
+    config: {fileID: 11400000, guid: 29aedb0cf41ee8e4c8a5698a95a516cc, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 9728b1d3cca024f479e8854a4dafd723, type: 3}
+  - templateId: dragons-phalanx-knight-90
+    revision: 1
+    config: {fileID: 11400000, guid: c7b33954c725b4b49b19e27113443b94, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: dragons-phalanx-knight-150
+    revision: 1
+    config: {fileID: 11400000, guid: f0a38e712b74d5640bdc99793e8b2c2b, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: roster-giant-demon
+    revision: 1
+    config: {fileID: 11400000, guid: 542a266b831e6ab4794f67d0a6f2046d, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: e04713bc7274b0345989ca8230e92118, type: 3}
+  - templateId: roster-giant-dino
+    revision: 1
+    config: {fileID: 11400000, guid: ccc7b1b9d4402b14cb0f0d78ddcd0da8, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 3009e1a44660d3c44b623c1bc7b8d62a, type: 3}
+  - templateId: roster-giant-yeti
+    revision: 1
+    config: {fileID: 11400000, guid: 0f956bc584647d94ca324fd1f84d434a, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 63c83c7e4e09c114895dec2b7d16185d, type: 3}
+  - templateId: roster-giant-bluedemon
+    revision: 1
+    config: {fileID: 11400000, guid: d811f4bc652401a48823fce5878144ce, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: ace55cd5b9be92445b559266040ad84d, type: 3}
+  - templateId: roster-giant-alien
+    revision: 1
+    config: {fileID: 11400000, guid: 56a1ddc75a531bf429dd21bf09fde16e, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: e9b456c6c818f414d982f45721fa3c2d, type: 3}
+  - templateId: roster-orcskull
+    revision: 1
+    config: {fileID: 11400000, guid: 3e3413676b4367948940e50b446d3224, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 1f2556f1ab476e143be0463f34a9d886, type: 3}
+  - templateId: roster-ninja
+    revision: 1
+    config: {fileID: 11400000, guid: 1d183cf270e4cb74b8ab9fdc1781f60f, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: f96b21b55998ad949a8f1d16195c5e52, type: 3}
+  - templateId: roster-tribal
+    revision: 1
+    config: {fileID: 11400000, guid: ae1bd13a58cd9cd4baf1a3ca377d151f, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 2fab95c80097cfe4485a42d0502f6cc5, type: 3}
+  - templateId: roster-knight-legion
+    revision: 1
+    config: {fileID: 11400000, guid: 1052ae1a6fa863d4a96051994f742497, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 5db1779f8beb4a448bbb0ed943a305e0, type: 3}
+  - templateId: roster-cactoro
+    revision: 1
+    config: {fileID: 11400000, guid: 0334cf8115bcaac42895a2a710253529, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 804512b0ebf26944697393ed5cddd176, type: 3}
+  - templateId: roster-frog
+    revision: 1
+    config: {fileID: 11400000, guid: 2394bbd1c61c6fa488ad079a6b82e1d6, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 87fefd96b1e59da478a085a2415a38e4, type: 3}
+  - templateId: roster-monkroose
+    revision: 1
+    config: {fileID: 11400000, guid: 0dccacb0a12a81443921aa804d76d7d7, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: ddde4b2cbab5dd74c99fbf35a708b125, type: 3}
+  - templateId: roster-platformer-crab
+    revision: 1
+    config: {fileID: 11400000, guid: 4579a34ad0fcf4b439e290856416f655, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 73284172f4f543e45b780f8b70a6e3f3, type: 3}
+  - templateId: roster-platformer-enemy
+    revision: 1
+    config: {fileID: 11400000, guid: 536a890d47c3f194ebfa89104480eae9, type: 2}
+    hiddenFromSelection: 1
+    selectionNote: "\u539F\u59CBFBX\u672C\u8EAB\u4E3A\u5934\u90E8\u4E3B\u5BFC\u9020\u578B\uFF0C\u5E76\u975E\u4E22\u5931\u8EAB\u4F53\uFF1B\u5F53\u524D\u5730\u9762\u5175\u56E2\u89D2\u8272\u7F3A\u5C11\u53EF\u8BFB\u7684\u5B8C\u6574\u4F53\u6001\u4E0E\u6B65\u884C/\u51FA\u624B\u8BED\u4E49\u3002\u9000\u51FA\u65B0\u6B63\u5F0F\u9009\u62E9\uFF0C\u8D44\u6E90\u4E0E\u65E7\u65B9\u6848\u8EAB\u4EFD\u4FDD\u7559\u3002"
+    unitPreview: {fileID: 0}
+  - templateId: roster-platformer-skull
+    revision: 1
+    config: {fileID: 11400000, guid: deb2592f0ea467741b8ee0e7bf477034, type: 2}
+    hiddenFromSelection: 1
+    selectionNote: "\u539F\u59CBFBX\u672C\u8EAB\u4E3A\u5934\u90E8\u4E3B\u5BFC\u9020\u578B\uFF0C\u5E76\u975E\u4E22\u5931\u8EAB\u4F53\uFF1B\u5F53\u524D\u5730\u9762\u5175\u56E2\u89D2\u8272\u7F3A\u5C11\u53EF\u8BFB\u7684\u5B8C\u6574\u4F53\u6001\u4E0E\u6B65\u884C/\u51FA\u624B\u8BED\u4E49\u3002\u9000\u51FA\u65B0\u6B63\u5F0F\u9009\u62E9\uFF0C\u8D44\u6E90\u4E0E\u65E7\u65B9\u6848\u8EAB\u4EFD\u4FDD\u7559\u3002"
+    unitPreview: {fileID: 0}
+  - templateId: roster-robot-expressive
+    revision: 1
+    config: {fileID: 11400000, guid: 6f11aef30b52f35469ed3baf49428b50, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 021544ba15490804cbbc9b6cd813a878, type: 3}

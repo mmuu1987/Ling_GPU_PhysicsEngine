@@ -14,14 +14,14 @@ namespace MassEngine.Game.Editor
     /// <summary>One pinned CC0 RobotExpressive conversion. Never edits formal catalogs, old assets or generic gates.</summary>
     public static class RobotExpressiveBuilder
     {
-        public const string Source="Assets/CharacterPilotSource/TowerDefenseRobotExpressive01";
+        public const string Source="Assets/Art/Source/CharacterPilot/TowerDefenseRobotExpressive01";
         public const string SourceSha="047f5e5fb3bb6d378bd1df16ca6137f2a596c99b3a1b5690b4020c05aaf6f319";
-        public const string Root="Assets/Game/RobotExpressivePilot/Version01";
+        public const string Root="Assets/Game/Content/Characters/RobotExpressivePilot/Version01";
         public const string Native=Root+"/Native03";
         public const string Prepared=Root+"/Prepared04";
         public const string RecipePath=Root+"/RobotRecipe.asset";
-        public const string Output="Assets/Game/CharacterPipeline/Generated/TowerDefenseRobot01";
-        const string Knight="Assets/Game/CharacterPipeline/Generated/Knight04";
+        public const string Output="Assets/Game/Authoring/CharacterPipeline/Generated/TowerDefenseRobot01";
+        const string Knight="Assets/Game/Authoring/CharacterPipeline/Generated/Knight04";
         [Serializable] sealed class Provenance { public string sourceSha256,bundleSha256,license,commit; }
         [Serializable] public sealed class ConversionEvidence
         {

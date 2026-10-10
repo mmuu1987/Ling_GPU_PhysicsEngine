@@ -23,8 +23,8 @@ namespace MassEngine.Game.Tests
     {
         public void Setup()
         {
-            const string menu = "Assets/Game/PlatformerBatch6/Prepared01/Integrated/Menu.unity";
-            var catalog = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>("Assets/Game/PlatformerBatch6/Prepared01/Integrated/Catalog.asset");
+            const string menu = "Assets/Game/Content/Characters/PlatformerBatch6/Prepared01/Integrated/Menu.unity";
+            var catalog = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>("Assets/Game/Content/Characters/PlatformerBatch6/Prepared01/Integrated/Catalog.asset");
             if (catalog == null) throw new InvalidOperationException("Owned collection is missing.");
             // SceneManager's player scene list is captured at Play startup, not by changing settings during Play.
             EditorBuildSettings.scenes = new[] { menu }.Concat(catalog.entries.Select(e => e.scenePath)).Distinct().Select(p => new EditorBuildSettingsScene(p, true)).ToArray();
@@ -34,8 +34,8 @@ namespace MassEngine.Game.Tests
     [PrebuildSetup(typeof(PlatformerBatch6PlanBuildSetup))]
     public sealed class PlatformerBatch6PlanCycleTests
     {
-        private const string DefaultMenu = "Assets/Game/PlatformerBatch6/Prepared01/Integrated/Menu.unity";
-        private const string Catalog = "Assets/Game/PlatformerBatch6/Prepared01/Integrated/Catalog.asset";
+        private const string DefaultMenu = "Assets/Game/Content/Characters/PlatformerBatch6/Prepared01/Integrated/Menu.unity";
+        private const string Catalog = "Assets/Game/Content/Characters/PlatformerBatch6/Prepared01/Integrated/Catalog.asset";
         private static readonly string[] Keys = { "crab", "enemy", "skull" };
         private static readonly int[] Counts = { 100, 75, 95 }, Hp = { 90, 110, 85 };
         private string phase, root, menu;

@@ -19,7 +19,7 @@ namespace MassEngine.Tests
     public sealed class ProjectileImpactFxSceneTests
     {
         // Newest dragon integration (IntegrateFire05).
-        private const string ScenePath = "Assets/Game/Dragons/Prepared07/Integrated/dragonBattlefield.unity";
+        private const string ScenePath = "Assets/Game/Content/Characters/Dragons/Prepared07/Integrated/dragonBattlefield.unity";
         private static readonly FieldInfo FxField = typeof(MassEngineManager).GetField("projectileImpactFx", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo TimeField = typeof(MassEngineManager).GetField("projectileSimulationTime", BindingFlags.Instance | BindingFlags.NonPublic);
 

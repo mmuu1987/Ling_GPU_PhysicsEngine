@@ -21,7 +21,7 @@ namespace MassEngine.Tests
     /// </summary>
     public sealed class Troops4BattlefieldTests
     {
-        private const string Folder = "Assets/Game/Troops4/Prepared01/Integrated/";
+        private const string Folder = "Assets/Game/Content/Characters/Troops4/Prepared01/Integrated/";
         private static readonly string[] Keys = { "orcskull", "ninja", "tribal" };
         private static string Dir => Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs", "AgentMonsters3"));
         private static string output = "troops4-shipped-03";

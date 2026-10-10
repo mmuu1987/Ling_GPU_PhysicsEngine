@@ -19,24 +19,27 @@ namespace MassEngine.Game
         {
             if (session == null || WarSandboxSceneSession.Instance != session) return;
             if (libraryOpen && (session.State != WarSandboxEntryState.Menu || session.SettingsOpen || session.ConfirmationOpen)) CloseLibrary();
+            if (session.HelpOpen && Input.GetKeyDown(KeyCode.Escape)) { Guide30.For(session)?.Close(); nextRefresh = 0; }
             bool closedPreview = Input.GetKeyDown(KeyCode.Escape) && unitPreviewOpen;
             if (closedPreview) { unitPreviewOpen = false; nextRefresh = 0; }
             if (Input.GetKeyDown(KeyCode.Escape) && libraryOpen && !closedPreview) LibraryEscape();
-            if (Input.GetKeyDown(KeyCode.Escape) && session.SettingsOpen) CloseSettings();
+            if (Input.GetKeyDown(KeyCode.Escape) && session.SettingsOpen) SettingsEscape();
             if (Input.GetKeyDown(KeyCode.Escape) && session.ConfirmationOpen) session.CancelConfirmation();
-            if (CatalogInteractive()) CatalogKeys();
+            if (!session.HelpInputBlocked30 && CatalogInteractive()) CatalogKeys();
             if (openDeploymentOnEnter && session.State == WarSandboxEntryState.Battle && !session.InputBlocked)
             {
                 var editor = session.Controller != null ? session.Controller.GetComponent<WarSandboxDeploymentHUD>() : null;
                 if (editor != null) { editor.RequestEdit(); openDeploymentOnEnter = false; }
             }
+            Guide30.For(session)?.Tick();
             if (ui == null) ui = new WarSandboxUGUI(transform, "Front End Canvas", 200);
             var size = new Vector2(ui.Width, ui.Height);
             if (size != lastUiSize) { lastUiSize = size; nextRefresh = 0; } // Resize must redraw now, not leave a clipped old layout.
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + 0.1f;
             ui.Begin();
-            if (session.SettingsOpen) DrawSettings();
+            if (session.HelpOpen) DrawHelp30();
+            else if (session.SettingsOpen) DrawSettings();
             else if (session.ConfirmationOpen) DrawConfirmation();
             else switch (session.State)
             {
@@ -45,7 +48,7 @@ namespace MassEngine.Game
                 case WarSandboxEntryState.Failed: DrawFailure(); break;
                 default: if (libraryOpen) DrawLibrary(); else DrawCatalog(); break;
             }
-            if (unitPreviewOpen && session.State == WarSandboxEntryState.Menu && !session.SettingsOpen && !session.ConfirmationOpen)
+            if (unitPreviewOpen && session.State == WarSandboxEntryState.Menu && !session.SettingsOpen && !session.ConfirmationOpen && !session.HelpOpen)
                 DrawExpandedUnitPreview();
             else if (session.State != WarSandboxEntryState.Menu) unitPreviewOpen = false;
             ui.End();
@@ -57,10 +60,10 @@ namespace MassEngine.Game
         public static Rect NavigationRect(float width, float height)
         {
             float scale = Mathf.Clamp(Mathf.Min(width / 1280f, height / 720f), 0.5f, 1.5f);
-            return new Rect(width - (NavMargin + NavWidth) * scale, NavTop * scale, NavWidth * scale, NavHeight * scale);
+            return new Rect(width - (NavMargin + NavigationWidth30) * scale, NavTop * scale, NavigationWidth30 * scale, NavHeight * scale);
         }
         /// <summary>The same strip in UI units (what presenters pass to WarSandboxUGUI).</summary>
-        public static Rect NavigationLayout(float uiWidth) => new Rect(uiWidth - NavMargin - NavWidth, NavTop, NavWidth, NavHeight);
+        public static Rect NavigationLayout(float uiWidth) => new Rect(uiWidth - NavMargin - NavigationWidth30, NavTop, NavigationWidth30, NavHeight);
         public static bool IsOverNavigation(Vector2 point)
         {
             var session = WarSandboxSceneSession.Instance;
@@ -273,12 +276,14 @@ namespace MassEngine.Game
             ui.Button("failure-return", new Rect(x, ui.Height - 140, w, 44), "返回战场目录", () => session.TryReturnToMenu(true, out _), true);
             ui.Button("failure-quit", new Rect(x, ui.Height - 88, w, 36), "退出游戏", RequestQuit);
         }
+        public void RequestReturn28() => RequestReturn();
         private void RequestReturn()
         {
+            PlanState28.For(session.Controller)?.RefreshKnownFiles();
             confirmingQuit = false;
             if (session.RequiresEndConfirmation) session.BeginConfirmation(); else session.TryReturnToMenu(false, out _);
         }
-        private void RequestQuit() { confirmingQuit = true; session.BeginConfirmation(); }
+        private void RequestQuit() { PlanState28.For(session.Controller)?.RefreshKnownFiles(); confirmingQuit = true; session.BeginConfirmation(); }
         private void DrawConfirmation()
         {
             ui.Panel("modal-shade", new Rect(0, 0, ui.Width, ui.Height), WarSandboxUGUI.Shade);
@@ -286,8 +291,8 @@ namespace MassEngine.Game
             var card = new Rect(x, y, w, 280);
             ui.Panel("modal-card", card); ui.Brackets("modal-card-br", card);
             ui.Code("modal-code", new Rect(x + 24, y + 18, w - 48, 20), confirmingQuit ? "SYSTEM // EXIT" : "MISSION // ABORT", 12, WarSandboxUGUI.Accent);
-            ui.LabelAligned("modal-title", new Rect(x + 14, y + 40, w - 28, 44), confirmingQuit ? "退出游戏？" : "结束本局？", 26, WarSandboxUGUI.Ink, true, TextAnchor.MiddleLeft);
-            ui.Label("modal-body", new Rect(x + 14, y + 90, w - 28, 80), (WarSandboxRuntimeDeployment.BlocksCommands(session.Controller)
+            ui.LabelAligned("modal-title", new Rect(x + 14, y + 40, w - 28, 44), confirmingQuit ? "退出游戏？" : PlanState28.For(session.Controller) != null && PlanState28.For(session.Controller).NeedsLeaveWarning ? "离开当前战场？" : "结束本局？", 26, WarSandboxUGUI.Ink, true, TextAnchor.MiddleLeft);
+            ui.Label("modal-body", new Rect(x + 14, y + 90, w - 28, 80), PlanState28.LeaveText(session.Controller, WarSandboxRuntimeDeployment.BlocksCommands(session.Controller)
                 ? "未应用的布阵修改不会保留。" : "当前战斗进度不会保留。") + (session.Error == null ? "" : "\n" + session.Error), 15, WarSandboxUGUI.Muted);
             ui.Button("modal-confirm", new Rect(x + 24, y + 180, w - 48, 40), confirmingQuit ? "退出游戏" : "结束并返回目录", () =>
             { if (confirmingQuit) Application.Quit(); else session.TryReturnToMenu(true, out _); }, true);

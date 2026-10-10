@@ -239,6 +239,8 @@ namespace MassEngine.Game
         /// <summary>Number of templates running with at least one non-official stat.</summary>
         public int CustomTemplateCount { get; private set; }
         public bool HasCustomStats => CustomTemplateCount > 0;
+        public bool HasRadiusChanges { get; private set; }
+        private struct TunedConfigs { public CombatConfig combat; public MovementConfig movement; public FlockingConfig flocking; }
         private readonly List<UnityEngine.Object> owned = new List<UnityEngine.Object>();
 
         public WarSandboxDeploymentInstance(WarSandboxDeploymentEntry[] entries) : this(entries, null) { }
@@ -250,7 +252,7 @@ namespace MassEngine.Game
         /// </summary>
         public WarSandboxDeploymentInstance(WarSandboxDeploymentEntry[] entries, WarSandboxStatResolver stats)
         {
-            var tuned = new Dictionary<UnitTypeConfig, KeyValuePair<CombatConfig, MovementConfig>>();
+            var tuned = new Dictionary<UnitTypeConfig, TunedConfigs>();
             try
             {
                 Scenario = Own(ScriptableObject.CreateInstance<ScenarioConfig>());
@@ -272,8 +274,9 @@ namespace MassEngine.Game
                             if (stats.TryGetEffectiveChanges(e.template, out var changes)) { configs = Tune(e.template, changes); CustomTemplateCount++; }
                             tuned.Add(e.template, configs);
                         }
-                        if (configs.Key != null) unit.combatConfig = configs.Key;
-                        if (configs.Value != null) unit.movementConfig = configs.Value;
+                        if (configs.combat != null) unit.combatConfig = configs.combat;
+                        if (configs.movement != null) unit.movementConfig = configs.movement;
+                        if (configs.flocking != null) unit.flockingConfig = configs.flocking;
                     }
                     spawn.unitCount = e.count; spawn.spawnCenter = e.center;
                     spawn.formationDensity = e.density; spawn.formationAspect = e.aspect; spawn.spawnSize = e.manualSize;
@@ -283,13 +286,19 @@ namespace MassEngine.Game
             catch { Dispose(); throw; }
         }
 
-        private KeyValuePair<CombatConfig, MovementConfig> Tune(UnitTypeConfig template, WarSandboxStatSet changes)
+        private TunedConfigs Tune(UnitTypeConfig template, WarSandboxStatSet changes)
         {
-            CombatConfig combat = null; MovementConfig movement = null;
+            CombatConfig combat = null; MovementConfig movement = null; FlockingConfig flocking = null;
             foreach (var pair in changes.Values)
             {
                 var definition = WarSandboxUnitStats.Get(pair.Key);
-                if (definition.UsesMovement)
+                if (definition.UsesFlocking)
+                {
+                    if (flocking == null)
+                    { flocking = Own(UnityEngine.Object.Instantiate(template.flockingConfig)); flocking.name = template.flockingConfig.name + " (Tuned radius)"; }
+                    HasRadiusChanges = true;
+                }
+                else if (definition.UsesMovement)
                 {
                     if (movement == null)
                     {
@@ -302,9 +311,9 @@ namespace MassEngine.Game
                     combat = Own(UnityEngine.Object.Instantiate(template.combatConfig));
                     combat.name = template.combatConfig.name + " (Tuned)";
                 }
-                definition.Write(combat, movement, pair.Value);
+                definition.Write(combat, movement, pair.Value, flocking);
             }
-            return new KeyValuePair<CombatConfig, MovementConfig>(combat, movement);
+            return new TunedConfigs { combat = combat, movement = movement, flocking = flocking };
         }
 
         private T Own<T>(T value) where T : UnityEngine.Object
@@ -324,3 +333,4 @@ namespace MassEngine.Game
         }
     }
 }
+

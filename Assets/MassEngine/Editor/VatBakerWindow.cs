@@ -11,7 +11,7 @@ namespace MassEngine.Editor
     /// </summary>
     public sealed class VatBakerWindow : EditorWindow
     {
-        private const string DefaultFolder = "Assets/VAT_Data";
+        private const string DefaultFolder = "Assets/Art/VAT/Characters";
 
         [SerializeField] private GameObject model;
         [SerializeField] private AnimationClip idle;
