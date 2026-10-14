@@ -24,6 +24,52 @@ namespace MassEngine.Game
             aspect = unit.spawnConfig.formationAspect, manualSize = unit.spawnConfig.spawnSize
         };
 
+        // C4 (2026-10-12): large bodies (dragons, giants, cavalry; radius above 1.5 m, half the
+        // default 3 m spatial cell) start as a small block instead of the 1000-strong crowd default.
+        public const float LargeBodyRadius = 1.5f;
+        public const int CrowdDefaultCount = 1000, LargeDefaultCount = 24;
+        // Auto-sized blocks are thinned to this fraction of square packing (one body per (2r)^2).
+        public const float AutoPackingFraction = .8f;
+        public static bool IsLargeTemplate(UnitTypeConfig unit) =>
+            unit != null && unit.flockingConfig != null && unit.flockingConfig.agentRadius > LargeBodyRadius;
+        public static int DefaultCount(UnitTypeConfig unit) => IsLargeTemplate(unit) ? LargeDefaultCount : CrowdDefaultCount;
+
+        /// <summary>For auto-sized blocks only: thins a block the roster packing check would reject
+        /// (e.g. a dragon given the crowd's spacing). Never packs tighter or edits a manual size.
+        /// Auto sizing cannot go below SpawnConfig's 0.05 /m2 floor (Draft validation, HUD input and
+        /// saved plans all enforce it), which is still too dense for any body over ~2.2 m; such a
+        /// block gets an explicit footprint of the same aspect at the thinned density instead.</summary>
+        public void FitDensityToBody()
+        {
+            if (template == null || template.flockingConfig == null || manualSize.x > 0 || manualSize.z > 0) return;
+            float limit = BodyDensityLimit(template.flockingConfig.agentRadius);
+            float effective = Mathf.Clamp(density, AutoDensityFloor, SpawnConfig.PackingLimitPerSquareMeter);
+            if (effective <= limit) return; // also false for NaN density, which falls through and is replaced
+            if (limit >= AutoDensityFloor) { density = limit; return; }
+            float shape = Mathf.Clamp(float.IsNaN(aspect) ? 1f : aspect, .1f, 10f);
+            float depth = Mathf.Sqrt(Mathf.Max(1, count) / limit / shape); // X, as SpawnConfig.ResolveSpawnSize
+            manualSize = new Vector3(depth, 0f, depth * shape);
+        }
+
+        // SpawnConfig.ResolveSpawnSize clamps auto density to this floor.
+        public const float AutoDensityFloor = .05f;
+
+        /// <summary>Densest spacing the body allows: AutoPackingFraction of square packing, one body per (2r)^2.</summary>
+        public static float BodyDensityLimit(float radius)
+        {
+            float r = Mathf.Max(.05f, radius);
+            return AutoPackingFraction / (4f * r * r);
+        }
+
+        /// <summary>Sparsest density an edit may produce: the 0.05 /m2 floor, or the body limit when the body is so
+        /// large that even the floor packs it too tightly (dragons). Below 0.05 the footprint stays explicit.</summary>
+        public static float MinimumDensity(UnitTypeConfig unit) =>
+            unit != null && unit.flockingConfig != null ? Mathf.Min(AutoDensityFloor, BodyDensityLimit(unit.flockingConfig.agentRadius)) : AutoDensityFloor;
+
+        /// <summary>Densest density a count edit targets: the 1.5 /m2 packing limit, or the body limit if tighter.</summary>
+        public static float MaximumDensity(UnitTypeConfig unit) =>
+            unit != null && unit.flockingConfig != null ? Mathf.Min(SpawnConfig.PackingLimitPerSquareMeter, BodyDensityLimit(unit.flockingConfig.agentRadius)) : SpawnConfig.PackingLimitPerSquareMeter;
+
         public Vector3 Size => SpawnConfig.ResolveSpawnSize(count, density, aspect, manualSize);
         public Rect Bounds => new Rect(center.x - Size.x * 0.5f, center.z - Size.z * 0.5f, Size.x, Size.z);
         public string Name => template != null ? template.unitTypeName : "Missing template";
@@ -54,8 +100,52 @@ namespace MassEngine.Game
         public WarSandboxStatOverrides Stats => stats.Clone();
         public int Count => entries.Count;
         public int Revision { get; private set; }
+        /// <summary>2048 maps: outward x offset for compositions added from template defaults (see
+        /// WarSandboxRuntimeDeployment.authoredSpawnOutwardOffset). 0 = unchanged.</summary>
+        public float SpawnOutwardOffset { get; set; }
+        public static WarSandboxDeploymentEntry ShiftOutward(WarSandboxDeploymentEntry e, float offset)
+        {
+            if (offset != 0f && e.center.x != 0f) e.center.x += e.center.x < 0f ? -offset : offset;
+            return e;
+        }
         public bool CanUndo => undo.Count > 0;
         public bool CanRedo => redo.Count > 0;
+        public const string LockedMessage = "挑战模式：敌方编成已锁定，只能编辑你指挥的军团。";
+        /// <summary>Challenge mode (2026-10-14): entries of armies the player does not command are read-only.</summary>
+        public bool IsLocked(int index) => index >= 0 && index < entries.Count && rules.Locks(entries[index].teamId);
+        public bool IsTeamLocked(int teamId) => rules.Locks(teamId);
+        private bool TemplateLocked(UnitTypeConfig template)
+        {
+            if (!rules.challengeEnabled) return false;
+            for (int i = 0; i < entries.Count; i++) if (entries[i].template == template && rules.Locks(entries[i].teamId)) return true;
+            return false;
+        }
+        /// <summary>Budget battle (2026-10-14): default budget for every army; one Undo step.</summary>
+        public bool SetBudget(bool enabled, int points)
+        {
+            if (points < 0 || points > WarSandboxUnitCost.MaxBudget) return false;
+            if (rules.budgetEnabled == enabled && rules.budgetPoints == points) return false;
+            Remember(); rules.budgetEnabled = enabled; rules.budgetPoints = points; return true;
+        }
+        /// <summary>Per-army budget; 0 = follow the default budget. One Undo step.</summary>
+        public bool SetTeamBudget(int teamId, int points)
+        {
+            if (teamId < 0 || teamId > ConfigValidator.MaxTeamId || points < 0 || points > WarSandboxUnitCost.MaxBudget) return false;
+            var old = rules.budgetTeamPoints;
+            int current = old != null && teamId < old.Length ? old[teamId] : 0;
+            if (current == points) return false;
+            var next = new int[ConfigValidator.MaxTeamId + 1];
+            if (old != null) Array.Copy(old, next, Mathf.Min(old.Length, next.Length));
+            next[teamId] = points;
+            Remember(); rules.budgetTeamPoints = next; return true;
+        }
+        /// <summary>Turns challenge mode on for teamId, or off. One Undo step; never blocked by the lock itself.</summary>
+        public bool SetChallenge(bool enabled, int teamId)
+        {
+            if (teamId < 0 || teamId > ConfigValidator.MaxTeamId) return false;
+            if (rules.challengeEnabled == enabled && (!enabled || rules.challengeTeam == teamId)) return false;
+            Remember(); rules.challengeEnabled = enabled; rules.challengeTeam = enabled ? teamId : 0; return true;
+        }
         public WarSandboxDeploymentEntry this[int index] => entries[index];
 
         public WarSandboxDeploymentDraft(IEnumerable<WarSandboxDeploymentEntry> source, WarSandboxBattlefieldRules? initialRules = null,
@@ -102,6 +192,7 @@ namespace MassEngine.Game
         public bool SetStat(UnitTypeConfig template, WarSandboxUnitStat stat, float value)
         {
             if (template == null || !WarSandboxUnitStats.Applies(template, WarSandboxUnitStats.Get(stat))) return false;
+            if (TemplateLocked(template)) return false;
             var probe = stats.Clone();
             if (!probe.Set(template, stat, value)) return false;
             bool coalesce = undo.Count > 0 && redo.Count == 0 && coalesceTemplate == template && coalesceStat == stat;
@@ -112,13 +203,13 @@ namespace MassEngine.Game
 
         public bool ClearStat(UnitTypeConfig template, WarSandboxUnitStat stat)
         {
-            if (!stats.TryGet(template, stat, out _)) return false;
+            if (!stats.TryGet(template, stat, out _) || TemplateLocked(template)) return false;
             Remember(); stats.Remove(template, stat); return true;
         }
 
         public bool ClearTemplateStats(UnitTypeConfig template)
         {
-            if (stats.Get(template).Count == 0) return false;
+            if (stats.Get(template).Count == 0 || TemplateLocked(template)) return false;
             Remember(); stats.RemoveTemplate(template); return true;
         }
 
@@ -134,27 +225,29 @@ namespace MassEngine.Game
         public bool Set(int index, WarSandboxDeploymentEntry value)
         {
             if (index < 0 || index >= Count || entries[index].Equals(value)) return false;
+            if (rules.Locks(entries[index].teamId) || rules.Locks(value.teamId)) return false;
             Remember(); entries[index] = value; return true;
         }
 
         public bool Add(UnitTypeConfig template, int teamId, bool templateDefaults = false)
         {
             if (Count >= MaxCompositions || template == null || template.spawnConfig == null ||
-                teamId < 0 || teamId > ConfigValidator.MaxTeamId) return false;
-            var value = WarSandboxDeploymentEntry.From(template);
-            value.teamId = teamId; if (!templateDefaults) { value.count = 1000; value.manualSize = Vector3.zero; }
+                teamId < 0 || teamId > ConfigValidator.MaxTeamId || rules.Locks(teamId)) return false;
+            var value = ShiftOutward(WarSandboxDeploymentEntry.From(template), SpawnOutwardOffset);
+            value.teamId = teamId; if (!templateDefaults) { value.count = WarSandboxDeploymentEntry.DefaultCount(template); value.manualSize = Vector3.zero; }
+            value.FitDensityToBody();
             Remember(); entries.Add(value); return true;
         }
 
         public bool Remove(int index)
         {
-            if (index < 0 || index >= Count) return false;
+            if (index < 0 || index >= Count || rules.Locks(entries[index].teamId)) return false;
             Remember(); entries.RemoveAt(index); return true;
         }
 
         public bool RemoveArmy(int teamId)
         {
-            if (!entries.Exists(e => e.teamId == teamId)) return false;
+            if (rules.Locks(teamId) || !entries.Exists(e => e.teamId == teamId)) return false;
             Remember(); entries.RemoveAll(e => e.teamId == teamId); return true;
         }
 
@@ -184,13 +277,22 @@ namespace MassEngine.Game
             history.Add(snapshot);
         }
 
-        public bool TryValidate(Vector2 worldSize, WarSandboxBattlefieldRules rules, out string error)
+        /// <summary>spatial=false (2026-10-12, deployment B) checks only what an edit must never break: representable
+        /// values, team/facing, counts and totals. Footprint bounds, crowding, obstacles and overlaps are skipped so an
+        /// edit may leave the draft temporarily invalid; apply/start/save always run the full (spatial) check.</summary>
+        public bool TryValidate(Vector2 worldSize, WarSandboxBattlefieldRules rules, out string error, bool spatial = true)
         {
             error = null;
             if (Count < 1 || Count > MaxCompositions) error = "需要 1 到 " + MaxCompositions + " 个编成。";
             else if (!Finite(worldSize.x) || !Finite(worldSize.y) || worldSize.x <= 0 || worldSize.y <= 0) error = "战场尺寸无效。";
             else if (!rules.TryValidate(out error)) return false;
             if (error != null) return false;
+            if (rules.challengeEnabled)
+            {
+                bool own = false;
+                for (int i = 0; i < Count; i++) own |= entries[i].teamId == rules.challengeTeam;
+                if (!own) { error = "挑战模式：你指挥的" + WarSandboxBattleController.DefaultArmyName(rules.challengeTeam) + "没有编成，请重新选择指挥的军团。"; return false; }
+            }
             long total = 0;
             for (int i = 0; i < Count; i++)
             {
@@ -209,6 +311,7 @@ namespace MassEngine.Game
                 if (error != null) return false;
                 total += e.count;
                 if (total > MaxTotalUnits) { error = "总兵力不能超过 " + MaxTotalUnits + "。"; return false; }
+                if (!spatial) continue;
                 Rect bounds = e.Bounds;
                 if (!Finite(e.Size) || bounds.xMin < -worldSize.x * 0.5f || bounds.xMax > worldSize.x * 0.5f ||
                     bounds.yMin < -worldSize.y * 0.5f || bounds.yMax > worldSize.y * 0.5f)
@@ -337,4 +440,5 @@ namespace MassEngine.Game
         }
     }
 }
+
 

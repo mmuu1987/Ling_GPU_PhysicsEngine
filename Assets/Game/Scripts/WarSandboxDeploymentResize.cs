@@ -16,6 +16,13 @@ namespace MassEngine.Game
                 !Finite(depthWidth.x)||!Finite(depthWidth.y)||depthWidth.x<=0||depthWidth.y<=0)
             {error="人数、中心和尺寸必须为有效正数（中心可为负）。";return false;}
             double area=(double)depthWidth.x*depthWidth.y;float density=(float)(source.count/area),aspect=depthWidth.y/depthWidth.x;
+            float floor=WarSandboxDeploymentEntry.MinimumDensity(source.template);
+            if(density<.05f-1e-6f&&density>=floor*(1-1e-4f)&&aspect>=.1f-1e-6f&&aspect<=10f+1e-6f)
+            {
+                // Too sparse for the auto footprint (0.05 /m2 floor) but required by a large body: keep it explicit,
+                // exactly as FitDensityToBody does. density/aspect fields stay as they were (still in range).
+                result.center=center;result.manualSize=new Vector3(depthWidth.x,source.manualSize.y,depthWidth.y);return true;
+            }
             if(density<.05f-1e-6f||density>SpawnConfig.PackingLimitPerSquareMeter+1e-6f||aspect<.1f-1e-6f||aspect>10f+1e-6f)
             {error="尺寸超出密度0.05–1.5或宽深比0.1–10的可表示范围。";return false;}
             result.center=center;result.density=Mathf.Clamp(density,.05f,SpawnConfig.PackingLimitPerSquareMeter);result.aspect=Mathf.Clamp(aspect,.1f,10);result.manualSize=Vector3.zero;
@@ -42,7 +49,7 @@ namespace MassEngine.Game
             var size=original.Size;float d=size.x,w=size.z;
             if(!Finite(d)||!Finite(w)||d<=0||w<=0||original.count<=0){error="原占地无效。";return false;}
             float nd=x==0?d:d+x*delta.x,nw=z==0?w:w+z*delta.y;bool crossed=nd<=0||nw<=0;
-            double minArea=original.count/(double)SpawnConfig.PackingLimitPerSquareMeter,maxArea=original.count/.05;
+            double minArea=original.count/(double)SpawnConfig.PackingLimitPerSquareMeter,maxArea=original.count/(double)WarSandboxDeploymentEntry.MinimumDensity(original.template);
             if(locked)
             {
                 float ratio=w/d;if(ratio<.1f||ratio>10){error="旧尺寸比例超出自动范围，不能锁比例转换。";return false;}
@@ -79,3 +86,4 @@ namespace MassEngine.Game
         }
     }
 }
+

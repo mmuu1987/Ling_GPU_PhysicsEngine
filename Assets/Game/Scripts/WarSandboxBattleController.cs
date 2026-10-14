@@ -29,6 +29,13 @@ namespace MassEngine.Game
         [Header("Battle Rules")]
         public WarSandboxBattlefieldConfig battlefieldConfig;
         public WarSandboxGameMode gameMode = WarSandboxGameMode.Annihilation;
+        /// <summary>Challenge mode (2026-10-14): only challengeTeam accepts player commands. Set through battlefield rules.</summary>
+        [HideInInspector] public bool challengeEnabled;
+        [HideInInspector] public int challengeTeam;
+        /// <summary>Budget battle (2026-10-14): carried so the deployment draft round-trips it; not used by the simulation.</summary>
+        [System.NonSerialized] public bool budgetEnabled;
+        [System.NonSerialized] public int budgetPoints = WarSandboxUnitCost.DefaultBudget;
+        [System.NonSerialized] public int[] budgetTeamPoints;
         public Vector3 controlPointCenter = Vector3.zero;
         [Min(2f)] public float controlPointRadius = 30f;
         [Min(5f)] public float controlPointCaptureSeconds = 20f;
@@ -117,7 +124,11 @@ namespace MassEngine.Game
             if (!manager.TryGetTerrainContext(out var surface, out _, out error)) return false;
             if (surface == null) return true;
             if (!WarSandboxDeploymentDraft.TryCapture(manager.scenarioConfig, out var draft, out error)) return false;
-            return terrainValidation.TryValidate(manager, new WarSandboxDeploymentDraft(draft.Snapshot(), rules), out _, out error);
+            var entries = draft.Snapshot();
+            var deployment = GetComponent<WarSandboxRuntimeDeployment>();
+            if (deployment != null && deployment.ShiftsAuthored(manager.scenarioConfig))
+                for (int i = 0; i < entries.Length; i++) entries[i] = WarSandboxDeploymentDraft.ShiftOutward(entries[i], deployment.authoredSpawnOutwardOffset);
+            return terrainValidation.TryValidate(manager, new WarSandboxDeploymentDraft(entries, rules), out _, out error);
         }
 
         // Queued waypoints are checked without replacing the current manager target. An army
@@ -339,8 +350,20 @@ namespace MassEngine.Game
             return true;
         }
 
+        public bool ChallengeActive => challengeEnabled;
+        public int ChallengeTeam => challengeTeam;
+        /// <summary>Player-facing permission. Default orders and route advancement go through IssueOrderInternal and are never blocked.</summary>
+        public bool CanCommandTeam(int teamId) => !challengeEnabled || teamId == challengeTeam;
+        public bool CanCommandTeam(int teamId, out string error)
+        {
+            error = CanCommandTeam(teamId) ? null : "挑战模式：只能指挥" + DefaultArmyName(challengeTeam) + "，其他军团由电脑按默认命令作战。";
+            return error == null;
+        }
+
         public bool IssueOrder(ArmyOrder order)
         {
+            if (IsTerminalPhase(phase) || !WarSandboxSceneSession.AllowsBattleCommands(this)) return false;
+            if (!CanCommandTeam(order.teamId, out string lockError)) return RejectCommand(lockError);
             return IssueOrderInternal(order, true);
         }
 
@@ -351,6 +374,7 @@ namespace MassEngine.Game
             ArmyRuntimeState army = GetArmy(teamId);
             if (army == null)
                 return false;
+            if (!CanCommandTeam(teamId, out string lockError)) return RejectCommand(lockError);
 
             if (!TryResolveMoveTarget(teamId, target, out target, out string error)) return RejectCommand(error);
 
@@ -391,7 +415,12 @@ namespace MassEngine.Game
                 controlPointCaptureSeconds = controlPointCaptureSeconds,
                 staticObstaclesEnabled = staticObstaclesEnabled,
                 staticObstacleClearance = staticObstacleClearance,
-                staticObstacles = ResolveStaticObstacles()
+                staticObstacles = ResolveStaticObstacles(),
+                challengeEnabled = challengeEnabled,
+                challengeTeam = challengeTeam,
+                budgetEnabled = budgetEnabled,
+                budgetPoints = budgetPoints,
+                budgetTeamPoints = budgetTeamPoints
             }.Copy();
         }
 
@@ -450,6 +479,11 @@ namespace MassEngine.Game
             staticObstacleClearance = rules.staticObstacleClearance;
             useCustomStaticObstacleLayout = true;
             staticObstacles = rules.Copy().staticObstacles;
+            challengeEnabled = rules.challengeEnabled;
+            challengeTeam = rules.challengeTeam;
+            budgetEnabled = rules.budgetEnabled;
+            budgetPoints = rules.budgetPoints;
+            budgetTeamPoints = rules.budgetTeamPoints != null ? (int[])rules.budgetTeamPoints.Clone() : null;
             ResetControlPointState();
             ConfigureControlPointTelemetry();
             ApplyStaticObstacleSettings();
@@ -595,7 +629,7 @@ namespace MassEngine.Game
                 {
                     issuedAnyOrder |= gameMode == WarSandboxGameMode.ControlPoint
                         ? IssueOrderInternal(ArmyOrder.Move(teamId, controlPointCenter), true, allowCombatAlongRoute: true)
-                        : IssueOrder(ArmyOrder.Attack(teamId));
+                        : IssueOrderInternal(ArmyOrder.Attack(teamId), true);
                 }
             }
 

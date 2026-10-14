@@ -12,6 +12,13 @@ namespace MassEngine.Game
         [Tooltip("Optional battlefield-local selectable library. Null preserves the legacy Scenario-only roster.")]
         public WarSandboxRosterPolicy rosterPolicy;
         public bool UseTemplateSpawnDefaults => rosterPolicy != null && rosterPolicy.useTemplateSpawnDefaults;
+        [Tooltip("2048 maps (2026-10-14): authored and newly added formations start this many metres further out along x "
+            + "(west team further west, east team further east). 0 = unchanged (all 1024 scenes).")]
+        public float authoredSpawnOutwardOffset;
+        /// <summary>True while the manager still runs the scene's authored scenario (no runtime copy yet): checks of that
+        /// scenario must use the shifted positions the load path will deploy.</summary>
+        public bool ShiftsAuthored(ScenarioConfig scenario) =>
+            authoredSpawnOutwardOffset != 0f && scenario != null && (active == null || scenario != active.Scenario);
         public bool IsEditing { get; private set; }
         public WarSandboxDeploymentDraft Draft { get; private set; }
         public string Error { get; private set; }
@@ -81,6 +88,7 @@ namespace MassEngine.Game
             manager.PauseBattle();
             StatStore.Invalidate();
             Draft = new WarSandboxDeploymentDraft(committed, controller.CaptureBattlefieldRules(), committedStats);
+            Draft.SpawnOutwardOffset = authoredSpawnOutwardOffset;
             dispatchBeforeEdit = manager.enableGpuDispatch;
             manager.enableGpuDispatch = false;
             IsEditing = true; Error = null;
@@ -97,6 +105,7 @@ namespace MassEngine.Game
             if (!WarSandboxDeploymentDraft.TryCapture(manager.scenarioConfig, out var initial, out error)) return false;
             sourceScenario = manager.scenarioConfig;
             committed = initial.Snapshot();
+            for (int i = 0; i < committed.Length; i++) committed[i] = WarSandboxDeploymentDraft.ShiftOutward(committed[i], authoredSpawnOutwardOffset);
             // Only the NEW-unit chooser is filtered; committed drafts and ID resolution remain intact.
             foreach (var entry in committed) if (Selectable(entry.template) && !templates.Contains(entry.template)) templates.Add(entry.template);
             if (rosterPolicy != null) foreach (var template in rosterPolicy.templates)
@@ -121,11 +130,13 @@ namespace MassEngine.Game
             { warning = "全局数值只能在进入战场或明确应用布阵时生效。"; return false; }
             var global = StatStore.Current;
             warning = StatStore.Warning;
-            if (global.IsEmpty || manager.scenarioConfig == null || manager.scenarioConfig.unitTypes == null) return false;
+            // 2048 maps: the outward spawn offset is applied on load through the same runtime-scenario path.
+            bool shifted = authoredSpawnOutwardOffset != 0f;
+            if ((global.IsEmpty && !shifted) || manager.scenarioConfig == null || manager.scenarioConfig.unitTypes == null) return false;
             var resolver = new WarSandboxStatResolver(battlefieldCatalog, global, null);
             bool affected = false;
             foreach (var unit in manager.scenarioConfig.unitTypes) affected |= unit != null && resolver.HasCustom(unit);
-            if (!affected) return false;
+            if (!affected && !shifted) return false;
             if (!EnsureCommitted(out string error)) { warning = "全局兵种数值未生效：" + error; return false; }
             var previousScenario = manager.scenarioConfig;
             var previousClearance = manager.DeploymentRadiusClearance;
@@ -209,11 +220,12 @@ namespace MassEngine.Game
             if (!CanAccess() || !IsEditing || Draft == null || controller.Phase != WarSandboxBattlePhase.Setup ||
                 !ReferenceEquals(Draft, expectedDraft) || Draft.Revision != revision || index < 0 || index >= Draft.Count || !Draft[index].Equals(expectedEntry))
             { error = "草稿或目标编成已变化，拖动已取消。"; return false; }
+            if (Draft.IsLocked(index)) { error = WarSandboxDeploymentDraft.LockedMessage; return false; }
             var next = expectedEntry; next.center = new Vector3(center.x, expectedEntry.center.y, center.z);
             if (next.Equals(expectedEntry)) return true;
             var entries = Draft.Snapshot(); entries[index] = next;
             var candidate = new WarSandboxDeploymentDraft(entries, Draft.Rules, Draft.Stats);
-            if (!ValidateDraft(candidate, out error)) return false;
+            if (!ValidateEdit(candidate, out error)) return false;
             // Validation is CPU-only and synchronous. Recheck the token before the single history write.
             if (!ReferenceEquals(Draft, expectedDraft) || Draft.Revision != revision || !Draft[index].Equals(expectedEntry))
             { error = "草稿已变化，位置未提交。"; return false; }
@@ -246,15 +258,17 @@ namespace MassEngine.Game
                 Draft.Revision!=revision||index<0||index>=Draft.Count||!Draft[index].Equals(original)||next.template!=original.template||next.teamId!=original.teamId||next.center.y!=original.center.y)
             {error="草稿或目标编成已变化，未提交。";return false;}
             if(next.Equals(original))return true;
+            if(Draft.IsLocked(index)){error=WarSandboxDeploymentDraft.LockedMessage;return false;}
             if(shapeChanged)
             {
                 if(!WarSandboxDeploymentResize.Finite(next.density)||next.density<.05f||next.density>SpawnConfig.PackingLimitPerSquareMeter||!WarSandboxDeploymentResize.Finite(next.aspect)||next.aspect<.1f||next.aspect>10){error="密度或比例无效。";return false;}
                 if(!WarSandboxDeploymentResize.TryFromSize(next,next.center,new Vector2(next.Size.x,next.Size.z),out var converted,out error))return false;
                 if(next.manualSize.x>0&&next.manualSize.z>0)next=converted;
-                if(!TryGetResizeRadius(next,out var radius,out error)||!WarSandboxDeploymentResize.Fits(next,radius,next.template.spawnConfig.formationJitterFraction,out error))return false;
+                // Too-tight spacing is a spatial problem: written to the draft, reported by TryValidate (red block).
+                if(!TryGetResizeRadius(next,out var radius,out error))return false;
             }
             var entries=Draft.Snapshot();entries[index]=next;var candidate=new WarSandboxDeploymentDraft(entries,Draft.Rules,Draft.Stats);
-            if(!ValidateDraft(candidate,out error))return false;
+            if(!ValidateEdit(candidate,out error))return false;
             if(!ReferenceEquals(Draft,expected)||Draft.Revision!=revision||!Draft[index].Equals(original)){error="草稿已变化。";return false;}
             return Draft.Set(index,next);
         }
@@ -268,6 +282,34 @@ namespace MassEngine.Game
             return Draft.Set(index, entry);
         }
 
+        // Deployment B (2026-10-12): an edit (count, position, size) is rejected only for hard problems: values the draft
+        // cannot represent, roster/capacity limits, unverifiable radii or a broken battlefield context. Spatial problems
+        // (out of bounds, overlap, obstacles, terrain, crowding) are written to the draft so the player can fix them by
+        // dragging/resizing; TryValidate reports them, and apply/start/save keep requiring the full ValidateDraft.
+        private bool ValidateEdit(WarSandboxDeploymentDraft candidate, out string error)
+        {
+            if (ValidateDraft(candidate, out error)) return true;
+            if (!ValidateHard(candidate, out error)) return false;
+            error = null; return true;
+        }
+
+        private bool ValidateHard(WarSandboxDeploymentDraft draft, out string error)
+        {
+            error = null;
+            for (int i = 0; i < draft.Count; i++)
+                if (!templates.Contains(draft[i].template)) { error = "编成使用了未收录的兵种模板。"; return false; }
+            var simulation = controller.manager.systemConfig != null ? controller.manager.systemConfig.simulationConfig : null;
+            float padding = simulation != null ? simulation.boundaryPadding : 0;
+            if (float.IsNaN(padding) || float.IsInfinity(padding) || padding < 0) { error = "战场边界留白无效。"; return false; }
+            if (!draft.TryValidate(WorldSize - Vector2.one * (padding * 2), draft.Rules, out error, false)) return false;
+            if (rosterPolicy != null && !rosterPolicy.TryValidate(draft, simulation, out error, false)) return false;
+            var session = WarSandboxSceneSession.Instance;
+            if (session != null && session.CurrentBattlefield != null &&
+                !WarSandboxSceneSession.TryValidateTerrainProvider(controller.manager, session.CurrentBattlefield, out error)) return false;
+            var resolver = new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, draft.Stats);
+            return WarSandboxRadiusPolicy.TryValidate(controller.manager, draft, resolver, out _, out error, false);
+        }
+
         private bool ValidateDraft(WarSandboxDeploymentDraft draft, out string error)
         {
             error = null;
@@ -277,6 +319,23 @@ namespace MassEngine.Game
             float padding = simulation != null ? simulation.boundaryPadding : 0;
             if (float.IsNaN(padding) || float.IsInfinity(padding) || padding < 0) { error = "战场边界留白无效。"; return false; }
             if (!draft.TryValidate(WorldSize - Vector2.one * (padding * 2), draft.Rules, out error)) return false;
+            // Count-lock B: a resized formation whose real lattice cannot hold its radius is written to the draft (red) and
+            // blocks Apply/Start here. Shapes equal to the committed deployment or the template default are authored
+            // content and keep their old behaviour (the lattice check only ever ran on resize edits).
+            var spacing = new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, draft.Stats);
+            for (int i = 0; i < draft.Count; i++)
+            {
+                var entry = draft[i];
+                if (entry.template == null || entry.template.spawnConfig == null || SameShapeAsSource(entry)) continue;
+                var info = UnitPreviewRadius.Read(entry.template);
+                if (!info.Available) continue;
+                var value = spacing.Resolve(entry.template, WarSandboxUnitStats.Get(WarSandboxUnitStat.AgentRadius));
+                if (!WarSandboxDeploymentResize.Fits(entry, value.applies ? value.effective : info.BaseRadius,
+                    entry.template.spawnConfig.formationJitterFraction, out error))
+                { error = "编成 " + (i + 1) + "：" + error; return false; }
+            }
+            // Budget battle (2026-10-14): like the count lock, an over-budget draft may exist (shown red) but never applies or starts.
+            if (!WarSandboxUnitCost.TryCheck(draft, new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, draft.Stats), out error)) return false;
             if (rosterPolicy != null && !rosterPolicy.TryValidate(draft, simulation, out error)) return false;
             var session = WarSandboxSceneSession.Instance;
             if (session != null && session.CurrentBattlefield != null &&
@@ -285,6 +344,14 @@ namespace MassEngine.Game
             if (!WarSandboxRadiusPolicy.TryValidate(controller.manager, draft, resolver, out var clearance, out error)) return false;
             return terrainValidation.TryValidate(controller.manager, draft, out _, out error, clearance);
         }
+
+        private bool SameShapeAsSource(WarSandboxDeploymentEntry entry)
+        {
+            if (committed != null) foreach (var c in committed) if (SameShape(c, entry)) return true;
+            return SameShape(WarSandboxDeploymentEntry.From(entry.template), entry);
+        }
+        private static bool SameShape(WarSandboxDeploymentEntry a, WarSandboxDeploymentEntry b) =>
+            a.template == b.template && a.count == b.count && a.density == b.density && a.aspect == b.aspect && a.manualSize == b.manualSize;
 
         // Presentation-only canonical state. Stable plan IDs, no persistence side effects.
         public string PlanSignature28(bool current)
@@ -298,6 +365,10 @@ namespace MassEngine.Game
                 battlefieldCatalog, draft ? Draft.Stats : committedStats, out _);
             return PlanState28.Canonical(plan);
         }
+
+        /// <summary>Effective stats of the current draft (official, global and this plan's local values) for unit prices.</summary>
+        public WarSandboxStatResolver DraftResolver() =>
+            Draft != null ? new WarSandboxStatResolver(battlefieldCatalog, StatStore.Current, Draft.Stats) : null;
 
         public bool TrySavePlan(string slot, string displayName, bool overwrite, out string error)
         {
@@ -390,6 +461,9 @@ namespace MassEngine.Game
                 controller.CommitDeploymentRules();
                 PlanState28.For(controller)?.MarkApplied();
                 previous?.Dispose();
+                var own = controller.ChallengeActive ? controller.GetArmy(controller.ChallengeTeam) : null;
+                if (own != null && own.initialUnitCount > 0) controller.SelectArmy(controller.ChallengeTeam);
+                else
                 for (int i = 0; i < controller.ArmyCount; i++)
                     if (controller.GetArmy(i).initialUnitCount > 0) { controller.SelectArmy(i); break; }
                 return true;

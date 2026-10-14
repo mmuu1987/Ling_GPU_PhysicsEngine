@@ -9,7 +9,7 @@ namespace MassEngine.Game
         // Covers today's complete authored range; below .05 existing consumers disagree on minima.
         public const float Min = .05f, Max = 4.8f;
         public static bool TryValidate(MassEngineManager manager, WarSandboxDeploymentDraft draft, WarSandboxStatResolver resolver,
-            out float? clearance, out string error)
+            out float? clearance, out string error, bool spatial = true)
         {
             clearance = null; error = null;
             var definition = WarSandboxUnitStats.Get(WarSandboxUnitStat.AgentRadius);
@@ -18,7 +18,9 @@ namespace MassEngine.Game
             if (!changed && !manager.DeploymentRadiusClearance.HasValue) return true; // untouched legacy path
             var simulation = manager.systemConfig != null ? manager.systemConfig.simulationConfig : null;
             if (simulation == null) { error = "半径校验缺少战场网格设置。"; return false; }
-            float maximum = .45f;
+            // C4 (2026-10-12): large bodies (radius above half a spatial cell) use the GPU large path and
+            // their own terrain probe; only crowd radii widen the shared navigation clearance.
+            float maximum = .45f, largest = 0f;
             var radii = new float[draft.Count];
             for (int i = 0; i < draft.Count; i++)
             {
@@ -27,19 +29,21 @@ namespace MassEngine.Game
                 if (!info.Available) { error = "编成 " + (i + 1) + "：自定义模块的半径/生成比例尚未验证。"; return false; }
                 float radius = value.applies ? value.effective : info.BaseRadius;
                 if (!definition.Accepts(radius)) { error = "编成 " + (i + 1) + "：半径必须为 0.05–4.8 米。"; return false; }
-                radii[i] = radius; maximum = Mathf.Max(maximum, radius);
+                radii[i] = radius; largest = Mathf.Max(largest, radius);
+                if (!WarSandboxRosterPolicy.IsLargeBody(radius, simulation.cellSize)) maximum = Mathf.Max(maximum, radius);
             }
             // Once the radius workflow has been used, restoration also recalculates clearance,
             // rather than retaining a larger historical value. Ordinary ResetBattle keeps it.
             clearance = maximum;
             if (!changed) return true;
-            if (float.IsNaN(simulation.cellSize) || simulation.cellSize < maximum * 2)
-            { error = "半径未应用：当前邻域网格不支持该体积（最大直径 " + (maximum * 2).ToString("0.##") + " 米，网格 " + simulation.cellSize.ToString("0.##") + " 米）。请减小半径；不会自动改网格。"; return false; }
+            if (float.IsNaN(simulation.cellSize) || simulation.cellSize < maximum * 2 || largest > WarSandboxRosterPolicy.MaximumLargeBodyRadius(simulation.cellSize))
+            { error = "半径未应用：当前邻域网格不支持该体积（最大半径 " + largest.ToString("0.##") + " 米，网格 " + simulation.cellSize.ToString("0.##") + " 米，支持上限 " + WarSandboxRosterPolicy.MaximumLargeBodyRadius(simulation.cellSize).ToString("0.##") + " 米）。请减小半径；不会自动改网格。"; return false; }
             var half = simulation.simulationWorldSize * .5f - Vector2.one * simulation.boundaryPadding;
             for (int i = 0; i < draft.Count; i++)
             {
                 var entry = draft[i]; float r = radii[i]; string prefix = "编成 " + (i + 1) + "：";
                 if (entry.count <= 0 || entry.template.spawnConfig == null) { error = prefix + "半径校验缺少有效生成配置。"; return false; }
+                if (!spatial) continue; // spacing, bounds and overlap may be temporarily invalid while editing
                 var size = entry.Size;
                 // Same rows/columns as DefaultSpawnModule. Bound deterministic interior jitter
                 // conservatively; a partial last row cannot defeat the inter-row X separation.

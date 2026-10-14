@@ -15,6 +15,8 @@ namespace MassEngine.Game
         [TextArea] public string selectionNote;
         [Tooltip("Static full-body image captured from this actual game config, never concept art.")]
         public Texture2D unitPreview;
+        [Tooltip("预算对战单价修正（等预算自动对战校准）：最终单价 = 公式单价 × 此系数；1 = 不修正。")]
+        [Min(0.05f)] public float priceScale = 1f;
 
         public bool TryValidate(out string error)
         {
@@ -173,6 +175,16 @@ namespace MassEngine.Game
                 }
             error = "Unknown unit template id: " + id;
             return false;
+        }
+
+        /// <summary>Budget price correction of the template using this config (1 when absent or invalid).</summary>
+        public float PriceScaleOf(UnitTypeConfig config)
+        {
+            if (templates != null && config != null)
+                foreach (var entry in templates)
+                    if (entry != null && entry.config == config)
+                        return entry.priceScale > 0f && !float.IsNaN(entry.priceScale) && !float.IsInfinity(entry.priceScale) ? entry.priceScale : 1f;
+            return 1f;
         }
 
         public bool TryGetTemplateId(UnitTypeConfig config, out string id, out int revision)
