@@ -16,6 +16,13 @@ namespace MassEngine
         public static readonly int FarIncludeDeadId = Shader.PropertyToID("farIncludeDead");
         public static readonly int CorpseLingerSecondsId = Shader.PropertyToID("corpseLingerSeconds");
         public static readonly int CorpseSinkSecondsId = Shader.PropertyToID("corpseSinkSeconds");
+        public static readonly int PresentationHoldSecondsId = Shader.PropertyToID("presentationHoldSeconds");
+        public static readonly int AttackPresentationHoldSecondsId = Shader.PropertyToID("attackPresentationHoldSeconds");
+        public static readonly int LocomotionStartSpeedFloorId = Shader.PropertyToID("locomotionStartSpeedFloor");
+        public static readonly int LocomotionStopSpeedFloorId = Shader.PropertyToID("locomotionStopSpeedFloor");
+        public static readonly int MinStandSecondsId = Shader.PropertyToID("minStandSeconds");
+        public static readonly int MinWalkSecondsId = Shader.PropertyToID("minWalkSeconds");
+        public static readonly int MoveAnimationSpeedFloorId = Shader.PropertyToID("moveAnimationSpeedFloor");
         public static readonly int FrustumPlanesId = Shader.PropertyToID("frustumPlanes");
         public static readonly int NearAnimationIntervalId = Shader.PropertyToID("nearAnimationInterval");
         public static readonly int MidAnimationIntervalId = Shader.PropertyToID("midAnimationInterval");
@@ -38,6 +45,10 @@ namespace MassEngine
         public static readonly int GridAgentIndicesReadBufferId = Shader.PropertyToID("gridAgentIndicesReadBuffer");
         public static readonly int TeamGridCountsReadBufferId = Shader.PropertyToID("teamGridCountsReadBuffer");
         public static readonly int TeamGridAgentIndicesReadBufferId = Shader.PropertyToID("teamGridAgentIndicesReadBuffer");
+        // C1 large-body stamping (AgentDataCommon.hlsl LARGE_*)
+        public static readonly int LargeCellsId = Shader.PropertyToID("largeCells");
+        public static readonly int LargeCellsReadBufferId = Shader.PropertyToID("largeCellsReadBuffer");
+        public static readonly int SpatialHashStatsReadBufferId = Shader.PropertyToID("spatialHashStatsReadBuffer");
         public static readonly int GridCellCountId = Shader.PropertyToID("gridCellCount");
         public static readonly int GridResolutionId = Shader.PropertyToID("gridResolution");
         public static readonly int GridOriginId = Shader.PropertyToID("gridOrigin");
@@ -117,6 +128,8 @@ namespace MassEngine
         public static readonly int DefenderDensityMapId = Shader.PropertyToID("defenderDensityMap");
         public static readonly int AttackerDensityMapWriteId = Shader.PropertyToID("attackerDensityMapWrite");
         public static readonly int DefenderDensityMapWriteId = Shader.PropertyToID("defenderDensityMapWrite");
+        public static readonly int RangedBlockBufferId = Shader.PropertyToID("rangedBlockBuffer");
+        public static readonly int RangedBlockReadBufferId = Shader.PropertyToID("rangedBlockReadBuffer");
         public static readonly int MovementCommandRevisionBufferId = Shader.PropertyToID("movementCommandRevisionBuffer");
         public static readonly int EngagementSlotAssignmentBufferId = Shader.PropertyToID("engagementSlotAssignmentBuffer");
         public static readonly int EngagementSlotOccupancyBufferId = Shader.PropertyToID("engagementSlotOccupancyBuffer");
@@ -127,6 +140,13 @@ namespace MassEngine
         public static readonly int NearVisibleAgentIndicesId = Shader.PropertyToID("nearVisibleAgentIndices");
         public static readonly int MidVisibleAgentIndicesId = Shader.PropertyToID("midVisibleAgentIndices");
         public static readonly int FarVisibleAgentIndicesId = Shader.PropertyToID("farVisibleAgentIndices");
+        // LOD hysteresis + crossfade (2026-10-13)
+        public static readonly int AgentLodStateBufferId = Shader.PropertyToID("agentLodStateBuffer");
+        public static readonly int LodCrossfadeEnabledId = Shader.PropertyToID("lodCrossfadeEnabled");
+        public static readonly int LodHysteresisRatioId = Shader.PropertyToID("lodHysteresisRatio");
+        public static readonly int LodCrossfadeSecondsId = Shader.PropertyToID("lodCrossfadeSeconds");
+        public static readonly int MassLodStateId = Shader.PropertyToID("_MassLodState");
+        public static readonly int MassLodTierPlusOneId = Shader.PropertyToID("_MassLodTierPlusOne");
 
         // Render path
         public static readonly int VisibleAgentIndicesId = Shader.PropertyToID("visibleAgentIndices");
@@ -153,3 +173,5 @@ namespace MassEngine
         public static readonly int DeathClipFrameRateId = Shader.PropertyToID("_DeathClipFrameRate");
     }
 }
+
+

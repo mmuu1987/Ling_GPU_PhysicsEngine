@@ -44,6 +44,7 @@ namespace MassEngine
                         unitType.UnitTypeIndex,
                         lod,
                         buffers.agentBuffer,
+                        buffers.agentLodStateBuffer,
                         buffers.GetVisibleIndexBuffer(unitType.UnitTypeIndex, lod),
                         buffers.GetDrawArgsBuffer(unitType.UnitTypeIndex, lod),
                         bounds,
@@ -52,7 +53,7 @@ namespace MassEngine
             }
         }
 
-        private void DrawLod(ResolvedUnitTypeRuntime runtime, int unitTypeIndex, int lodLevel, ComputeBuffer agentBuffer, ComputeBuffer visibleIndices, ComputeBuffer argsBuffer, Bounds bounds, Vector4 corpseSink)
+        private void DrawLod(ResolvedUnitTypeRuntime runtime, int unitTypeIndex, int lodLevel, ComputeBuffer agentBuffer, ComputeBuffer lodStateBuffer, ComputeBuffer visibleIndices, ComputeBuffer argsBuffer, Bounds bounds, Vector4 corpseSink)
         {
             Mesh mesh = runtime.GetMesh(lodLevel);
             Material material = runtime.GetMaterial(lodLevel);
@@ -80,6 +81,12 @@ namespace MassEngine
             block.SetBuffer(AgentBufferId, agentBuffer);
             block.SetBuffer(VisibleAgentIndicesId, visibleIndices);
             block.SetVector(CorpseSinkId, corpseSink);
+            // LOD crossfade: which tier this draw is (+1, 0 = none) and the per-agent tier word.
+            if (lodStateBuffer != null)
+            {
+                block.SetBuffer(MassLodStateId, lodStateBuffer);
+                block.SetFloat(MassLodTierPlusOneId, lodLevel + 1);
+            }
             Graphics.DrawMeshInstancedIndirect(
                 mesh,
                 0,

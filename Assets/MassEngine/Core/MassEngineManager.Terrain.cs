@@ -61,17 +61,27 @@ namespace MassEngine
             }
         }
 
+        // C3a (2026-10-12): large types (radius > half a spatial cell, the GPU's large-body rule) do
+        // not widen the shared navigation mask. Inflating every obstacle by a dragon's radius would
+        // close the narrow paths for the whole army; large bodies probe their own edge on the GPU
+        // (TerrainNavigation.hlsl LargeBodyTerrainProbe) instead.
+        private bool IsLargeClearanceRadius(float radius) =>
+            Simulation != null && radius > Simulation.cellSize * .5f;
+
         private float ResolveTerrainClearance()
         {
             if (deploymentRadiusClearance.HasValue) return deploymentRadiusClearance.Value;
             float radius = .45f;
             if (scenarioConfig != null && scenarioConfig.unitTypes != null)
                 foreach (var unit in scenarioConfig.unitTypes)
-                    if (unit != null && unit.flockingConfig != null)
+                    if (unit != null && unit.flockingConfig != null && !IsLargeClearanceRadius(unit.flockingConfig.agentRadius))
                         radius = Mathf.Max(radius, unit.flockingConfig.agentRadius);
             if (unitTypeRegistry != null)
                 foreach (var unit in unitTypeRegistry.RegisteredTypes)
-                    radius = Mathf.Max(radius, unit.BuildGpuSettings().agentRadius);
+                {
+                    float unitRadius = unit.BuildGpuSettings().agentRadius;
+                    if (!IsLargeClearanceRadius(unitRadius)) radius = Mathf.Max(radius, unitRadius);
+                }
             terrainClearanceFloor = Mathf.Max(terrainClearanceFloor, radius);
             return terrainClearanceFloor;
         }
@@ -142,7 +152,9 @@ namespace MassEngine
                     if (unit != null && unit.spawnConfig != null && unit.spawnConfig.unitCount > 0)
                     {
                         Vector3 center = unit.spawnConfig.spawnCenter, size = unit.spawnConfig.ResolveSpawnSize();
-                        if (!navigation.IsFootprintWalkable(new Vector2(center.x, center.z), new Vector2(size.x, size.z)))
+                        // C4: large bodies do not widen the nav mask (C3a); check their overhang beyond it.
+                        float overhang = unit.flockingConfig != null ? Mathf.Max(0f, unit.flockingConfig.agentRadius - navigation.Clearance) : 0f;
+                        if (!navigation.IsFootprintWalkable(new Vector2(center.x, center.z), new Vector2(size.x + 2f * overhang, size.z + 2f * overhang)))
                         { terrainError = "Spawn footprint intersects terrain exclusion or insufficient clearance: " + unit.name; return false; }
                     }
             return true;
@@ -153,13 +165,14 @@ namespace MassEngine
             if (!TryGetTerrainContext(out var surface, out var navigation, out _)) return false;
             if (surface == null)
             { terrainRuntime?.Dispose(); terrainRuntime = null; return true; }
-            if (terrainRuntime == null || terrainRuntime.Navigation != navigation || terrainRuntime.LaneApproach33 != Flow.terrainLaneApproach33)
+            if (terrainRuntime == null || terrainRuntime.Navigation != navigation)
             {
                 terrainRuntime?.Dispose(); terrainRuntime = null;
-                try { terrainRuntime = new TerrainNavigationRuntime(navigation, bufferManager.TeamCount, Flow.terrainLaneApproach33, asyncDynamicSolve: true); } // P3-CPU-01
+                try { terrainRuntime = new TerrainNavigationRuntime(navigation, bufferManager.TeamCount, laneApproach33: false, asyncDynamicSolve: true); } // P3-CPU-01; LaneApproach retired in N5d (GPU nav steers)
                 catch (Exception exception) { terrainError = exception.Message; return false; }
                 MarkAllFlowFieldsDirty();
             }
+            SyncGpuNavField();
             return true;
         }
 
@@ -211,5 +224,6 @@ namespace MassEngine
         }
     }
 }
+
 
 

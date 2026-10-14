@@ -24,11 +24,14 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
         _DeathClipStartFrame ("Death Clip Start Frame", Float) = 0
         _DeathClipFrameCount ("Death Clip Frame Count", Float) = 30
         _DeathClipFrameRate ("Death Clip Frame Rate", Float) = 30
+        [Header(Vertex AO)]
+        _VertexAO       ("Vertex AO (per unit type, MPB)", Range(0, 1)) = 0
+        _VertexAODirect ("Vertex AO on direct light (MPB)", Range(0, 1)) = 0
     }
 
     SubShader
     {
-        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" "MassLodCrossfade"="1" }
         LOD 80
 
         // Shared across ForwardNoShadow / DepthOnly / DepthNormals (same layout as
@@ -62,12 +65,51 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 float _DeathClipStartFrame;
                 float _DeathClipFrameCount;
                 float _DeathClipFrameRate;
+                float _VertexAO;
+                float _VertexAODirect;
             CBUFFER_END
 
             // 尸体下沉参数，每帧由 MassGpuRenderDispatcher 通过 MaterialPropertyBlock 写入。
             // xyz = (停留秒数, 下沉秒数, 下沉深度)；x <= 0 表示不下沉（尸体永久保留）。
             // 由 MPB 提供，所以必须放在 UnityPerMaterial 之外。
             float4 _MassCorpseSink;
+
+
+            // LOD crossfade (2026-10-13, 中景闪动修复 B). _MassLodTierPlusOne = tier of this draw + 1
+            // (MPB; 0 = no crossfade). _MassLodState = per-agent word from the LOD classification
+            // (AgentDataCommon.hlsl ResolveLodTier). While an agent changes tier it is drawn in both
+            // tiers; the incoming mesh keeps the dither cells below the progress, the outgoing mesh
+            // the rest, so every pixel shows exactly one of them.
+            float _MassLodTierPlusOne;
+            static float _GlobalLodVis = 2.0; // > 1.5 = fully shown
+
+            float MassLodVisibility(uint state)
+            {
+                if (_MassLodTierPlusOne < 0.5 || (state & 16u) == 0u)
+                    return 2.0;
+                int cur = (int)(state & 3u);
+                int prev = (int)((state >> 2) & 3u);
+                float f = (float)(state >> 16) * (1.0 / 65535.0);
+                if (f >= 1.0 || cur == prev)
+                    return 2.0;
+                int tier = (int)(_MassLodTierPlusOne - 0.5);
+                if (tier == cur) return f;
+                if (tier == prev) return -1.0 - f;
+                return 2.0;
+            }
+
+            void MassLodDitherClip(float vis, float4 positionCS)
+            {
+                if (vis > 1.5)
+                    return;
+                static const float bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+                uint2 p = (uint2)positionCS.xy & 3u;
+                float t = (bayer[p.y * 4u + p.x] + 0.5) / 16.0;
+                if (vis >= 0.0)
+                    clip(vis - t);
+                else
+                    clip(t - (-1.0 - vis));
+            }
 
             // 与 LitInstancedAgentShader / AgentDataCommon.hlsl / CorpseLifetime.cs 同一套算法。
             float ResolveCorpseSink(int state, float age)
@@ -94,6 +136,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                 StructuredBuffer<AgentData> agentBuffer;
                 StructuredBuffer<uint> visibleAgentIndices;
+                StructuredBuffer<uint> _MassLodState;
                 static float _GlobalAnimationTime;
                 static int _GlobalCurrentState;
             #endif
@@ -187,6 +230,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
 
                     _GlobalAnimationTime = data.currentAnimationTime;
                     _GlobalCurrentState = data.currentState >= 3 ? data.currentState : data.presentationState;
+                    _GlobalLodVis = MassLodVisibility(_MassLodState[agentIndex]);
                 #endif
             }
         ENDHLSL
@@ -202,6 +246,11 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             #pragma multi_compile_instancing
             #pragma instancing_options procedural:setup
             #pragma multi_compile_fog
+            // C (2026-10-13): receive main-light shadows + vertex additional lights like LitInstancedAgent,
+            // so an agent does not change brightness at the near/mid ring. This tier still casts no shadow.
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma target 4.5
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -211,6 +260,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
+                float2 aoUV : TEXCOORD3; // 顶点AO（uv3.x）
                 uint vertexID : SV_VertexID;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -218,9 +268,13 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                nointerpolation float lodVis : TEXCOORD7; // LOD crossfade
                 float3 normalWS : TEXCOORD0;
                 float2 uv : TEXCOORD1;
                 half fogFactor : TEXCOORD2;
+                half ao : TEXCOORD3;
+                float3 positionWS : TEXCOORD4;
+                half3 vertexLight : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -229,6 +283,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 Varyings output = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.lodVis = _GlobalLodVis;
 
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                     float2 vatUV = GetVATUV(input.vertexID, _GlobalAnimationTime, _GlobalCurrentState);
@@ -241,6 +296,13 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = input.uv;
+                output.ao = (half)lerp(1.0, saturate(input.aoUV.x), _VertexAO);
+                output.positionWS = TransformObjectToWorld(input.positionOS.xyz);
+                #if defined(_ADDITIONAL_LIGHTS_VERTEX)
+                    output.vertexLight = VertexLighting(output.positionWS, normalize(output.normalWS));
+                #else
+                    output.vertexLight = 0;
+                #endif
                 output.fogFactor = ComputeFogFactor(output.positionCS.z);
                 return output;
             }
@@ -248,14 +310,22 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             half4 frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+MassLodDitherClip(input.lodVis, input.positionCS);
 
                 float3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb * _BaseColor.rgb;
                 float3 normalWS = normalize(input.normalWS);
-                Light mainLight = GetMainLight();
+                // Same lighting as LitInstancedAgent ForwardLit (C, 2026-10-13): main-light shadows, AO on
+                // ambient (and partly on direct), vertex additional lights. The old 0.25 floor is gone.
+                float4 shadowCoord = TransformWorldToShadowCoord(input.positionWS);
+                Light mainLight = GetMainLight(shadowCoord, input.positionWS, half4(1, 1, 1, 1));
                 half nDotL = saturate(dot(normalWS, mainLight.direction));
-                half3 directLight = mainLight.color * (nDotL * mainLight.distanceAttenuation);
-                half3 ambient = SampleSH(normalWS);
-                half3 finalColor = albedo * max(directLight + ambient, half3(0.25, 0.25, 0.25));
+                half3 directLight = mainLight.color * (nDotL * mainLight.distanceAttenuation * mainLight.shadowAttenuation);
+                half3 ambient = SampleSH(normalWS) * input.ao;
+                directLight *= lerp(1.0h, input.ao, (half)_VertexAODirect);
+                half3 finalColor = albedo * (directLight + ambient);
+                #if defined(_ADDITIONAL_LIGHTS_VERTEX)
+                    finalColor += albedo * input.vertexLight;
+                #endif
                 finalColor = MixFog(finalColor, input.fogFactor);
                 return half4(finalColor, 1.0);
             }
@@ -294,6 +364,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                nointerpolation float lodVis : TEXCOORD7; // LOD crossfade
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -302,6 +373,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 Varyings output = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.lodVis = _GlobalLodVis;
 
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                 {
@@ -318,6 +390,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             half4 DepthOnlyFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                MassLodDitherClip(input.lodVis, input.positionCS);
                 return 0;
             }
             ENDHLSL
@@ -354,6 +427,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                nointerpolation float lodVis : TEXCOORD7; // LOD crossfade
                 float3 normalWS : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -363,6 +437,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 Varyings output = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.lodVis = _GlobalLodVis;
 
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                 {
@@ -382,6 +457,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             half4 DepthNormalsFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                MassLodDitherClip(input.lodVis, input.positionCS);
                 return half4(normalize(input.normalWS), 0.0);
             }
             ENDHLSL

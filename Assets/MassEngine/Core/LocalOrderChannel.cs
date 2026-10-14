@@ -10,7 +10,7 @@ namespace MassEngine
     public sealed class LocalOrderChannel : IDisposable
     {
         public const string Keyword="MASS_LOCAL_ORDERS";
-        public const int GroupBudget=4,PhysicalSlots=GroupBudget+1,MaxCells=65536;
+        public const int GroupBudget=8,PhysicalSlots=GroupBudget+1,MaxCells=65536;
         private readonly MassGpuBufferManager buffers;private readonly Func<float,TerrainNavigationGrid> makeNavigation;
         private readonly Func<bool> canRefreshAttack;private float nextAttackRefresh;private int lastAttackSequence;
         private readonly Func<bool> contextCurrent;private readonly int[] teams;private readonly float[] radii;
@@ -20,6 +20,10 @@ namespace MassEngine
         private Task<PlanResult> retiredPlanTask;private Pending pending;private bool disposed,ackPending;private AsyncGPUReadbackRequest ackRequest;
         private int serial,version,ackVersion;private float nextAckTime;private readonly int cells;
         public int Epoch {get;} public int ActiveGroups {get;private set;} public int ActiveMembers {get;private set;}
+        /// <summary>Bit s = physical slot s + 1 is referenced by a live order (N5a GPU layers relax only these).</summary>
+        public uint UsedSlotMask {get;private set;}
+        /// <summary>N5a: invoked on the main thread after a group is committed (slot, team, kind, plan). Exceptions are logged, never undo the commit.</summary>
+        public Action<int,int,LocalOrderKind,LocalOrderPlan> SlotCommitted {get;set;}
         public long GpuBytes => disposed?0:(long)orders.Length*68+(long)PhysicalSlots*cells*12;
         public int NavigationContexts=>cache.Count;
         public long NavigationCpuUpperEstimate=>(long)cache.Count*cells*96;
@@ -47,7 +51,7 @@ namespace MassEngine
             if(disposed||epoch!=Epoch){r.Error="Old battle/prototype generation.";return r;}
             if(pending!=null&&pending.refresh){retiredPlanTask=pending.task;pending=null;}
             if(pending!=null||(retiredPlanTask!=null&&!retiredPlanTask.IsCompleted)){r.Error="One command is awaiting its live snapshot; retry, old state unchanged.";return r;}
-            if(members==null||members.Length==0||members.Length>4096||!LocalOrderPlan.Finite(target)||serial>=8000000){r.Error="Invalid/empty/oversized members, nonfinite target or sequence exhausted.";return r;}
+            if(members==null||members.Length==0||members.Length>teams.Length||!LocalOrderPlan.Finite(target)||serial>=8000000){r.Error="Invalid/empty/oversized members, nonfinite target or sequence exhausted.";return r;}
             if(kind!=LocalOrderKind.Move&&kind!=LocalOrderKind.Hold&&kind!=LocalOrderKind.Attack&&kind!=LocalOrderKind.Retreat){r.Error="Unknown local command; no fallback to whole army.";return r;}
             r.Sequence=++serial;r.Status=LocalOrderStatus.AwaitingSnapshot;
             var p=new Pending{members=(int[])members.Clone(),target=target,kind=kind,receipt=r,watch=Stopwatch.StartNew()};
@@ -113,7 +117,7 @@ namespace MassEngine
                 var watch=Stopwatch.StartNew();
                 var replacing=new HashSet<int>(plan.Members);var used=new HashSet<int>();var surviving=new HashSet<int>();
                 for(int i=0;i<orders.Length;i++)if(orders[i].slotPlusOne!=0){used.Add(orders[i].slotPlusOne);if(!replacing.Contains(i)&&p.hp[i]>0)surviving.Add(orders[i].slotPlusOne);}
-                if(surviving.Count>=GroupBudget)throw new InvalidOperationException("Four independent groups exhausted; old groups retained, no merging.");
+                if(surviving.Count>=GroupBudget)throw new InvalidOperationException(GroupBudget+" independent groups exhausted; old groups retained, no merging.");
                 int slot=1;while(used.Contains(slot))slot++;if(slot>PhysicalSlots)throw new InvalidOperationException("No transactional staging slot.");
                 var next=(LocalAgentOrder[])orders.Clone();for(int i=0;i<next.Length;i++)if(p.hp[i]<=0)next[i]=default;
                 for(int n=0;n<plan.Members.Length;n++)next[plan.Members[n]]=new LocalAgentOrder{slotPlusOne=slot,sequence=p.receipt.Sequence,epoch=Epoch,
@@ -125,6 +129,7 @@ namespace MassEngine
                 p.receipt.Target=plan.ResolvedTarget;p.receipt.UploadMilliseconds=watch.Elapsed.TotalMilliseconds;
                 if(p.refresh){p.receipt.NavigationRefreshes++;p.receipt.NavigationError=null;}else p.receipt.SubmittedMembers=plan.Members.Length;
                 p.receipt.Status=LocalOrderStatus.Committed;
+                try{SlotCommitted?.Invoke(slot,p.receipt.Team,p.kind,plan);}catch(Exception cb){UnityEngine.Debug.LogException(cb);}
             }
             catch(Exception ex){if(p.task!=null&&!p.task.IsCompleted)retiredPlanTask=p.task;if(p.refresh)p.receipt.NavigationError=ex.Message;else{p.receipt.Status=LocalOrderStatus.Rejected;p.receipt.Error=ex.Message;}}
             pending=null;
@@ -149,7 +154,7 @@ namespace MassEngine
             foreach(var r in receipts.Values){r.Status=LocalOrderStatus.Committed;r.ObservedAlive=r.GpuExecutingMembers=r.GpuBlockedMembers=0;}
         }
         private void Recount()
-        {var used=new HashSet<int>();ActiveMembers=0;var sequences=new HashSet<int>();foreach(var o in orders)if(o.slotPlusOne!=0){used.Add(o.slotPlusOne);sequences.Add(o.sequence);ActiveMembers++;}ActiveGroups=used.Count;
+        {var used=new HashSet<int>();ActiveMembers=0;var sequences=new HashSet<int>();foreach(var o in orders)if(o.slotPlusOne!=0){used.Add(o.slotPlusOne);sequences.Add(o.sequence);ActiveMembers++;}ActiveGroups=used.Count;uint usedMask=0;foreach(int u in used)if(u>=1&&u<=32)usedMask|=1u<<(u-1);UsedSlotMask=usedMask;
          var remove=new List<int>();foreach(var k in receipts.Keys)if(!sequences.Contains(k))remove.Add(k);foreach(int k in remove){receipts[k].Status=LocalOrderStatus.Invalidated;receipts[k].Error="Members replaced, cleared or no longer alive.";receipts[k].ObservedAlive=receipts[k].GpuExecutingMembers=receipts[k].GpuBlockedMembers=0;receipts.Remove(k);}}
         public bool TryGetReceipt(int sequence,out LocalOrderReceipt receipt)=>receipts.TryGetValue(sequence,out receipt);
         public LocalAgentOrder OrderAt(int index)=>orders[index];
@@ -169,29 +174,33 @@ namespace MassEngine
             shader.Dispatch(kernel,Mathf.Max(1,(orders.Length+63)/64),1,1);
             ackRequest=AsyncGPUReadback.Request(ackBuffer);ackVersion=version;ackPending=true;nextAckTime=Time.realtimeSinceStartup+.2f;AckRequests++;
         }
-        // Admission already limits each of four groups to 4096 members. This table is sorted by
-        // scanning orders only after a committed version change; agent IDs are not bitmask-limited.
-        private const int PartitionCapacity=GroupBudget*4096;
-        private int[] partitionIds;private int partitionVersion=-1,partitionCount,partitionStances;
+        // Membership bitset (one bit per agent slot) in the shared 64 KiB cbuffer, so no group or order has a member limit.
+        // Rebuilt by scanning orders only after a committed version change; uploaded per frame at the battle's size
+        // (AgentCount/8 bytes, rounded to int4 rows). Battles above PartitionMaxAgents use the keyword path instead.
+        private const int PartitionWords=16384;
+        public const int PartitionMaxAgents=PartitionWords*32;
+        private int[] partitionBits;private int partitionVersion=-1,partitionWordCount,partitionStances;
         internal bool TryBindPartition(MassGpuShaderSet shaders)
         {
-            if(disposed||ActiveGroups==0||!shaders.HasLocalPartitions||buffers.LocalPartitionTypeMask==0)return false;
-            if(partitionIds==null)partitionIds=new int[PartitionCapacity];
+            if(disposed||ActiveGroups==0||!shaders.HasLocalPartitions||buffers.LocalPartitionTypeMask==0||orders.Length>PartitionMaxAgents)return false;
+            var shader=shaders.CombatSimulationShader;if(shader==null)return false;
             if(partitionVersion!=version) {
-                partitionCount=partitionStances=0;
+                int words=(((orders.Length+31)>>5)+3)&~3;
+                if(partitionBits==null||partitionBits.Length!=words)partitionBits=new int[words];else Array.Clear(partitionBits,0,words);
+                partitionWordCount=partitionStances=0;bool any=false;
                 for(int i=0;i<orders.Length;i++) {
                     var o=orders[i];if(o.slotPlusOne<=0||o.epoch!=Epoch)continue;
                     int role=o.stance==1?0:o.stance==3?1:o.stance==4?2:-1;
-                    if(role<0||partitionCount>=PartitionCapacity){partitionVersion=-1;return false;}
-                    partitionIds[partitionCount++]=i;partitionStances|=1<<role;
+                    if(role<0){partitionVersion=-1;return false;}
+                    partitionBits[i>>5]|=1<<(i&31);partitionStances|=1<<role;any=true;
                 }
+                partitionWordCount=any?words:0;
                 partitionVersion=version;
             }
-            if(partitionCount==0)return false;
-            var shader=shaders.CombatSimulationShader;
+            if(partitionWordCount==0)return false;
             shader.DisableKeyword(Keyword);
-            shader.SetInts("_LocalPartitionIds",partitionIds);
-            shader.SetInt("_LocalPartitionCount",partitionCount);
+            shader.SetInts("_LocalPartitionBits",partitionBits);
+            shader.SetInt("_LocalPartitionCount",partitionWordCount);
             return true;
         }
         internal bool UsesPartition(int role) => (partitionStances&(1<<(role/2)))!=0 && (buffers.LocalPartitionTypeMask&(1<<(role%2)))!=0;
@@ -199,7 +208,7 @@ namespace MassEngine
             shader.SetInt("_LocalOrderEpoch",Epoch);shader.SetInt("_LocalOrderCellCount",cells);
             shader.SetBuffer(kernel,"_LocalOrders",orderBuffer);shader.SetBuffer(kernel,"_LocalOrderFlow",flowBuffer);shader.SetBuffer(kernel,"_LocalOrderMask",maskBuffer);
         }
-        public long PartitionCpuBytes => partitionIds==null?0:(long)partitionIds.Length*4;
+        public long PartitionCpuBytes => partitionBits==null?0:(long)partitionBits.Length*4;
         // Shared compute-asset constant storage, not an additional channel-owned ComputeBuffer.
         public const int PartitionConstantBytes=65536;
 
@@ -213,10 +222,10 @@ namespace MassEngine
         public bool IsDisposed=>disposed;
         public void Dispose()
         {
-            if(disposed)return;disposed=true;partitionIds=null;partitionCount=partitionStances=0;partitionVersion=-1;
+            if(disposed)return;disposed=true;partitionBits=null;partitionWordCount=partitionStances=0;partitionVersion=-1;
             if(pending!=null){pending.receipt.Status=LocalOrderStatus.Invalidated;pending.receipt.Error="Battle/context reset; snapshot discarded.";pending=null;}
             foreach(var r in receipts.Values)r.Status=LocalOrderStatus.Invalidated;receipts.Clear();cache.Clear();
-            orderBuffer?.Release();spareOrderBuffer?.Release();flowBuffer?.Release();maskBuffer?.Release();ackBuffer?.Release();ActiveGroups=ActiveMembers=0;
+            orderBuffer?.Release();spareOrderBuffer?.Release();flowBuffer?.Release();maskBuffer?.Release();ackBuffer?.Release();ActiveGroups=ActiveMembers=0;UsedSlotMask=0;
             // Default ComputeBuffer mode and ordered graphics dispatches retain in-flight native uses. No async-compute queue is used.
         }
     }

@@ -15,8 +15,13 @@ MonoBehaviour:
   nearLodRadius: 30
   midLodRadius: 120
   nearAnimationInterval: 1
-  midAnimationInterval: 2
+  midAnimationInterval: 1
   farAnimationInterval: 4
+  nearSimulationInterval: 1
+  midSimulationInterval: 1
+  farSimulationInterval: 4
   enableFrustumCulling: 1
   cullingRadius: 2
   maxRenderDistance: 1800
+  lodHysteresis: 0.1
+  lodCrossfadeSeconds: 0.25

@@ -13,11 +13,16 @@ void ClearGrid(uint3 id : SV_DispatchThreadID)
         return;
 
     gridCounts[id.x] = 0;
+    largeCells[id.x * LARGE_CELL_STRIDE] = 0;
     [loop]
     for (uint team = 0; team < (uint)max(0, teamCount); team++)
         teamGridCounts[team * gridCellCount + id.x] = 0;
     if (id.x == 0)
+    {
         spatialHashStats[0] = 0;
+        spatialHashStats[SPATIAL_STATS_LARGE_COUNT] = 0;
+        spatialHashStats[SPATIAL_STATS_LARGE_MAX_RADIUS_BITS] = 0;
+    }
 }
 
 [numthreads(64, 1, 1)]
@@ -29,7 +34,12 @@ void BuildSpatialHash(uint3 id : SV_DispatchThreadID)
     if (id.x >= count || !IsAliveIndex(id.x))
         return;
 
-    uint cellIndex = CellToIndex(PositionXzToCell(agentPositionReadBuffer[id.x]));
+    float2 position = agentPositionReadBuffer[id.x];
+    uint cellIndex = CellToIndex(PositionXzToCell(position));
+    // C1: large bodies are additionally stamped into every cell their reach touches.
+    float bodyRadius = AgentBodyRadius(id.x);
+    if (IsLargeBodyRadius(bodyRadius))
+        StampLargeAgent(id.x, position, bodyRadius);
     uint slot;
     InterlockedAdd(gridCounts[cellIndex], 1, slot);
     if (slot < maxAgentsPerCell)
@@ -102,4 +112,5 @@ void BuildTeamSpatialStats(uint3 id : SV_DispatchThreadID)
         InterlockedAdd(teamSpatialStats[baseIndex + 7], 1, ignored);
     }
 }
+
 

@@ -8,6 +8,7 @@
 #pragma multi_compile __ MASS_TERRAIN_ENABLED
 #pragma multi_compile_local __ MASS_MELEE_CHARGE
 #pragma multi_compile_local __ MASS_LOCAL_ORDERS
+#pragma multi_compile_local __ MASS_GPU_NAV
 
 #pragma kernel SimulateLocalAttackMelee LP_ATTACKMELEE
 #pragma kernel SimulateLocalAttackRanged LP_ATTACKRANGED
@@ -20,6 +21,7 @@
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
 #include "CongestionWaiting.hlsl"
 #include "RangedClearance.hlsl"
+#include "RangedAreaFire.hlsl"
 
 #if defined(MASS_MELEE_CHARGE)
 // Opt-in melee charge (CombatConfig.chargeDamageMultiplier > 1), per unit type:
@@ -57,7 +59,8 @@ void AdvanceRangedCycle(uint index, inout AgentData agent, UnitTypeSettings sett
 #else
         float distanceSqr = dot(targetXZ - agent.position.xz, targetXZ - agent.position.xz);
 #endif
-        float range = settings.projectileRange + max(0.25, settings.agentRadius * 0.75);
+        // C2: same exit range as the decision (AttackExitRange), reaching a large target's surface.
+        float range = settings.projectileRange + max(0.25, settings.agentRadius * 0.75) + TargetReachBonus((uint)target);
         attacking = attacking && distanceSqr <= range * range;
     }
     else attacking = false;
@@ -80,6 +83,304 @@ void AdvanceRangedCycle(uint index, inout AgentData agent, UnitTypeSettings sett
     agent.currentAnimationTime = frac(release - cooldown / interval + 1.0) * max(0.0001, settings.attackClipDuration);
 }
 
+// Attack contact response (see the STATE_ATTACK branch). The old impulse model settled
+// near 0.62 / 28 = 0.022 m/s per metre of overlap per unit separationStrength; standing
+// firm yields ~60% of that, smoothed over 0.1 s, and caps lower.
+#define ATTACK_CONTACT_YIELD 0.0133
+#define ATTACK_CONTACT_MAX_SPEED_FRACTION 0.12
+#define ATTACK_CONTACT_SMOOTH_SECONDS 0.1
+
+// Presentation hold: the logic state may change every decision, the SHOWN clip only
+// once the wanted clip has differed for a hold time. Without it every logic blip was an
+// instant pose cut to frame 0 (no cross-fade exists). Entering Attack and Dead stay
+// immediate (strike/death sync). While Attack is held after the logic left it, a return
+// to Attack continues the same swing. Hold seconds of 0 (the default for raw kernel
+// dispatch) keep the legacy immediate behaviour.
+#define FOLLOW_HEADWAY_SECONDS 0.3
+// Round 6 contact retarget (see the target selection): an enemy within attackRange + MARGIN that is
+// at least GAIN metres closer than the current (out of reach) target replaces it.
+#define CONTACT_RETARGET_ENABLED 1
+#define CONTACT_RETARGET_MARGIN 2.0 // 2026-10-13 前线密度 乙: was 0.3
+#define CONTACT_RETARGET_GAIN 0.5
+#define FOLLOW_RELEASE_GAP 0.5
+// OFF (2026-10-11 round 4): the sidestep turns a 1-ulp difference between two compiles of the
+// same code into a different path (P9 reference tests: 5e-7 -> 0.12 m in 32 frames), because
+// the friendly ahead-cone it reads is piecewise. Needs an ulp-robust formulation first.
+#define FOLLOW_SIDESTEP_ENABLED 0
+#define SIDESTEP_BLOCKED_GAP 0.25
+#define SIDESTEP_FREE_GAP 0.6
+#define SIDESTEP_SHUT_GAP 0.4
+#define SIDESTEP_OPEN_GAP 0.7
+// Slide toward the open diagonal when the way straight ahead is blocked by a friend.
+// xy = steering direction (at most 45 deg off forward), z = blend weight 0..1. Every term
+// is continuous in the probe distances, so the heading eases over instead of snapping 45
+// deg at a threshold (a snap reads as a flick on screen, and a 1-ulp difference between
+// two compiles of the same code could flip it). A fixed per-agent side preference breaks
+// left/right ties without any frame-to-frame state.
+float3 FollowSidestep(uint index, float2 forward, NeighborhoodQueryResult n, float scale)
+{
+    if (dot(forward, forward) < 0.25) return 0.0;
+    float blocked = saturate((SIDESTEP_FREE_GAP * scale - n.aheadGap) / ((SIDESTEP_FREE_GAP - SIDESTEP_BLOCKED_GAP) * scale));
+    if (blocked <= 0.0) return 0.0;
+    float openLeft = saturate((n.leftGap - SIDESTEP_SHUT_GAP * scale) / ((SIDESTEP_OPEN_GAP - SIDESTEP_SHUT_GAP) * scale));
+    float openRight = saturate((n.rightGap - SIDESTEP_SHUT_GAP * scale) / ((SIDESTEP_OPEN_GAP - SIDESTEP_SHUT_GAP) * scale));
+    bool preferLeft = Hash01(index ^ 0x2C1B3C6Du) < 0.5;
+    float side = openLeft * (preferLeft ? 1.0 : 0.6) - openRight * (preferLeft ? 0.6 : 1.0);
+    float weight = blocked * saturate(abs(side) * 2.5);
+    if (weight <= 0.0) return 0.0;
+    return float3(normalize(forward + float2(-forward.y, forward.x) * side), weight);
+}
+// Follow, never shove (2026-10-11 front-line crowding): an engaging unit's forward speed is
+// limited to the free distance to the FRIENDLY body ahead / headway. Before, rear ranks drove into
+// the unit ahead at >= 0.35 maxSpeed for 0.4 s before the congestion wait kicked in, so the
+// press chained rank by rank into the front (nearest-ally centre distance 0.55 m for 1.1 m
+// bodies). Only the forward component is limited; sideways slipping into gaps stays free.
+void ApplyFollowGapHeadway(inout AgentData agent, float2 forward, float aheadGap, float headwaySeconds)
+{
+    if (dot(forward, forward) < 0.25 || aheadGap > 1e5) return;
+    float along = dot(agent.velocity.xz, forward);
+    float capSpeed = max(0.0, aheadGap) / headwaySeconds;
+    if (along > capSpeed) agent.velocity.xz -= forward * (along - capSpeed);
+}
+void ApplyFollowGap(inout AgentData agent, float2 forward, float aheadGap)
+{
+    ApplyFollowGapHeadway(agent, forward, aheadGap, FOLLOW_HEADWAY_SECONDS);
+}
+// 前线密度 丙′ (2026-10-14): close-up follow for engaging melee units. With the 0.3 s headway an engager
+// was capped below the start-walking speed of the locomotion deadzone (0.9 m/s) once the gap ahead
+// fell under ~0.27 m, so it froze short of its friend: 80% of the Engage band stood still and the
+// band held 0.6-0.8 /m2 against 1.05-1.15 in the rear (2026-10-13/14 40k samples). Measured from a
+// point ENGAGE_CLOSE_GAP inside the contact with a matching headway, the cap stays at walking speed
+// (1 m/s at contact) until the bodies touch, then drops to zero within those 3 cm.
+// 40k late sample: Engage band 0.89-1.21 /m2 (rear 1.03-1.2), front reversals 0.015 -> 0.008 /s.
+#define ENGAGE_CLOSE_GAP 0.03
+// Inelastic friendly contact (2026-10-11 round 5): never drive INTO an overlapping friend from
+// any side (the follow gap only covers the friend straight ahead). Only the approaching
+// component is removed, so sliding past stays free and separation alone resolves overlap:
+// clumps stop bouncing between the steering push and the separation spring.
+void ApplyFriendlyContact(inout AgentData agent, float2 press)
+{
+    float pressLength = length(press);
+    if (pressLength < 0.0001) return;
+    float2 normal = press / pressLength;
+    float approach = dot(agent.velocity.xz, normal);
+    if (approach > 0.0) agent.velocity.xz -= normal * (approach * saturate(pressLength));
+}
+// R1 (2026-10-11): locomotion deadzone + positional overlap settling.
+// A body only travels on its own velocity when that speed is outside the same moveStop /
+// moveStart hysteresis the presentation uses (keyed on the SHOWN state), so an Idle pose never
+// slides. Overlap of settling bodies (waiting, not steering) is removed positionally: first
+// order, no velocity memory, stops at contact - the underdamped separation spring no longer
+// keeps packed clumps creeping (2026-10-11 sample 205054: Move median speed == 0.08 cap).
+#define SETTLE_OVERLAP_SECONDS 0.12
+#define SETTLE_MAX_SPEED_FRACTION 0.25
+
+// Presentation word (congestion record word 12, owner-only), round 6 layout:
+// low 16 bits = presentation-hold pending time, high 16 bits = seconds the current shown clip has
+// been shown; both in milliseconds, saturating at 65.535 s.
+uint PresentationWordIndex(uint index) { return CongestionOffset(index) + CONGESTION_PRESENTATION_HOLD_WORD; }
+float PresentationPendingSeconds(uint raw) { return (float)(raw & 0xFFFFu) * 0.001; }
+float PresentationShownSeconds(uint raw) { return (float)(raw >> 16) * 0.001; }
+uint PackPresentationWord(float pendingSeconds, float shownSeconds)
+{
+    uint pending = (uint)min(65535.0, max(0.0, pendingSeconds) * 1000.0 + 0.5);
+    uint shown = (uint)min(65535.0, max(0.0, shownSeconds) * 1000.0 + 0.5);
+    return pending | (shown << 16);
+}
+
+bool LocomotionAsleep(uint index, AgentData agent)
+{
+    if (agent.currentState == STATE_ATTACK || agent.currentState == STATE_DEAD) return false;
+    UnitTypeSettings s = GetUnitSettings(index);
+    float bodyScale = max(0.01, abs(agent.scale.y));
+    float stopSpeed, startSpeed;
+    ResolveLocomotionThresholds(s, bodyScale, stopSpeed, startSpeed);
+    float shown = PresentationShownSeconds(asuint(engagementSlotAssignmentBuffer[PresentationWordIndex(index)]));
+    float speedSqr = dot(agent.velocity.xz, agent.velocity.xz);
+    if (agent.presentationState == STATE_MOVE)
+    {
+        // Minimum walk: a walk that just started is only cut when the body has (nearly) stopped.
+        float stop = shown < minWalkSeconds ? max(0.0, s.moveStopSpeed) * bodyScale : stopSpeed;
+        return speedSqr <= stop * stop;
+    }
+    // Minimum stand: a freshly planted body ignores small follow-up nudges for minStandSeconds.
+    if (shown < minStandSeconds)
+    {
+        float breakSpeed = startSpeed * STAND_BREAK_FACTOR;
+        if (speedSqr < breakSpeed * breakSpeed) return true;
+    }
+    return speedSqr <= startSpeed * startSpeed;
+}
+
+// Velocity that, applied for this frame only, removes the share of `overlap` that decays over
+// dtSim (each partner takes half). Never stored as the body's own velocity.
+float2 SettleOverlapVelocity(float2 overlap, float dtSim, float dt, float maxSpeed)
+{
+    if (dtSim <= 0.0 || dt <= 0.0) return 0.0;
+    float2 step = overlap * (0.5 * (1.0 - exp(-dtSim / SETTLE_OVERLAP_SECONDS)));
+    float cap = max(0.05, maxSpeed * SETTLE_MAX_SPEED_FRACTION) * dtSim;
+    float stepLength = length(step);
+    if (stepLength > cap) step *= cap / stepLength;
+    return step / dt;
+}
+
+// C3a: body radius for the terrain edge probes (TerrainNavigation.hlsl); 0 = centre only, which is
+// every normal body and every frame without a large body on the map.
+float TerrainProbeRadius(uint index)
+{
+    if (spatialHashStatsReadBuffer[SPATIAL_STATS_LARGE_COUNT] <= 0)
+        return 0.0;
+    float bodyRadius = AgentBodyRadius(index);
+    return IsLargeBodyRadius(bodyRadius) ? bodyRadius : 0.0;
+}
+
+void IntegrateLocomotion(uint index, inout AgentData agent, float dt, float2 settleVelocity)
+{
+    bool asleep = LocomotionAsleep(index, agent);
+    bool settling = dot(settleVelocity, settleVelocity) > 0.0;
+#if defined(MASS_TERRAIN_ENABLED)
+    float probeRadius = TerrainProbeRadius(index);
+#endif
+    if (!asleep && !settling)
+    {
+#if defined(MASS_TERRAIN_ENABLED)
+        TerrainIntegrate(agent, dt, probeRadius);
+#else
+        agent.position += agent.velocity * dt;
+#endif
+        return;
+    }
+    float3 intent = agent.velocity;
+    float2 travel = (asleep ? 0.0 : agent.velocity.xz) + settleVelocity;
+    agent.velocity = float3(travel.x, 0.0, travel.y);
+#if defined(MASS_TERRAIN_ENABLED)
+    TerrainIntegrate(agent, dt, probeRadius);
+#else
+    agent.position += agent.velocity * dt;
+#endif
+    agent.velocity = intent;
+}
+
+// R2 (2026-10-11): front zone. Enemy presence along the travel path within FRONT_ZONE_DISTANCE,
+// read from the per-team density maps built before this dispatch (snapshot, race free). A
+// 3-cell wide band is probed so a slightly oblique path still sees the enemy front.
+#define FRONT_ZONE_DISTANCE 16.0
+#define FRONT_ZONE_MAX_STEPS 8
+
+uint SampleEnemyDensityCell(uint selfIndex, int2 cell)
+{
+    cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
+    cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
+    int team = teamIdReadBuffer[selfIndex];
+    if (team == attackerTeamId) return defenderDensityMap[cell];
+    if (team == defenderTeamId) return attackerDensityMap[cell];
+    return 0u;
+}
+
+bool FrontZoneAhead(uint selfIndex, float3 position, float2 direction)
+{
+    float lenSqr = dot(direction, direction);
+    if (lenSqr <= 0.0001) return false;
+    float2 forward = direction * rsqrt(lenSqr);
+    float2 side = float2(-forward.y, forward.x);
+    float cell = max(flowFieldCellSize, 0.0001);
+    int steps = min(FRONT_ZONE_MAX_STEPS, (int)ceil(FRONT_ZONE_DISTANCE / cell));
+    uint found = 0u;
+    [loop]
+    for (int k = 0; k <= steps; k++)
+    {
+        float2 probe = position.xz + forward * (cell * (float)k);
+        found += SampleEnemyDensityCell(selfIndex, PositionXzToFlowFieldCell(probe));
+        found += SampleEnemyDensityCell(selfIndex, PositionXzToFlowFieldCell(probe + side * cell));
+        found += SampleEnemyDensityCell(selfIndex, PositionXzToFlowFieldCell(probe - side * cell));
+    }
+    return found > 0u;
+}
+
+// R4 (2026-10-11): continuous front spill. Blocked by the friend ahead -> lean sideways toward
+// the less crowded side. Continuous in every input (smooth crowding kernel, smooth blocked
+// factor), so a last-bit difference in positions only produces a last-bit difference here.
+#define FRONT_SPILL_ENABLED 1
+#define FRONT_SPILL_FREE_GAP 0.6
+#define FRONT_SPILL_BLOCKED_GAP 0.15
+#define FRONT_SPILL_GAIN lerp(0.5, 0.2, CROWD_PACKING) // round 6: less sideways spread when packing
+#define FRONT_SPILL_MAX 0.7
+
+// Plain-march spill (2026-10-12): the same continuous rule for a marcher blocked by a friend with no
+// enemy ahead, so a column widens from its edges instead of queueing in file. Own gain, independent of
+// CROWD_PACKING (front-line packing unchanged). A lean above RELEASE means real room sideways: the
+// marcher is not "blocked" for the timed congestion wait, and a running wait ends.
+#define MARCH_SPILL_ENABLED 1
+#define MARCH_SPILL_GAIN 0.5
+#define MARCH_SPILL_RELEASE 0.1
+
+float2 ApplySpill(float2 desired, float2 forward, NeighborhoodQueryResult n, float scale, float gain, out float spill)
+{
+    spill = 0.0;
+    float len = length(desired);
+    if (len < 0.0001 || dot(forward, forward) < 0.0001) return desired;
+    forward = normalize(forward);
+    float2 side = float2(-forward.y, forward.x);
+    float blocked = saturate((FRONT_SPILL_FREE_GAP * scale - n.aheadGap) /
+                             ((FRONT_SPILL_FREE_GAP - FRONT_SPILL_BLOCKED_GAP) * scale));
+    if (blocked <= 0.0) return desired;
+    spill = clamp(-dot(n.friendSpread, side) * gain, -FRONT_SPILL_MAX, FRONT_SPILL_MAX) * blocked;
+    float2 leaned = desired / len + side * spill;
+    return normalize(leaned) * len;
+}
+
+float2 ApplyFrontSpill(float2 desired, float2 forward, NeighborhoodQueryResult n, float scale)
+{
+    float spill;
+    return ApplySpill(desired, forward, n, scale, FRONT_SPILL_GAIN, spill);
+}
+#define PRESENTATION_HOLD_MAX_SPEED 0.5
+#define PRESENTATION_START_CONFIRM_SECONDS 0.1
+#define PRESENTATION_MIN_RUN_SECONDS 0.25 // shortest shown run (round 6)
+float ApplyPresentationHold(inout AgentData agent, int shownBefore, float timeBefore, float pending, float shownSeconds)
+{
+    int wanted = agent.presentationState;
+    float hold = shownBefore == STATE_ATTACK ? attackPresentationHoldSeconds : presentationHoldSeconds;
+    // A stationary pose is never held over real motion: an Attack or Idle pose kept while
+    // the body already travels reads as skating (2026-10-11 sample 2: held Attack frames
+    // moved at a median 2.5 m/s, held Idle up to 3.6 m/s).
+    bool stationaryPose = shownBefore == STATE_ATTACK || shownBefore == STATE_IDLE;
+    bool moving = agent.locomotionSpeed > PRESENTATION_HOLD_MAX_SPEED * max(0.01, abs(agent.scale.y));
+    // Round 6: nor is the run clip held over a body that has stopped (locomotionSpeed is zeroed
+    // below the stop speed) - that is running on the spot (auto sample r6b: Run shown on a still
+    // body was the p10 of Run frames). The deadzone already filters the blips the hold was for.
+    bool stoppedRun = shownBefore == STATE_MOVE && wanted == STATE_IDLE && agent.locomotionSpeed <= 0.0;
+    // ...except right after it started: a run shorter than PRESENTATION_MIN_RUN_SECONDS is kept to
+    // that length, so a short queue step reads as one step instead of a 1-3 frame Idle>Run>Idle cut
+    // (auto sample r6i: 933 such cuts, 11% of agents; worst case now ~0.15 s of run on the spot).
+    if (stoppedRun && shownSeconds < PRESENTATION_MIN_RUN_SECONDS)
+    {
+        agent.presentationState = shownBefore;
+        agent.currentAnimationTime = timeBefore;
+        return pending + deltaTime;
+    }
+    // Round 6 start confirmation: a planted body that starts to move shows Run only once the motion
+    // has lasted PRESENTATION_START_CONFIRM_SECONDS, unless it is clearly running. One- to three-frame
+    // nudges (a friend slipping in and out of the ahead corridor) otherwise cut Idle>Run>Idle
+    // (auto sample r6e: 816 such blips, 11% of agents) - they now show as a few cm of slide.
+    float effectiveHold = hold;
+    if (stationaryPose && moving)
+    {
+        float bodyScale = max(0.01, abs(agent.scale.y));
+        bool clearlyRunning = agent.locomotionSpeed > max(locomotionStartSpeedFloor, 0.5) * STAND_BREAK_FACTOR * bodyScale;
+        effectiveHold = shownBefore == STATE_IDLE && !clearlyRunning ? min(hold, PRESENTATION_START_CONFIRM_SECONDS) : 0.0;
+    }
+    if (wanted == shownBefore || wanted == STATE_DEAD || wanted == STATE_ATTACK ||
+        shownBefore == STATE_DEAD || effectiveHold <= 0.0 || stoppedRun)
+        return 0.0;
+    pending += deltaTime;
+    if (pending >= effectiveHold)
+        return 0.0;
+    agent.presentationState = shownBefore;
+    agent.currentAnimationTime = timeBefore;
+    return pending;
+}
+
 void StoreAgent(uint index, AgentData agent)
 {
 #if defined(MASS_TERRAIN_ENABLED)
@@ -89,7 +390,12 @@ void StoreAgent(uint index, AgentData agent)
     {
         AgentData previous = agentBuffer[index];
         UnitTypeSettings settings = GetUnitSettings(index);
-        UpdateLocomotionPresentation(agent, previous.position, settings);
+        int shownBefore = agent.presentationState;
+        float timeBefore = agent.currentAnimationTime;
+        uint presentationWord = PresentationWordIndex(index);
+        uint presentationRaw = asuint(engagementSlotAssignmentBuffer[presentationWord]);
+        float shownSeconds = PresentationShownSeconds(presentationRaw);
+        UpdateLocomotionPresentationDwell(agent, previous.position, settings, shownSeconds);
         // Waiting suppresses propulsion as well as Move animation. Tiny contact
         // corrections are not a reason to wake the running cycle.
         if (agent.currentState != STATE_ATTACK && agent.currentState != STATE_DEAD &&
@@ -101,6 +407,13 @@ void StoreAgent(uint index, AgentData agent)
             agent.presentationState = STATE_IDLE;
             agent.locomotionSpeed = 0.0;
         }
+        float pending = 0.0;
+        if (agent.currentState != STATE_DEAD)
+            pending = ApplyPresentationHold(agent, shownBefore, timeBefore, PresentationPendingSeconds(presentationRaw), shownSeconds);
+        shownSeconds = agent.presentationState == shownBefore ? shownSeconds + deltaTime : 0.0;
+        uint packedPresentation = PackPresentationWord(pending, shownSeconds);
+        if (packedPresentation != presentationRaw)
+            engagementSlotAssignmentBuffer[presentationWord] = asint(packedPresentation);
         if (agent.currentState != STATE_DEAD)
             AdvanceRangedCycle(index, agent, settings, previous.currentState);
     }
@@ -135,6 +448,16 @@ float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPositi
     // 统一使用有效射程：远程单位用 projectileRange，近战单位用 attackRange
     float effectiveRange = settings.projectileRange > 0.01 ? settings.projectileRange : settings.attackRange;
     float attackRange = max(0.1, effectiveRange);
+    // C2: a large target is ringed around its (scaled) body with the reach-extended range. Its
+    // perimeter holds more attackers than the 8 sectors, so each attacker keeps a stable offset
+    // inside its sector instead of stacking on the sector centre. Normal targets: no change.
+    float reachBonus = TargetReachBonus(targetIndex);
+    bool largeTarget = reachBonus > 0.0;
+    if (largeTarget)
+    {
+        targetRadius = reachBonus + LARGE_TARGET_REFERENCE_RADIUS;
+        attackRange += reachBonus;
+    }
 
     // Prefer a deterministic sector, but select against the previous frame's actual
     // assignments. Retaining the current slot receives hysteresis so rings do not
@@ -171,7 +494,8 @@ float2 ResolveEngagementSlot(uint selfIndex, uint targetIndex, float2 selfPositi
 
     // Slots sit safely inside attack range but outside the target's visual center.
     float slotRadius = min(max((selfRadius + targetRadius) * 0.8, attackRange * 0.72), attackRange * 0.86);
-    float angle = phase + (float)bestSlot * (6.2831853 / (float)ENGAGEMENT_SLOT_COUNT);
+    float sectorOffset = largeTarget ? (Hash01(selfIndex ^ 0x68E31DA4u) - 0.5) * 0.9 : 0.0;
+    float angle = phase + ((float)bestSlot + sectorOffset) * (6.2831853 / (float)ENGAGEMENT_SLOT_COUNT);
     return targetPosition + float2(cos(angle), sin(angle)) * slotRadius;
 }
 
@@ -206,6 +530,7 @@ void ClearDensityMap(uint3 id : SV_DispatchThreadID)
     densityMapWrite[cell] = 0u;
     attackerDensityMapWrite[cell] = 0u;
     defenderDensityMapWrite[cell] = 0u;
+    RangedAreaClearBlocks(cell);
 }
 
 [numthreads(64, 1, 1)]
@@ -226,6 +551,7 @@ void BuildDensityMap(uint3 id : SV_DispatchThreadID)
         InterlockedAdd(attackerDensityMapWrite[cell], 1u, original);
     else if (team == defenderTeamId)
         InterlockedAdd(defenderDensityMapWrite[cell], 1u, original);
+    RangedAreaAddMember(id.x, team, cell);
 }
 
 [numthreads(64, 1, 1)]
@@ -267,9 +593,9 @@ void ClearPendingDamage(uint3 id : SV_DispatchThreadID)
 // hpBuffer. Every other hp lookup in the pipeline uses the snapshot.
 #ifdef LP_STANCE
 void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
-    out int finishMode, out float finishDtSim, out bool finishHasTactical)
+    out int finishMode, out float finishDtSim, out bool finishHasTactical, out float2 finishSettle)
 {
-    finishMode = 0; finishDtSim = 0.0; finishHasTactical = false;
+    finishMode = 0; finishDtSim = 0.0; finishHasTactical = false; finishSettle = 0.0;
     float dt = SafeDt();
     int hpSelf = hpReadBuffer[id.x];
 
@@ -339,11 +665,32 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
     // period stays exactly attackInterval at ANY simulation cadence.
     float cooldown = attackCooldownBuffer[id.x] - dtSim;
     int targetIndex = targetAgentIndexBuffer[id.x];
+    int decisionStartTarget = targetIndex;
     float searchRadius = settings.targetAcquireRadius;
     bool targetIsValid = CurrentTargetIsValid(id.x, agent, targetIndex);
     bool searchCadence = ShouldSearchForLocalTarget(id.x, simInterval);
-    bool targetIsOverloaded = targetIsValid && searchCadence && TargetLoadRatio(id.x, (uint)targetIndex) > 1.0;
-    bool searchForEnemy = searchCadence && (!targetIsValid || targetIsOverloaded);
+    // Round 6: load balancing never pulls a melee unit off a target it can already hit. With the
+    // contact retarget that produced Attack -> Run -> Attack ping-pong every search beat (auto
+    // sample r6a: 0.019 Attack exits /agent/s, 8x round 5); without it, it still cost a swing.
+    bool targetInReach = false;
+    if (targetIsValid && settings.projectileRange <= 0.01)
+    {
+        float2 toCurrentTarget = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
+        float reach = settings.attackRange + max(0.25, settings.agentRadius * 0.75) + TargetReachBonus((uint)targetIndex);
+        targetInReach = dot(toCurrentTarget, toCurrentTarget) <= reach * reach;
+    }
+    bool targetIsOverloaded = targetIsValid && searchCadence && !targetInReach && TargetLoadRatio(id.x, (uint)targetIndex) > 1.0;
+    // A target that was valid last decision and is gone now (killed, leashed) is
+    // re-acquired THIS decision instead of on the next search beat. Waiting for the
+    // beat left 1-3 frames with no target, which dropped Attack for a run-pose blip and
+    // restarted the swing (2026-10-11 flicker sample: 54% of Attack exits). It costs one
+    // enemy scoring pass per loss; the neighborhood query runs every decision anyway.
+    bool lostTarget = targetIndex >= 0 && !targetIsValid;
+    bool searchForEnemy = (searchCadence && (!targetIsValid || targetIsOverloaded)) || lostTarget;
+    // Area fire: ranged units never run the per-enemy scoring search (RangedAreaFire.hlsl).
+    bool rangedAreaUnit = RangedAreaFireUnit(id.x, settings);
+    bool rangedAreaPick = rangedAreaUnit && (searchCadence || !targetIsValid);
+    if (rangedAreaUnit) searchForEnemy = false;
     NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy, congestion.forward);
 
     if (!targetIsValid)
@@ -376,6 +723,45 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
         if (neighborhood.bestEnemyScore + moveMargin < currentScore)
             targetIndex = neighborhood.bestEnemyIndex;
     }
+    if (rangedAreaPick)
+        targetIndex = RangedAreaRetarget(id.x, agent.position, settings, targetIndex);
+#if CONTACT_RETARGET_ENABLED
+    // Round 6 contact retarget: a melee unit that is not swinging and whose target is out of reach
+    // takes an enemy that is already at arm's length instead of pushing past it (2026-10-12 auto
+    // sample base1: 94% of Engage units with an enemy within range + 0.3 m chased a farther one).
+    // The nearest enemy comes from the 3x3 contact cells the neighbourhood query reads every
+    // decision anyway, so this costs no extra search.
+    // A swing in progress keeps its target; a target picked THIS decision (the old one died or was
+    // lost) is still open: otherwise the score pick (affinity, load) could send an attacker 4-6 m
+    // away for one decision and the next one snapped it back - a 2-frame Attack>Run>Attack cut
+    // (auto sample r6g: 151 of 228 Attack exits).
+    if (targetIndex >= 0 && (agent.currentState != STATE_ATTACK || targetIndex != decisionStartTarget) &&
+        settings.projectileRange <= 0.01 &&
+        neighborhood.nearestEnemyIndex >= 0 && neighborhood.nearestEnemyIndex != targetIndex)
+    {
+        float contactBodyScale = max(0.01, abs(agent.scale.y));
+        float contactRange = settings.attackRange + CONTACT_RETARGET_MARGIN * contactBodyScale;
+        if (neighborhood.nearestEnemyDistSqr <= contactRange * contactRange)
+        {
+            // C2: both sides are reach distances (a large enemy from its surface); the usability
+            // test below takes the centre distance and adds the bonus itself.
+            float2 toCurrent = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
+            float currentDistance = TargetReachDistance((uint)targetIndex, length(toCurrent));
+            float nearDistance = sqrt(neighborhood.nearestEnemyDistSqr);
+            uint nearIndex = (uint)neighborhood.nearestEnemyIndex;
+#if defined(MASS_TERRAIN_ENABLED)
+            float nearUsableSqr = TerrainDistanceSquared(agent.position, agentPositionReadBuffer[nearIndex]);
+#else
+            float2 toNear = agentPositionReadBuffer[nearIndex] - agent.position.xz;
+            float nearUsableSqr = dot(toNear, toNear);
+#endif
+            if (currentDistance > settings.attackRange &&
+                nearDistance + CONTACT_RETARGET_GAIN * contactBodyScale < currentDistance &&
+                TargetIsUsable(id.x, nearIndex, nearUsableSqr, agent.position, false))
+                targetIndex = (int)nearIndex;
+        }
+    }
+#endif
 
     float2 desiredDirection = 0.0;
     // Every team now reads its own flow field and its own flow configuration, so the
@@ -407,13 +793,24 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
 #else
         bool isRanged = settings.projectileRange > 0.01;
 #endif
-        float effectiveRange = isRanged ? settings.projectileRange : settings.attackRange;
+        // C2: every range below reaches a large target's surface (bonus 0 for normal targets).
+        float reachBonus = TargetReachBonus((uint)targetIndex);
+        float effectiveRange = (isRanged ? settings.projectileRange : settings.attackRange) + reachBonus;
+        float targetEntryRadius = reachBonus > 0.0 ? reachBonus + LARGE_TARGET_REFERENCE_RADIUS : max(0.05, GetAgentRadius((uint)targetIndex));
 
-        float activeAttackRange = effectiveRange;
+        // Round 6: melee closes in before it starts swinging (CROWD_PACKING 0 = at full range);
+        // it keeps swinging out to the unchanged exit range, so the hysteresis only widens.
+        float meleeEntryRange = lerp(effectiveRange,
+            max((max(0.05, settings.agentRadius) + targetEntryRadius) * 1.05, effectiveRange * 0.75),
+            CROWD_PACKING);
+        float activeAttackRange = isRanged ? effectiveRange : min(effectiveRange, meleeEntryRange);
         float attackRangeSqr = activeAttackRange * activeAttackRange;
-        float attackExitRange = activeAttackRange + max(0.25, settings.agentRadius * 0.75);
+        float attackExitRange = effectiveRange + max(0.25, settings.agentRadius * 0.75);
         float attackExitRangeSqr = attackExitRange * attackExitRange;
-        float2 engagementPoint = ResolveEngagementSlot(id.x, (uint)targetIndex, agent.position.xz, targetPosition, settings);
+        float2 engagementPoint = targetPosition;
+        // Area fire takes no melee ring slot, so volleys do not load the victim's ring.
+        if (RangedAreaFireUnit(id.x, settings)) engagementSlotAssignmentBuffer[id.x] = -1;
+        else engagementPoint = ResolveEngagementSlot(id.x, (uint)targetIndex, agent.position.xz, targetPosition, settings);
 
         // (chase-leash enforcement lives in TargetIsUsable / CurrentTargetIsValid)
         {
@@ -421,7 +818,7 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
 #if defined(MASS_TERRAIN_ENABLED)
             if (!isRanged && !TerrainSegmentClear(agent.position.xz, targetPosition)) inAttackHold = false;
 #endif
-            if (isRanged && inAttackHold)
+            if (isRanged && inAttackHold && !RangedAreaFireUnit(id.x, settings)) // area fire: allies never block
             {
                 rangedBlocked = !ResolveRangedClearance(id.x, agent, targetIndex, settings, simInterval, dtSim,
                     !holdingPosition && selfFlow.modes.x == FLOW_TARGET_NONE, congestion);
@@ -472,7 +869,7 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
                     {
                         float2 toSlot = engagementPoint - agent.position.xz;
                         float2 pursuitDirection = dot(toSlot, toSlot) > 0.0001 ? normalize(toSlot) : normalize(toTarget);
-                        desiredDirection = BlendPursuitWithNavigation(id.x, agent.position, pursuitDirection, targetDistance, settings);
+                        desiredDirection = BlendPursuitWithNavigation(id.x, agent.position, pursuitDirection, max(0.0, targetDistance - reachBonus), settings);
                     }
                 }
             }
@@ -598,38 +995,101 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
         finishMode = 2; return;
     }
 
+    // Fill free space instead of queueing behind one body: blocked straight ahead but open
+    // diagonally ahead -> step into the opening (no congestion wait). Without the old shove
+    // nobody slid into holes left by the fallen any more, so the front thinned out while the
+    // rear stood packed behind single friends (2026-10-11 round 3 screenshot).
+    // R2: a marching unit whose path runs into the enemy within FRONT_ZONE_DISTANCE is part of
+    // the fighting mass: it follows the friend ahead continuously (follow gap) instead of
+    // queueing on the timed congestion wait, which left holes between front and rear ranks.
+    // The probe is evaluated unconditionally on purpose: called only inside the condition, FXC
+    // compiled the production (MASS_LOCAL_ORDERS) variant so that it yielded false although the
+    // same call with the same inputs returned true later in the kernel (P9 diagnostic,
+    // 2026-10-11). Unconditional evaluation is stable in every variant; cost <= 27 texel loads.
+    bool enemyFrontAhead = FrontZoneAhead(id.x, agent.position, tacticalDirection);
+    bool frontZone = agent.currentState == STATE_MOVE && !holdingPosition && hasTacticalDirection && enemyFrontAhead;
+    bool followMode = agent.currentState == STATE_ENGAGE || frontZone;
+    bool followLocomotion = (agent.currentState == STATE_ENGAGE || agent.currentState == STATE_MOVE) && !holdingPosition;
+    float followScale = max(0.01, abs(agent.scale.y));
+    float3 sidestep = FOLLOW_SIDESTEP_ENABLED && followLocomotion ? FollowSidestep(id.x, congestion.forward, neighborhood, followScale) : 0.0;
+    bool sidestepping = sidestep.z > 0.0;
+    bool marchSpilling = false;
+    bool arrivalFollow = false; // N5c (opt-in, RuntimeFlowConfig.gpuNavArrivalFollow): plain march inside the GPU-nav arrival zone
+#if defined(MASS_TERRAIN_ENABLED) && defined(MASS_GPU_NAV)
+    arrivalFollow = !followMode && agent.currentState == STATE_MOVE && !holdingPosition && hasTacticalDirection && GpuNavInArrivalZone(selfTeamId);
+#endif
+#if MARCH_SPILL_ENABLED
+    // Plain march (not engaged, no enemy ahead): blocked -> lean toward the less crowded side.
+    if (!followMode && agent.currentState == STATE_MOVE && hasTacticalDirection && dot(desiredDirection, desiredDirection) > 0.0001)
+    {
+        float marchSpill = 0.0;
+        desiredDirection = ApplySpill(desiredDirection, tacticalDirection, neighborhood, followScale, MARCH_SPILL_GAIN, marchSpill);
+        marchSpilling = abs(marchSpill) > MARCH_SPILL_RELEASE;
+    }
+#endif
+    // A waiting unit resumes as soon as real space opens instead of sitting out the full
+    // 1.1-2.0 s timer (that delay turned every front movement into a stop-go wave).
+    if (followLocomotion && congestion.remainingSeconds > 0.0 &&
+        (sidestepping || marchSpilling || (!neighborhood.friendlyAhead && neighborhood.aheadGap > FOLLOW_RELEASE_GAP * followScale)))
+        congestion.remainingSeconds = 0.0;
+    if (sidestepping && dot(desiredDirection, desiredDirection) > 0.0001)
+        desiredDirection = lerp(desiredDirection, sidestep.xy * max(0.5, length(desiredDirection)), sidestep.z);
+#if FRONT_SPILL_ENABLED
+    // R4: blocked followers spread sideways into the less crowded side (continuous).
+    if (followMode && hasTacticalDirection && dot(desiredDirection, desiredDirection) > 0.0001)
+        desiredDirection = ApplyFrontSpill(desiredDirection, tacticalDirection, neighborhood, followScale);
+#endif
     bool waitingForSpace = ResolveCongestion(id.x, agent, settings, tacticalDirection,
-        neighborhood.friendlyAhead, !holdingPosition && agent.currentState != STATE_ATTACK && hasTacticalDirection,
+        // Engaging units never enter the timed congestion wait: ApplyFollowGap already stops
+        // them at the friend ahead and lets them follow the moment space opens. The wait
+        // only added 1.1-2.0 s stand-offs between 0.3 s steps (2026-10-11 round 3 sample:
+        // engaging units shown Idle 72% of the time, 0.78 Idle<->Run cuts /agent/s).
+        neighborhood.friendlyAhead && !sidestepping && !marchSpilling,
+        !holdingPosition && agent.currentState != STATE_ATTACK && agent.currentState != STATE_ENGAGE && !frontZone && hasTacticalDirection,
         dtSim, congestion);
+    if (followMode && hasTacticalDirection)
+    {
+        // Engage (and the R2 front zone) skips the timed wait (ineligible above, which clears forward) but still needs
+        // its travel direction for next frame's ahead/side gap probes and ApplyFollowGap.
+        congestion.forward = normalize(tacticalDirection);
+        uint forwardWord = CongestionOffset(id.x) + 2u;
+        engagementSlotAssignmentBuffer[forwardWord] = asint(congestion.forward.x);
+        engagementSlotAssignmentBuffer[forwardWord + 1u] = asint(congestion.forward.y);
+    }
+    float2 settleVelocity = 0.0;
     if (waitingForSpace)
     {
-        // No forward steering, density diffusion or cached running velocity. Resolve
-        // only real overlap, slowly, without turning every tiny shove into a run cycle.
-        float scale = max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
-        float2 correction = neighborhood.contactSeparation * 2.0;
-        float correctionLength = length(correction);
-        float correctionCap = 0.08 * scale;
-        if (correctionLength > correctionCap) correction *= correctionCap / correctionLength;
-        agent.velocity = float3(correction.x, 0.0, correction.y);
+        // No forward steering, density diffusion or cached running velocity. A waiting body
+        // stands still; only real overlap is removed, positionally (R1) - the old capped
+        // correction velocity kept packed waiting clumps creeping at 0.08 m/s.
+        agent.velocity = 0.0;
+        settleVelocity = SettleOverlapVelocity(neighborhood.contactSeparation, dtSim, dt, settings.maxSpeed);
     }
     else if (agent.currentState == STATE_ATTACK)
     {
-        agent.velocity.xz *= saturate(1.0 - 28.0 * dtSim);
-        // Apply contact separation AFTER attack damping. At reduced simulation cadence
-        // the old ordering could damp the entire correction to zero every decision.
-        agent.velocity.xz += separationVelocityDelta;
-        float maxContactSpeed = max(0.05, settings.maxSpeed * 0.18);
-        float contactSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
-        if (contactSpeedSqr > maxContactSpeed * maxContactSpeed)
-            agent.velocity.xz *= maxContactSpeed * rsqrt(contactSpeedSqr);
+        // Attackers stand firm. They yield to contact pressure with an overlap-
+        // proportional velocity that is approached through a frame-rate independent
+        // low-pass, instead of "velocity *= saturate(1 - 28 dt); velocity += impulse".
+        // That factor is 0 for any dt above 36 ms, so at battle frame rates every frame
+        // re-derived the velocity from that frame's overlap alone; it flipped as the press
+        // shifted and sat on the cap (2026-10-11 sample: 28% of attack frames reversed,
+        // p90 speed == the 0.18 * maxSpeed cap). Elapsed-interval aware via dtSim; a
+        // forced zero-budget decision (dtSim 0) keeps the cached velocity.
+        float2 yieldVelocity = separationForce * settings.separationStrength * ATTACK_CONTACT_YIELD;
+        float maxContactSpeed = max(0.05, settings.maxSpeed * ATTACK_CONTACT_MAX_SPEED_FRACTION);
+        float yieldSpeedSqr = dot(yieldVelocity, yieldVelocity);
+        if (yieldSpeedSqr > maxContactSpeed * maxContactSpeed)
+            yieldVelocity *= maxContactSpeed * rsqrt(yieldSpeedSqr);
+        agent.velocity.xz = lerp(agent.velocity.xz, yieldVelocity,
+            1.0 - exp(-dtSim / ATTACK_CONTACT_SMOOTH_SECONDS));
     }
     else if (dot(desiredDirection, desiredDirection) > 0.0001)
     {
         float steerRate = agent.currentState == STATE_ENGAGE
             ? 10.0
             : settings.flowFieldResponsiveness * saturate(settings.flowFieldWeight);
-        float queueSlowdown = agent.currentState == STATE_ENGAGE ? 0.35 : 0.75;
-        float minQueueSpeed = agent.currentState == STATE_ENGAGE ? 0.35 : 0.08;
+        float queueSlowdown = followMode ? 0.35 : 0.75; // R3: gap-led braking in the front zone
+        float minQueueSpeed = followMode ? 0.35 : 0.08;
         float jamSpeedScale = max(minQueueSpeed, saturate(1.0 - densityPressure.aheadPressure * queueSlowdown));
         float targetSpeed = settings.maxSpeed * AgentSpeedMultiplier(id.x, id.x) * densityPressure.speedScale * jamSpeedScale;
 
@@ -643,21 +1103,29 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
         if (elapsedIntervals > 0) alphaN = pow(alpha, (float)elapsedIntervals);
         float gain = steerPerFrame * (alpha < 0.9999 ? (1.0 - alphaN) / max(1.0 - alpha, 0.0001) : (float)elapsedIntervals);
         agent.velocity.xz = agent.velocity.xz * alphaN + desiredDirection * (targetSpeed * gain);
+        if (followMode && agent.currentState == STATE_ENGAGE && settings.projectileRange <= 0.01)
+            ApplyFollowGapHeadway(agent, congestion.forward, neighborhood.aheadGap + ENGAGE_CLOSE_GAP * followScale, ENGAGE_CLOSE_GAP); // 丙′
+        else if (followMode)
+            ApplyFollowGap(agent, congestion.forward, neighborhood.aheadGap);
+        else if (arrivalFollow)
+            ApplyFollowGap(agent, normalize(tacticalDirection), neighborhood.aheadGap); // N5c: stop behind arrived ranks, no shove
+        ApplyFriendlyContact(agent, neighborhood.friendPress);
         agent.velocity.y = 0.0;
         SmoothFaceDirectionDt(agent, hasTacticalDirection ? tacticalDirection : desiredDirection, 0.05, 360.0, dtSim);
         agent.velocity.xz += separationVelocityDelta;
     }
     else
     {
-        // Idle agents still need to resolve spawn/contact overlap.
-        agent.velocity.xz += separationVelocityDelta;
+        // Idle agents still resolve spawn/contact overlap - positionally (R1), not through
+        // the separation spring velocity.
+        settleVelocity = SettleOverlapVelocity(separationForce, dtSim, dt, settings.maxSpeed);
     }
 
     agent.velocity = ClampVelocity(id.x, agent.velocity);
     if (agent.currentState == STATE_MOVE || agent.currentState == STATE_ENGAGE)
     {
-        float queueSlowdown = agent.currentState == STATE_ENGAGE ? 0.35 : 0.75;
-        float minQueueSpeed = agent.currentState == STATE_ENGAGE ? 0.35 : 0.08;
+        float queueSlowdown = followMode ? 0.35 : 0.75; // R3: gap-led braking in the front zone
+        float minQueueSpeed = followMode ? 0.35 : 0.08;
         float jamSpeedScale = max(minQueueSpeed, saturate(1.0 - densityPressure.aheadPressure * queueSlowdown));
         float maxLocomotionSpeed = settings.maxSpeed * max(0.08, densityPressure.speedScale * jamSpeedScale);
         float locomotionSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
@@ -673,7 +1141,7 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
         }
         LimitRangedReposition(agent, settings, congestion, dt);
     }
-    finishMode = 3; finishDtSim = dtSim; finishHasTactical = hasTacticalDirection;
+    finishMode = 3; finishDtSim = dtSim; finishHasTactical = hasTacticalDirection; finishSettle = settleVelocity;
 }
 
 [numthreads(64, 1, 1)]
@@ -716,16 +1184,16 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     if (IsCorpseDespawned(agent))
         return;
 
-    int finishMode; float finishDtSim; bool finishHasTactical;
-    ResolveBeforeIntegration(id, agent, finishMode, finishDtSim, finishHasTactical);
+    int finishMode; float finishDtSim; bool finishHasTactical; float2 finishSettle;
+    ResolveBeforeIntegration(id, agent, finishMode, finishDtSim, finishHasTactical, finishSettle);
     if (finishMode != 0)
     {
         float dt = SafeDt();
         float3 previousPosition = agent.position;
 #if defined(MASS_TERRAIN_ENABLED)
-        TerrainIntegrate(agent, dt);
+        if (finishMode == 2) TerrainIntegrate(agent, dt, TerrainProbeRadius(id.x)); else IntegrateLocomotion(id.x, agent, dt, finishSettle);
 #else
-        agent.position += agent.velocity * dt;
+        if (finishMode == 2) agent.position += agent.velocity * dt; else IntegrateLocomotion(id.x, agent, dt, finishSettle);
 #endif
         if (finishMode == 2)
         {
@@ -746,7 +1214,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 
         }
 #if defined(MASS_TERRAIN_ENABLED)
-        if (finishMode == 2) TerrainConstrainPosition(previousPosition, agent);
+        if (finishMode == 2) TerrainConstrainPosition(previousPosition, agent, TerrainProbeRadius(id.x));
 #else
         ApplyStaticObstacleBounds(id.x, agent);
         ApplyBounds(agent);
@@ -855,9 +1323,9 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         if (GetAgentFlowParams(id.x).modes.x == FLOW_TARGET_NONE)
             LimitRangedReposition(agent, GetUnitSettings(id.x), congestion, dt);
 #if defined(MASS_TERRAIN_ENABLED)
-        TerrainIntegrate(agent, dt);
+        IntegrateLocomotion(id.x, agent, dt, 0.0);
 #else
-        agent.position += agent.velocity * dt;
+        IntegrateLocomotion(id.x, agent, dt, 0.0);
         ApplyStaticObstacleBounds(id.x, agent);
         ApplyBounds(agent);
 #endif
@@ -878,11 +1346,32 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     // period stays exactly attackInterval at ANY simulation cadence.
     float cooldown = attackCooldownBuffer[id.x] - dtSim;
     int targetIndex = targetAgentIndexBuffer[id.x];
+    int decisionStartTarget = targetIndex;
     float searchRadius = settings.targetAcquireRadius;
     bool targetIsValid = CurrentTargetIsValid(id.x, agent, targetIndex);
     bool searchCadence = ShouldSearchForLocalTarget(id.x, simInterval);
-    bool targetIsOverloaded = targetIsValid && searchCadence && TargetLoadRatio(id.x, (uint)targetIndex) > 1.0;
-    bool searchForEnemy = searchCadence && (!targetIsValid || targetIsOverloaded);
+    // Round 6: load balancing never pulls a melee unit off a target it can already hit. With the
+    // contact retarget that produced Attack -> Run -> Attack ping-pong every search beat (auto
+    // sample r6a: 0.019 Attack exits /agent/s, 8x round 5); without it, it still cost a swing.
+    bool targetInReach = false;
+    if (targetIsValid && settings.projectileRange <= 0.01)
+    {
+        float2 toCurrentTarget = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
+        float reach = settings.attackRange + max(0.25, settings.agentRadius * 0.75) + TargetReachBonus((uint)targetIndex);
+        targetInReach = dot(toCurrentTarget, toCurrentTarget) <= reach * reach;
+    }
+    bool targetIsOverloaded = targetIsValid && searchCadence && !targetInReach && TargetLoadRatio(id.x, (uint)targetIndex) > 1.0;
+    // A target that was valid last decision and is gone now (killed, leashed) is
+    // re-acquired THIS decision instead of on the next search beat. Waiting for the
+    // beat left 1-3 frames with no target, which dropped Attack for a run-pose blip and
+    // restarted the swing (2026-10-11 flicker sample: 54% of Attack exits). It costs one
+    // enemy scoring pass per loss; the neighborhood query runs every decision anyway.
+    bool lostTarget = targetIndex >= 0 && !targetIsValid;
+    bool searchForEnemy = (searchCadence && (!targetIsValid || targetIsOverloaded)) || lostTarget;
+    // Area fire: ranged units never run the per-enemy scoring search (RangedAreaFire.hlsl).
+    bool rangedAreaUnit = RangedAreaFireUnit(id.x, settings);
+    bool rangedAreaPick = rangedAreaUnit && (searchCadence || !targetIsValid);
+    if (rangedAreaUnit) searchForEnemy = false;
     NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy, congestion.forward);
 
     if (!targetIsValid)
@@ -915,6 +1404,45 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         if (neighborhood.bestEnemyScore + moveMargin < currentScore)
             targetIndex = neighborhood.bestEnemyIndex;
     }
+    if (rangedAreaPick)
+        targetIndex = RangedAreaRetarget(id.x, agent.position, settings, targetIndex);
+#if CONTACT_RETARGET_ENABLED
+    // Round 6 contact retarget: a melee unit that is not swinging and whose target is out of reach
+    // takes an enemy that is already at arm's length instead of pushing past it (2026-10-12 auto
+    // sample base1: 94% of Engage units with an enemy within range + 0.3 m chased a farther one).
+    // The nearest enemy comes from the 3x3 contact cells the neighbourhood query reads every
+    // decision anyway, so this costs no extra search.
+    // A swing in progress keeps its target; a target picked THIS decision (the old one died or was
+    // lost) is still open: otherwise the score pick (affinity, load) could send an attacker 4-6 m
+    // away for one decision and the next one snapped it back - a 2-frame Attack>Run>Attack cut
+    // (auto sample r6g: 151 of 228 Attack exits).
+    if (targetIndex >= 0 && (agent.currentState != STATE_ATTACK || targetIndex != decisionStartTarget) &&
+        settings.projectileRange <= 0.01 &&
+        neighborhood.nearestEnemyIndex >= 0 && neighborhood.nearestEnemyIndex != targetIndex)
+    {
+        float contactBodyScale = max(0.01, abs(agent.scale.y));
+        float contactRange = settings.attackRange + CONTACT_RETARGET_MARGIN * contactBodyScale;
+        if (neighborhood.nearestEnemyDistSqr <= contactRange * contactRange)
+        {
+            // C2: both sides are reach distances (a large enemy from its surface); the usability
+            // test below takes the centre distance and adds the bonus itself.
+            float2 toCurrent = agentPositionReadBuffer[(uint)targetIndex] - agent.position.xz;
+            float currentDistance = TargetReachDistance((uint)targetIndex, length(toCurrent));
+            float nearDistance = sqrt(neighborhood.nearestEnemyDistSqr);
+            uint nearIndex = (uint)neighborhood.nearestEnemyIndex;
+#if defined(MASS_TERRAIN_ENABLED)
+            float nearUsableSqr = TerrainDistanceSquared(agent.position, agentPositionReadBuffer[nearIndex]);
+#else
+            float2 toNear = agentPositionReadBuffer[nearIndex] - agent.position.xz;
+            float nearUsableSqr = dot(toNear, toNear);
+#endif
+            if (currentDistance > settings.attackRange &&
+                nearDistance + CONTACT_RETARGET_GAIN * contactBodyScale < currentDistance &&
+                TargetIsUsable(id.x, nearIndex, nearUsableSqr, agent.position, false))
+                targetIndex = (int)nearIndex;
+        }
+    }
+#endif
 
     float2 desiredDirection = 0.0;
     // Every team now reads its own flow field and its own flow configuration, so the
@@ -946,13 +1474,24 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 #else
         bool isRanged = settings.projectileRange > 0.01;
 #endif
-        float effectiveRange = isRanged ? settings.projectileRange : settings.attackRange;
+        // C2: every range below reaches a large target's surface (bonus 0 for normal targets).
+        float reachBonus = TargetReachBonus((uint)targetIndex);
+        float effectiveRange = (isRanged ? settings.projectileRange : settings.attackRange) + reachBonus;
+        float targetEntryRadius = reachBonus > 0.0 ? reachBonus + LARGE_TARGET_REFERENCE_RADIUS : max(0.05, GetAgentRadius((uint)targetIndex));
 
-        float activeAttackRange = effectiveRange;
+        // Round 6: melee closes in before it starts swinging (CROWD_PACKING 0 = at full range);
+        // it keeps swinging out to the unchanged exit range, so the hysteresis only widens.
+        float meleeEntryRange = lerp(effectiveRange,
+            max((max(0.05, settings.agentRadius) + targetEntryRadius) * 1.05, effectiveRange * 0.75),
+            CROWD_PACKING);
+        float activeAttackRange = isRanged ? effectiveRange : min(effectiveRange, meleeEntryRange);
         float attackRangeSqr = activeAttackRange * activeAttackRange;
-        float attackExitRange = activeAttackRange + max(0.25, settings.agentRadius * 0.75);
+        float attackExitRange = effectiveRange + max(0.25, settings.agentRadius * 0.75);
         float attackExitRangeSqr = attackExitRange * attackExitRange;
-        float2 engagementPoint = ResolveEngagementSlot(id.x, (uint)targetIndex, agent.position.xz, targetPosition, settings);
+        float2 engagementPoint = targetPosition;
+        // Area fire takes no melee ring slot, so volleys do not load the victim's ring.
+        if (RangedAreaFireUnit(id.x, settings)) engagementSlotAssignmentBuffer[id.x] = -1;
+        else engagementPoint = ResolveEngagementSlot(id.x, (uint)targetIndex, agent.position.xz, targetPosition, settings);
 
         // (chase-leash enforcement lives in TargetIsUsable / CurrentTargetIsValid)
         {
@@ -960,7 +1499,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 #if defined(MASS_TERRAIN_ENABLED)
             if (!isRanged && !TerrainSegmentClear(agent.position.xz, targetPosition)) inAttackHold = false;
 #endif
-            if (isRanged && inAttackHold)
+            if (isRanged && inAttackHold && !RangedAreaFireUnit(id.x, settings)) // area fire: allies never block
             {
                 rangedBlocked = !ResolveRangedClearance(id.x, agent, targetIndex, settings, simInterval, dtSim,
                     !holdingPosition && selfFlow.modes.x == FLOW_TARGET_NONE, congestion);
@@ -1011,7 +1550,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
                     {
                         float2 toSlot = engagementPoint - agent.position.xz;
                         float2 pursuitDirection = dot(toSlot, toSlot) > 0.0001 ? normalize(toSlot) : normalize(toTarget);
-                        desiredDirection = BlendPursuitWithNavigation(id.x, agent.position, pursuitDirection, targetDistance, settings);
+                        desiredDirection = BlendPursuitWithNavigation(id.x, agent.position, pursuitDirection, max(0.0, targetDistance - reachBonus), settings);
                     }
                 }
             }
@@ -1136,7 +1675,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 
 #if defined(MASS_TERRAIN_ENABLED)
         float3 previousPosition = agent.position;
-        TerrainIntegrate(agent, dt);
+        TerrainIntegrate(agent, dt, TerrainProbeRadius(id.x));
 #else
         agent.position += agent.velocity * dt;
 #endif
@@ -1157,7 +1696,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         }
 
 #if defined(MASS_TERRAIN_ENABLED)
-        TerrainConstrainPosition(previousPosition, agent);
+        TerrainConstrainPosition(previousPosition, agent, TerrainProbeRadius(id.x));
 #else
         ApplyStaticObstacleBounds(id.x, agent);
         ApplyBounds(agent);
@@ -1166,38 +1705,101 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         return;
     }
 
+    // Fill free space instead of queueing behind one body: blocked straight ahead but open
+    // diagonally ahead -> step into the opening (no congestion wait). Without the old shove
+    // nobody slid into holes left by the fallen any more, so the front thinned out while the
+    // rear stood packed behind single friends (2026-10-11 round 3 screenshot).
+    // R2: a marching unit whose path runs into the enemy within FRONT_ZONE_DISTANCE is part of
+    // the fighting mass: it follows the friend ahead continuously (follow gap) instead of
+    // queueing on the timed congestion wait, which left holes between front and rear ranks.
+    // The probe is evaluated unconditionally on purpose: called only inside the condition, FXC
+    // compiled the production (MASS_LOCAL_ORDERS) variant so that it yielded false although the
+    // same call with the same inputs returned true later in the kernel (P9 diagnostic,
+    // 2026-10-11). Unconditional evaluation is stable in every variant; cost <= 27 texel loads.
+    bool enemyFrontAhead = FrontZoneAhead(id.x, agent.position, tacticalDirection);
+    bool frontZone = agent.currentState == STATE_MOVE && !holdingPosition && hasTacticalDirection && enemyFrontAhead;
+    bool followMode = agent.currentState == STATE_ENGAGE || frontZone;
+    bool followLocomotion = (agent.currentState == STATE_ENGAGE || agent.currentState == STATE_MOVE) && !holdingPosition;
+    float followScale = max(0.01, abs(agent.scale.y));
+    float3 sidestep = FOLLOW_SIDESTEP_ENABLED && followLocomotion ? FollowSidestep(id.x, congestion.forward, neighborhood, followScale) : 0.0;
+    bool sidestepping = sidestep.z > 0.0;
+    bool marchSpilling = false;
+    bool arrivalFollow = false; // N5c (opt-in, RuntimeFlowConfig.gpuNavArrivalFollow): plain march inside the GPU-nav arrival zone
+#if defined(MASS_TERRAIN_ENABLED) && defined(MASS_GPU_NAV)
+    arrivalFollow = !followMode && agent.currentState == STATE_MOVE && !holdingPosition && hasTacticalDirection && GpuNavInArrivalZone(selfTeamId);
+#endif
+#if MARCH_SPILL_ENABLED
+    // Plain march (not engaged, no enemy ahead): blocked -> lean toward the less crowded side.
+    if (!followMode && agent.currentState == STATE_MOVE && hasTacticalDirection && dot(desiredDirection, desiredDirection) > 0.0001)
+    {
+        float marchSpill = 0.0;
+        desiredDirection = ApplySpill(desiredDirection, tacticalDirection, neighborhood, followScale, MARCH_SPILL_GAIN, marchSpill);
+        marchSpilling = abs(marchSpill) > MARCH_SPILL_RELEASE;
+    }
+#endif
+    // A waiting unit resumes as soon as real space opens instead of sitting out the full
+    // 1.1-2.0 s timer (that delay turned every front movement into a stop-go wave).
+    if (followLocomotion && congestion.remainingSeconds > 0.0 &&
+        (sidestepping || marchSpilling || (!neighborhood.friendlyAhead && neighborhood.aheadGap > FOLLOW_RELEASE_GAP * followScale)))
+        congestion.remainingSeconds = 0.0;
+    if (sidestepping && dot(desiredDirection, desiredDirection) > 0.0001)
+        desiredDirection = lerp(desiredDirection, sidestep.xy * max(0.5, length(desiredDirection)), sidestep.z);
+#if FRONT_SPILL_ENABLED
+    // R4: blocked followers spread sideways into the less crowded side (continuous).
+    if (followMode && hasTacticalDirection && dot(desiredDirection, desiredDirection) > 0.0001)
+        desiredDirection = ApplyFrontSpill(desiredDirection, tacticalDirection, neighborhood, followScale);
+#endif
     bool waitingForSpace = ResolveCongestion(id.x, agent, settings, tacticalDirection,
-        neighborhood.friendlyAhead, !holdingPosition && agent.currentState != STATE_ATTACK && hasTacticalDirection,
+        // Engaging units never enter the timed congestion wait: ApplyFollowGap already stops
+        // them at the friend ahead and lets them follow the moment space opens. The wait
+        // only added 1.1-2.0 s stand-offs between 0.3 s steps (2026-10-11 round 3 sample:
+        // engaging units shown Idle 72% of the time, 0.78 Idle<->Run cuts /agent/s).
+        neighborhood.friendlyAhead && !sidestepping && !marchSpilling,
+        !holdingPosition && agent.currentState != STATE_ATTACK && agent.currentState != STATE_ENGAGE && !frontZone && hasTacticalDirection,
         dtSim, congestion);
+    if (followMode && hasTacticalDirection)
+    {
+        // Engage (and the R2 front zone) skips the timed wait (ineligible above, which clears forward) but still needs
+        // its travel direction for next frame's ahead/side gap probes and ApplyFollowGap.
+        congestion.forward = normalize(tacticalDirection);
+        uint forwardWord = CongestionOffset(id.x) + 2u;
+        engagementSlotAssignmentBuffer[forwardWord] = asint(congestion.forward.x);
+        engagementSlotAssignmentBuffer[forwardWord + 1u] = asint(congestion.forward.y);
+    }
+    float2 settleVelocity = 0.0;
     if (waitingForSpace)
     {
-        // No forward steering, density diffusion or cached running velocity. Resolve
-        // only real overlap, slowly, without turning every tiny shove into a run cycle.
-        float scale = max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
-        float2 correction = neighborhood.contactSeparation * 2.0;
-        float correctionLength = length(correction);
-        float correctionCap = 0.08 * scale;
-        if (correctionLength > correctionCap) correction *= correctionCap / correctionLength;
-        agent.velocity = float3(correction.x, 0.0, correction.y);
+        // No forward steering, density diffusion or cached running velocity. A waiting body
+        // stands still; only real overlap is removed, positionally (R1) - the old capped
+        // correction velocity kept packed waiting clumps creeping at 0.08 m/s.
+        agent.velocity = 0.0;
+        settleVelocity = SettleOverlapVelocity(neighborhood.contactSeparation, dtSim, dt, settings.maxSpeed);
     }
     else if (agent.currentState == STATE_ATTACK)
     {
-        agent.velocity.xz *= saturate(1.0 - 28.0 * dtSim);
-        // Apply contact separation AFTER attack damping. At reduced simulation cadence
-        // the old ordering could damp the entire correction to zero every decision.
-        agent.velocity.xz += separationVelocityDelta;
-        float maxContactSpeed = max(0.05, settings.maxSpeed * 0.18);
-        float contactSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
-        if (contactSpeedSqr > maxContactSpeed * maxContactSpeed)
-            agent.velocity.xz *= maxContactSpeed * rsqrt(contactSpeedSqr);
+        // Attackers stand firm. They yield to contact pressure with an overlap-
+        // proportional velocity that is approached through a frame-rate independent
+        // low-pass, instead of "velocity *= saturate(1 - 28 dt); velocity += impulse".
+        // That factor is 0 for any dt above 36 ms, so at battle frame rates every frame
+        // re-derived the velocity from that frame's overlap alone; it flipped as the press
+        // shifted and sat on the cap (2026-10-11 sample: 28% of attack frames reversed,
+        // p90 speed == the 0.18 * maxSpeed cap). Elapsed-interval aware via dtSim; a
+        // forced zero-budget decision (dtSim 0) keeps the cached velocity.
+        float2 yieldVelocity = separationForce * settings.separationStrength * ATTACK_CONTACT_YIELD;
+        float maxContactSpeed = max(0.05, settings.maxSpeed * ATTACK_CONTACT_MAX_SPEED_FRACTION);
+        float yieldSpeedSqr = dot(yieldVelocity, yieldVelocity);
+        if (yieldSpeedSqr > maxContactSpeed * maxContactSpeed)
+            yieldVelocity *= maxContactSpeed * rsqrt(yieldSpeedSqr);
+        agent.velocity.xz = lerp(agent.velocity.xz, yieldVelocity,
+            1.0 - exp(-dtSim / ATTACK_CONTACT_SMOOTH_SECONDS));
     }
     else if (dot(desiredDirection, desiredDirection) > 0.0001)
     {
         float steerRate = agent.currentState == STATE_ENGAGE
             ? 10.0
             : settings.flowFieldResponsiveness * saturate(settings.flowFieldWeight);
-        float queueSlowdown = agent.currentState == STATE_ENGAGE ? 0.35 : 0.75;
-        float minQueueSpeed = agent.currentState == STATE_ENGAGE ? 0.35 : 0.08;
+        float queueSlowdown = followMode ? 0.35 : 0.75; // R3: gap-led braking in the front zone
+        float minQueueSpeed = followMode ? 0.35 : 0.08;
         float jamSpeedScale = max(minQueueSpeed, saturate(1.0 - densityPressure.aheadPressure * queueSlowdown));
         float targetSpeed = settings.maxSpeed * AgentSpeedMultiplier(id.x, id.x) * densityPressure.speedScale * jamSpeedScale;
 
@@ -1211,21 +1813,29 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         if (elapsedIntervals > 0) alphaN = pow(alpha, (float)elapsedIntervals);
         float gain = steerPerFrame * (alpha < 0.9999 ? (1.0 - alphaN) / max(1.0 - alpha, 0.0001) : (float)elapsedIntervals);
         agent.velocity.xz = agent.velocity.xz * alphaN + desiredDirection * (targetSpeed * gain);
+        if (followMode && agent.currentState == STATE_ENGAGE && settings.projectileRange <= 0.01)
+            ApplyFollowGapHeadway(agent, congestion.forward, neighborhood.aheadGap + ENGAGE_CLOSE_GAP * followScale, ENGAGE_CLOSE_GAP); // 丙′
+        else if (followMode)
+            ApplyFollowGap(agent, congestion.forward, neighborhood.aheadGap);
+        else if (arrivalFollow)
+            ApplyFollowGap(agent, normalize(tacticalDirection), neighborhood.aheadGap); // N5c: stop behind arrived ranks, no shove
+        ApplyFriendlyContact(agent, neighborhood.friendPress);
         agent.velocity.y = 0.0;
         SmoothFaceDirectionDt(agent, hasTacticalDirection ? tacticalDirection : desiredDirection, 0.05, 360.0, dtSim);
         agent.velocity.xz += separationVelocityDelta;
     }
     else
     {
-        // Idle agents still need to resolve spawn/contact overlap.
-        agent.velocity.xz += separationVelocityDelta;
+        // Idle agents still resolve spawn/contact overlap - positionally (R1), not through
+        // the separation spring velocity.
+        settleVelocity = SettleOverlapVelocity(separationForce, dtSim, dt, settings.maxSpeed);
     }
 
     agent.velocity = ClampVelocity(id.x, agent.velocity);
     if (agent.currentState == STATE_MOVE || agent.currentState == STATE_ENGAGE)
     {
-        float queueSlowdown = agent.currentState == STATE_ENGAGE ? 0.35 : 0.75;
-        float minQueueSpeed = agent.currentState == STATE_ENGAGE ? 0.35 : 0.08;
+        float queueSlowdown = followMode ? 0.35 : 0.75; // R3: gap-led braking in the front zone
+        float minQueueSpeed = followMode ? 0.35 : 0.08;
         float jamSpeedScale = max(minQueueSpeed, saturate(1.0 - densityPressure.aheadPressure * queueSlowdown));
         float maxLocomotionSpeed = settings.maxSpeed * max(0.08, densityPressure.speedScale * jamSpeedScale);
         float locomotionSpeedSqr = dot(agent.velocity.xz, agent.velocity.xz);
@@ -1242,9 +1852,9 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         LimitRangedReposition(agent, settings, congestion, dt);
     }
 #if defined(MASS_TERRAIN_ENABLED)
-    TerrainIntegrate(agent, dt);
+    IntegrateLocomotion(id.x, agent, dt, settleVelocity);
 #else
-    agent.position += agent.velocity * dt;
+    IntegrateLocomotion(id.x, agent, dt, settleVelocity);
     ApplyStaticObstacleBounds(id.x, agent);
     ApplyBounds(agent);
 #endif
@@ -1285,4 +1895,7 @@ void ObserveLocalOrders(uint3 id:SV_DispatchThreadID)
     _LocalOrderAck[id.x]=(uint)o.sequence | (battleStarted==0?0x80000000u:0u) | (!open?0x40000000u:0u) | (observedRevision!=-(float)o.sequence?0x20000000u:0u);
 #endif
 }
+
+
+
 

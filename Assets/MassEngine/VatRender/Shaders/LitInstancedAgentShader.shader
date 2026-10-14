@@ -41,10 +41,13 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
         _DeathClipStartFrame  ("Death Clip Start Frame",  Float) = 0
         _DeathClipFrameCount  ("Death Clip Frame Count",  Float) = 30
         _DeathClipFrameRate   ("Death Clip Frame Rate",   Float) = 30
+        [Header(Vertex AO)]
+        _VertexAO       ("Vertex AO (per unit type, MPB)", Range(0, 1)) = 0
+        _VertexAODirect ("Vertex AO on direct light (MPB)", Range(0, 1)) = 0
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" "MassLodCrossfade"="1" }
         // 降低 LOD 值或者配置 LOD 设置可以协助以后的性能管理
         LOD 300
 
@@ -84,12 +87,51 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             float _DeathClipStartFrame;
             float _DeathClipFrameCount;
             float _DeathClipFrameRate;
+            float _VertexAO;
+            float _VertexAODirect;
         CBUFFER_END
 
         // 尸体下沉参数，每帧由 MassGpuRenderDispatcher 通过 MaterialPropertyBlock 写入。
         // xyz = (停留秒数, 下沉秒数, 下沉深度)；x <= 0 表示不下沉（尸体永久保留）。
         // 由 MPB 提供，所以必须放在 UnityPerMaterial 之外。
         float4 _MassCorpseSink;
+
+
+            // LOD crossfade (2026-10-13, 中景闪动修复 B). _MassLodTierPlusOne = tier of this draw + 1
+            // (MPB; 0 = no crossfade). _MassLodState = per-agent word from the LOD classification
+            // (AgentDataCommon.hlsl ResolveLodTier). While an agent changes tier it is drawn in both
+            // tiers; the incoming mesh keeps the dither cells below the progress, the outgoing mesh
+            // the rest, so every pixel shows exactly one of them.
+            float _MassLodTierPlusOne;
+            static float _GlobalLodVis = 2.0; // > 1.5 = fully shown
+
+            float MassLodVisibility(uint state)
+            {
+                if (_MassLodTierPlusOne < 0.5 || (state & 16u) == 0u)
+                    return 2.0;
+                int cur = (int)(state & 3u);
+                int prev = (int)((state >> 2) & 3u);
+                float f = (float)(state >> 16) * (1.0 / 65535.0);
+                if (f >= 1.0 || cur == prev)
+                    return 2.0;
+                int tier = (int)(_MassLodTierPlusOne - 0.5);
+                if (tier == cur) return f;
+                if (tier == prev) return -1.0 - f;
+                return 2.0;
+            }
+
+            void MassLodDitherClip(float vis, float4 positionCS)
+            {
+                if (vis > 1.5)
+                    return;
+                static const float bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
+                uint2 p = (uint2)positionCS.xy & 3u;
+                float t = (bayer[p.y * 4u + p.x] + 0.5) / 16.0;
+                if (vis >= 0.0)
+                    clip(vis - t);
+                else
+                    clip(t - (-1.0 - vis));
+            }
 
         // 尸体停留 x 秒后，用 y 秒沉入地下 z 米。地面不透明，遮挡由它完成，
         // 不需要 alpha 混合。age 就是 Dead 状态下复用的 currentAnimationTime。
@@ -123,6 +165,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             // near draw 绑定 nearAgentIndexBuffer，far draw 绑定 farAgentIndexBuffer。
             // unity_InstanceID 只是“当前批次中的第几个”，不能直接当作 agentBuffer 下标。
             StructuredBuffer<uint> visibleAgentIndices;
+            StructuredBuffer<uint> _MassLodState;
 
             // setup() 读出当前 agent 的动画时间后暂存在这里，
             // vertex 阶段再用它去计算 VAT 采样帧。
@@ -238,6 +281,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 // 记录当前实例的动画时间。后面的 vertex shader 会用它采 VAT。
                 _GlobalAnimationTime = data.currentAnimationTime;
                 _GlobalCurrentState = data.currentState >= 3 ? data.currentState : data.presentationState;
+                _GlobalLodVis = MassLodVisibility(_MassLodState[agentIndex]);
             #endif
         }
         ENDHLSL
@@ -270,6 +314,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 float4 positionOS   : POSITION;
                 float3 normalOS     : NORMAL;
                 float2 uv           : TEXCOORD0;
+                float2 aoUV         : TEXCOORD3;   // 顶点AO（uv3.x，MassEngine/顶点AO 烘焙）
                 uint   vertexID     : SV_VertexID; // VAT 采样所需的顶点 ID
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -277,10 +322,12 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             struct Varyings
             {
                 float4 positionCS   : SV_POSITION;
+                nointerpolation float lodVis : TEXCOORD7; // LOD crossfade
                 float3 positionWS   : TEXCOORD0; // 这次要保存世界坐标了，因为真实光照计算必须在世界坐标下进行
                 float3 normalWS     : TEXCOORD1;
                 float2 uv           : TEXCOORD2;
                 half fogFactor      : TEXCOORD3; // 用于存放计算好的雾气浓度数据
+                half ao             : TEXCOORD5; // 顶点AO（关闭时为 1）
                 half3 vertexLight   : TEXCOORD4; // 顶点级附加光源结果（性能大幅优于 per-pixel）
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -291,6 +338,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.lodVis = _GlobalLodVis;
 
                 // ── 步骤 3：VAT 顶点置换 ──────────────────────────────
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
@@ -317,6 +365,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 // TransformObjectToWorldNormal 会正确处理非均匀缩放的情况
                 output.normalWS = TransformObjectToWorldNormal(input.normalOS);
                 output.uv = input.uv;
+                output.ao = (half)lerp(1.0, saturate(input.aoUV.x), _VertexAO);
 
                 // ── 顶点级附加光源（Additional Lights per-vertex）──
                 // URP 默认限制附加光源数量（通常 4 个），per-vertex 模式下
@@ -339,6 +388,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             half4 frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                MassLodDitherClip(input.lodVis, input.positionCS);
                 
                 // 1. 采样基础颜色贴图
                 float3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv).rgb * _BaseColor.rgb;
@@ -356,7 +406,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 //   - color：光源颜色
                 //   - distanceAttenuation：距离衰减
                 //   - shadowAttenuation：阴影衰减（0=完全阴影，1=无阴影）
-                Light mainLight = GetMainLight(shadowCoord);
+                Light mainLight = GetMainLight(shadowCoord, input.positionWS, half4(1, 1, 1, 1)); // distance fade: never read past the shadow map edge (Docs/Rendering-Shadows.md)
                 
                 // NdotL（法线与光方向的点积）：表面朝向与光线的夹角余弦值
                 // saturate 钳制到 [0,1]，背面（夹角 > 90°）的值为 0
@@ -369,6 +419,10 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 // SampleSH：球谐函数（Spherical Harmonics）采样，获取场景全局环境光。
                 // 没有这行，阴影区域会变成纯黑色。
                 half3 ambient = SampleSH(normalWS);
+
+                // 顶点AO：环境光全部乘 AO，直射光按 _VertexAODirect 部分乘（未烘焙的兵种两者都为 1）
+                ambient *= input.ao;
+                lightColor *= lerp(1.0h, input.ao, (half)_VertexAODirect);
                 
                 // 5. 合并：物体颜色 × (直接光照 + 环境光)
                 float3 finalColor = albedo * (lightColor + ambient);
@@ -443,6 +497,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             struct Varyings
             {
                 float4 positionCS   : SV_POSITION;
+                nointerpolation float lodVis : TEXCOORD7; // LOD crossfade
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -451,6 +506,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 Varyings output = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.lodVis = _GlobalLodVis;
 
                 // ── VAT 顶点置换（Shadow Pass 仅需位置，法线沿用原始 Mesh 数据即可）──
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
@@ -494,6 +550,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             half4 ShadowPassFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                MassLodDitherClip(input.lodVis, input.positionCS);
                 // 片元着色器直接返回 0，因为在阴影 Pass 里我们只关心深度(Z-Depth)写满了没有，不关心具体的RGB颜色！
                 return 0;
             }
@@ -532,6 +589,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                nointerpolation float lodVis : TEXCOORD7; // LOD crossfade
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -540,6 +598,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 Varyings output = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.lodVis = _GlobalLodVis;
 
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                 {
@@ -556,6 +615,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             half4 DepthOnlyFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                MassLodDitherClip(input.lodVis, input.positionCS);
                 return 0;
             }
             ENDHLSL
@@ -592,6 +652,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
+                nointerpolation float lodVis : TEXCOORD7; // LOD crossfade
                 float3 normalWS : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
@@ -601,6 +662,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 Varyings output = (Varyings)0;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
+                output.lodVis = _GlobalLodVis;
 
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                 {
@@ -620,6 +682,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
             half4 DepthNormalsFragment(Varyings input) : SV_Target
             {
                 UNITY_SETUP_INSTANCE_ID(input);
+                MassLodDitherClip(input.lodVis, input.positionCS);
                 return half4(normalize(input.normalWS), 0.0);
             }
             ENDHLSL

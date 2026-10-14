@@ -130,6 +130,8 @@ namespace MassEngine
         }
 
         public uint[] CopyWalkable() => (uint[])walkable.Clone();
+        /// <summary>GPU nav field (N1): copies of the 8-neighbour bits (bit d = edge in direction d) and the 4 stored edge costs per cell.</summary>
+        public void CopyGraph(out byte[] neighbourBits, out double[] costs) { neighbourBits = (byte[])neighbours.Clone(); costs = (double[])edgeCosts.Clone(); }
 
         // Runtime owns/disposes the native snapshot; the managed grid remains independently usable.
         internal TerrainNavigationBurstWorkspace CreateBurstWorkspace() =>

@@ -35,7 +35,7 @@ namespace MassEngine
             LocalOrderKind kind,Vector2 target,Func<float,TerrainNavigationGrid> navigationFactory,out LocalOrderPlan plan,out string error)
         {
             plan=null;error=null;
-            if(snapshot==null||snapshot.Length==0||snapshot.Length>4096||teams==null||radii==null||positions==null||hp==null||
+            if(snapshot==null||snapshot.Length==0||teams==null||snapshot.Length>teams.Length||radii==null||positions==null||hp==null||
                 teams.Length!=radii.Length||teams.Length!=positions.Length||teams.Length!=hp.Length||!Finite(target)||
                 (kind!=LocalOrderKind.Move&&kind!=LocalOrderKind.Hold&&kind!=LocalOrderKind.Attack&&kind!=LocalOrderKind.Retreat)) {error="Invalid member snapshot, target or local command.";return false;}
             var members=new List<int>();var unique=new HashSet<int>();float maxRadius=.05f;
@@ -75,9 +75,17 @@ namespace MassEngine
                 // A clear rectangular arrival region guarantees safe local distribution after the shared obstacle-aware path.
                 Vector2 extent=new Vector2((cols-1)*step,(rows-1)*step);
                 if(!nav.IsFootprintWalkable(center,extent)){error="Arrival region cannot fit selected live members; old commands retained.";return false;}
-                for(int i=0;i<members.Count;i++)
+                // Shape-preserving slots: members are ranked back-to-front along Z into rows of `cols`, then left-to-right along X
+                // within each row, and take the grid slot of the same rank (a short last row is centred). Relative order holds on
+                // both axes, so arriving members do not cross or swap sides; O(n log n). Ties fall back to the agent index.
+                var order=new int[members.Count];for(int i=0;i<order.Length;i++)order[i]=i;
+                Array.Sort(order,(a,b)=>{int c=positions[members[a]].y.CompareTo(positions[members[b]].y);return c!=0?c:members[a].CompareTo(members[b]);});
+                var byX=Comparer<int>.Create((a,b)=>{int c=positions[members[a]].x.CompareTo(positions[members[b]].x);return c!=0?c:members[a].CompareTo(members[b]);});
+                for(int start=0;start<order.Length;start+=cols)Array.Sort(order,start,Mathf.Min(cols,order.Length-start),byX);
+                for(int k=0;k<order.Length;k++)
                 {
-                    goals[i]=center+new Vector2(i%cols-(cols-1)*.5f,i/cols-(rows-1)*.5f)*step;
+                    int i=order[k],row=k/cols,inRow=Mathf.Min(cols,order.Length-row*cols);
+                    goals[i]=center+new Vector2(k%cols+(cols-inRow)*.5f-(cols-1)*.5f,row-(rows-1)*.5f)*step;
                     if(!nav.AreConnected(positions[members[i]],goals[i])){error="A selected current live position cannot reach the arrival region.";return false;}
                 }
                 region=extent.magnitude+nav.CellSize*2;

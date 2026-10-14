@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 030c97ee73095ec46811b7863cd6c1d9, type: 3}
+  m_Name: MassEngineVertexAo
+  m_EditorClassIdentifier: MassEngine::MassEngine.VertexAoLibrary
+  strength: 0
+  directStrength: 0
+  entries:
+  - source: {fileID: 1119645169851441335, guid: 9fc5d3fa954ef5a4395e4a3c9033d44c, type: 2}
+    baked: {fileID: 4300000, guid: 64728efedef8d2542b20d679bb383cc0, type: 2}
+    note: MaleSword_VAT / near
+  - source: {fileID: 6801271717214245415, guid: 70008155e9d571045925af5a61d86a2c, type: 2}
+    baked: {fileID: 4300000, guid: 65501de7f1dbb704383de7c6f8a9ca9e, type: 2}
+    note: MaleSword_VAT / mid
+  - source: {fileID: -3537217046420809929, guid: 69e7d148ec0dd3341a7d067a22bd2dc8, type: 2}
+    baked: {fileID: 4300000, guid: 9337d1b56967b704c81a3ea5dd34a733, type: 2}
+    note: MaleSword_VAT / far

@@ -15,10 +15,13 @@ struct CongestionWait
     float rangedSeconds;
     int rangedTargetPlusOne;
 };
+// Word 12 of each record is the presentation-hold timer (owner-only, see
+// ApplyPresentationHold). Read/WriteCongestion cover words 0-11 only.
+#define CONGESTION_PRESENTATION_HOLD_WORD 12u
 uint CongestionOffset(uint index)
 {
     uint count, stride; agentBuffer.GetDimensions(count, stride);
-    return count + index * 12u;
+    return count + index * 13u;
 }
 CongestionWait ReadCongestion(uint index)
 {
@@ -109,5 +112,7 @@ bool ResolveCongestion(uint index, AgentData agent, UnitTypeSettings settings, f
     return s.remainingSeconds > 0.0;
 }
 #endif
+
+
 
 
