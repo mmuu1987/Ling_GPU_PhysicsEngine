@@ -9,17 +9,44 @@ EditorBuildSettings:
     path: Assets/Game/Scenes/MainMenu.unity
     guid: 6c94129123a1f304c8f65e870196711d
   - enabled: 1
-    path: Assets/Game/Scenes/Green.unity
-    guid: e9ed5b3c4bc19c7449bbc6108709522f
-  - enabled: 1
-    path: Assets/Game/Scenes/Autumn.unity
-    guid: 6c9a9acf471f7c14886d78d19cffdd1f
-  - enabled: 1
-    path: Assets/Game/Scenes/Winter.unity
-    guid: 79e3f0112228c0e43b73b4896d9488ff
-  - enabled: 1
     path: Assets/Game/Content/Battlefields/Map1024/Green1024.unity
     guid: 7193f8ad7716d4d45aa83e3363f6fb06
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps1024/Plains/Plains.unity
+    guid: 967ef1f78b1bdeb4fb31f0adcad27e3e
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps1024/ForestHills/ForestHills.unity
+    guid: 3080ef41fdf4853479aa8ed6374208c9
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps1024/ProcRockySteppe/ProcRockySteppe.unity
+    guid: 5df3358513b671a4bb88f4b4e19ff987
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps1024/ProcAutumnWoods/ProcAutumnWoods.unity
+    guid: c4f177f7110778c48bb94367dc65228e
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps1024/ProcSnowHighlands/ProcSnowHighlands.unity
+    guid: bad3239231318f649bb36192e2f6d2be
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps1024/ProcStoneForest/ProcStoneForest.unity
+    guid: 378dacd43be1c614693eb296cc062f80
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps1024/ProcDeepWoods/ProcDeepWoods.unity
+    guid: 9a95b2bcf1e8f1040b1ab52c003fbf7f
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps2048/TestPlain2048/TestPlain2048.unity
+    guid: 8bd4aeaeebb0c304392903baff8f256f
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps2048/Hills2048/Hills2048.unity
+    guid: 2e2f6e322c81bf9428d1575117753315
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps2048/RidgePass2048/RidgePass2048.unity
+    guid: b33a69005d2aa5c408168a5e0896101d
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps2048/CanyonMesa2048/CanyonMesa2048.unity
+    guid: 9b9c634b5707d284d8a14b4da70e0b6e
+  - enabled: 1
+    path: Assets/Game/Content/Battlefields/Maps2048/CliffPlateau2048/CliffPlateau2048.unity
+    guid: adaf0121aa4191442969781a2e73c516
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0
