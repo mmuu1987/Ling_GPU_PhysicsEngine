@@ -32,6 +32,7 @@ namespace MassEngine.Game
         {
             scope=null;error=null;ResolveReferences();
             if(controller==null||controller.SelectedArmy==null){error="请先选择军团";return false;}
+            if(!controller.CanCommandTeam(controller.selectedTeam,out error))return false;
             if(PendingDecision26||helpOpen||WarSandboxUGUI.IsTyping||WarSandboxDeploymentHUD.BlocksInput(controller)||!WarSandboxSceneSession.AllowsBattleCommands(controller)||IsTerminalPhase(controller.Phase))
             {error="当前界面或战斗状态不允许下令";return false;}
             if(selectionDragging){error="请先完成或取消框选";return false;}

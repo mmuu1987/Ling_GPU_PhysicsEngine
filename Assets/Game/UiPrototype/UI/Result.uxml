@@ -1,0 +1,81 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.UiPrototype" editor-extension-mode="False">
+    <ui:VisualElement class="modal-root">
+        <ui:VisualElement name="res-dim" class="fill dimmer" />
+        <tac:TacFrame class="result tac-frame--hi">
+            <ui:VisualElement class="row">
+                <ui:Label text="AFTER-ACTION // 战后报告" class="code code--accent" />
+                <ui:VisualElement class="spacer" />
+                <ui:Label name="res-op" text="OP-01 // FOREST-HILLS-1024" class="code" />
+            </ui:VisualElement>
+            <ui:Label name="res-title" text="攻方胜利" class="result__title" />
+            <ui:Label name="res-sub" text="歼灭战 · 守方全军覆没 · 用时 04:37" class="result__sub" />
+            <ui:VisualElement class="result__kpis">
+                <ui:VisualElement class="kpi">
+                    <ui:Label text="总参战" class="kpi__k" />
+                    <ui:Label name="res-k-total" text="14,052" class="kpi__v" />
+                </ui:VisualElement>
+                <ui:VisualElement class="kpi">
+                    <ui:Label text="总阵亡" class="kpi__k" />
+                    <ui:Label name="res-k-dead" text="9,210" class="kpi__v kpi__v--danger" />
+                </ui:VisualElement>
+                <ui:VisualElement class="kpi">
+                    <ui:Label text="交换比" class="kpi__k" />
+                    <ui:Label name="res-k-ratio" text="1 : 2.4" class="kpi__v" />
+                </ui:VisualElement>
+                <ui:VisualElement class="kpi kpi--last">
+                    <ui:Label text="用时" class="kpi__k" />
+                    <ui:Label name="res-k-time" text="04:37" class="kpi__v" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="result__sides">
+                <ui:VisualElement name="res-side-atk" class="side side--atk">
+                    <ui:VisualElement class="side__head">
+                        <ui:Label text="攻方 · ATTACKER" class="side__title" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Label name="res-win-atk" text="WIN" class="chip chip--win" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="side__cols">
+                        <ui:Label text="军团" class="scol scol--k" />
+                        <ui:Label text="初始" class="scol" />
+                        <ui:Label text="存活" class="scol" />
+                        <ui:Label text="损失" class="scol" />
+                        <ui:Label text="击杀" class="scol" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="res-rows-atk" />
+                </ui:VisualElement>
+                <ui:VisualElement name="res-side-def" class="side side--def">
+                    <ui:VisualElement class="side__head">
+                        <ui:Label text="守方 · DEFENDER" class="side__title" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Label name="res-win-def" text="WIN" class="chip chip--win" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="side__cols">
+                        <ui:Label text="军团" class="scol scol--k" />
+                        <ui:Label text="初始" class="scol" />
+                        <ui:Label text="存活" class="scol" />
+                        <ui:Label text="损失" class="scol" />
+                        <ui:Label text="击杀" class="scol" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="res-rows-def" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="result__actions">
+                <ui:Button name="res-catalog" class="btn--first btn btn--ghost">
+                    <tac:TacIcon icon="map" class="btn__icon" />
+                    <ui:Label text="选择其他战场" />
+                </ui:Button>
+                <ui:VisualElement class="spacer" />
+                <ui:Button name="res-redeploy" class="btn btn--lg">
+                    <tac:TacIcon icon="chev-l" class="btn__icon" />
+                    <ui:Label text="返回布阵" />
+                </ui:Button>
+                <ui:Button name="res-again" class="btn btn--primary btn--lg">
+                    <ui:VisualElement class="glow" picking-mode="Ignore" />
+                    <tac:TacIcon icon="rotate" class="btn__icon" />
+                    <ui:Label text="再来一局" />
+                    <ui:Label text="ENTER" class="key key--on-primary" />
+                </ui:Button>
+            </ui:VisualElement>
+        </tac:TacFrame>
+    </ui:VisualElement>
+</ui:UXML>

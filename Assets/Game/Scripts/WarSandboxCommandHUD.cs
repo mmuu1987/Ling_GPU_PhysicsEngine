@@ -69,6 +69,7 @@ namespace MassEngine.Game
         {
             CloseSelectionPreview();
             runtimeUi?.SetVisible(false);
+            HideBattleToolkit();
             if (legacyClickSetter != null)
                 legacyClickSetter.enabled = legacyClickSetterWasEnabled;
         }
@@ -500,6 +501,8 @@ namespace MassEngine.Game
         private string FormatResultTitle(WarSandboxBattleResult result)
         {
             if (result.phase == WarSandboxBattlePhase.Ended) return "手动结束";
+            if (controller != null && controller.ChallengeActive)
+                return result.winnerTeamId == controller.ChallengeTeam ? "挑战胜利" : result.winnerTeamId >= 0 ? "挑战失败" : "同归于尽";
             if (result.winnerTeamId >= 0 && result.TryGetArmy(result.winnerTeamId, out var winner))
                 return winner.displayName + "胜利";
             switch (result.phase)

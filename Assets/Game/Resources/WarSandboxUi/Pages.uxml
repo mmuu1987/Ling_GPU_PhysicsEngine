@@ -1,0 +1,233 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.Game.Ui" editor-extension-mode="False">
+    <Style src="WarSandboxUi.Toy.uss" />
+    <Style src="Pages.uss" />
+    <ui:VisualElement name="pg" class="fill" picking-mode="Ignore">
+
+        <!-- Unit library (兵种库): full page over the menu background -->
+        <ui:VisualElement name="lib" class="fill lib">
+            <ui:VisualElement class="row lib-head">
+                <ui:VisualElement class="bh-grow">
+                    <ui:Label text="兵种库" class="code code--accent" />
+                    <ui:Label text="兵种图鉴" class="h-page lib-head__title" />
+                    <ui:Label name="lib-note" text="" class="hint" />
+                </ui:VisualElement>
+                <ui:Button name="lib-back" class="btn btn--primary btn--lg">
+                    <tac:TacIcon icon="chev-l" class="btn__icon" />
+                    <ui:Label text="返回目录" />
+                </ui:Button>
+            </ui:VisualElement>
+            <ui:Label name="lib-empty" text="当前目录没有登记兵种模板。" class="lib-empty" />
+            <ui:VisualElement name="lib-body" class="row lib-body">
+                <tac:TacFrame class="lib-left">
+                    <ui:Label name="lib-count" text="" class="code code--accent lib-count" />
+                    <ui:ScrollView name="lib-list" class="bh-grow" />
+                </tac:TacFrame>
+                <tac:TacFrame class="lib-card tac-frame--hi">
+                    <ui:VisualElement class="row lib-card__head">
+                        <ui:VisualElement class="bh-grow">
+                            <ui:Label name="lib-name" text="" class="lib-name" />
+                            <ui:Label name="lib-id" text="" class="hint" />
+                        </ui:VisualElement>
+                        <ui:Label name="lib-dirty" text="未保存" class="chip lib-chip lib-chip--dirty" />
+                        <ui:Label text="全局" class="chip lib-chip lib-chip--global" />
+                        <ui:Label text="官方" class="chip lib-chip lib-chip--official" />
+                        <ui:Button name="lib-open-preview" class="btn btn--sm">
+                            <tac:TacIcon icon="overview" class="btn__icon" />
+                            <ui:Label text="查看模型" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="row lib-card__content">
+                        <ui:ScrollView name="lib-table" class="bh-grow lib-table">
+                            <ui:Label name="lib-radius" text="" class="lib-radius" />
+                            <ui:Label name="lib-radius-source" text="" class="hint hint--wrap" />
+                            <ui:Label name="lib-radius-legend" text="" class="lib-legend" />
+                            <ui:VisualElement name="lib-rows" class="lib-rows" />
+                        </ui:ScrollView>
+                        <ui:VisualElement name="lib-portrait" class="lib-portrait" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="lib-foot">
+                        <ui:Label name="lib-foot-note" text="" class="lib-foot__note" />
+                        <ui:VisualElement class="row">
+                            <ui:Button name="lib-reset-all" text="全部恢复官方…" class="btn btn--danger btn--first" />
+                            <ui:Button name="lib-undo" text="撤销上次全局修改" class="btn" />
+                            <ui:VisualElement class="spacer" />
+                            <ui:Button name="lib-restore" text="恢复此兵种" class="btn" />
+                            <ui:Button name="lib-discard" text="放弃修改" class="btn" />
+                            <ui:Button name="lib-save" text="保存到全局" class="btn btn--primary lib-save" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </tac:TacFrame>
+            </ui:VisualElement>
+
+            <ui:VisualElement name="lib-unsaved" class="fill dimmer modal-root">
+                <tac:TacFrame class="pg-modal">
+                    <ui:Label name="lib-unsaved-title" text="" class="h-page" />
+                    <ui:Label text="这些全局数值还没有保存。放弃后恢复为上次保存的数值。" class="para pg-modal__body" />
+                    <ui:VisualElement class="row">
+                        <ui:Button name="lib-unsaved-cancel" text="取消" class="btn btn--lg bh-grow btn--first" />
+                        <ui:Button name="lib-unsaved-discard" text="放弃" class="btn btn--danger btn--lg bh-grow" />
+                        <ui:Button name="lib-unsaved-save" text="保存" class="btn btn--primary btn--lg bh-grow" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+            </ui:VisualElement>
+            <ui:VisualElement name="lib-resetall" class="fill dimmer modal-root">
+                <tac:TacFrame class="pg-modal">
+                    <ui:Label text="全部恢复官方数值？" class="h-page" />
+                    <ui:Label name="lib-resetall-body" text="" class="para pg-modal__body" />
+                    <ui:VisualElement class="row">
+                        <ui:Button name="lib-resetall-cancel" text="取消" class="btn btn--lg bh-grow btn--first" />
+                        <ui:Button name="lib-resetall-confirm" text="全部恢复" class="btn btn--danger btn--lg bh-grow" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Settings: audio + camera, the two pages the game has -->
+        <ui:VisualElement name="set" class="fill dimmer modal-root">
+            <tac:TacFrame class="pg-settings tac-frame--hi">
+                <ui:Label name="set-code" text="" class="code code--accent" />
+                <ui:Label name="set-title" text="设置" class="h-page" />
+                <ui:VisualElement name="set-main" class="settings__body pg-settings__body">
+                    <ui:VisualElement name="set-tabs" class="vtabs">
+                        <ui:Button name="set-tab-audio" class="vtab">
+                            <tac:TacIcon icon="audio" class="vtab__icon" />
+                            <ui:Label text="声音" />
+                        </ui:Button>
+                        <ui:Button name="set-tab-camera" class="vtab">
+                            <tac:TacIcon icon="overview" class="vtab__icon" />
+                            <ui:Label text="镜头" />
+                        </ui:Button>
+                        <ui:Button name="set-tab-graphics" class="vtab">
+                            <tac:TacIcon icon="map" class="vtab__icon" />
+                            <ui:Label text="画面" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="settings__panes">
+                        <ui:VisualElement name="set-audio" class="spane">
+                            <ui:Label text="声音" class="h-sub" />
+                            <ui:Label name="set-note" text="" class="hint hint--wrap pg-note" />
+                            <ui:VisualElement class="srow">
+                                <ui:Label text="音效音量" class="srow__k" />
+                                <tac:TacSlider name="set-volume" low="0" high="1" value="0.65" class="bh-grow" />
+                                <ui:Label name="set-volume-v" text="" class="srow__v" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="srow">
+                                <ui:Label text="静音" class="srow__k bh-grow" />
+                                <tac:TacToggle name="set-mute" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="srow">
+                                <ui:Label text="试听" class="srow__k bh-grow" />
+                                <ui:Button name="set-preview" class="btn btn--sm">
+                                    <tac:TacIcon icon="audio" class="btn__icon" />
+                                    <ui:Label text="试听音效" />
+                                </ui:Button>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="set-camera" class="spane">
+                            <ui:Label text="镜头" class="h-sub" />
+                            <ui:VisualElement class="srow pg-srow">
+                                <ui:Label text="平移速度" class="srow__k" />
+                                <tac:TacSlider name="cam-pan" low="0" high="1" class="bh-grow" />
+                                <ui:Label name="cam-pan-v" text="" class="srow__v" />
+                            </ui:VisualElement>
+                            <ui:Label text="拖拽 / 方向键 / 右键+WASD" class="hint pg-srow__hint" />
+                            <ui:VisualElement class="srow pg-srow">
+                                <ui:Label text="缩放速度" class="srow__k" />
+                                <tac:TacSlider name="cam-zoom" low="0" high="1" class="bh-grow" />
+                                <ui:Label name="cam-zoom-v" text="" class="srow__v" />
+                            </ui:VisualElement>
+                            <ui:Label text="滚轮" class="hint pg-srow__hint" />
+                            <ui:VisualElement class="srow pg-srow">
+                                <ui:Label text="转向灵敏度" class="srow__k" />
+                                <tac:TacSlider name="cam-look" low="0" high="1" class="bh-grow" />
+                                <ui:Label name="cam-look-v" text="" class="srow__v" />
+                            </ui:VisualElement>
+                            <ui:Label text="右键 / Alt+左键" class="hint pg-srow__hint" />
+                            <ui:VisualElement class="srow pg-srow">
+                                <ui:Label text="聚焦俯角" class="srow__k" />
+                                <tac:TacSlider name="cam-pitch" low="0" high="1" class="bh-grow" />
+                                <ui:Label name="cam-pitch-v" text="" class="srow__v" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="srow pg-srow">
+                                <ui:Label text="聚焦取景" class="srow__k" />
+                                <tac:TacSlider name="cam-framing" low="0" high="1" class="bh-grow" />
+                                <ui:Label name="cam-framing-v" text="" class="srow__v" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="srow pg-srow">
+                                <ui:Label text="跟随自动缩放" class="srow__k bh-grow" />
+                                <tac:TacToggle name="cam-follow-zoom" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:VisualElement name="set-graphics" class="spane">
+                            <ui:Label text="画面" class="h-sub" />
+                            <ui:VisualElement class="srow pg-srow">
+                                <ui:Label text="阴影距离" class="srow__k" />
+                                <tac:TacSlider name="gfx-shadow" low="0" high="1" class="bh-grow" />
+                                <ui:Label name="gfx-shadow-v" text="" class="srow__v" />
+                            </ui:VisualElement>
+                            <ui:Label text="离镜头多远以内的地面显示阴影。越远，远处也有影子，但近处影子更柔和；物件多的地图开销略增。调整立即生效。" class="hint hint--wrap pg-srow__hint" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="set-confirm" class="pg-settings__confirm">
+                    <ui:Label name="set-confirm-text" text="" class="para pg-modal__body" />
+                    <ui:Button name="set-defaults-confirm" text="" class="btn btn--primary btn--lg btn--first pg-wide" />
+                    <ui:Button name="set-defaults-cancel" text="取消，保留当前调整" class="btn btn--lg btn--first pg-wide" />
+                </ui:VisualElement>
+                <ui:VisualElement name="set-foot" class="pg-settings__foot">
+                    <ui:Label name="set-status" text="" class="pg-status" />
+                    <ui:Label name="set-error" text="" class="pg-error" />
+                    <ui:VisualElement class="row">
+                        <ui:Button name="set-defaults" class="btn btn--ghost btn--first">
+                            <tac:TacIcon icon="rotate" class="btn__icon" />
+                            <ui:Label name="set-defaults-text" text="恢复默认" />
+                        </ui:Button>
+                        <ui:VisualElement class="spacer" />
+                        <ui:Button name="set-cancel" text="取消修改并返回" class="btn btn--lg" />
+                        <ui:Button name="set-save" class="btn btn--primary btn--lg">
+                            <tac:TacIcon icon="check" class="btn__icon" />
+                            <ui:Label text="保存并返回" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Help (Guide30) -->
+        <ui:VisualElement name="help" class="fill dimmer modal-root">
+            <tac:TacFrame class="pg-help tac-frame--hi">
+                <ui:Label name="help-code" text="" class="code code--accent" />
+                <ui:Label name="help-title" text="" class="h-page" />
+                <tac:TacSeg name="help-tabs" options="快速上手|战斗与镜头|方案与战后" index="0" class="pg-help__tabs" />
+                <ui:ScrollView name="help-scroll" class="pg-help__scroll">
+                    <ui:Label name="help-body" text="" class="pg-help__body" />
+                </ui:ScrollView>
+                <ui:Label name="help-note" text="" class="pg-help__note" />
+                <ui:VisualElement class="row">
+                    <ui:Button name="help-skip" text="跳过引导" class="btn btn--lg btn--first" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Button name="help-close" class="btn btn--primary btn--lg">
+                        <tac:TacIcon icon="check" class="btn__icon" />
+                        <ui:Label name="help-close-text" text="关闭帮助" />
+                    </ui:Button>
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Unit model zoom (catalog portrait / library) -->
+        <ui:VisualElement name="zoom" class="fill dimmer modal-root">
+            <tac:TacFrame class="pg-zoom tac-frame--hi">
+                <ui:VisualElement class="row">
+                    <ui:Label text="单体模型" class="code code--accent" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Button name="zoom-close" text="关闭" class="btn btn--sm" />
+                </ui:VisualElement>
+                <ui:VisualElement name="zoom-host" class="pg-zoom__host" />
+                <ui:Label name="zoom-name" text="" class="pg-zoom__name" />
+                <ui:Label name="zoom-radius" text="" class="pg-zoom__line" />
+                <ui:Label name="zoom-source" text="" class="pg-zoom__line pg-zoom__line--muted" />
+                <ui:Label name="zoom-legend" text="" class="pg-zoom__line pg-zoom__line--muted" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

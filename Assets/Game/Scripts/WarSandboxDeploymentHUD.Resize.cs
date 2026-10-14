@@ -27,11 +27,11 @@ namespace MassEngine.Game
         private DeploymentResizeHandle HitResizeHandle(Vector2 point)
         {
             if(!spatialSelection||placing||deployment.Draft.Count==0)return DeploymentResizeHandle.None;
-            var rect=MapBounds(deployment.Draft[selected].Bounds,translationWorld,translationMap);float hit=11/runtimeUi.Scale,best=hit*hit;var answer=DeploymentResizeHandle.None;
+            var rect=MapBounds(deployment.Draft[selected].Bounds,translationWorld,translationMap);float hit=11/MapUiScale,best=hit*hit;var answer=DeploymentResizeHandle.None;
             if(new Rect(rect.center-rect.size*.25f,rect.size*.5f).Contains(point))return DeploymentResizeHandle.None; // retain a move target even for tiny blocks
             foreach(var h in ResizeHandles)
             {
-                var p=HandlePoint(rect,h);float s=4/runtimeUi.Scale;
+                var p=HandlePoint(rect,h);float s=4/MapUiScale;
                 p.x=Mathf.Clamp(p.x,translationMap.xMin+s,translationMap.xMax-s);p.y=Mathf.Clamp(p.y,translationMap.yMin+s,translationMap.yMax-s);
                 float dist=(point-p).sqrMagnitude;if(dist<best){best=dist;answer=h;}
             }
@@ -39,6 +39,7 @@ namespace MassEngine.Game
         }
         private void ResizeFieldsPreview(WarSandboxDeploymentEntry e,bool preview)
         {
+            if(TkMapActive){TkResizePreview(e,preview);return;}
             if(runtimeUi==null)return;
             var r=MapBounds(preview?e.Bounds:(deployment.Draft!=null&&selected<deployment.Draft.Count?deployment.Draft[selected].Bounds:new Rect()),translationWorld,translationMap);
             float s=8/runtimeUi.Scale;
@@ -55,3 +56,4 @@ namespace MassEngine.Game
         }
     }
 }
+

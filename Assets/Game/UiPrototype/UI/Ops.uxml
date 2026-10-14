@@ -1,0 +1,95 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.UiPrototype" editor-extension-mode="False">
+    <ui:VisualElement class="page page--ops">
+        <tac:TacFrame class="ops-list">
+            <ui:VisualElement class="panel-head">
+                <ui:Label text="作战目录" class="h-panel" />
+                <ui:VisualElement class="spacer" />
+                <ui:Label name="ops-count" text="CATALOG // 12" class="code" />
+            </ui:VisualElement>
+            <ui:ScrollView name="ops-scroll" class="ops-scroll" />
+            <ui:VisualElement class="panel-foot">
+                <ui:Label text="↑↓" class="key" />
+                <ui:Label text="选择" class="hint" />
+                <ui:Label text="ENTER" class="key" />
+                <ui:Label text="部署" class="hint" />
+                <ui:Label text="双击" class="key" />
+                <ui:Label text="直接部署" class="hint" />
+            </ui:VisualElement>
+        </tac:TacFrame>
+        <tac:TacFrame class="ops-detail tac-frame--hi">
+            <ui:VisualElement class="row">
+                <ui:Label name="op-code" text="OP-01 // ANNIHILATION" class="code code--accent" />
+                <ui:VisualElement class="spacer" />
+                <ui:VisualElement class="status-dot status-dot--ok" />
+                <ui:Label name="op-status" text="就绪 · READY" class="code" />
+            </ui:VisualElement>
+            <ui:Label name="op-title" text="森林丘陵 · 正面决战" class="h-hero" />
+            <ui:VisualElement class="stat-row">
+                <ui:VisualElement class="stat">
+                    <ui:Label text="军团" class="stat__k" />
+                    <ui:Label name="st-legions" text="2" class="stat__v" />
+                    <ui:Label text="LEGIONS" class="stat__u" />
+                </ui:VisualElement>
+                <ui:VisualElement class="stat">
+                    <ui:Label text="兵力" class="stat__k" />
+                    <ui:Label name="st-troops" text="109,618" class="stat__v" />
+                    <ui:Label text="TROOPS" class="stat__u" />
+                </ui:VisualElement>
+                <ui:VisualElement class="stat">
+                    <ui:Label text="模式" class="stat__k" />
+                    <ui:Label name="st-mode" text="歼灭战" class="stat__v stat__v--text" />
+                    <ui:Label name="st-mode-en" text="ANNIHILATION" class="stat__u" />
+                </ui:VisualElement>
+                <ui:VisualElement class="stat stat--last">
+                    <ui:Label text="地形" class="stat__k" />
+                    <ui:Label name="st-terrain" text="丘陵林地" class="stat__v stat__v--text" />
+                    <ui:Label name="st-terrain-en" text="FOREST HILLS" class="stat__u" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="ops-body">
+                <ui:VisualElement class="ops-brief">
+                    <ui:Label text="作战简报" class="h-sub" />
+                    <ui:Label name="op-desc" text="" class="para" />
+                    <ui:VisualElement name="op-warn" class="callout callout--warn">
+                        <tac:TacIcon icon="warn" class="callout__icon" />
+                        <ui:Label name="op-warn-text" text="" class="callout__text" />
+                    </ui:VisualElement>
+                    <ui:Label text="作战目标" class="h-sub" />
+                    <ui:VisualElement name="op-objectives" class="objectives" />
+                    <ui:Label text="参战兵种" class="h-sub" />
+                    <ui:VisualElement name="op-units" class="unit-chips" />
+                </ui:VisualElement>
+                <tac:TacFrame class="ops-preview tac-frame--inset">
+                    <tac:TacMapView name="op-map" mode="preview" class="fill" />
+                    <ui:Label text="RECON // 1024 × 1024 m" class="map-tag map-tag--tl" />
+                    <ui:Label text="N ▲" class="map-tag map-tag--tr" />
+                    <ui:Label name="op-map-tag" text="GRID 64 m" class="map-tag map-tag--bl" />
+                    <ui:VisualElement class="map-tag legend map-tag--br">
+                        <ui:VisualElement class="legend__sw legend__sw--atk" />
+                        <ui:Label text="攻方" class="legend__t" />
+                        <ui:VisualElement class="legend__sw legend__sw--def" />
+                        <ui:Label text="守方" class="legend__t" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+            </ui:VisualElement>
+            <ui:VisualElement class="ops-actions">
+                <ui:Button name="op-plans" class="btn--first btn">
+                    <tac:TacIcon icon="save" class="btn__icon" />
+                    <ui:Label text="方案库" />
+                </ui:Button>
+                <ui:Button name="op-units-lib" class="btn">
+                    <tac:TacIcon icon="library" class="btn__icon" />
+                    <ui:Label text="兵种库" />
+                </ui:Button>
+                <ui:VisualElement class="spacer" />
+                <ui:Label name="op-est" text="预计载入 ~4 s" class="hint hint--mr" />
+                <ui:Button name="op-deploy" class="btn btn--primary btn--xl">
+                    <ui:VisualElement class="glow" picking-mode="Ignore" />
+                    <ui:Label text="进入部署" />
+                    <tac:TacIcon icon="chev-r" class="btn__icon btn__icon--r" />
+                    <ui:Label text="ENTER" class="key key--on-primary" />
+                </ui:Button>
+            </ui:VisualElement>
+        </tac:TacFrame>
+    </ui:VisualElement>
+</ui:UXML>

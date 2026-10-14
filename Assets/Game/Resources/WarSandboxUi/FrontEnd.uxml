@@ -1,0 +1,218 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.Game.Ui" editor-extension-mode="False">
+    <Style src="WarSandboxUi.Toy.uss" />
+    <Style src="FrontEnd.uss" />
+    <ui:VisualElement name="fe" class="fe fill" picking-mode="Ignore">
+
+        <!-- Full-screen menu pages (state Menu / Loading / Failed) -->
+        <ui:VisualElement name="fe-menu" class="app fill">
+            <tac:TacBackdrop class="fill" picking-mode="Ignore" />
+
+            <!-- 主菜单 -->
+            <ui:VisualElement name="page-home" class="fe-page fe-home">
+                <ui:VisualElement class="fe-home__left">
+                    <ui:Label text="你的军团，你的战场" class="fe-home__eyebrow" />
+                    <ui:Label text="战争沙盒" class="fe-home__title" />
+                    <ui:Label text="选择战场，组建自己的军团。&#10;布好阵，再一起出发。" class="fe-home__desc" />
+                    <ui:Button name="home-play" class="btn btn--primary btn--xl fe-home__play">
+                        <ui:Label text="开始游戏" />
+                        <tac:TacIcon icon="chev-r" class="btn__icon btn__icon--r" />
+                    </ui:Button>
+                    <ui:VisualElement class="row fe-home__row">
+                        <ui:Button name="home-library" class="btn btn--lg fe-home__btn">
+                            <tac:TacIcon icon="library" class="btn__icon" />
+                            <ui:Label text="兵种图鉴" />
+                        </ui:Button>
+                        <ui:Button name="home-settings" class="btn btn--lg fe-home__btn">
+                            <tac:TacIcon icon="settings" class="btn__icon" />
+                            <ui:Label text="设置" />
+                        </ui:Button>
+                        <ui:Button name="home-help" class="btn btn--lg fe-home__btn">
+                            <tac:TacIcon icon="info" class="btn__icon" />
+                            <ui:Label text="操作帮助" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                    <ui:Button name="home-quit" class="btn btn--ghost fe-home__quit">
+                        <tac:TacIcon icon="exit" class="btn__icon" />
+                        <ui:Label text="退出游戏" />
+                    </ui:Button>
+                </ui:VisualElement>
+                <tac:TacFrame name="home-portrait-card" class="fe-home__card tac-frame--hi">
+                    <ui:VisualElement name="home-portrait" class="fe-home__portrait" picking-mode="Ignore" />
+                    <ui:Label text="认识你的新队友" class="fe-home__note" />
+                </tac:TacFrame>
+                <ui:Label text="本地单机  ·  方案与兵种数值保存在本机" class="fe-home__footer" />
+            </ui:VisualElement>
+
+            <!-- 选择战场（原型 Ops 布局 + 真实目录数据） -->
+            <ui:VisualElement name="page-catalog" class="fe-page page page--ops">
+                <tac:TacFrame class="ops-list fe-ops-list">
+                    <ui:VisualElement class="panel-head">
+                        <ui:Label text="战场目录" class="h-panel" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Label name="cat-count" text="" class="code" />
+                    </ui:VisualElement>
+                    <ui:ScrollView name="cat-scroll" class="ops-scroll" />
+                    <ui:VisualElement class="panel-foot">
+                        <ui:Label text="↑↓" class="key" />
+                        <ui:Label text="选择" class="hint" />
+                        <ui:Label text="ENTER" class="key" />
+                        <ui:Label text="布阵" class="hint" />
+                        <ui:Label text="双击" class="key" />
+                        <ui:Label text="直接布阵" class="hint" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+                <tac:TacFrame name="cat-detail" class="ops-detail tac-frame--hi">
+                    <ui:Label name="cat-code" text="" class="code code--accent" />
+                    <ui:Label name="cat-title" text="" class="h-hero fe-cat-title" />
+                    <ui:VisualElement class="stat-row">
+                        <ui:VisualElement class="stat">
+                            <ui:Label text="军团" class="stat__k" />
+                            <ui:Label name="st-armies" text="—" class="stat__v mono" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stat">
+                            <ui:Label text="兵力" class="stat__k" />
+                            <ui:Label name="st-troops" text="—" class="stat__v mono" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stat">
+                            <ui:Label text="模式" class="stat__k" />
+                            <ui:Label name="st-mode" text="" class="stat__v stat__v--text" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="stat stat--last">
+                            <ui:Label text="地形" class="stat__k" />
+                            <ui:Label name="st-terrain" text="" class="stat__v stat__v--text" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="ops-body">
+                        <ui:ScrollView name="cat-brief" class="ops-brief fe-brief">
+                            <ui:Label text="这场战斗" class="h-sub" />
+                            <ui:Label name="cat-desc" text="" class="para" />
+                            <ui:VisualElement name="cat-warn" class="callout callout--warn">
+                                <tac:TacIcon icon="warn" class="callout__icon" />
+                                <ui:Label text="运行负载较高 · 建议独立显卡" class="callout__text" />
+                            </ui:VisualElement>
+                            <ui:Label name="cat-briefing-head" text="作战简报" class="h-sub" />
+                            <ui:Label name="cat-briefing" text="" class="para" />
+                            <ui:Label name="cat-units-head" text="参战兵种" class="h-sub" />
+                            <ui:VisualElement name="cat-units" class="unit-chips" />
+                        </ui:ScrollView>
+                        <ui:VisualElement class="fe-media">
+                            <tac:TacFrame class="tac-frame--inset fe-preview">
+                                <ui:VisualElement name="cat-preview" class="fe-preview__img" picking-mode="Ignore" />
+                                <ui:Label name="cat-preview-missing" text="暂无战场预览图" class="fe-missing" />
+                                <ui:Label text="战场预览" class="map-tag map-tag--tl" />
+                            </tac:TacFrame>
+                            <tac:TacFrame name="cat-unit" class="tac-frame--inset fe-unit">
+                                <ui:VisualElement name="cat-unit-img" class="fe-unit__img" />
+                                <ui:Label name="cat-unit-missing" text="尚未配置真实模型图" class="fe-missing" />
+                                <ui:VisualElement class="fe-unit__info">
+                                    <ui:Label text="单体模型" class="code code--accent" />
+                                    <ui:Label name="cat-unit-name" text="" class="fe-unit__name" />
+                                    <ui:Label name="cat-unit-truth" text="" class="hint" />
+                                    <ui:VisualElement class="spacer" />
+                                    <ui:VisualElement name="cat-unit-pager" class="row">
+                                        <ui:Button name="cat-unit-prev" text="‹" class="btn btn--sm fe-pager" />
+                                        <ui:Label name="cat-unit-counter" text="1 / 1" class="mono fe-pager__n" />
+                                        <ui:Button name="cat-unit-next" text="›" class="btn btn--sm fe-pager" />
+                                    </ui:VisualElement>
+                                    <ui:Button name="cat-unit-zoom" class="btn btn--sm fe-unit__zoom">
+                                        <ui:Label text="放大查看" />
+                                    </ui:Button>
+                                </ui:VisualElement>
+                            </tac:TacFrame>
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="ops-actions">
+                        <ui:Label text="选择战场  →  战前布阵  →  开战" class="hint" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Label name="cat-error" text="" class="fe-error-inline" />
+                        <ui:Button name="cat-enter" class="btn btn--primary btn--xl">
+                            <ui:Label text="进入布阵" />
+                            <tac:TacIcon icon="chev-r" class="btn__icon btn__icon--r" />
+                            <ui:Label text="ENTER" class="key key--on-primary" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                </tac:TacFrame>
+                <tac:TacFrame name="cat-empty" class="fe-empty tac-frame--danger">
+                    <ui:Label text="没有可用战场" class="h-panel" />
+                    <ui:Label name="cat-empty-text" text="没有可用战场，请检查战场目录。" class="para" />
+                </tac:TacFrame>
+            </ui:VisualElement>
+
+            <!-- 载入中 -->
+            <ui:VisualElement name="page-loading" class="fe-page fe-center">
+                <tac:TacFrame class="fe-card">
+                    <ui:Label text="部署中" class="code code--accent" />
+                    <ui:Label text="正在部署战场" class="h-page" />
+                    <ui:VisualElement class="fe-progress">
+                        <ui:VisualElement name="load-fill" class="fe-progress__fill" />
+                    </ui:VisualElement>
+                    <ui:Label name="load-value" text="0%  ·  准备规则与军团" class="hint" />
+                </tac:TacFrame>
+            </ui:VisualElement>
+
+            <!-- 载入失败 -->
+            <ui:VisualElement name="page-failure" class="fe-page fe-center">
+                <tac:TacFrame class="fe-card fe-card--wide tac-frame--danger">
+                    <ui:Label text="部署失败" class="code fe-code-danger" />
+                    <ui:Label text="战场未能就绪" class="h-page" />
+                    <ui:ScrollView name="fail-scroll" class="fe-fail-scroll">
+                        <ui:Label name="fail-text" text="" class="para fe-fail-text" />
+                    </ui:ScrollView>
+                    <ui:Button name="fail-return" text="返回战场目录" class="btn btn--primary btn--lg fe-block" />
+                    <ui:Button name="fail-quit" text="退出游戏" class="btn fe-block" />
+                </tac:TacFrame>
+            </ui:VisualElement>
+
+            <!-- 目录顶栏（主菜单页不显示） -->
+            <ui:VisualElement name="fe-topbar" class="topbar">
+                <ui:Button name="top-home" class="sysbtn fe-top-home">
+                    <tac:TacIcon icon="chev-l" class="sysbtn__icon" />
+                    <ui:Label text="主菜单" />
+                </ui:Button>
+                <tac:TacIcon icon="logo" class="brand-mark" />
+                <ui:Label text="战争沙盒" class="brand" />
+                <ui:Label text="·" class="crumb-sep" />
+                <ui:Label name="top-crumb" text="选择战场" class="crumb" />
+                <ui:VisualElement class="spacer" />
+                <ui:Button name="top-help" class="sysbtn">
+                    <tac:TacIcon icon="info" class="sysbtn__icon" />
+                    <ui:Label text="帮助" />
+                </ui:Button>
+                <ui:Button name="top-library" class="sysbtn">
+                    <tac:TacIcon icon="library" class="sysbtn__icon" />
+                    <ui:Label text="兵种图鉴" />
+                </ui:Button>
+                <ui:Button name="top-settings" class="sysbtn">
+                    <tac:TacIcon icon="settings" class="sysbtn__icon" />
+                    <ui:Label text="设置" />
+                </ui:Button>
+                <ui:Button name="top-quit" class="sysbtn sysbtn--danger">
+                    <tac:TacIcon icon="exit" class="sysbtn__icon" />
+                    <ui:Label text="退出" />
+                </ui:Button>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- In-battle system strip (same rect as WarSandboxFrontEnd.NavigationRect) -->
+        <ui:VisualElement name="fe-nav" class="fe-nav">
+            <ui:Button name="nav-help" text="帮助" class="fe-nav__btn fe-nav__btn--s" />
+            <ui:Button name="nav-settings" text="设置" class="fe-nav__btn fe-nav__btn--s" />
+            <ui:Button name="nav-menu" text="战场目录" class="fe-nav__btn fe-nav__btn--l" />
+            <ui:Button name="nav-quit" text="退出" class="fe-nav__btn fe-nav__btn--q" />
+        </ui:VisualElement>
+        <tac:TacFrame name="fe-nav-error" class="fe-nav-error tac-frame--danger">
+            <ui:Label name="fe-nav-error-text" text="" class="fe-error-text" />
+        </tac:TacFrame>
+
+        <!-- Confirmation (end battle / leave / quit) -->
+        <ui:VisualElement name="fe-confirm" class="fill dimmer modal-root">
+            <tac:TacFrame class="fe-modal">
+                <ui:Label name="confirm-code" text="" class="code code--accent" />
+                <ui:Label name="confirm-title" text="" class="h-page" />
+                <ui:Label name="confirm-body" text="" class="para fe-modal__body" />
+                <ui:Button name="confirm-ok" text="" class="btn btn--primary btn--lg fe-block" />
+                <ui:Button name="confirm-cancel" text="取消" class="btn fe-block" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

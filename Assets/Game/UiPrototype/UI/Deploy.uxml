@@ -1,0 +1,207 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.UiPrototype" editor-extension-mode="False">
+    <ui:VisualElement class="page page--deploy">
+        <ui:VisualElement class="deploy-head">
+            <ui:VisualElement>
+                <ui:Label name="dp-code" text="BATTLE PLANNER // FOREST-HILLS-1024" class="code code--accent" />
+                <ui:Label text="配兵与布阵" class="h-page" />
+            </ui:VisualElement>
+            <ui:VisualElement class="spacer" />
+            <ui:Button name="dp-back" class="btn btn--ghost">
+                <tac:TacIcon icon="chev-l" class="btn__icon" />
+                <ui:Label text="返回目录" />
+            </ui:Button>
+            <ui:Button name="dp-plans" class="btn">
+                <tac:TacIcon icon="save" class="btn__icon" />
+                <ui:Label text="方案库" />
+            </ui:Button>
+            <ui:Button name="dp-units" class="btn">
+                <tac:TacIcon icon="library" class="btn__icon" />
+                <ui:Label text="兵种库" />
+            </ui:Button>
+        </ui:VisualElement>
+        <ui:VisualElement class="deploy-cols">
+            <tac:TacFrame class="col-left">
+                <ui:VisualElement class="panel-head">
+                    <ui:Label text="军团编成" class="h-panel" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Label name="dp-forces" text="FORCES // 7" class="code" />
+                </ui:VisualElement>
+                <ui:ScrollView name="comp-scroll" class="grow" />
+                <ui:VisualElement class="comp-actions row row--gap">
+                    <ui:Button name="comp-add" class="btn btn--sm grow">
+                        <tac:TacIcon icon="add" class="btn__icon" />
+                        <ui:Label text="新建" />
+                    </ui:Button>
+                    <ui:Button name="comp-copy" class="btn btn--sm grow">
+                        <tac:TacIcon icon="copy" class="btn__icon" />
+                        <ui:Label text="复制" />
+                    </ui:Button>
+                    <ui:Button name="comp-del" class="btn btn--sm btn--danger grow">
+                        <tac:TacIcon icon="delete" class="btn__icon" />
+                        <ui:Label text="删除" />
+                    </ui:Button>
+                </ui:VisualElement>
+                <ui:VisualElement class="totals">
+                    <ui:VisualElement class="row">
+                        <ui:Label text="总兵力" class="totals__k" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Label name="dp-total" text="0 / 200,000" class="totals__v mono" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="meter">
+                        <ui:VisualElement name="dp-total-atk" class="meter__fill meter__fill--atk" />
+                        <ui:VisualElement name="dp-total-def" class="meter__fill meter__fill--def" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="row">
+                        <ui:Label name="dp-total-atk-t" text="攻方 0" class="totals__s totals__s--atk" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Label name="dp-total-def-t" text="守方 0" class="totals__s totals__s--def" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </tac:TacFrame>
+            <tac:TacFrame class="col-map tac-frame--inset">
+                <ui:VisualElement class="map-toolbar">
+                    <tac:TacSeg name="map-tool" options="选择 / 移动|缩放|旋转 90°" index="0" />
+                    <ui:VisualElement class="vsep" />
+                    <ui:Button name="map-undo" class="ibtn" tooltip="撤销 Ctrl+Z">
+                        <tac:TacIcon icon="undo" class="ibtn__icon" />
+                    </ui:Button>
+                    <ui:Button name="map-redo" class="ibtn" tooltip="重做 Ctrl+Y">
+                        <tac:TacIcon icon="redo" class="ibtn__icon" />
+                    </ui:Button>
+                    <ui:Button name="map-center" class="ibtn" tooltip="点击放置">
+                        <tac:TacIcon icon="target" class="ibtn__icon" />
+                    </ui:Button>
+                    <ui:VisualElement class="spacer" />
+                    <ui:Label text="吸附网格" class="hint" />
+                    <tac:TacToggle name="map-snap" value="true" class="ttoggle--sm" />
+                    <ui:Label name="map-cursor" text="X 0512  Z 0512" class="code code--mr mono" />
+                </ui:VisualElement>
+                <ui:VisualElement class="map-wrap">
+                    <tac:TacDeployMap name="deploy-map" class="fill" />
+                    <ui:VisualElement name="map-banner" class="map-banner">
+                        <tac:TacIcon icon="warn" class="map-banner__icon" />
+                        <ui:Label name="map-banner-text" text="" class="map-banner__text" />
+                        <ui:Button name="map-banner-undo" class="btn btn--sm btn--danger-solid">
+                            <ui:Label text="撤销 Esc" />
+                        </ui:Button>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="scale-bar">
+                        <ui:VisualElement class="scale-bar__line" />
+                        <ui:Label text="100 m" class="code" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </tac:TacFrame>
+            <tac:TacFrame class="col-right">
+                <ui:VisualElement class="tabs">
+                    <ui:Button name="tab-unit" text="兵种" class="tab" />
+                    <ui:Button name="tab-form" text="阵型" class="tab" />
+                    <ui:Button name="tab-stat" text="属性" class="tab" />
+                </ui:VisualElement>
+                <ui:VisualElement name="pane-unit" class="pane">
+                    <ui:VisualElement class="portrait">
+                        <ui:VisualElement class="portrait__bg" />
+                        <tac:TacIcon name="unit-icon" icon="infantry" class="portrait__icon" />
+                        <ui:Label name="unit-tier" text="T2" class="portrait__tier" />
+                        <ui:Label name="unit-code" text="UNIT // SWORDSMAN" class="portrait__code code" />
+                    </ui:VisualElement>
+                    <ui:Label name="unit-name" text="长剑步兵" class="h-section" />
+                    <ui:Label name="unit-en" text="Swordsman" class="sub-en" />
+                    <ui:VisualElement name="unit-chips" class="unit-chips" />
+                    <ui:VisualElement name="unit-stats" class="stat-bars" />
+                    <ui:Button name="unit-swap" class="btn btn--block">
+                        <tac:TacIcon icon="swap" class="btn__icon" />
+                        <ui:Label text="更换兵种" />
+                    </ui:Button>
+                </ui:VisualElement>
+                <ui:VisualElement name="pane-form" class="pane">
+                    <ui:Label name="form-title" text="编成 1 · 长剑步兵" class="h-section" />
+                    <ui:VisualElement class="field">
+                        <ui:VisualElement class="field__head">
+                            <ui:Label text="人数" class="field__k" />
+                            <ui:VisualElement class="spacer" />
+                            <ui:Label name="f-count-hint" text="回车确认" class="field__hint" />
+                        </ui:VisualElement>
+                        <ui:TextField name="f-count" value="4000" class="tfield" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="field">
+                        <ui:VisualElement class="field__head">
+                            <ui:Label text="密度" class="field__k" />
+                            <ui:VisualElement class="spacer" />
+                            <ui:Label name="f-density-v" text="0.50 人/m²" class="field__v mono" />
+                        </ui:VisualElement>
+                        <tac:TacSlider name="f-density" low="0.05" high="2" value="0.5" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="field">
+                        <ui:VisualElement class="field__head">
+                            <ui:Label text="正面 / 纵深" class="field__k" />
+                            <ui:VisualElement class="spacer" />
+                            <ui:Label name="f-aspect-v" text="2.0" class="field__v mono" />
+                        </ui:VisualElement>
+                        <tac:TacSlider name="f-aspect" low="0.25" high="6" value="2" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="field">
+                        <ui:VisualElement class="field__head">
+                            <ui:Label text="朝向" class="field__k" />
+                        </ui:VisualElement>
+                        <tac:TacSeg name="f-facing" options="→ 东|↓ 南|← 西|↑ 北" index="0" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="field">
+                        <ui:VisualElement class="field__head">
+                            <ui:Label text="阵型模板" class="field__k" />
+                        </ui:VisualElement>
+                        <tac:TacCycler name="f-shape" options="方阵|横队|纵队|疏散" index="1" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="field field--row">
+                        <ui:Label text="调整时锁定人数" class="field__k grow" />
+                        <tac:TacToggle name="f-lock" value="true" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="field field--row">
+                        <ui:Label text="开战后保持阵型" class="field__k grow" />
+                        <tac:TacToggle name="f-keep" value="false" />
+                    </ui:VisualElement>
+                    <ui:Label name="f-size" text="脚印 63 × 126 m" class="code" />
+                </ui:VisualElement>
+                <ui:VisualElement name="pane-stat" class="pane">
+                    <ui:Label name="stat-title" text="数值覆盖" class="h-section" />
+                    <ui:VisualElement class="table-head">
+                        <ui:Label text="属性" class="tcol tcol--k" />
+                        <ui:Label text="基础" class="tcol" />
+                        <ui:Label text="覆盖" class="tcol" />
+                        <ui:Label text="有效" class="tcol" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="stat-rows" class="table" />
+                    <ui:Label text="覆盖值仅作用于本编成；留空表示沿用兵种默认值。" class="hint hint--wrap" />
+                    <ui:Button name="stat-reset" class="btn btn--block btn--ghost">
+                        <tac:TacIcon icon="undo" class="btn__icon" />
+                        <ui:Label text="全部恢复默认" />
+                    </ui:Button>
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+        <tac:TacFrame class="deploy-foot tac-frame--bar">
+            <tac:TacIcon name="dp-status-icon" icon="check" class="foot-status__icon" />
+            <ui:VisualElement class="foot-status">
+                <ui:Label name="dp-status" text="布阵有效 · 可开战" class="foot-status__t" />
+                <ui:Label name="dp-status-sub" text="已应用到本局 · 方案未保存" class="foot-status__s" />
+            </ui:VisualElement>
+            <ui:VisualElement class="spacer" />
+            <ui:Button name="dp-revert" class="btn">
+                <ui:Label text="取消修改" />
+            </ui:Button>
+            <ui:Button name="dp-save" class="btn">
+                <tac:TacIcon icon="save" class="btn__icon" />
+                <ui:Label text="保存方案" />
+            </ui:Button>
+            <ui:Button name="dp-apply" class="btn">
+                <tac:TacIcon icon="check" class="btn__icon" />
+                <ui:Label text="应用布阵" />
+            </ui:Button>
+            <ui:Button name="dp-start" class="btn btn--primary btn--lg">
+                <ui:VisualElement class="glow" picking-mode="Ignore" />
+                <tac:TacIcon icon="play" class="btn__icon" />
+                <ui:Label text="应用并开战" />
+                <ui:Label text="ENTER" class="key key--on-primary" />
+            </ui:Button>
+        </tac:TacFrame>
+    </ui:VisualElement>
+</ui:UXML>

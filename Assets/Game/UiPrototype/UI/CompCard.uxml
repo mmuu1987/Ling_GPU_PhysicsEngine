@@ -1,0 +1,22 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.UiPrototype" editor-extension-mode="False">
+    <ui:VisualElement class="comp-card">
+        <ui:VisualElement name="stripe" class="comp-card__stripe" picking-mode="Ignore" />
+        <ui:VisualElement class="comp-card__body" picking-mode="Ignore">
+            <ui:VisualElement class="row" picking-mode="Ignore">
+                <ui:Label name="idx" text="编成 1" class="code" />
+                <ui:VisualElement class="spacer" />
+                <tac:TacIcon name="warn" icon="warn" class="comp-card__warn" />
+                <ui:Label name="role" text="近战" class="chip chip--role" />
+            </ui:VisualElement>
+            <ui:Label name="name" text="长剑步兵" class="comp-card__name" />
+            <ui:VisualElement class="row" picking-mode="Ignore">
+                <ui:Label name="count" text="4,000" class="comp-card__count" />
+                <ui:VisualElement class="spacer" />
+                <ui:Label name="size" text="63 × 126 m" class="comp-card__size mono" />
+            </ui:VisualElement>
+            <ui:VisualElement class="mini-bar" picking-mode="Ignore">
+                <ui:VisualElement name="share" class="mini-bar__fill" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

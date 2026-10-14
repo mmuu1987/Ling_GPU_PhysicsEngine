@@ -388,6 +388,7 @@ namespace MassEngine.Game
         private void OnDestroy()
         {
             runtimeUi?.Dispose();
+            DestroyBattleToolkit();
             if (telemetryHud != null) telemetryHud.enabled = telemetryWasEnabled;
             if (flowHud != null) flowHud.enabled = flowWasEnabled;
         }

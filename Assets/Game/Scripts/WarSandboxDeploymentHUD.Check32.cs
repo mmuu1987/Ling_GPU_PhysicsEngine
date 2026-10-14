@@ -26,7 +26,7 @@ namespace MassEngine.Game {
    }else{
     if(index<0||index>=deployment.Draft.Count)return;
     if(index!=selected){if(!CommitFields())return;selected=index;RefreshAfterUiChange();}
-    legionOpen=!DeploymentCheck32.Spatial(problem);spatialSelection=!legionOpen;
+    legionOpen=!DeploymentCheck32.Spatial(problem);spatialSelection=!legionOpen;if(spatialSelection)inspectorTab=1;
    }
    pickerOpen=armyMenu=templateMenu=placing=removeArmyConfirm=false;clearFocusRequested=true;nextUiRefresh=0;
   }

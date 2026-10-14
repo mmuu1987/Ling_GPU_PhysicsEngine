@@ -1,0 +1,188 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.UiPrototype" editor-extension-mode="False">
+    <ui:VisualElement class="page page--battle">
+        <tac:TacMapView name="b-world" mode="battle" seed="11" class="fill" />
+        <ui:VisualElement class="fill battle-shade" picking-mode="Ignore" />
+
+        <tac:TacFrame class="b-title">
+            <ui:Label name="b-code" text="OP-01 // FOREST-HILLS-1024" class="code code--accent" />
+            <ui:Label name="b-name" text="森林丘陵 · 正面决战" class="b-title__name" />
+            <ui:VisualElement class="row">
+                <ui:VisualElement name="b-phase-dot" class="status-dot status-dot--live" />
+                <ui:Label name="b-phase" text="交战中" class="b-title__phase" />
+                <ui:Label name="b-mode" text="· 歼灭战" class="b-title__mode" />
+            </ui:VisualElement>
+        </tac:TacFrame>
+
+        <tac:TacFrame class="b-timer tac-frame--hi">
+            <ui:VisualElement class="row">
+                <ui:Label text="ATTACKER" class="code code--atk" />
+                <ui:VisualElement class="spacer" />
+                <ui:Label name="b-speed-tag" text="×1" class="code code--accent" />
+                <ui:VisualElement class="spacer" />
+                <ui:Label text="DEFENDER" class="code code--def" />
+            </ui:VisualElement>
+            <ui:VisualElement class="row row--center">
+                <ui:Label name="b-atk" text="7,012" class="b-timer__side b-timer__side--atk" />
+                <ui:Label name="b-clock" text="00:00" class="b-timer__clock" />
+                <ui:Label name="b-def" text="7,040" class="b-timer__side b-timer__side--def" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sbar">
+                <ui:VisualElement name="b-bar-atk" class="sbar__atk" />
+                <ui:VisualElement class="sbar__mid" />
+                <ui:VisualElement name="b-bar-def" class="sbar__def" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sbar-ticks" picking-mode="Ignore">
+                <ui:VisualElement class="sbar-ticks__t" />
+                <ui:VisualElement class="sbar-ticks__t" />
+                <ui:VisualElement class="sbar-ticks__t sbar-ticks__t--mid" />
+                <ui:VisualElement class="sbar-ticks__t" />
+                <ui:VisualElement class="sbar-ticks__t" />
+            </ui:VisualElement>
+        </tac:TacFrame>
+
+        <ui:VisualElement class="b-right">
+            <tac:TacFrame class="b-sys tac-frame--bar">
+                <ui:Button name="b-help" class="ibtn" tooltip="操作提示">
+                    <tac:TacIcon icon="help" class="ibtn__icon" />
+                </ui:Button>
+                <ui:Button name="b-tech" class="ibtn" tooltip="技术信息">
+                    <tac:TacIcon icon="info" class="ibtn__icon" />
+                </ui:Button>
+                <ui:Button name="b-settings" class="ibtn" tooltip="设置">
+                    <tac:TacIcon icon="settings" class="ibtn__icon" />
+                </ui:Button>
+                <ui:Button name="b-catalog" class="ibtn" tooltip="战场目录">
+                    <tac:TacIcon icon="map" class="ibtn__icon" />
+                </ui:Button>
+                <ui:Button name="b-exit" class="ibtn ibtn--danger" tooltip="退出">
+                    <tac:TacIcon icon="exit" class="ibtn__icon" />
+                </ui:Button>
+            </tac:TacFrame>
+            <tac:TacFrame class="b-speed tac-frame--bar">
+                <ui:Label text="SPEED" class="code" />
+                <tac:TacSeg name="b-speed" options="0.5×|1×|2×|4×" index="1" class="tseg--sm" />
+            </tac:TacFrame>
+            <ui:VisualElement class="row row--gap b-ops">
+                <ui:Button name="b-redeploy" class="btn btn--sm">
+                    <tac:TacIcon icon="chev-l" class="btn__icon" />
+                    <ui:Label text="返回布阵" />
+                </ui:Button>
+                <ui:Button name="b-restart" class="btn btn--sm">
+                    <tac:TacIcon icon="rotate" class="btn__icon" />
+                    <ui:Label text="原样重开" />
+                </ui:Button>
+                <ui:Button name="b-end" class="btn btn--sm btn--danger">
+                    <tac:TacIcon icon="flag" class="btn__icon" />
+                    <ui:Label text="结束本局" />
+                </ui:Button>
+            </ui:VisualElement>
+            <tac:TacFrame name="b-tech-panel" class="b-techp">
+                <ui:Label text="TELEMETRY" class="code code--accent" />
+                <ui:Label name="b-tech-text" text="" class="mono b-techp__t" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <ui:VisualElement class="b-left">
+            <tac:TacFrame name="b-sel" class="b-sel tac-frame--hi">
+                <ui:VisualElement class="row">
+                    <ui:Label name="b-sel-code" text="SELECTED // 军团 1" class="code code--accent" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Label name="b-sel-order" text="进攻" class="chip chip--order" />
+                </ui:VisualElement>
+                <ui:VisualElement class="row b-sel__namerow">
+                    <ui:VisualElement name="b-sel-stripe" class="b-sel__stripe" />
+                    <ui:Label name="b-sel-name" text="攻方 · 长剑步兵" class="b-sel__name" />
+                </ui:VisualElement>
+                <ui:VisualElement class="row row--baseline">
+                    <ui:Label name="b-sel-count" text="4,000" class="b-sel__count" />
+                    <ui:Label name="b-sel-start" text="/ 4,000" class="b-sel__start" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Label name="b-sel-pct" text="100%" class="b-sel__pct" />
+                </ui:VisualElement>
+                <ui:VisualElement class="hp hp--lg">
+                    <ui:VisualElement name="b-sel-hp" class="hp__fill" />
+                </ui:VisualElement>
+                <ui:VisualElement class="mini-stats">
+                    <ui:VisualElement class="mini-stat">
+                        <ui:Label text="损失" class="mini-stat__k" />
+                        <ui:Label name="b-sel-loss" text="0" class="mini-stat__v" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="mini-stat">
+                        <ui:Label text="击杀" class="mini-stat__k" />
+                        <ui:Label name="b-sel-kills" text="0" class="mini-stat__v" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="mini-stat">
+                        <ui:Label text="士气" class="mini-stat__k" />
+                        <ui:Label name="b-sel-morale" text="高" class="mini-stat__v" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </tac:TacFrame>
+            <tac:TacFrame class="b-forces">
+                <ui:VisualElement class="panel-head panel-head--sm">
+                    <ui:Label text="FORCES" class="code code--accent" />
+                    <ui:Label text="// 1–9 选择 · TAB 切换" class="code" />
+                </ui:VisualElement>
+                <ui:ScrollView name="b-armies" class="grow" />
+            </tac:TacFrame>
+            <tac:TacFrame class="b-log">
+                <ui:VisualElement class="panel-head panel-head--sm">
+                    <ui:Label text="战况 · 操作反馈" class="code code--accent" />
+                </ui:VisualElement>
+                <ui:VisualElement name="b-log-list" class="log" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <tac:TacFrame class="b-cmd tac-frame--hi">
+            <ui:Button name="b-pause" class="cmd cmd--primary">
+                <ui:VisualElement class="glow" picking-mode="Ignore" />
+                <tac:TacIcon name="b-pause-icon" icon="pause" class="cmd__icon" />
+                <ui:Label name="b-pause-text" text="暂停" class="cmd__label" />
+                <ui:Label text="SPACE" class="cmd__key" />
+            </ui:Button>
+            <ui:VisualElement class="vsep vsep--tall" />
+            <ui:Button name="cmd-attack" class="cmd">
+                <tac:TacIcon icon="attack" class="cmd__icon" />
+                <ui:Label text="进攻" class="cmd__label" />
+                <ui:Label text="A" class="cmd__key" />
+            </ui:Button>
+            <ui:Button name="cmd-move" class="cmd">
+                <tac:TacIcon icon="move" class="cmd__icon" />
+                <ui:Label text="移动" class="cmd__label" />
+                <ui:Label text="M" class="cmd__key" />
+            </ui:Button>
+            <ui:Button name="cmd-hold" class="cmd">
+                <tac:TacIcon icon="hold" class="cmd__icon" />
+                <ui:Label text="防守" class="cmd__label" />
+                <ui:Label text="H" class="cmd__key" />
+            </ui:Button>
+            <ui:Button name="cmd-retreat" class="cmd">
+                <tac:TacIcon icon="retreat" class="cmd__icon" />
+                <ui:Label text="撤退" class="cmd__label" />
+                <ui:Label text="R" class="cmd__key" />
+            </ui:Button>
+            <ui:VisualElement class="vsep vsep--tall" />
+            <ui:Button name="cmd-follow" class="cmd cmd--toggle">
+                <tac:TacIcon icon="follow" class="cmd__icon" />
+                <ui:Label text="跟随" class="cmd__label" />
+                <ui:Label text="F" class="cmd__key" />
+            </ui:Button>
+            <ui:Button name="cmd-overview" class="cmd cmd--toggle">
+                <tac:TacIcon icon="overview" class="cmd__icon" />
+                <ui:Label text="全景" class="cmd__label" />
+                <ui:Label text="F3" class="cmd__key" />
+            </ui:Button>
+        </tac:TacFrame>
+
+        <tac:TacFrame class="b-mini">
+            <ui:VisualElement class="panel-head panel-head--sm">
+                <ui:Label text="TACTICAL" class="code code--accent" />
+                <ui:Label text="// 1024 m" class="code" />
+                <ui:VisualElement class="spacer" />
+                <ui:Label name="b-mini-zoom" text="1:4096" class="code mono" />
+            </ui:VisualElement>
+            <tac:TacFrame class="b-mini__map tac-frame--inset">
+                <tac:TacMapView name="b-minimap" mode="minimap" seed="11" class="fill" />
+            </tac:TacFrame>
+        </tac:TacFrame>
+    </ui:VisualElement>
+</ui:UXML>

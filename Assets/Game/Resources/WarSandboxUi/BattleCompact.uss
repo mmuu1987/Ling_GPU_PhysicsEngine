@@ -1,0 +1,132 @@
+/* =====================================================================
+   战斗 HUD · 紧凑布局（布局重设计 第 1 阶段）
+   - 面板单位参照 1440 × 810（面板宽度总是 ≥ 1440）。
+   - 互不重叠：左列 14..314；底部堆栈 326..(小地图左侧 12)；小地图右下；
+     顶部胶囊 top 12 高 40；提示条、菜单、详情从 top 60 开始。
+   - 只用 bc-* 容器类；Battle.uss 只借用军团卡、小地图、战后报告、确认框等共享样式。
+   ===================================================================== */
+
+.bc-hidden { display: none; }
+
+/* ---------- 通用：胶囊 / 小提示条 ---------- */
+.bc-pill {
+    height: 40px; padding: 0 14px; flex-direction: row; align-items: center;
+    --frame-radius: 20; --frame-shadow: 0.12;
+}
+.bc-chip {
+    flex-direction: row; align-items: center; padding: 4px 12px; margin-top: 6px; min-height: 32px;
+    --frame-radius: 16; --frame-shadow: 0.1;
+}
+.bc-chip__icon { width: 16px; height: 16px; margin-right: 6px; }
+.bc-chip__t { font-size: 13px; color: var(--c-ink); -unity-font-style: bold; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- 左上：战场名 + 阶段 ---------- */
+.bc-tl { position: absolute; left: 14px; top: 12px; width: 300px; flex-direction: row; }
+.bc-title { max-width: 300px; flex-shrink: 1; }
+.bc-title .status-dot { flex-shrink: 0; }
+.bc-title__name { font-size: 15px; -unity-font-style: bold; color: var(--c-ink); flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bc-title__phase { font-size: 13px; -unity-font-style: bold; color: var(--c-danger); margin-left: 8px; flex-shrink: 0; }
+.bc-title__mode { font-size: 13px; color: var(--c-muted); margin-left: 4px; flex-shrink: 0; }
+
+/* ---------- 顶部中央：520 × 40 ---------- */
+.bc-center { position: absolute; top: 12px; left: 50%; translate: -50% 0; width: 520px; align-items: center; }
+.bc-timer { width: 520px; flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 3px 16px 0 16px; }
+.bc-timer__row { height: 28px; }
+.bc-side { flex-grow: 1; flex-basis: 0; flex-shrink: 1; font-size: 13px; -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--c-ink2); }
+.bc-side--l { -unity-text-align: middle-left; }
+.bc-side--r { -unity-text-align: middle-right; }
+.bc-timer__mid { flex-shrink: 0; margin: 0 10px; align-items: center; }
+.bc-clock { font-size: 22px; -unity-font-style: bold; color: var(--c-ink); }
+.bc-speedtag { margin-left: 6px; font-size: 12px; }
+.bc-bar { height: 5px; border-radius: 3px; overflow: hidden; flex-direction: row; background-color: #EFE8DA; margin-top: 1px; }
+.bc-bar .bh-bar__seg { height: 100%; }
+
+/* 多军团：悬停顶部胶囊时显示（C# 控制显示）。悬停浮层，不常驻。 */
+.bc-pop { position: absolute; top: 46px; width: 300px; padding: 8px 14px 12px 14px; --frame-radius: 16; --frame-shadow: 0.2; }
+.bc-pop__list { flex-direction: column; margin-top: 4px; }
+.bc-pop .bh-bar-label { flex-grow: 0; flex-basis: auto; height: 22px; font-size: 13px; -unity-text-align: middle-left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.bc-p7 { max-width: 640px; }
+.bc-p7__k { flex-shrink: 0; margin-right: 8px; font-size: 12px; }
+.bc-p7__t { font-size: 12px; color: var(--c-ink2); }
+.bc-p7__btn { height: 26px; border-radius: 13px; font-size: 12px; margin-left: 8px; flex-shrink: 0; border-bottom-width: 2px; }
+
+/* ---------- 右上：速度 + 菜单 ---------- */
+.bc-right { position: absolute; right: 14px; top: 12px; width: 340px; align-items: flex-end; }
+.bc-rt { padding: 0 6px 0 8px; }
+.bc-speed .tseg__item { height: 26px; padding: 0 9px; font-size: 13px; }
+.bc-vsep { height: 22px; margin: 0 6px; }
+.bc-menu-btn { height: 30px; padding: 0 10px; border-bottom-width: 0; border-width: 0; flex-direction: row; align-items: center; }
+.bc-menu-btn--on { background-color: #EAF5FE; color: #1F77C0; }
+.bc-burger { width: 14px; height: 12px; justify-content: space-between; margin-right: 6px; }
+.bc-burger__line { height: 2px; border-radius: 1px; background-color: var(--c-ink2); }
+.bc-menu-btn--on .bc-burger__line { background-color: #1F77C0; }
+.bc-menu-btn__t { font-size: 13px; -unity-font-style: bold; }
+
+.bc-menu { width: 230px; margin-top: 8px; padding: 6px 8px 10px 8px; --frame-radius: 16; --frame-shadow: 0.2; }
+.bc-menu__head { font-size: 11px; color: var(--c-muted); -unity-font-style: bold; margin: 8px 8px 2px 8px; }
+.bc-menu__head--first { margin-top: 2px; }
+.bc-mi {
+    flex-direction: row; align-items: center; height: 30px; margin: 0; padding: 0 8px;
+    border-width: 0; border-radius: 10px; background-color: rgba(0, 0, 0, 0); color: var(--c-ink);
+}
+.bc-mi:hover:enabled { background-color: #FFF3DC; }
+.bc-mi:active:hover:enabled { background-color: #FFE9C2; }
+.bc-mi:disabled { opacity: 0.4; }
+.bc-mi__icon { width: 16px; height: 16px; margin-right: 8px; }
+.bc-mi__t { font-size: 14px; flex-grow: 1; }
+.bc-mi__key { font-size: 11px; color: var(--c-dim); }
+.bc-mi--danger { color: #D9372C; }
+.bc-mi.btn--on { background-color: #E3F2FD; color: #1F5F96; }
+
+.bc-details { width: 340px; max-height: 440px; margin-top: 8px; padding: 12px 16px 16px 16px; overflow: hidden; }
+.bc-details__t { font-size: 13px; color: var(--c-ink2); white-space: normal; }
+
+/* ---------- 左列：军团列表 ---------- */
+.bc-left { position: absolute; left: 14px; top: 60px; bottom: 14px; width: 300px; align-items: stretch; justify-content: flex-start; }
+.bc-forces { flex-grow: 0; flex-shrink: 1; padding: 8px 10px 10px 10px; --frame-radius: 16; }
+.bc-forces__head { margin: 0 4px 6px 4px; }
+.bc-forces__hint { font-size: 11px; }
+.bc-armies { flex-grow: 0; flex-shrink: 1; }
+.bc-forces .army-card { height: 44px; margin-bottom: 4px; flex-shrink: 0; border-radius: 12px; }
+.bc-seldetail { font-size: 12px; color: var(--c-ink2); white-space: normal; margin: 4px 4px 0 4px; flex-shrink: 0; }
+
+/* ---------- 底部堆栈：规则错误 / 提示 / 命令栏 ---------- */
+.bc-bottom { position: absolute; left: 326px; right: 14px; bottom: 14px; flex-direction: column; align-items: center; justify-content: flex-end; }
+.bc-bottom--mini { right: 266px; }
+.bc-rule-error {
+    max-width: 760px; margin-bottom: 8px; padding: 8px 14px; border-radius: 14px; background-color: #FFF1EE;
+    border-width: 2px; border-color: #F3A79E; font-size: 14px; color: #B4362D; white-space: normal; -unity-font-style: bold;
+}
+.bc-toast { flex-direction: row; align-items: center; max-width: 760px; margin-bottom: 8px; padding: 6px 8px 6px 16px; min-height: 36px; --frame-radius: 18; --frame-shadow: 0.14; }
+.bc-toast__t { font-size: 14px; color: var(--c-ink); white-space: normal; flex-shrink: 1; }
+.bc-toast__btn { height: 26px; border-radius: 13px; font-size: 12px; margin-left: 10px; flex-shrink: 0; border-bottom-width: 2px; }
+
+.bc-setup { width: 560px; padding: 14px 18px 18px 18px; }
+
+.bc-cmd { flex-direction: row; align-items: center; height: 70px; padding: 0 8px 0 12px; --frame-radius: 20; }
+.bc-cmd__sep { height: 44px; margin: 0 6px; }
+.bc-cmd .cmd { width: 54px; height: 54px; margin: 0 2px; border-radius: 14px; border-bottom-width: 4px; }
+.bc-cmd .cmd--primary { width: 92px; }
+.bc-cmd .cmd__icon { width: 20px; height: 20px; }
+.bc-cmd .cmd__label { font-size: 12px; margin-top: 2px; }
+.bc-cmd .cmd__key { right: 5px; top: 3px; font-size: 9px; }
+.bc-cmd .cmd:disabled { opacity: 0.4; }
+
+.bc-sum { width: 216px; justify-content: center; }
+.bc-sum__stripe { width: 4px; height: 16px; border-radius: 2px; margin-right: 6px; }
+.bc-sum__name { font-size: 14px; -unity-font-style: bold; color: var(--c-ink); flex-shrink: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bc-sum__chip { font-size: 11px; margin-left: 6px; flex-shrink: 0; }
+.bc-sum__nums { margin-top: 2px; }
+.bc-sum__count { font-size: 15px; -unity-font-style: bold; color: var(--c-ink); }
+.bc-sum__start { font-size: 12px; color: var(--c-muted); margin-left: 3px; }
+.bc-sum__pct { font-size: 12px; color: #23955A; -unity-font-style: bold; margin-left: 6px; }
+.bc-sum__k { font-size: 11px; color: var(--c-muted); margin-right: 3px; }
+.bc-sum__loss { font-size: 12px; color: var(--c-danger); }
+.bc-sum__hp { margin-top: 3px; height: 6px; border-radius: 3px; }
+
+/* ---------- 小地图（默认 220） ---------- */
+.bc-mini { position: absolute; right: 14px; bottom: 14px; width: 240px; padding: 6px 10px 10px 10px; --frame-radius: 16; }
+.bc-mini__head { margin: 0 2px 4px 2px; }
+.bc-mini__hint { font-size: 11px; }
+.bc-mini__host { width: 220px; height: 220px; border-radius: 10px; overflow: hidden; }

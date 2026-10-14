@@ -19,7 +19,10 @@ namespace MassEngine.Game
             }
             if (telemetryHud != null) telemetryHud.enabled = false;
             if (flowHud != null) flowHud.enabled = false;
-            if (!visible) { runtimeUi?.SetVisible(false); return; }
+            if (!visible) { runtimeUi?.SetVisible(false); HideBattleToolkit(); return; }
+            // UI Toolkit migration phase 3: the Q 版 document replaces the uGUI drawing below (switch: WarSandboxUiToolkit.Enabled).
+            if (MassEngine.Game.Ui.WarSandboxUiToolkit.Enabled) { runtimeUi?.SetVisible(false); BattleToolkitUpdate(); return; }
+            HideBattleToolkit();
             if (runtimeUi == null) runtimeUi = new WarSandboxUGUI(transform, "Battle HUD Canvas", 50);
             runtimeUi.SetVisible(true);
             if (Time.unscaledTime < nextUiRefresh) return;

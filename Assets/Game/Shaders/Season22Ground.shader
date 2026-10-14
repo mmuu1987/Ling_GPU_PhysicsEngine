@@ -46,7 +46,7 @@ Shader "MassEngine/Season22 Ground" {
   half3 albedo=lerp(lerp(grass,stone,rocky),dirt,road*(1-smoothstep(260,420,max(abs(p.x),abs(p.y)))));
   if(_Season>1.5){float snow=(.38+.56*smoothstep(.22,.72,broad+fine*.14))*(1-road*.82)*(1-detail.r*.20);snow*=1-saturate(slope*2);albedo=lerp(albedo,half3(.64,.71,.73)*(.94+.07*fine),snow);}
   albedo*=1-detail.b*(_Season>1.5?.18:.32);
-  Light light=GetMainLight(TransformWorldToShadowCoord(i.world));half illumination=.43+.57*saturate(dot(normal,light.direction))*light.shadowAttenuation;
+  Light light=GetMainLight(TransformWorldToShadowCoord(i.world),i.world,half4(1,1,1,1));half illumination=.43+.57*saturate(dot(normal,light.direction))*light.shadowAttenuation;
   float haze=smoothstep(_HazeStart,_HazeEnd,length(p));return half4(lerp(albedo*illumination,_HazeColor.rgb,haze),1);
  }
  ENDHLSL

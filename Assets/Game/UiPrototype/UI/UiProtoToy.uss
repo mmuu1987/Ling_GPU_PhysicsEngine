@@ -1,0 +1,363 @@
+/* =====================================================================
+   Q 版 · UI Toolkit 原型主题
+   - 在 B 版样式之上覆盖：同一套 UXML / 交互，只换皮。
+   - 参照当前游戏内 Toy UI：奶白圆角面板、胶囊按钮、橙色主按钮、浅蓝选中、红蓝双方。
+   - 面板（TacFrame）用 --frame-radius / --frame-border / --frame-shadow 切到圆角卡通模式。
+   - 地图配色在 Runtime/TacTheme.cs（Painter2D 内容 USS 管不到）。
+   ===================================================================== */
+@import url("UiProtoB.uss");
+
+:root {
+    --c-bg: #BFE3F2;
+    --c-panel: #FFFCF4;
+    --c-line: #EADFCB;
+    --c-line-hi: #DCD0BA;
+    --c-accent: #2F9BEA;
+    --c-accent-soft: rgba(47, 155, 234, 0.12);
+    --c-accent-mid: rgba(47, 155, 234, 0.25);
+    --c-amber: #FFA41B;
+    --c-danger: #F0453A;
+    --c-ok: #3DBB78;
+    --c-ink: #3B3F4C;
+    --c-ink2: #5E6371;
+    --c-muted: #8E929C;
+    --c-dim: #B4B6BC;
+    --c-atk: #F26B3A;
+    --c-def: #3D8BF0;
+}
+
+/* ---------- 基础 ---------- */
+.app { font-size: 16px; }
+.vignette, .scanlines, .glow, .battle-shade, .sbar-ticks, .sub-en, .stat__u, .portrait__bg { display: none; }
+
+/* ---------- 文字 ---------- */
+.code { font-size: 13px; letter-spacing: 0; color: var(--c-muted); }
+.code--accent { color: #E07F00; -unity-font-style: bold; }
+.h-hero { font-size: 44px; color: var(--c-ink); text-shadow: 0 0 0 rgba(0, 0, 0, 0); margin: 4px 0 18px 0; }
+.h-page { color: var(--c-ink); font-size: 32px; }
+.h-panel { color: var(--c-ink); letter-spacing: 0; font-size: 20px; }
+.h-section { color: var(--c-ink); }
+.h-sub { font-size: 15px; letter-spacing: 0; color: #E07F00; -unity-font-style: bold; border-bottom-width: 2px; border-color: var(--c-line); }
+.para { color: var(--c-ink2); }
+.key {
+    font-size: 11px; letter-spacing: 0; color: var(--c-ink2); border-radius: 6px;
+    background-color: #F1EBDD; border-color: #DCCFB6; border-width: 1px; border-bottom-width: 2px;
+}
+.key--on-primary { color: #7A4300; background-color: rgba(255, 255, 255, 0.4); border-color: rgba(122, 67, 0, 0.3); }
+
+/* ---------- Chips ---------- */
+.chip { border-radius: 10px; padding: 1px 8px; letter-spacing: 0; border-color: var(--c-line-hi); color: var(--c-ink2); }
+.chip--new { background-color: #FF5C7A; border-color: #FF5C7A; color: #FFFFFF; }
+.chip--win { background-color: var(--c-amber); border-color: #E58600; color: #FFFFFF; }
+.chip--role { color: var(--c-muted); background-color: #F7F1E4; }
+.chip--order { color: #1F77C0; border-color: rgba(47, 155, 234, 0.5); background-color: rgba(47, 155, 234, 0.12); }
+.chip--order-hold { color: #23955A; border-color: rgba(61, 187, 120, 0.5); background-color: rgba(61, 187, 120, 0.14); }
+.chip--order-retreat { color: #C46F00; border-color: rgba(255, 164, 27, 0.55); background-color: rgba(255, 164, 27, 0.15); }
+.chip--order-move { color: var(--c-ink2); }
+.chip--unit { border-radius: 12px; padding: 4px 10px; background-color: #F3ECDD; border-color: #E3D7C0; color: var(--c-ink2); }
+
+/* ---------- 圆角面板 ---------- */
+.tac-frame {
+    --frame-fill: rgba(255, 252, 244, 0.97);
+    --frame-line: #E6D9C2;
+    --frame-accent: #2F9BEA;
+    --frame-radius: 20;
+    --frame-border: 2;
+    --frame-shadow: 0.16;
+    --frame-glow: 0;
+    padding: 18px 20px 23px 20px;
+}
+.tac-frame--hi { --frame-fill: #FFFFFF; --frame-line: #E6D9C2; --frame-glow: 0; }
+.tac-frame--inset {
+    --frame-fill: #F4EEDF; --frame-line: #E2D5BD; --frame-radius: 14; --frame-shadow: 0; --frame-glow: 0; --frame-border: 0;
+    border-radius: 14px; border-width: 2px; border-color: #E2D5BD; overflow: hidden; padding: 0;
+}
+.tac-frame--bar { padding: 8px 12px 13px 12px; }
+.tac-frame--danger { --frame-accent: #F0453A; --frame-line: #F3A79E; --frame-fill: #FFF1EE; }
+.result, .settings { --frame-fill: #FFFCF4; --frame-radius: 26; --frame-shadow: 0.22; }
+
+/* ---------- 按钮：胶囊 + 底部加厚描边（玩具按钮的“厚度”） ---------- */
+.btn {
+    height: 42px; padding: 0 18px; border-radius: 21px;
+    border-width: 2px; border-bottom-width: 4px; border-color: #DCD0BA;
+    background-color: #FFFFFF; color: var(--c-ink); font-size: 15px; -unity-font-style: bold;
+}
+.btn:hover:enabled { background-color: #FFF6E3; border-color: #E8C98E; color: var(--c-ink); }
+.btn:active:hover:enabled { background-color: #FFEFD0; translate: 0 2px; }
+.btn:disabled { opacity: 0.45; }
+.btn--primary { background-color: #FFA41B; border-color: #E58600; color: #FFFFFF; }
+.btn--primary:hover:enabled { background-color: #FFB43F; border-color: #E58600; color: #FFFFFF; }
+.btn--primary:active:hover:enabled { background-color: #F59400; }
+.btn--danger { border-color: #F4B3AB; color: #D9372C; background-color: #FFF5F3; }
+.btn--danger:hover:enabled { background-color: #FFE6E2; border-color: #F0453A; color: #D9372C; }
+.btn--danger-solid { background-color: #F0453A; border-color: #C92E24; color: #FFFFFF; }
+.btn--danger-solid:hover:enabled { background-color: #FF5A4E; border-color: #C92E24; color: #FFFFFF; }
+.btn--ghost { background-color: rgba(0, 0, 0, 0); border-color: rgba(0, 0, 0, 0); color: var(--c-muted); }
+.btn--ghost:hover:enabled { background-color: rgba(59, 63, 76, 0.05); border-color: rgba(0, 0, 0, 0); color: var(--c-ink); }
+.btn--sm { height: 34px; border-radius: 17px; padding: 0 12px; font-size: 13px; border-bottom-width: 3px; }
+.btn--lg { height: 50px; border-radius: 25px; }
+.btn--xl { height: 60px; border-radius: 30px; font-size: 22px; letter-spacing: 1px; }
+
+.ibtn { border-radius: 17px; color: var(--c-muted); border-width: 2px; }
+.ibtn:hover:enabled { background-color: #FFF1D9; border-color: #EAD3A8; color: #E58600; }
+.ibtn--danger:hover:enabled { background-color: #FFE6E2; border-color: #F4B3AB; color: var(--c-danger); }
+.vsep { width: 2px; border-radius: 1px; background-color: var(--c-line); }
+
+/* ---------- 顶栏 ---------- */
+.topbar { height: 60px; background-color: rgba(255, 252, 244, 0.9); border-bottom-width: 2px; border-color: #E6D9C2; }
+.brand-mark { color: #FFA41B; width: 26px; height: 26px; }
+.brand { letter-spacing: 1px; font-size: 19px; color: var(--c-ink); }
+.crumb-sep { color: var(--c-dim); }
+.crumb { letter-spacing: 0; color: var(--c-ink2); font-size: 16px; }
+.sysbtn {
+    height: 36px; border-radius: 18px; padding: 0 14px;
+    border-width: 2px; border-bottom-width: 3px; border-color: #DCD0BA;
+    background-color: #FFFFFF; color: var(--c-ink); -unity-font-style: bold;
+}
+.sysbtn:hover:enabled { background-color: #FFF6E3; border-color: #E8C98E; color: var(--c-ink); }
+.sysbtn--danger:hover:enabled { background-color: #FFE6E2; border-color: #F4B3AB; color: #D9372C; }
+
+/* ---------- 弹窗 / 导航 / 提示 ---------- */
+.dimmer { background-color: rgba(40, 52, 74, 0.45); }
+.page { padding: 84px 32px 52px 32px; }
+.protonav { background-color: rgba(255, 252, 244, 0.94); border-top-width: 2px; border-color: #E6D9C2; }
+.protonav__tag { color: #E07F00; letter-spacing: 0; -unity-font-style: bold; }
+.protonav__btn { border-radius: 11px; color: var(--c-muted); }
+.protonav__btn:hover:enabled { color: var(--c-ink); border-color: rgba(0, 0, 0, 0); background-color: rgba(59, 63, 76, 0.06); }
+.protonav__btn--on { color: #1F77C0; border-color: rgba(47, 155, 234, 0.5); background-color: rgba(47, 155, 234, 0.1); }
+.toast { background-color: #FFFFFF; border-width: 2px; border-bottom-width: 4px; border-color: #E6D9C2; border-radius: 22px; padding: 10px 20px; top: 76px; }
+.toast__icon { color: #FFA41B; }
+.toast__text { color: var(--c-ink); -unity-font-style: bold; }
+
+.panel-head { border-bottom-width: 2px; }
+.panel-foot { border-top-width: 2px; }
+.callout--warn { background-color: #FFF4DE; border-color: #FFA41B; border-radius: 12px; border-left-width: 5px; }
+.callout__icon { color: #E58600; }
+.callout__text { color: #8A5A00; }
+
+/* =====================================================================
+   作战选择
+   ===================================================================== */
+.list-section__t { letter-spacing: 0; color: #E07F00; -unity-font-style: bold; font-size: 14px; }
+.list-section__line { height: 2px; border-radius: 1px; }
+.op-row { height: 60px; border-radius: 16px; border-width: 2px; margin-bottom: 4px; padding-right: 16px; }
+.op-row:hover { background-color: #FFF6E3; border-color: #F0DDB8; }
+.op-row__bar { width: 0; margin-right: 8px; }
+.op-row__idx {
+    width: 32px; height: 32px; border-radius: 16px; margin-right: 12px;
+    background-color: #F1EBDD; color: var(--c-muted); font-size: 13px; letter-spacing: 0;
+    -unity-text-align: middle-center; -unity-font-style: bold;
+}
+.op-row__name { color: var(--c-ink); -unity-font-style: bold; }
+.op-row__meta { color: var(--c-muted); letter-spacing: 0; }
+.op-row__count { color: var(--c-ink2); }
+.op-row--sel { background-image: none; background-color: #E3F2FD; border-color: #8CC6F2; }
+.op-row--sel:hover { background-color: #E3F2FD; }
+.op-row--sel .op-row__name { color: #1F5F96; }
+.op-row--sel .op-row__idx { background-color: #2F9BEA; color: #FFFFFF; }
+.op-row--sel .op-row__count { color: #1F77C0; }
+
+.stat-row { border-top-width: 0; border-bottom-width: 0; }
+.stat { background-color: #F7F1E4; border-radius: 16px; border-right-width: 0; margin-right: 10px; padding: 12px 18px; }
+.stat--last { margin-right: 0; }
+.stat__v { color: var(--c-ink); }
+.stat__k { color: var(--c-muted); -unity-font-style: bold; }
+
+.objective__mark { rotate: 0deg; width: 12px; height: 12px; border-radius: 6px; border-width: 2px; }
+.objective__t { color: var(--c-ink2); }
+.map-tag { font-size: 13px; letter-spacing: 0; color: #FFFFFF; -unity-font-style: bold; text-shadow: 0 1px 3px rgba(30, 50, 20, 0.6); }
+.legend__sw { border-radius: 5px; }
+.legend__t { color: #FFFFFF; text-shadow: 0 1px 3px rgba(30, 50, 20, 0.6); -unity-font-style: bold; }
+.ops-actions { border-top-width: 2px; }
+
+/* =====================================================================
+   配兵布阵
+   ===================================================================== */
+.side-head__sw { border-radius: 5px; }
+.side-head__t { letter-spacing: 0; color: var(--c-ink2); -unity-font-style: bold; }
+.comp-card { background-color: #FFFFFF; border-width: 2px; border-color: #EADFCB; border-radius: 16px; overflow: hidden; margin-bottom: 8px; }
+.comp-card:hover { border-color: #E8C98E; background-color: #FFFBF2; }
+.comp-card__stripe { width: 6px; }
+.comp-card__name { color: var(--c-ink); -unity-font-style: bold; }
+.comp-card__count { color: var(--c-ink); }
+.comp-card__size { color: var(--c-muted); }
+.comp-card--sel { border-color: #2F9BEA; background-color: #EAF5FE; }
+.comp-card--sel .comp-card__name { color: #1F5F96; }
+.comp-card--bad { border-color: #F0453A; background-color: #FFEDEA; }
+.mini-bar { height: 6px; border-radius: 3px; background-color: #EFE8DA; overflow: hidden; }
+.mini-bar__fill { border-radius: 3px; }
+.totals { border-top-width: 2px; }
+.totals__v { color: var(--c-ink); -unity-font-style: bold; }
+.meter { height: 10px; border-radius: 5px; background-color: #EFE8DA; overflow: hidden; }
+
+.map-toolbar { background-color: #FBF6EC; border-bottom-width: 2px; border-color: #EADFCB; }
+.map-banner { background-color: #FFEDEA; border-width: 2px; border-left-width: 2px; border-color: #F0453A; border-radius: 14px; }
+.map-banner__text { color: #B3261E; -unity-font-style: bold; }
+.scale-bar__line { border-color: #FFFFFF; border-left-width: 2px; border-right-width: 2px; border-bottom-width: 2px; }
+.scale-bar .code { color: #FFFFFF; -unity-font-style: bold; text-shadow: 0 1px 3px rgba(30, 50, 20, 0.6); }
+.map-label { color: #FFFFFF; text-shadow: 0 1px 3px rgba(30, 30, 30, 0.7); }
+.map-label--zone { font-size: 13px; letter-spacing: 0; color: #FFFFFF; -unity-font-style: bold; }
+.map-label--dim { background-color: rgba(59, 63, 76, 0.85); border-radius: 8px; color: #FFFFFF; text-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+
+.tabs { border-bottom-width: 0; background-color: #F3ECDD; border-radius: 22px; padding: 4px; margin: 0 0 14px 0; }
+.tab { height: 36px; border-radius: 18px; border-bottom-width: 0; color: var(--c-muted); font-size: 15px; -unity-font-style: bold; }
+.tab:hover:enabled { color: var(--c-ink); background-color: rgba(255, 255, 255, 0.6); }
+.tab--on { background-color: #FFFFFF; color: #E07F00; }
+.tab--on:hover:enabled { background-color: #FFFFFF; color: #E07F00; }
+
+.portrait { border-width: 0; border-radius: 18px; background-color: #FFE6B8; }
+.portrait__icon { color: #D27400; }
+.portrait__tier { background-color: #FFA41B; color: #FFFFFF; border-radius: 12px; padding: 0 10px; font-size: 17px; }
+.portrait__code .code, .portrait__code { color: #B07A3A; }
+.sbar-row__k { color: var(--c-muted); -unity-font-style: bold; }
+.sbar-row__track { height: 10px; border-radius: 5px; background-color: #EFE8DA; overflow: hidden; }
+.sbar-row__fill { background-color: #FFB43F; border-radius: 5px; }
+.sbar-row__v { color: var(--c-ink); -unity-font-style: bold; }
+
+.field__k { color: var(--c-ink2); -unity-font-style: bold; }
+.field__v { color: #1F77C0; -unity-font-style: bold; }
+.field__hint { color: var(--c-muted); }
+
+.app .tfield.unity-base-text-field > .unity-base-text-field__input,
+.app .tfield.unity-base-text-field:hover > .unity-base-text-field__input,
+.app .tfield.unity-base-text-field:focus > .unity-base-text-field__input {
+    border-radius: 12px; background-color: #FFFFFF; border-width: 2px; border-color: #DCD0BA; color: var(--c-ink);
+    --unity-cursor-color: #2F9BEA; --unity-selection-color: rgba(47, 155, 234, 0.3);
+}
+.app .tfield.unity-base-text-field:focus > .unity-base-text-field__input { border-color: #2F9BEA; }
+.app .tfield--error.unity-base-text-field > .unity-base-text-field__input,
+.app .tfield--error.unity-base-text-field:focus > .unity-base-text-field__input { border-color: #F0453A; background-color: #FFEDEA; }
+
+.table-head { border-bottom-width: 2px; }
+.trow { border-color: rgba(230, 217, 194, 0.8); }
+.tcell { color: var(--c-ink2); }
+.tcell--k { color: var(--c-ink); }
+.tcell--ovr { color: #E07F00; }
+.tcell--eff { color: var(--c-ink); }
+
+.deploy-foot { height: 80px; }
+.foot-status__s { color: var(--c-muted); }
+
+/* =====================================================================
+   战斗 HUD（压在明亮的草地上：面板几乎不透明）
+   ===================================================================== */
+.b-title__name { color: var(--c-ink); }
+.b-title__mode { color: var(--c-muted); }
+.b-timer__clock { color: var(--c-ink); text-shadow: 0 0 0 rgba(0, 0, 0, 0); }
+.sbar { height: 12px; border-radius: 6px; overflow: hidden; background-color: #EFE8DA; }
+.sbar__mid { width: 3px; background-color: #FFFFFF; }
+.b-techp__t { color: var(--c-ink2); }
+.b-sel__name { color: var(--c-ink); }
+.b-sel__count { color: var(--c-ink); }
+.b-sel__pct { color: #23955A; -unity-font-style: bold; }
+.hp { height: 8px; border-radius: 4px; background-color: #EFE8DA; overflow: hidden; }
+.hp--lg { height: 12px; border-radius: 6px; }
+.hp__fill { border-radius: 4px; }
+.mini-stat__v { color: var(--c-ink); -unity-font-style: bold; }
+.log-line__t { color: var(--c-dim); }
+.log-line__m { color: var(--c-ink2); }
+.log-line--warn .log-line__m { color: #C46F00; }
+.log-line--cmd .log-line__m { color: #1F77C0; }
+
+.army-card { height: 56px; margin-bottom: 6px; background-color: #FFFFFF; border-width: 2px; border-color: #EFE6D5; border-radius: 14px; overflow: hidden; }
+.army-card:hover { background-color: #FFFBF2; border-color: #E8C98E; }
+.army-card__stripe { width: 6px; }
+.army-card__key { color: var(--c-muted); -unity-font-style: bold; }
+.army-card__name { color: var(--c-ink); }
+.army-card__count { color: var(--c-ink2); }
+.army-card--sel { border-color: #2F9BEA; background-color: #EAF5FE; }
+.army-card--sel .army-card__key { color: #1F77C0; }
+.army-card--sel .army-card__name { color: #1F5F96; }
+
+.cmd {
+    width: 92px; height: 78px; margin: 0 4px; border-radius: 18px;
+    border-width: 2px; border-bottom-width: 5px; border-color: #DCD0BA;
+    background-color: #FFFFFF; color: var(--c-ink2);
+}
+.cmd:hover:enabled { border-color: #E8C98E; background-color: #FFF6E3; color: var(--c-ink); }
+.cmd:active:hover:enabled { background-color: #FFEFD0; translate: 0 2px; }
+.cmd__label { -unity-font-style: bold; }
+.cmd__key { color: var(--c-dim); letter-spacing: 0; right: 9px; top: 6px; }
+.cmd--on { border-color: #2F9BEA; background-color: #EAF5FE; color: #1F77C0; }
+.cmd--on .cmd__key { color: #2F9BEA; }
+.cmd--primary { width: 128px; background-color: #FFA41B; border-color: #E58600; color: #FFFFFF; }
+.cmd--primary .cmd__key { color: rgba(255, 255, 255, 0.8); }
+.cmd--primary:hover:enabled { background-color: #FFB43F; border-color: #E58600; color: #FFFFFF; }
+.cmd--paused { background-color: #3DBB78; border-color: #2A9A5E; }
+.cmd--paused:hover:enabled { background-color: #4FCB88; border-color: #2A9A5E; }
+
+/* =====================================================================
+   结算 / 设置
+   ===================================================================== */
+.result__title { color: #FF8A00; text-shadow: 0 3px 0 rgba(224, 127, 0, 0.25); }
+.result__title--draw { color: var(--c-ink); text-shadow: 0 3px 0 rgba(59, 63, 76, 0.12); }
+.result__sub { color: var(--c-ink2); }
+.result__kpis { border-top-width: 0; border-bottom-width: 0; }
+.kpi { background-color: #F7F1E4; border-radius: 16px; border-right-width: 0; margin-right: 10px; }
+.kpi--last { margin-right: 0; }
+.kpi__k { color: var(--c-muted); -unity-font-style: bold; }
+.kpi__v { color: var(--c-ink); }
+.side { border-radius: 18px; background-color: #FFFFFF; border-width: 2px; border-color: #EADFCB; }
+.side--atk { border-top-width: 6px; border-top-color: var(--c-atk); }
+.side--def { border-top-width: 6px; border-top-color: var(--c-def); }
+.side--win { background-color: #FFF7E6; }
+.side__title { color: var(--c-ink); letter-spacing: 0; }
+.side__cols { border-bottom-width: 2px; }
+.srow-res { border-color: rgba(230, 217, 194, 0.8); }
+.scell { color: var(--c-ink2); }
+.scell--k { color: var(--c-ink); }
+.scell--alive { color: var(--c-ink); }
+.result__actions { border-top-width: 2px; }
+
+.vtabs { border-right-width: 2px; }
+.vtab { border-radius: 16px; border-left-width: 0; color: var(--c-muted); -unity-font-style: bold; }
+.vtab:hover:enabled { background-color: #FFF6E3; color: var(--c-ink); }
+.vtab--on { background-color: #FFA41B; color: #FFFFFF; }
+.vtab--on:hover:enabled { background-color: #FFB43F; color: #FFFFFF; }
+.srow { border-color: rgba(230, 217, 194, 0.8); }
+.srow__k { color: var(--c-ink); -unity-font-style: bold; }
+.srow__v { color: #1F77C0; -unity-font-style: bold; }
+.krow { border-color: rgba(230, 217, 194, 0.8); }
+.krow__k { color: var(--c-ink2); }
+.krow__v { border-radius: 8px; background-color: #F1EBDD; border-color: #DCCFB6; border-bottom-width: 2px; color: var(--c-ink); -unity-font-style: bold; }
+
+/* =====================================================================
+   自定义控件
+   ===================================================================== */
+.tslider__track { height: 10px; border-radius: 5px; background-color: #EFE8DA; overflow: hidden; }
+.tslider__fill { background-color: #2F9BEA; border-radius: 5px; }
+.tslider__thumb {
+    top: 2px; width: 22px; height: 22px; translate: -11px 0; border-radius: 11px;
+    background-color: #FFFFFF; border-width: 3px; border-color: #2F9BEA;
+}
+
+.ttoggle { width: 50px; height: 28px; border-radius: 14px; border-width: 0; background-color: #DCD5C6; }
+.ttoggle__knob { left: 3px; width: 22px; height: 22px; border-radius: 11px; background-color: #FFFFFF; }
+.ttoggle--on { background-color: #3DBB78; border-color: #3DBB78; }
+.ttoggle--on .ttoggle__knob { left: 25px; background-color: #FFFFFF; }
+.ttoggle--sm { width: 40px; height: 22px; border-radius: 11px; }
+.ttoggle--sm .ttoggle__knob { width: 16px; height: 16px; border-radius: 8px; }
+.ttoggle--sm.ttoggle--on .ttoggle__knob { left: 21px; }
+
+.tseg { border-width: 0; background-color: #F1EBDD; border-radius: 18px; padding: 3px; }
+.tseg__item { height: 32px; border-radius: 15px; border-left-width: 0; color: var(--c-muted); -unity-font-style: bold; }
+.tseg__item:hover:enabled { background-color: rgba(255, 255, 255, 0.7); color: var(--c-ink); }
+.tseg__item--on { background-color: #FFFFFF; color: #E07F00; }
+.tseg__item--on:hover:enabled { background-color: #FFFFFF; color: #E07F00; }
+.tseg--sm .tseg__item { height: 28px; }
+.map-toolbar .tseg__item { height: 30px; }
+
+.tcycler { border-radius: 20px; border-width: 2px; border-color: #DCD0BA; background-color: #FFFFFF; height: 40px; }
+.tcycler__btn { border-radius: 18px; color: #E07F00; }
+.tcycler__btn:hover:enabled { background-color: #FFF1D9; color: #E07F00; }
+.tcycler__value { color: var(--c-ink); -unity-font-style: bold; }
+.tcycler__dot { width: 6px; height: 6px; border-radius: 3px; background-color: #E6DCC8; }
+.tcycler__dot--on { background-color: #FFA41B; }
+
+/* ---------- 修饰类重申（上面的基础类覆盖在 B 的修饰类之后，需要再声明一次） ---------- */
+.code--atk { color: var(--c-atk); -unity-font-style: bold; }
+.code--def { color: var(--c-def); -unity-font-style: bold; }
+.kpi__v--danger { color: var(--c-danger); }
+.scell--loss { color: var(--c-danger); }
+.field__hint--error { color: var(--c-danger); }
+.b-timer__side { -unity-font-style: bold; }

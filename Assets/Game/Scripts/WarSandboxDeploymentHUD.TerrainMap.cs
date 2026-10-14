@@ -4,9 +4,11 @@ namespace MassEngine.Game {
   private Texture2D terrainMapTexture;
   private TerrainNavigationGrid terrainMapNavigation;
   private void ReleaseTerrainMap(){if(terrainMapTexture!=null)Destroy(terrainMapTexture);terrainMapTexture=null;terrainMapNavigation=null;}
-  private void DrawTerrainMap(WarSandboxUGUI ui,Rect map){
+  private void DrawTerrainMap(WarSandboxUGUI ui,Rect map){var t=TerrainMapTexture();if(t!=null)ui.PictureFit("deployment-terrain-map",map,t);}
+  /// <summary>Walkable/exclusion texture (row 0 = south), shared by the uGUI and UI Toolkit maps; null without terrain.</summary>
+  private Texture2D TerrainMapTexture(){
    var manager=deployment.controller.manager;
-   if(!manager.TryGetTerrainContext(out var surface,out var navigation,out _)||surface==null||navigation==null){ReleaseTerrainMap();return;}
+   if(!manager.TryGetTerrainContext(out var surface,out var navigation,out _)||surface==null||navigation==null){ReleaseTerrainMap();return null;}
    if(terrainMapTexture==null||terrainMapNavigation!=navigation){
     ReleaseTerrainMap();terrainMapNavigation=navigation;
     const int n=128;var pixels=new Color32[n*n];
@@ -20,7 +22,8 @@ namespace MassEngine.Game {
     terrainMapTexture=new Texture2D(n,n,TextureFormat.RGBA32,false){name="Terrain deployment exclusion",filterMode=FilterMode.Bilinear,wrapMode=TextureWrapMode.Clamp,hideFlags=HideFlags.DontSave};
     terrainMapTexture.SetPixels32(pixels);terrainMapTexture.Apply(false,false);
    }
-   ui.PictureFit("deployment-terrain-map",map,terrainMapTexture);
+   return terrainMapTexture;
   }
  }
 }
+

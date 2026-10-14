@@ -173,6 +173,14 @@ namespace MassEngine.Game
                 ui.Panel("map-objective", new Rect(point.x - 5, point.y - 5, 10, 10), WarSandboxUGUI.Amber, false);
             }
             var draft = deployment.Draft;
+            // Deployment B: the draft may be temporarily invalid; outline the formation(s) named by the first problem.
+            int problemA = -1, problemB = -1;
+            if (!deployment.TryValidate(out string problem) && problem != null)
+            {
+                problemA = DeploymentCheck32.Index(problem, draft);
+                var other = System.Text.RegularExpressions.Regex.Match(problem, "与编成 (\\d+)");
+                if (other.Success && int.TryParse(other.Groups[1].Value, out int j) && j >= 1 && j <= draft.Count) problemB = j - 1;
+            }
             for (int i = 0; i < draft.Count; i++)
             {
                 var entry = draft[i]; var bounds = entry.Bounds;
@@ -181,6 +189,14 @@ namespace MassEngine.Game
                 rect = Rect.MinMaxRect(Mathf.Max(map.xMin, rect.xMin), Mathf.Max(map.yMin, rect.yMin), Mathf.Min(map.xMax, rect.xMax), Mathf.Min(map.yMax, rect.yMax));
                 if (rect.width <= 0 || rect.height <= 0) continue;
                 ui.Panel("map-unit-" + i, rect, WarSandboxTeamPalette.Resolve(entry.teamId), false);
+                if (i == problemA || i == problemB)
+                {
+                    var red = WarSandboxUGUI.Danger; float t = 3;
+                    ui.Panel("map-problem-top-" + i, new Rect(rect.x - t, rect.y - t, rect.width + 2 * t, t), red, false);
+                    ui.Panel("map-problem-bottom-" + i, new Rect(rect.x - t, rect.yMax, rect.width + 2 * t, t), red, false);
+                    ui.Panel("map-problem-left-" + i, new Rect(rect.x - t, rect.y, t, rect.height), red, false);
+                    ui.Panel("map-problem-right-" + i, new Rect(rect.xMax, rect.y, t, rect.height), red, false);
+                }
                 if (spatialSelection && i == selected)
                 {
                     ui.Panel("map-selected-top", new Rect(rect.x, rect.y, rect.width, 2), WarSandboxUGUI.Accent, false);
@@ -218,13 +234,16 @@ namespace MassEngine.Game
                 ui.Field("plans-slot", new Rect(x + 82, 150, 96, 34), planSlot, v => planSlot = v, WarSandboxLocalPlanStore.MaxSlotLength);
                 ui.Label("plans-name-label", new Rect(x + 188, 150, 62, 34), "名称", 14, WarSandboxUGUI.Muted);
                 ui.Field("plans-name", new Rect(x + 250, 150, w - 270, 34), planName, v => planName = v, 80);
-                ui.Button("plans-save", new Rect(x + 22, 200, w - 44, 36), deployment.PlanStore.Exists(planSlot) ? "覆盖方案" : "另存新方案", () =>
+                // Deployment B: an invalid draft cannot be saved (the player fixes the red formations first).
+                bool saveValid = deployment.TryValidate(out string saveProblem) || HasPendingInputs();
+                if (!saveValid) ui.Label("plans-save-blocked", new Rect(x + 12, 236, w - 24, 20), "布阵有问题，修正后才能保存：" + DeploymentCheck32.Problem(saveProblem, deployment.Draft), 12, WarSandboxUGUI.Danger);
+                ui.Button("plans-save", new Rect(x + 22, 200, w - 44, 36), !saveValid ? "布阵有问题，不能保存" : deployment.PlanStore.Exists(planSlot) ? "覆盖方案" : "另存新方案", () =>
                 {
                     if (!CommitFields()) { planMessage = inputError; return; }
                     if (deployment.PlanStore.Exists(planSlot)) { pendingPlanAction = "save"; pendingPlanSlot = planSlot; pendingPlanName = planName; }
                     else SavePlan(planSlot, planName, false);
                     clearFocusRequested = true;
-                }, true);
+                }, true, saveValid);
                 ui.Label("plans-list-heading", new Rect(x, 274, w, 28), "已保存方案  /  " + planSlots.Length, 17, null, true);
                 ui.Scroll("plans-list", new Rect(x, 312, w, Mathf.Max(80, h - 478)), Mathf.Max(72, planSlots.Length * 62));
                 if (planSlots.Length == 0) ui.Label("plans-empty", new Rect(16, 10, w - 32, 64), "还没有方案。保存当前布阵后，下次启动仍能继续使用。", 16, WarSandboxUGUI.Muted);

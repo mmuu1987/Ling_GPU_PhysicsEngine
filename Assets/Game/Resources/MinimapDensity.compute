@@ -1,0 +1,31 @@
+// Minimap army shapes (2026-10-12): per-army head count on a Res x Res grid over the simulation world.
+// Read-only over the engine buffers (same layout mirror as MemberSelection); the CPU reads _Cells back a few times a second.
+#pragma kernel ClearCells
+#pragma kernel SplatAgents
+#include "MemberSelectionBuffers.hlsl"
+
+StructuredBuffer<AgentData> _Agents;
+StructuredBuffer<int> _TeamIds, _Hp;
+RWStructuredBuffer<uint> _Cells; // [team * Res * Res + z * Res + x]
+int _Count, _Res, _TeamCount;
+float4 _World; // xy = world min (x, z), zw = 1 / world size
+
+[numthreads(64, 1, 1)]
+void ClearCells(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x < (uint)(_Res * _Res * _TeamCount)) _Cells[id.x] = 0;
+}
+
+[numthreads(64, 1, 1)]
+void SplatAgents(uint3 id : SV_DispatchThreadID)
+{
+    uint i = id.x;
+    if (i >= (uint)_Count || _Hp[i] <= 0) return;
+    int team = _TeamIds[i];
+    if (team < 0 || team >= _TeamCount) return;
+    float3 p = _Agents[i].position;
+    float2 uv = (p.xz - _World.xy) * _World.zw;
+    if (!all(isfinite(uv)) || any(uv < 0) || any(uv >= 1)) return;
+    uint2 c = min((uint2)(uv * _Res), (uint)(_Res - 1));
+    InterlockedAdd(_Cells[(uint)team * (uint)(_Res * _Res) + c.y * (uint)_Res + c.x], 1u);
+}

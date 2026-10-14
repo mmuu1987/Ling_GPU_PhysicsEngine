@@ -37,7 +37,7 @@ Shader "MassEngine/Art20 Ground" {
   float rocky=saturate(smoothstep(.09,.31,slope)*.75+rim*smoothstep(.45,.85,broad)*.28);
   half3 stone=SAMPLE_TEXTURE2D(_Rock,sampler_Rock,p*.09).rgb*half3(.79,.88,.81);
   half3 albedo=lerp(lerp(grass,stone,rocky),dirt,road*(1-smoothstep(260,420,max(abs(p.x),abs(p.y)))));
-  Light light=GetMainLight(TransformWorldToShadowCoord(i.world));half illumination=.43+.57*saturate(dot(normalize(i.normal),light.direction))*light.shadowAttenuation;
+  Light light=GetMainLight(TransformWorldToShadowCoord(i.world),i.world,half4(1,1,1,1));half illumination=.43+.57*saturate(dot(normalize(i.normal),light.direction))*light.shadowAttenuation;
   float haze=smoothstep(_HazeStart,_HazeEnd,length(p));return half4(lerp(albedo*illumination,_HazeColor.rgb,haze),1);
  }
  ENDHLSL
