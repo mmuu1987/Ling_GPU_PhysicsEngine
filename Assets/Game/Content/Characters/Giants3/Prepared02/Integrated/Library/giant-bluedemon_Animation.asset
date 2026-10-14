@@ -16,4 +16,4 @@ MonoBehaviour:
   moveStopSpeed: 0.05
   moveStartSpeed: 0.12
   moveAnimationSpeedMin: 0.2
-  moveAnimationSpeedMax: 1.15
+  moveAnimationSpeedMax: 2

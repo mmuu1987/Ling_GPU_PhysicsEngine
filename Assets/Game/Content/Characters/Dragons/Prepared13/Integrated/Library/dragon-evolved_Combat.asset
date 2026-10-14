@@ -21,7 +21,7 @@ MonoBehaviour:
   attackInterval: 1.5000001
   maxHp: 1500
   projectileRange: 14
-  projectileSpeed: 18
+  projectileSpeed: 30
   projectileGravity: 0
   projectileHitRadius: 0.6
   projectileMaxLifetime: 3

@@ -19,7 +19,7 @@ MonoBehaviour:
   attackRange: 4.35
   attackDamage: 45
   attackInterval: 1.0666667
-  maxHp: 300
+  maxHp: 450
   projectileRange: 0
   projectileSpeed: 12
   projectileGravity: -9.8

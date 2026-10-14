@@ -12,17 +12,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010006, type: 3}
   m_Name: DefenderUnitConfig_Combat
   m_EditorClassIdentifier: 
-  targetAcquireRadius: 20
-  attackRange: 1.8
-  attackDamage: 10
-  attackInterval: 0.8
-  maxHp: 100
-  projectileRange: 20
-  projectileSpeed: 12
-  projectileGravity: -9.8
-  projectileHitRadius: 0.08
-  projectileMaxLifetime: 5
-  projectileTrailLength: 1.4
   attackReleasePhase: 0.55
   projectileOriginHeight: 1.3
   projectileTargetHeight: 1
+  targetAcquireRadius: 26
+  attackRange: 1.8
+  attackDamage: 9
+  attackInterval: 1.2
+  maxHp: 80
+  projectileRange: 500
+  projectileSpeed: 75
+  projectileGravity: -9.8
+  projectileHitRadius: 0.08
+  projectileMaxLifetime: 10
+  projectileTrailLength: 1.4
+  projectileSplashRadius: 1.5
+  chargeDamageMultiplier: 1
+  chargeMinSpeedFraction: 0.6
