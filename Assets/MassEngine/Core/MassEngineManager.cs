@@ -66,6 +66,9 @@ namespace MassEngine
         public bool enableGpuDispatch;
         public bool rebuildRuntimeFlowEveryFrame;
         public bool battleStarted;
+        /// <summary>Set by the battle controller during Setup: Idle clips play while the battle is not started (pose only).</summary>
+        [System.NonSerialized] public bool animateIdleWhileStopped;
+        private static readonly int MassProjectileTimeId = Shader.PropertyToID("_MassProjectileTime");
 
         private UnitTypeRegistry unitTypeRegistry;
         private ComputePipelineOrchestrator pipelineOrchestrator;
@@ -239,6 +242,7 @@ namespace MassEngine
                 0f));
             // Tracers draw straight from projectileBuffer via the GPU active list, so a
             // paused battle keeps showing frozen shots and a cleared pool shows none.
+            Shader.SetGlobalFloat(MassProjectileTimeId, projectileSimulationTime); // ProjectileTrail volley loft (render only)
             projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds);
             if (projectileImpactFx != null)
                 projectileRenderDispatcher.DrawImpacts(ProjectileRender, projectileImpactFx, renderBounds, projectileSimulationTime);
@@ -813,6 +817,7 @@ namespace MassEngine
                 projectileThreadGroupsX = projectileThreadGroups,
                 simulationTime = projectileSimulationTime,
                 battleStarted = battleStarted,
+                idleAnimateStopped = !battleStarted && animateIdleWhileStopped,
                 combatEnabled = true,
                 attackerTeamId = AttackerTeamId,
                 defenderTeamId = DefenderTeamId,

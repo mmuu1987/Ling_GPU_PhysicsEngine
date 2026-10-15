@@ -46,9 +46,9 @@
 .bc-pop__list { flex-direction: column; margin-top: 4px; }
 .bc-pop .bh-bar-label { flex-grow: 0; flex-basis: auto; height: 22px; font-size: 13px; -unity-text-align: middle-left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.bc-p7 { max-width: 640px; }
+.bc-p7 { width: 600px; max-width: 600px; } /* fixed: live counts must not resize the chip */
 .bc-p7__k { flex-shrink: 0; margin-right: 8px; font-size: 12px; }
-.bc-p7__t { font-size: 12px; color: var(--c-ink2); }
+.bc-p7__t { font-size: 12px; color: var(--c-ink2); flex-grow: 1; flex-basis: 0; }
 .bc-p7__btn { height: 26px; border-radius: 13px; font-size: 12px; margin-left: 8px; flex-shrink: 0; border-bottom-width: 2px; }
 
 /* ---------- 右上：速度 + 菜单 ---------- */

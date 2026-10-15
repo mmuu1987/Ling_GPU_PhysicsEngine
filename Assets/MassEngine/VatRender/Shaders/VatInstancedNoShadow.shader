@@ -230,6 +230,12 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
 
                     _GlobalAnimationTime = data.currentAnimationTime;
                     _GlobalCurrentState = data.currentState >= 3 ? data.currentState : data.presentationState;
+                    // Idle: fixed per-agent phase so a standing army never moves in unison (render only, 2026-10-15).
+                    if (_GlobalCurrentState == 0)
+                    {
+                        uint idleHash = agentIndex * 2654435761u; idleHash ^= idleHash >> 15; idleHash *= 2246822519u; idleHash ^= idleHash >> 13;
+                        _GlobalAnimationTime += (float)(idleHash & 0xFFFFu) / 65536.0 * (max(1.0, _IdleClipFrameCount) / max(1.0, _IdleClipFrameRate));
+                    }
                     _GlobalLodVis = MassLodVisibility(_MassLodState[agentIndex]);
                 #endif
             }
