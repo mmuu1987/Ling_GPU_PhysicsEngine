@@ -147,16 +147,32 @@ namespace MassEngine.Game
         /// <summary>Optional; omitted when 0 (auto) so older plans stay byte-identical and still load.</summary>
         [DataMember(EmitDefaultValue = false)]
         public int facing;
+        /// <summary>Brush deployment (2026-10-15): optional painted footprint (cell metres, cells along X / Z, row-major bits
+        /// LSB first in base64). Omitted for rectangles, so older plans stay byte-identical and still load.</summary>
+        [DataMember(EmitDefaultValue = false)]
+        public float brushCell;
+        [DataMember(EmitDefaultValue = false)]
+        public int brushWidth;
+        [DataMember(EmitDefaultValue = false)]
+        public int brushHeight;
+        [DataMember(EmitDefaultValue = false)]
+        public string brushBits;
 
         public static WarSandboxPlanEntry From(WarSandboxDeploymentEntry source, string id, int revision)
         {
-            return new WarSandboxPlanEntry
+            var result = new WarSandboxPlanEntry
             {
                 valuesVersion = 1, templateId = id, templateRevision = revision,
                 teamId = source.teamId, count = source.count,
                 center = WarSandboxPlanVector3.From(source.center), density = source.density,
                 aspect = source.aspect, manualSize = WarSandboxPlanVector3.From(source.manualSize), facing = source.facing
             };
+            if (source.brush != null)
+            {
+                result.brushCell = source.brush.cell; result.brushWidth = source.brush.width; result.brushHeight = source.brush.height;
+                result.brushBits = source.brush.ToBase64();
+            }
+            return result;
         }
 
         public bool TryToRuntime(UnitTypeConfig template, out WarSandboxDeploymentEntry result, out string error)
@@ -172,6 +188,11 @@ namespace MassEngine.Game
                 template = template, teamId = teamId, count = count, center = center.ToRuntime(),
                 density = density, aspect = aspect, manualSize = manualSize.ToRuntime(), facing = facing
             };
+            if (brushBits != null || brushWidth != 0 || brushHeight != 0 || brushCell != 0)
+            {
+                if (!WarSandboxBrushMask.TryFromBase64(brushCell, brushWidth, brushHeight, brushBits, out var mask, out error)) return false;
+                result.brush = mask;
+            }
             return true;
         }
     }
@@ -453,3 +474,4 @@ namespace MassEngine.Game
         private static void TryDelete(string path) { try { if (File.Exists(path)) File.Delete(path); } catch { } }
     }
 }
+
