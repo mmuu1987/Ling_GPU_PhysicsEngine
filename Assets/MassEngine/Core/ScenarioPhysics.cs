@@ -83,6 +83,9 @@ namespace MassEngine
                     maxAbsExtent = Mathf.Max(maxAbsExtent,
                         Mathf.Abs(spawn.spawnCenter.x) + size.x * 0.5f,
                         Mathf.Abs(spawn.spawnCenter.z) + size.z * 0.5f);
+                    // Brush deployment: explicit spawn positions are checked cell by cell by the deployment draft; their
+                    // bounding rectangle may legally wrap a hostile block, so it is left out of the rectangle test.
+                    if (spawn.customSpawnOffsets == null)
                     footprints.Add((unitTypes[i].teamId, unitTypes[i].name,
                         new Rect(spawn.spawnCenter.x - size.x * 0.5f, spawn.spawnCenter.z - size.z * 0.5f, size.x, size.z)));
 
@@ -219,3 +222,4 @@ namespace MassEngine
         }
     }
 }
+

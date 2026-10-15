@@ -138,8 +138,8 @@ namespace MassEngine.Game
         }
     }
 
-    /// <summary>Footprint tests that understand brush masks. Hostile footprints stay rectangles (ScenarioPhysics checks
-    /// hostile spawn rectangles); own-army shapes may interlock cell by cell.</summary>
+    /// <summary>Footprint tests that understand brush masks: painted shapes (own or hostile) may interlock cell by cell,
+    /// e.g. a ring around an enemy block. Two rectangles keep the old rectangle test.</summary>
     public static class WarSandboxBrushFootprint
     {
         public static bool Overlaps(Rect a, Rect b) => Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin) > 0.01f &&
@@ -166,7 +166,7 @@ namespace MassEngine.Game
         public static bool Overlaps(WarSandboxDeploymentEntry a, WarSandboxDeploymentEntry b)
         {
             if (!Overlaps(a.Bounds, b.Bounds)) return false;
-            if (a.teamId != b.teamId || (a.brush == null && b.brush == null)) return true;
+            if (a.brush == null && b.brush == null) return true;
             if (a.brush == null || (b.brush != null && b.brush.painted < a.brush.painted)) { var t = a; a = b; b = t; }
             var m = a.brush;
             for (int j = 0; j < m.height; j++)

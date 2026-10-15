@@ -15,6 +15,8 @@ namespace MassEngine.Game
         private int brushSize = 1;
         private static readonly float[] BrushRadii = { 5f, 12.5f, 25f };
         private static readonly string[] BrushNames = { "小", "中", "大" };
+        // Large bodies: the three sizes scale with one body spacing so they stay distinct (a kaiju gets 35 / 59 / 94 m).
+        private static readonly float[] BrushBodyScale = { .75f, 1.25f, 2f };
 
         // Stroke state: a world-aligned cell grid for the whole battlefield, built on pointer down.
         private bool brushStroke, brushStrokeErase, brushHasLast;
@@ -66,7 +68,8 @@ namespace MassEngine.Game
             e.template != null && e.template.flockingConfig != null ? Mathf.Max(.05f, e.template.flockingConfig.agentRadius) : .45f;
         private float BrushSpacing(WarSandboxDeploymentEntry e) => WarSandboxBrushMask.Spacing(e.density, BodyRadius(e));
         /// <summary>Large bodies: the brush is never narrower than one body spacing, or a stroke could hold nobody.</summary>
-        private float BrushWorldRadius(WarSandboxDeploymentEntry e) => Mathf.Max(BrushRadii[Mathf.Clamp(brushSize, 0, 2)], BrushSpacing(e) * .75f);
+        private float BrushRadiusFor(WarSandboxDeploymentEntry e, int k) => Mathf.Max(BrushRadii[k], BrushSpacing(e) * BrushBodyScale[k]);
+        private float BrushWorldRadius(WarSandboxDeploymentEntry e) => BrushRadiusFor(e, Mathf.Clamp(brushSize, 0, 2));
         private float BrushYaw(int index) => WarSandboxDeploymentFacing.ResolveQuarter(deployment.Draft, index) * 90f;
 
         private bool BrushUsable => brushMode && deployment != null && deployment.Draft != null && deployment.Draft.Count > 0 && spatialSelection;
@@ -89,7 +92,7 @@ namespace MassEngine.Game
             for (int k = 0; k < 3; k++)
             {
                 DpOnState(dpBrushSizes[k], brushSize == k);
-                dpBrushSizes[k].text = BrushNames[k] + " " + (Mathf.Max(BrushRadii[k], BrushSpacing(e) * .75f) * 2).ToString("0") + "m";
+                dpBrushSizes[k].text = BrushNames[k] + " " + (BrushRadiusFor(e, k) * 2).ToString("0") + "m";
             }
             string text;
             if (e.brush == null)
@@ -136,7 +139,7 @@ namespace MassEngine.Game
             for (int j = j0; j <= j1; j++) for (int i = i0; i <= i1; i++) grid[j * brushGW + i] = true;
         }
 
-        /// <summary>block: every grid cell another composition touches (own army cell by cell, hostile as its rectangle).
+        /// <summary>block: every grid cell another composition touches (painted shapes cell by cell, rectangles whole).
         /// !block: the selected composition's own cells, by cell centre.</summary>
         private void StampEntry(WarSandboxDeploymentEntry e, bool[] grid, bool ownTeam, bool block)
         {
@@ -185,7 +188,7 @@ namespace MassEngine.Game
                     BlockRect(new Rect(wall.xMin - c, wall.yMin - c, wall.width + 2 * c, wall.height + 2 * c), brushBlocked, true);
                 }
             var e = draft[index];
-            for (int k = 0; k < draft.Count; k++) if (k != index) StampEntry(draft[k], brushBlocked, draft[k].teamId == e.teamId, true);
+            for (int k = 0; k < draft.Count; k++) if (k != index) StampEntry(draft[k], brushBlocked, true, true);
 
             brushStrokeErase = brushErase || shift;
             brushMinI = brushGW; brushMinJ = brushGH; brushMaxI = -1; brushMaxJ = -1;
