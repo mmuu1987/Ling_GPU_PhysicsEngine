@@ -51,14 +51,14 @@ namespace MassEngine.Game
                 int columns = Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(entry.count * aspect)), 1, entry.count);
                 int rows = Mathf.CeilToInt(entry.count / (float)columns);
                 float jitter = Mathf.Clamp(entry.template.spawnConfig.formationJitterFraction, 0, .08f);
-                if ((rows > 1 && size.x / (rows - 1) * (1 - 2 * jitter) + .0001f < 2 * r) ||
-                    (columns > 1 && size.z / (columns - 1) * (1 - 2 * jitter) + .0001f < 2 * r))
+                if (entry.brush == null && ((rows > 1 && size.x / (rows - 1) * (1 - 2 * jitter) + .0001f < 2 * r) ||
+                    (columns > 1 && size.z / (columns - 1) * (1 - 2 * jitter) + .0001f < 2 * r))) // brush shapes: lattice spacing >= 2r by construction
                 { error = prefix + "半径与实际行列间距/抖动不相容。请降低密度或扩大占地；不会自动减人数或缩模型。"; return false; }
                 var bounds = Expanded(entry.Bounds, r);
                 if (bounds.xMin < -half.x || bounds.xMax > half.x || bounds.yMin < -half.y || bounds.yMax > half.y)
                 { error = prefix + "半径扩展后的占地越出战场留白。"; return false; }
                 for (int j = 0; j < i; j++)
-                    if (bounds.Overlaps(Expanded(draft[j].Bounds, radii[j])))
+                    if (entry.brush != null || draft[j].brush != null ? WarSandboxBrushFootprint.Overlaps(entry, draft[j]) : bounds.Overlaps(Expanded(draft[j].Bounds, radii[j])))
                     { error = prefix + "半径扩展后的占地可能与编成 " + (j + 1) + " 相交。请调整位置。"; return false; }
             }
             return true;
@@ -67,3 +67,4 @@ namespace MassEngine.Game
         { rect.xMin -= radius; rect.xMax += radius; rect.yMin -= radius; rect.yMax += radius; return rect; }
     }
 }
+

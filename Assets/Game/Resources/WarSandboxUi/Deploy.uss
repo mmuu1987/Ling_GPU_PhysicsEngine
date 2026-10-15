@@ -85,11 +85,14 @@
 
 /* 右栏：检查器 */
 .dp-insp { width: 360px; padding: 12px 14px 16px 14px; }
-.dp-insp-head { margin-bottom: 8px; }
+.dp-insp-head { margin-bottom: 8px; flex-shrink: 0; }
+/* Inspector: header and tabs never shrink; the form takes what is left and its scroll view scrolls (2026-10-15). */
+#dp-insp-form { flex-basis: 0; }
+#dp-place-scroll { flex-basis: 0; }
 .dp-scope { font-size: 12px; color: var(--c-muted); }
 .dp-name { font-size: 20px; -unity-font-style: bold; color: var(--c-ink); overflow: hidden; text-overflow: ellipsis; }
 .dp-count { font-size: 16px; -unity-font-style: bold; color: #1F77C0; }
-.dp-tabs { margin-bottom: 10px; }
+.dp-tabs { margin-bottom: 10px; flex-shrink: 0; }
 .dp-unit-preview { flex-grow: 1; flex-shrink: 1; max-height: 170px; min-height: 0; margin-bottom: 8px; }
 .dp-stats { align-items: stretch; margin-bottom: 10px; }
 .dp-stat { flex-grow: 1; flex-basis: 0; margin-right: 8px; padding: 4px 2px; border-radius: 14px; background-color: #F7F1E4; }
@@ -204,3 +207,4 @@
 .am-list { flex-direction: row; flex-wrap: wrap; margin-bottom: 12px; }
 .am-item { width: 48%; margin: 0 2% 8px 0; }
 .td-card { width: 550px; }
+
