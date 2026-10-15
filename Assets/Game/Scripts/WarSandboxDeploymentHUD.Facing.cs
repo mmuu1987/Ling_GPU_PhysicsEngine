@@ -39,7 +39,8 @@ namespace MassEngine.Game
             int quarter = ((FacingQuarter(selected) + quarters) % 4 + 4) % 4;
             var next = original;
             bool swap = (quarters & 1) != 0;
-            if (swap)
+            if (original.brush != null) next.brush = original.brush.Rotate(quarters); // brush shapes turn cell by cell
+            else if (swap)
             {
                 var size = original.Size;
                 if (!WarSandboxDeploymentResize.TryFromSize(original, original.center, new Vector2(size.z, size.x), out next, out var error))
@@ -91,3 +92,4 @@ namespace MassEngine.Game
         }
     }
 }
+

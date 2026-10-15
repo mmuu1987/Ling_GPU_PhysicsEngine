@@ -262,8 +262,11 @@ namespace MassEngine.Game
             if(shapeChanged)
             {
                 if(!WarSandboxDeploymentResize.Finite(next.density)||next.density<.05f||next.density>SpawnConfig.PackingLimitPerSquareMeter||!WarSandboxDeploymentResize.Finite(next.aspect)||next.aspect<.1f||next.aspect>10){error="密度或比例无效。";return false;}
-                if(!WarSandboxDeploymentResize.TryFromSize(next,next.center,new Vector2(next.Size.x,next.Size.z),out var converted,out error))return false;
-                if(next.manualSize.x>0&&next.manualSize.z>0)next=converted;
+                if(next.brush==null) // brush shapes take their size from the painted cells
+                {
+                    if(!WarSandboxDeploymentResize.TryFromSize(next,next.center,new Vector2(next.Size.x,next.Size.z),out var converted,out error))return false;
+                    if(next.manualSize.x>0&&next.manualSize.z>0)next=converted;
+                }
                 // Too-tight spacing is a spatial problem: written to the draft, reported by TryValidate (red block).
                 if(!TryGetResizeRadius(next,out var radius,out error))return false;
             }
@@ -330,6 +333,12 @@ namespace MassEngine.Game
                 var info = UnitPreviewRadius.Read(entry.template);
                 if (!info.Available) continue;
                 var value = spacing.Resolve(entry.template, WarSandboxUnitStats.Get(WarSandboxUnitStat.AgentRadius));
+                if (entry.brush != null)
+                {
+                    if (!WarSandboxBrushFootprint.Fits(entry, value.applies ? value.effective : info.BaseRadius, out error))
+                    { error = "编成 " + (i + 1) + "：" + error; return false; }
+                    continue;
+                }
                 if (!WarSandboxDeploymentResize.Fits(entry, value.applies ? value.effective : info.BaseRadius,
                     entry.template.spawnConfig.formationJitterFraction, out error))
                 { error = "编成 " + (i + 1) + "：" + error; return false; }
@@ -351,7 +360,7 @@ namespace MassEngine.Game
             return SameShape(WarSandboxDeploymentEntry.From(entry.template), entry);
         }
         private static bool SameShape(WarSandboxDeploymentEntry a, WarSandboxDeploymentEntry b) =>
-            a.template == b.template && a.count == b.count && a.density == b.density && a.aspect == b.aspect && a.manualSize == b.manualSize;
+            a.template == b.template && a.count == b.count && a.density == b.density && a.aspect == b.aspect && a.manualSize == b.manualSize && a.brush == b.brush;
 
         // Presentation-only canonical state. Stable plan IDs, no persistence side effects.
         public string PlanSignature28(bool current)
@@ -513,6 +522,7 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
 

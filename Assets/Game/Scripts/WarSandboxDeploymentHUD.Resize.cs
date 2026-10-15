@@ -16,7 +16,7 @@ namespace MassEngine.Game
             (h&DeploymentResizeHandle.MaxZ)!=0?r.yMin:(h&DeploymentResizeHandle.MinZ)!=0?r.yMax:r.center.y);
         private void DrawResizeHandles(WarSandboxUGUI ui,Rect map,Vector2 world)
         {
-            if(!spatialSelection||placing||deployment.Draft.Count==0)return;
+            if(!spatialSelection||placing||deployment.Draft.Count==0||deployment.Draft[selected].brush!=null)return;
             var r=MapBounds(deployment.Draft[selected].Bounds,world,map);float s=8/ui.Scale;
             foreach(var h in ResizeHandles)
             {
@@ -26,7 +26,7 @@ namespace MassEngine.Game
         }
         private DeploymentResizeHandle HitResizeHandle(Vector2 point)
         {
-            if(!spatialSelection||placing||deployment.Draft.Count==0)return DeploymentResizeHandle.None;
+            if(!spatialSelection||placing||deployment.Draft.Count==0||brushMode||deployment.Draft[selected].brush!=null)return DeploymentResizeHandle.None;
             var rect=MapBounds(deployment.Draft[selected].Bounds,translationWorld,translationMap);float hit=11/MapUiScale,best=hit*hit;var answer=DeploymentResizeHandle.None;
             if(new Rect(rect.center-rect.size*.25f,rect.size*.5f).Contains(point))return DeploymentResizeHandle.None; // retain a move target even for tiny blocks
             foreach(var h in ResizeHandles)
@@ -56,4 +56,5 @@ namespace MassEngine.Game
         }
     }
 }
+
 

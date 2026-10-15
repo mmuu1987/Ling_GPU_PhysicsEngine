@@ -37,7 +37,7 @@ namespace MassEngine.Game
         {
             if (dpRoot == null) return;
             if (tkMapPointer != -1 && dpMap != null) { if (dpMap.HasPointerCapture(tkMapPointer)) dpMap.ReleasePointer(tkMapPointer); tkMapPointer = -1; }
-            BlurToolkitFocus();
+            BlurToolkitFocus(); CancelBrushStroke();
             Tk.Show(dpRoot, false);
             dpUnitPv?.Deactivate(); dpLgPv?.Deactivate(); dpStPv?.Deactivate();
         }
@@ -47,6 +47,7 @@ namespace MassEngine.Game
             if (dpDoc == null) return;
             dpUnitPv?.Deactivate(); dpLgPv?.Deactivate(); dpStPv?.Deactivate();
             Tk.DestroyDocument(dpDoc); dpDoc = null; dpRoot = null; dpMap = null; dpGhost = null;
+            DisposeBrush(); dpBrushGhost = dpBrushRing = null; dpBrushPaint = dpBrushErase = dpBrushClear = null; dpBrushInfo = null;
         }
 
         private Button DpOn(string name, Action action)
@@ -209,7 +210,7 @@ namespace MassEngine.Game
             dpTreeList = r.Q<ScrollView>("dp-tree-list");
             dpUnitPv = new TkUnitPreview(); dpUnitPreviewHost.Add(dpUnitPv);
             BuildStatCells(r.Q("dp-unit-stats"), dpUnitStats);
-            Tk.SetText(dpMapNote, "拖色块平移 · 选中后拖边/角改尺寸 · R旋转朝向 · Shift锁比例 · 松手校验 · Esc/移出取消 · 滚轮缩放 · 右键拖动看图");
+            Tk.SetText(dpMapNote, "拖色块平移 · 选中后拖边/角改尺寸 · R旋转朝向 · Shift锁比例 · 松手校验 · Esc/移出取消 · 滚轮缩放 · 右键拖动看图 · 画笔：左键涂 / Shift擦 / Alt拖动平移 / [ ]笔刷");
 
             // Header / footer — DrawDeploymentOverview, DrawTightHeader, DrawDeploymentFooter.
             dpTight = DpOn("dp-tight", () => { if (CommitFields()) { tightDialog = 1; clearFocusRequested = true; } });
@@ -229,6 +230,7 @@ namespace MassEngine.Game
             // Map header — DrawUGUIMap.
             dpPlace = DpOn("dp-place", () => { placing = !placing; spatialSelection = true; });
             BuildMap(r);
+            BuildBrushControls(r);
 
             // Inspector — DrawInspector / DrawArmyInspector / DrawUnitFields / DrawPlacementFields / DrawFacingControls / DrawTightPresets.
             DpOn("dp-army-add-formation", () => { if (AddFormation(false)) { spatialSelection = true; inspectorTab = 0; } });
@@ -410,7 +412,10 @@ namespace MassEngine.Game
                 dpFacingAuto.SetEnabled(e.facing != WarSandboxDeploymentFacing.Auto);
                 dpManual.text = manual ? "阵型：手动尺寸" : "阵型：密度 / 宽深比";
                 Tk.Show(dpManualOn, manual); Tk.Show(dpManualOff, !manual);
-                Tk.SetText(dpResizeValues, "地图上拖边/角调整尺寸 · Shift锁比例\n松手校验，人数和体型不变\n编辑尺寸后切为自动占地");
+                Tk.Show(dpManual, e.brush == null);
+                UpdateBrushControls(e);
+                Tk.SetText(dpResizeValues, e.brush != null ? "画笔形状：用画笔/橡皮修改形状\n密度决定士兵间距，人数和体型不变\n「恢复矩形」回到自动占地" :
+                    "地图上拖边/角调整尺寸 · Shift锁比例\n松手校验，人数和体型不变\n编辑尺寸后切为自动占地");
                 return;
             }
             // Short screens drop the 3D preview first; numbers and actions always stay visible.
@@ -467,20 +472,23 @@ namespace MassEngine.Game
             {
                 if (e.button != 0 || tkMapPointer != -1 || deployment == null) return;
                 tkMapPointer = e.pointerId; dpMap.CapturePointer(e.pointerId); e.StopPropagation();
+                if (BrushBegin(e.localPosition, e.shiftKey, e.altKey)) return;
                 TranslationDownAt(e.localPosition, ScreenPixels(e.position));
             });
             dpMap.RegisterCallback<PointerMoveEvent>(e =>
             {
                 if (e.pointerId != tkMapPointer || deployment == null) return;
+                if (brushStroke) { BrushMove(e.localPosition); return; }
                 TranslationMoveAt(e.localPosition, ScreenPixels(e.position));
             });
             dpMap.RegisterCallback<PointerUpEvent>(e =>
             {
                 if (e.pointerId != tkMapPointer || e.button != 0) return;
                 tkMapPointer = -1; if (dpMap.HasPointerCapture(e.pointerId)) dpMap.ReleasePointer(e.pointerId);
+                if (brushStroke) { if (deployment != null) { BrushMove(e.localPosition); BrushEnd(); } else CancelBrushStroke(); return; }
                 if (deployment != null) TranslationUpAt(e.localPosition, ScreenPixels(e.position));
             });
-            dpMap.RegisterCallback<PointerCaptureOutEvent>(_ => { if (tkMapPointer != -1) { tkMapPointer = -1; CancelTranslation(); } });
+            dpMap.RegisterCallback<PointerCaptureOutEvent>(_ => { if (tkMapPointer != -1) { tkMapPointer = -1; CancelTranslation(); CancelBrushStroke("画笔已取消。"); } });
 
             // Zoom / pan: only the map element's size and offset change. Every layer is laid out in map-local
             // pixels, so drag / resize / rotate keep working unchanged.
@@ -593,6 +601,7 @@ namespace MassEngine.Game
             {
                 var b = dpBlockPool[i];
                 if (i >= draft.Count) { Tk.Show(b.root, false); continue; }
+                if (brushStroke && i == brushIndex) { Tk.Show(b.root, false); continue; } // the stroke preview stands in for it
                 var entry = draft[i]; var bounds = entry.Bounds;
                 if (float.IsNaN(bounds.width) || float.IsInfinity(bounds.width) || float.IsNaN(bounds.height) || float.IsInfinity(bounds.height)) { Tk.Show(b.root, false); continue; }
                 var rect = MapBounds(bounds, world, map);
@@ -600,6 +609,7 @@ namespace MassEngine.Game
                 if (rect.width <= 0 || rect.height <= 0) { Tk.Show(b.root, false); continue; }
                 Tk.Show(b.root, true); Place(b.root, rect);
                 b.root.style.backgroundColor = WarSandboxTeamPalette.Resolve(entry.teamId);
+                ApplyBrushLook(b.root, entry, i);
                 if ((i == problemA || i == problemB) && problems < 2) { const float t = 3; var o = dpProblemPool[problems++]; Tk.Show(o, true); Place(o, new Rect(rect.x - t, rect.y - t, rect.width + 2 * t, rect.height + 2 * t)); }
                 if (spatialSelection && i == selected) { Tk.Show(dpSelOutline, true); Place(dpSelOutline, rect); }
                 // White bar on the front edge (DrawFacingMark), in block-local coordinates.
@@ -622,9 +632,10 @@ namespace MassEngine.Game
                 Tk.Show(b.label, label);
                 if (label) Tk.SetText(b.label, (i + 1) + " " + FacingArrow(i));
             }
-            bool handles = spatialSelection && !placing && draft.Count > 0;
+            bool handles = spatialSelection && !placing && draft.Count > 0 && !brushMode && draft[selected].brush == null;
             Tk.Show(dpHandles, handles);
             if (handles) TkPlaceHandles(MapBounds(draft[selected].Bounds, world, map));
+            PruneBrushTextures();
         }
 
         private static void Place(VisualElement e, Rect r)
@@ -716,3 +727,4 @@ namespace MassEngine.Game
         }
     }
 }
+

@@ -36,6 +36,10 @@ namespace MassEngine
         [Tooltip("If BOTH x and z are > 0 this exact footprint is used and density is ignored. Leave zero for auto.")]
         public Vector3 spawnSize = Vector3.zero;
 
+        /// <summary>Optional explicit member positions relative to spawnCenter (x = world X, y = world Z), set at runtime by
+        /// brush deployment. Used by DefaultSpawnModule when it covers the whole unit count. Never serialized.</summary>
+        [System.NonSerialized] public Vector2[] customSpawnOffsets;
+
         /// <summary>True when the manual spawnSize override is active.</summary>
         public bool HasManualFootprint
         {
@@ -74,3 +78,4 @@ namespace MassEngine
         }
     }
 }
+

@@ -102,9 +102,10 @@ namespace MassEngine.Game
                 if (deployment.IsEditing && !Confirming && HasPendingInputs()) { ReadFields(); clearFocusRequested = true; nextUiRefresh = 0; return; }
                 if (legionOpen && !Confirming) { ReturnFromLegion(); return; }
                 if (Confirming) CancelConfirmation();
-                else { placing = templateMenu = armyMenu = false; clearFocusRequested = true; }
+                else { placing = templateMenu = armyMenu = false; brushMode = false; CancelBrushStroke(); clearFocusRequested = true; }
             }
             HandleFacingKeys();
+            HandleBrushKeys();
             RefreshUGUI();
         }
 
@@ -271,7 +272,7 @@ namespace MassEngine.Game
             }
             bool shape=n!=original.count||manual!=(original.manualSize.x>0&&original.manualSize.z>0)||
                 (manual?e.manualSize!=original.manualSize:d!=original.density||a!=original.aspect);
-            if(shape){if(!WarSandboxDeploymentResize.TryFromSize(e,e.center,new Vector2(e.Size.x,e.Size.z),out var converted,out inputError))return false;if(manual)e=converted;}
+            if(shape&&e.brush==null){if(!WarSandboxDeploymentResize.TryFromSize(e,e.center,new Vector2(e.Size.x,e.Size.z),out var converted,out inputError))return false;if(manual)e=converted;}
             if(!deployment.TryEditFormation(draft,draft.Revision,selected,original,e,shape,out inputError))return false;
             ReadFields();return true;
         }
@@ -409,6 +410,7 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
 
