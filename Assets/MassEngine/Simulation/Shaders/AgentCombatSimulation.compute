@@ -28,6 +28,63 @@
 // x = damage multiplier, y = minimum approach speed as a fraction of maxSpeed.
 // Declared only in this variant so the legacy variant has no unbound buffer.
 StructuredBuffer<float2> unitTypeMeleeCharge;
+// Kaiju B (2026-10-15): opt-in melee splash radius per unit type (CombatConfig.meleeSplashRadius, 0 = off).
+StructuredBuffer<float> unitTypeMeleeSplash;
+
+void ConsiderMeleeSplashVictim(uint index, int selfTeam, int directHit, float2 centre, float radius, int damage, float bodyRadius)
+{
+    if ((int)index == directHit || hpReadBuffer[index] <= 0 || teamIdReadBuffer[index] == selfTeam) return;
+    float2 offset = agentPositionReadBuffer[index] - centre;
+    float reach = radius + bodyRadius;
+    if (dot(offset, offset) <= reach * reach)
+    {
+        int ignoredSplash;
+        InterlockedAdd(pendingDamageBuffer[index], damage, ignoredSplash);
+    }
+}
+
+// Stomp: every other living enemy whose body circle overlaps `radius` around the struck target takes the
+// same melee hit once (the struck target already took it; allies never do). Same traversal as the
+// projectile splash: normal bodies from their home cell, a large body once from its stamps.
+void ApplyMeleeSplash(uint selfIndex, int directHit, float radius, int damage)
+{
+    if (!(radius > 0.0) || damage <= 0 || directHit < 0) return;
+    uint agentCount, agentStride;
+    agentBuffer.GetDimensions(agentCount, agentStride);
+    int selfTeam = teamIdReadBuffer[selfIndex];
+    float2 centre = agentPositionReadBuffer[(uint)directHit];
+    float reach = radius + 0.5 * max(cellSize, 0.0001);
+    int2 first = PositionXzToCell(centre - reach);
+    int2 last = PositionXzToCell(centre + reach);
+    [loop] for (int z = first.y; z <= last.y; z++)
+    [loop] for (int x = first.x; x <= last.x; x++)
+    {
+        uint cell = CellToIndex(int2(x, z));
+        uint count = min(gridCountsReadBuffer[cell], maxAgentsPerCell);
+        [loop] for (uint slot = 0; slot < count; slot++)
+        {
+            uint index = gridAgentIndicesReadBuffer[cell * maxAgentsPerCell + slot];
+            if (index >= agentCount) continue;
+            float bodyRadius = AgentBodyRadius(index);
+            if (!IsLargeBodyRadius(bodyRadius))
+                ConsiderMeleeSplashVictim(index, selfTeam, directHit, centre, radius, damage, bodyRadius);
+        }
+        uint record = cell * LARGE_CELL_STRIDE;
+        uint largeCount = min(largeCellsReadBuffer[record], LARGE_SLOTS_PER_CELL);
+        [loop] for (uint largeSlot = 0; largeSlot < largeCount; largeSlot++)
+        {
+            uint index = largeCellsReadBuffer[record + 1u + largeSlot];
+            if (index >= agentCount) continue;
+            float2 other = agentPositionReadBuffer[index];
+            float2 toOther = other - centre;
+            float otherDistance = length(toOther);
+            float2 anchor = otherDistance > radius ? centre + toOther * (radius / otherDistance) : other;
+            int2 anchorCell = PositionXzToCell(anchor);
+            if (anchorCell.x == x && anchorCell.y == z)
+                ConsiderMeleeSplashVictim(index, selfTeam, directHit, centre, radius, damage, AgentBodyRadius(index));
+        }
+    }
+}
 #endif
 
 void AdvanceRangedCycle(uint index, inout AgentData agent, UnitTypeSettings settings, int previousState)
@@ -847,6 +904,7 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
                     float2 charge = unitTypeMeleeCharge[unitTypeIndexReadBuffer[id.x]];
                     if (!wasAttacking && charge.x > 1.0 && length(agent.velocity.xz) >= charge.y * settings.maxSpeed)
                         meleeDamage += (int)round(max(1, settings.attackDamage) * (charge.x - 1.0));
+                    ApplyMeleeSplash(id.x, targetIndex, unitTypeMeleeSplash[unitTypeIndexReadBuffer[id.x]], meleeDamage);
 #endif
                     InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], meleeDamage, ignored);
                     cooldown += attacks * interval;
@@ -1528,6 +1586,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
                     float2 charge = unitTypeMeleeCharge[unitTypeIndexReadBuffer[id.x]];
                     if (!wasAttacking && charge.x > 1.0 && length(agent.velocity.xz) >= charge.y * settings.maxSpeed)
                         meleeDamage += (int)round(max(1, settings.attackDamage) * (charge.x - 1.0));
+                    ApplyMeleeSplash(id.x, targetIndex, unitTypeMeleeSplash[unitTypeIndexReadBuffer[id.x]], meleeDamage);
 #endif
                     InterlockedAdd(pendingDamageBuffer[(uint)targetIndex], meleeDamage, ignored);
                     cooldown += attacks * interval;

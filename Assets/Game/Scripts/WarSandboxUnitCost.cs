@@ -6,7 +6,7 @@ namespace MassEngine.Game
     /// <summary>
     /// Budget battle (2026-10-14): unit price from effective stats, army totals and the budget check.
     /// Lanchester square law: an army of N units is worth about N^2 x HP x DPS, so one unit is worth sqrt(HP x DPS).
-    /// Multipliers: ranged reach (+2% per metre beyond 2 m, max x3), splash (1 + 0.35 r^2), melee charge (+15% per
+    /// Multipliers: ranged reach (+2% per metre beyond 2 m, max x3), splash (1 + 0.35 r^2, ranged or melee), melee charge (+15% per
     /// multiplier step), speed (0.8 + 0.2 x speed / 12). Scale: the launch swordsman (140 HP, 14 per 0.9 s, 12 m/s) = 10 points. (Speed reference 6 -> 12 when all move speeds were doubled, 2026-10-14.)
     /// First draft; coefficients are meant to be tuned with equal-budget sample battles.
     /// </summary>
@@ -48,6 +48,9 @@ namespace MassEngine.Game
             {
                 float charge = Value(resolver, template, WarSandboxUnitStat.ChargeDamageMultiplier, 1f);
                 factor *= 1f + 0.15f * Mathf.Max(0f, charge - 1f);
+                // Kaiju B (2026-10-15): melee splash (stomp) uses the same area rule as projectile splash.
+                float meleeSplash = template.combatConfig != null ? Mathf.Max(0f, template.combatConfig.meleeSplashRadius) : 0f;
+                factor *= 1f + 0.35f * meleeSplash * meleeSplash;
             }
             factor *= Mathf.Clamp(0.8f + 0.2f * speed / 12f, 0.6f, 1.6f);
             return Mathf.Sqrt(hp * damage / interval) * factor;

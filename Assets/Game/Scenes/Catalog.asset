@@ -601,6 +601,13 @@ MonoBehaviour:
     selectionNote: 
     unitPreview: {fileID: 2800000, guid: 3009e1a44660d3c44b623c1bc7b8d62a, type: 3}
     priceScale: 1.365
+  - templateId: roster-kaiju-dino
+    revision: 1
+    config: {fileID: 11400000, guid: a068cd65907c00a4a9b4764e5f9b99ed, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 2800000, guid: 3009e1a44660d3c44b623c1bc7b8d62a, type: 3}
+    priceScale: 5.0
   - templateId: roster-giant-yeti
     revision: 1
     config: {fileID: 11400000, guid: 0f956bc584647d94ca324fd1f84d434a, type: 2}

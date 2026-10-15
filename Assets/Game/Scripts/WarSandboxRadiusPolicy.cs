@@ -7,7 +7,7 @@ namespace MassEngine.Game
     public static class WarSandboxRadiusPolicy
     {
         // Covers today's complete authored range; below .05 existing consumers disagree on minima.
-        public const float Min = .05f, Max = 4.8f;
+        public const float Min = .05f, Max = 13.4f; // Kaiju B (2026-10-15): was 4.8
         public static bool TryValidate(MassEngineManager manager, WarSandboxDeploymentDraft draft, WarSandboxStatResolver resolver,
             out float? clearance, out string error, bool spatial = true)
         {
@@ -28,7 +28,7 @@ namespace MassEngine.Game
                 var info = UnitPreviewRadius.Read(entry.template);
                 if (!info.Available) { error = "编成 " + (i + 1) + "：自定义模块的半径/生成比例尚未验证。"; return false; }
                 float radius = value.applies ? value.effective : info.BaseRadius;
-                if (!definition.Accepts(radius)) { error = "编成 " + (i + 1) + "：半径必须为 0.05–4.8 米。"; return false; }
+                if (!definition.Accepts(radius)) { error = "编成 " + (i + 1) + "：半径必须为 0.05–" + Max.ToString("0.##") + " 米。"; return false; }
                 radii[i] = radius; largest = Mathf.Max(largest, radius);
                 if (!WarSandboxRosterPolicy.IsLargeBody(radius, simulation.cellSize)) maximum = Mathf.Max(maximum, radius);
             }
