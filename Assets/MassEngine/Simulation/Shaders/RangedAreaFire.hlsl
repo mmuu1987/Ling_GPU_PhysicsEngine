@@ -27,7 +27,8 @@ int RangedAreaBlockCells()
 
 int2 RangedAreaBlockDims(int blockCells)
 {
-    return (flowFieldResolution + blockCells - 1) / blockCells;
+    // Both operands are non-negative: unsigned division gives the same result without the slow signed path.
+    return (int2)(((uint2)flowFieldResolution + (uint)(blockCells - 1)) / (uint)blockCells);
 }
 
 int RangedAreaTeamSlot(int team)
@@ -73,7 +74,8 @@ void RangedAreaAddMember(uint index, int team, int2 cell)
     rangedBlockBuffer.GetDimensions(length, stride);
     int blockCells = RangedAreaBlockCells();
     int2 dims = RangedAreaBlockDims(blockCells);
-    int2 block = clamp(cell / blockCells, 0, dims - 1);
+    // Negative cells clamp to block 0 either way; unsigned division after max(0) is identical and faster.
+    int2 block = clamp((int2)((uint2)max(cell, 0) / (uint)blockCells), 0, dims - 1);
     uint at = RangedAreaBlockBase(teamSlot, block, dims);
     if (at + RANGED_AREA_BLOCK_STRIDE > length) return;
     uint before;
@@ -109,7 +111,7 @@ int RangedAreaPickTarget(uint self, float3 position, float range)
     int blockCells = RangedAreaBlockCells();
     int2 dims = RangedAreaBlockDims(blockCells);
     float blockSize = (float)blockCells * max(flowFieldCellSize, 0.0001);
-    int2 home = clamp(PositionToFlowFieldCell(position) / blockCells, 0, dims - 1);
+    int2 home = clamp((int2)((uint2)max(PositionToFlowFieldCell(position), 0) / (uint)blockCells), 0, dims - 1);
     float reach = range + blockSize * 0.7072;
     int maxRing = min(max(dims.x, dims.y), (int)ceil(range / blockSize) + 1);
     float bestSqr = 3.0e38;

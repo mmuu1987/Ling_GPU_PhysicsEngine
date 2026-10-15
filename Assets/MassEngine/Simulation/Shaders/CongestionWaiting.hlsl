@@ -67,49 +67,58 @@ bool TickCongestion(uint index, inout AgentData agent, inout CongestionWait s, f
 #if defined(MASS_LOCAL_ORDERS) && defined(MASS_TERRAIN_ENABLED)
     if(HasLocalOrder(index))revision=-(float)LocalOrderFor(index).sequence;
 #endif
+    bool decide = false; // single exit (FXC flags early returns from inlined helpers as uninitialized)
     if (s.commandRevision != revision)
     {
         s = (CongestionWait)0; s.commandRevision = revision;
         agent.velocity = 0.0;
         WriteCongestion(index, s);
-        return true; // New order is honored even on a skipped LOD decision frame.
+        decide = true; // New order is honored even on a skipped LOD decision frame.
     }
-    if (s.remainingSeconds <= 0.0) return false;
-    s.remainingSeconds = max(0.0, s.remainingSeconds - dt);
-    WriteCongestion(index, s);
-    return s.remainingSeconds <= 0.0; // Retry immediately at expiry, not one LOD beat later.
+    else if (s.remainingSeconds > 0.0)
+    {
+        s.remainingSeconds = max(0.0, s.remainingSeconds - dt);
+        WriteCongestion(index, s);
+        decide = s.remainingSeconds <= 0.0; // Retry immediately at expiry, not one LOD beat later.
+    }
+    return decide;
 }
 bool ResolveCongestion(uint index, AgentData agent, UnitTypeSettings settings, float2 direction,
     bool friendlyAhead, bool eligible, float dtSim, inout CongestionWait s)
 {
+    bool waiting = false; // single exit, as TickCongestion
     if (!eligible || dot(direction, direction) < 0.0001)
     {
         s.observedSeconds = 0.0; s.remainingSeconds = 0.0; s.forward = 0.0;
-        WriteCongestion(index, s); return false;
+        WriteCongestion(index, s);
     }
-    if (s.remainingSeconds > 0.0) return true;
-    float2 forward = normalize(direction);
-    // Direction is the CURRENT navigation path, not the straight line to a clicked
-    // destination. Legitimate turns/detours restart the observation window.
-    if (!friendlyAhead || s.observedSeconds <= 0.0 || dot(forward, s.forward) < 0.5)
+    else if (s.remainingSeconds > 0.0) waiting = true;
+    else
     {
-        s.anchor = agent.position.xz; s.forward = forward; s.observedSeconds = 0.0;
-    }
-    if (friendlyAhead)
-    {
-        s.observedSeconds += dtSim;
-        if (s.observedSeconds >= 0.4)
+        float2 forward = normalize(direction);
+        // Direction is the CURRENT navigation path, not the straight line to a clicked
+        // destination. Legitimate turns/detours restart the observation window.
+        if (!friendlyAhead || s.observedSeconds <= 0.0 || dot(forward, s.forward) < 0.5)
         {
-            float scale = max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
-            float minimumProgressSpeed = max(0.06 * scale, min(settings.maxSpeed * 0.2, 0.6 * scale));
-            float netProgress = max(0.0, dot(agent.position.xz - s.anchor, s.forward));
-            if (netProgress < minimumProgressSpeed * s.observedSeconds)
-                s.remainingSeconds = 1.1 + 0.9 * Hash01(index ^ 0x6C8E9CF5u);
             s.anchor = agent.position.xz; s.forward = forward; s.observedSeconds = 0.0;
         }
+        if (friendlyAhead)
+        {
+            s.observedSeconds += dtSim;
+            if (s.observedSeconds >= 0.4)
+            {
+                float scale = max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
+                float minimumProgressSpeed = max(0.06 * scale, min(settings.maxSpeed * 0.2, 0.6 * scale));
+                float netProgress = max(0.0, dot(agent.position.xz - s.anchor, s.forward));
+                if (netProgress < minimumProgressSpeed * s.observedSeconds)
+                    s.remainingSeconds = 1.1 + 0.9 * Hash01(index ^ 0x6C8E9CF5u);
+                s.anchor = agent.position.xz; s.forward = forward; s.observedSeconds = 0.0;
+            }
+        }
+        WriteCongestion(index, s);
+        waiting = s.remainingSeconds > 0.0;
     }
-    WriteCongestion(index, s);
-    return s.remainingSeconds > 0.0;
+    return waiting;
 }
 #endif
 

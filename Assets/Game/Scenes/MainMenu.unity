@@ -296,62 +296,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b405164218377b4da61d2014087abc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game::MassEngine.Game.Guide30
---- !u!1 &1641693731
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1641693733}
-  - component: {fileID: 1641693732}
-  m_Layer: 0
-  m_Name: Opt-in formal robot workflow verification
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1641693732
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1641693731}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a8d685ec104b4ce69838a66ed1679250, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Game::MassEngine.Game.WarSandboxModelTrialSmoke
-  session: {fileID: 1241504349}
-  expectedCatalog: {fileID: 11400000, guid: 02608416c8f6e044096a6bb08cc486a2, type: 2}
-  expectedSourceScenario: {fileID: 11400000, guid: d6e5188464a23184aaa89ca8b9bea083, type: 2}
-  expectedTemplate: {fileID: 11400000, guid: 6f11aef30b52f35469ed3baf49428b50, type: 2}
-  battlefieldId: robot-expressive
-  templateId: roster-robot-expressive
-  templateRevision: 1
-  planSlot: RobotExpressiveFormal01
-  watchdogSeconds: 180
-  initialTrialCount: 64
-  savedTrialCount: 96
-  preBattleCheck: {fileID: 0}
---- !u!4 &1641693733
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1641693731}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1800320724
 GameObject:
   m_ObjectHideFlags: 0
@@ -404,4 +348,3 @@ SceneRoots:
   - {fileID: 1241504350}
   - {fileID: 406982080}
   - {fileID: 1800320726}
-  - {fileID: 1641693733}
