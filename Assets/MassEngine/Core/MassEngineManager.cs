@@ -82,6 +82,7 @@ namespace MassEngine
         private float[] projectileSplashCache;
         // Opt-in melee charge (null unless a unit type has chargeDamageMultiplier > 1).
         private Vector2[] meleeChargeCache;
+        private float[] meleeSplashCache;
         private MeleeChargeParams meleeCharge;
         private int[] agentUnitTypeIndices;
         private Vector3[] agentSpawnScales;
@@ -627,6 +628,7 @@ namespace MassEngine
                 meleeCharge.Dispose();
             meleeCharge = null;
             meleeChargeCache = null;
+            meleeSplashCache = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
             gpuSettingsCache = null;
@@ -678,12 +680,16 @@ namespace MassEngine
         {
             if (meleeChargeCache == null || meleeChargeCache.Length != gpuSettingsCache.Length)
                 meleeChargeCache = new Vector2[gpuSettingsCache.Length];
-            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache);
+            if (meleeSplashCache == null || meleeSplashCache.Length != gpuSettingsCache.Length)
+                meleeSplashCache = new float[gpuSettingsCache.Length];
+            // Kaiju B (2026-10-15): melee splash rides on the same opt-in variant as the charge.
+            bool splash = unitTypeRegistry.FillMeleeSplash(meleeSplashCache);
+            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash;
             if (wanted)
             {
                 if (meleeCharge == null)
                     meleeCharge = new MeleeChargeParams();
-                meleeCharge.Upload(meleeChargeCache);
+                meleeCharge.Upload(meleeChargeCache, meleeSplashCache);
             }
             else if (meleeCharge != null)
             {

@@ -151,12 +151,14 @@ StructuredBuffer<uint> teamGridAgentIndicesReadBuffer;
 #define LARGE_CELL_STRIDE 9u
 #define SPATIAL_STATS_LARGE_COUNT 1u
 #define SPATIAL_STATS_LARGE_MAX_RADIUS_BITS 2u
-// Stamp reach is clamped to this many cells around the home cell (covers body radii up to ~13 m at 3 m cells).
-#define LARGE_STAMP_MAX_CELL_RADIUS 5
-// A large agent scans normal agents within this many cells (radius + half cell up to ~9 m at 3 m cells).
-#define LARGE_BODY_SCAN_MAX_CELL_RADIUS 3
+// Stamp reach is clamped to this many cells around the home cell (covers body radii up to ~16 m at 3 m cells).
+#define LARGE_STAMP_MAX_CELL_RADIUS 6
+// A large agent scans normal agents within this many cells (radius + half cell up to ~15 m at 3 m cells).
+// Kaiju B (2026-10-15): 3 -> 5 so bodies up to 4.5 cells (13.5 m at 3 m cells) are covered.
+#define LARGE_BODY_SCAN_MAX_CELL_RADIUS 5
 // A large agent scans other large agents' home cells within this many cells.
-#define LARGE_PAIR_SCAN_MAX_CELL_RADIUS 4
+// Kaiju B (2026-10-15): 4 -> 9 so two 4.5-cell bodies (r1 + r2 < 9 cells) still find each other.
+#define LARGE_PAIR_SCAN_MAX_CELL_RADIUS 9
 // Pair push shares by body area only when a large body is involved; capped so a crushed small body
 // never receives more than this multiple of its usual separation response.
 #define LARGE_PUSH_SHARE_MAX 2.0

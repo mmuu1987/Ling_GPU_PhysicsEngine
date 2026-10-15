@@ -79,7 +79,13 @@ namespace MassEngine.Game.Editor
                             b.maximumDistance = EnvelopeDistance; b.maximumHorizontalRadius = CameraHorizontal; EditorUtility.SetDirty(b); envelopes++;
                         }
                         foreach (var d in root.GetComponentsInChildren<WarSandboxRuntimeDeployment>(true))
-                        { var so = new SerializedObject(d); Prop(so, "authoredSpawnOutwardOffset").floatValue = SpawnOutwardOffset; so.ApplyModifiedPropertiesWithoutUndo(); deployments++; }
+                        {
+                            var so = new SerializedObject(d); Prop(so, "authoredSpawnOutwardOffset").floatValue = SpawnOutwardOffset;
+                            // Kaiju B (2026-10-15): 2048 maps use their own roster (1024 roster + 巨兽级), built by Tools/巨兽.
+                            var policy2048 = AssetDatabase.LoadAssetAtPath<WarSandboxRosterPolicy>(Dir + "/RosterPolicy2048.asset");
+                            if (policy2048 != null) { Prop(so, "rosterPolicy").objectReferenceValue = policy2048; log.Add("rosterPolicy -> RosterPolicy2048"); }
+                            so.ApplyModifiedPropertiesWithoutUndo(); deployments++;
+                        }
                         foreach (var cam in root.GetComponentsInChildren<Camera>(true))
                             log.Add("camera " + cam.name + " pos " + cam.transform.position + " far " + cam.farClipPlane + " enabled " + cam.enabled);
                     }

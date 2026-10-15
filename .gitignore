@@ -175,3 +175,7 @@ sysinfo.txt
 # 程序化建筑：生成的网格和预制体留在本地（菜单 Tools/程序化建筑/生成建筑库 重建）
 /Assets/Game/Content/ProcBuildings/
 /Assets/Game/Content/ProcBuildings.meta
+
+# 巨兽：生成的放大网格/VAT 留在本地（菜单 Tools/巨兽/生成巨兽暴龙 重建）
+/Assets/Game/Content/Characters/Kaiju/Dino/Generated/
+/Assets/Game/Content/Characters/Kaiju/Dino/Generated.meta

@@ -181,6 +181,29 @@ namespace MassEngine
             return any;
         }
 
+        /// <summary>
+        /// Melee splash (stomp) radius per unit type (0 = single target). Returns true only when at least one
+        /// melee unit type has a radius, so callers can keep the legacy kernel otherwise.
+        /// </summary>
+        public bool FillMeleeSplash(float[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            bool any = false;
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                float radius = config != null ? config.meleeSplashRadius : 0f;
+                if (float.IsNaN(radius) || float.IsInfinity(radius) || radius < 0f) radius = 0f;
+                if (config != null && config.projectileRange > 0.01f) radius = 0f;
+                target[i] = radius;
+                any |= radius > 0f;
+            }
+
+            return any;
+        }
+
         public int CountAgentsForTeam(int teamId)
         {
             int count = 0;

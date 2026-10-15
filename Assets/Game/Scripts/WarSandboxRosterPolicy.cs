@@ -18,10 +18,10 @@ namespace MassEngine.Game
         [TextArea]public string explanation;
         /// <summary>Same test as AgentDataCommon.hlsl IsLargeBodyRadius.</summary>
         public static bool IsLargeBody(float radius,float cellSize)=>radius>cellSize*.5f;
-        /// <summary>Largest body the GPU large path covers: two such bodies must fit the pair scan
-        /// (LARGE_PAIR_SCAN_MAX_CELL_RADIUS 4 cells: r1 + r2 &lt; 4 cells), which also keeps the body
-        /// scan (LARGE_BODY_SCAN_MAX_CELL_RADIUS 3: r + half a cell &lt; 3 cells) and the stamp in range.</summary>
-        public static float MaximumLargeBodyRadius(float cellSize)=>cellSize*2f-.01f;
+        /// <summary>Largest body the GPU large path covers (Kaiju B 2026-10-15): the body scan
+        /// (LARGE_BODY_SCAN_MAX_CELL_RADIUS 5: r + half a cell &lt; 5 cells), two such bodies in the pair scan
+        /// (LARGE_PAIR_SCAN_MAX_CELL_RADIUS 9: r1 + r2 &lt; 9 cells) and the stamp (6 cells) all stay in range.</summary>
+        public static float MaximumLargeBodyRadius(float cellSize)=>cellSize*4.5f-.01f;
         public bool TryValidateDefinition(out string error)
         {
             error=null;if(templates==null||templates.Length==0||maximumUnits<1||maximumRadius<=0||maximumLargeUnits<0){error="战场角色清单配置无效。";return false;}

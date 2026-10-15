@@ -47,5 +47,9 @@ namespace MassEngine
 
         [Tooltip("Minimum approach speed for a charge hit, as a fraction of MovementConfig.maxSpeed.")]
         [Range(0f, 2f)] public float chargeMinSpeedFraction = 0.6f;
+
+        [Tooltip("Melee area damage (stomp) around the struck target. 0 = single target (default; behaviour unchanged). " +
+                 "Every other living enemy whose body circle overlaps this radius also takes the same melee hit once. No friendly fire. Ranged units ignore it.")]
+        [Min(0f)] public float meleeSplashRadius = 0f;
     }
 }
