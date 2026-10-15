@@ -54,6 +54,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
             // Outside UnityPerMaterial on purpose: set per draw from a MaterialPropertyBlock,
             // and an array in the per-material cbuffer would break batching declarations.
             float4 _ProjectileTeamColors[PROJECTILE_TEAM_COLOR_COUNT];
+            float _MassProjectileTime; // global, MassEngineManager (projectile simulation clock)
 
             // Mirrors ProjectileGpuData / ProjectileData exactly: 64 bytes, same field
             // order. Changing either side without the other silently misreads every field.
@@ -78,6 +79,8 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 // Compacted by the CollectActiveProjectiles kernel, so instance i is always
                 // a live slot; idle slots never reach the vertex stage at all.
                 StructuredBuffer<uint> activeProjectileIndices;
+                struct LoftAgentData { float3 position; float3 rotation; float3 scale; float3 velocity; int currentState; float currentAnimationTime; int presentationState; float locomotionSpeed; };
+                StructuredBuffer<LoftAgentData> agentBuffer;
                 static half4 _TracerColor;
                 static half _TracerFire;
             #endif
@@ -87,6 +90,36 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                     uint slot = activeProjectileIndices[unity_InstanceID];
                     ProjectileData data = projectileBuffer[slot];
+
+                    // Volley loft (2026-10-15, render only): long gravity shots get an extra, per-arrow random arc on
+                    // top of the simulated one, so a volley reads as a spread of heights instead of a flat sheet. The
+                    // bulge is zero at launch and at impact, so hits, timing and splash stay exactly as simulated.
+                    if (data.gravity < -0.01)
+                    {
+                        float g = -data.gravity;
+                        float age = max(0.0, _MassProjectileTime - data.launchTime);
+                        float vy0 = data.velocity.y + g * age;                         // exact: pure ballistic integration
+                        float y0 = data.position.y - vy0 * age + 0.5 * g * age * age;
+                        float y1 = y0;
+                        uint agentCount, agentStride;
+                        agentBuffer.GetDimensions(agentCount, agentStride);
+                        if (data.targetAgentIndex >= 0 && (uint)data.targetAgentIndex < agentCount)
+                        {
+                            LoftAgentData target = agentBuffer[(uint)data.targetAgentIndex];
+                            y1 = target.position.y + 0.9 * abs(target.scale.y);
+                        }
+                        float flight = (vy0 + sqrt(max(0.0, vy0 * vy0 - 2.0 * g * (y1 - y0)))) / g;
+                        float range = length(data.velocity.xz) * flight;
+                        if (flight > 1e-3 && age < flight && range > 20.0)
+                        {
+                            uint h = (slot * 2654435761u) ^ (asuint(data.launchTime) * 2246822519u);
+                            h ^= h >> 15; h *= 2654435761u; h ^= h >> 13;
+                            float extraApex = range * (0.06 + 0.22 * (float)(h & 0xFFFFu) / 65536.0) * smoothstep(20.0, 80.0, range);
+                            float u = age / flight;
+                            data.position.y += 4.0 * extraApex * u * (1.0 - u);
+                            data.velocity.y += 4.0 * extraApex * (1.0 - 2.0 * u) / flight;
+                        }
+                    }
 
                     float speed = length(data.velocity);
                     float3 dir = speed > 1e-4 ? data.velocity / speed : float3(0, 0, 1);

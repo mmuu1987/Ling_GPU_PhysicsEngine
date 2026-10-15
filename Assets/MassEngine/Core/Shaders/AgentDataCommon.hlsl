@@ -303,6 +303,8 @@ float4 staticObstacleRects[MAX_STATIC_OBSTACLES];
 // crowd-only frame leaves it at 0, and then nobody is an enemy and nobody holds.
 int combatEnabled;
 int battleStarted;
+// Setup preview (2026-10-15): 1 while the battle has not started yet; Idle clips still play (pose only, nothing moves).
+int idleAnimateStopped;
 int attackerTeamId;
 int defenderTeamId;
 // How many teams the team-partitioned buffers (teamGridCounts / teamGridAgentIndices /
@@ -649,7 +651,7 @@ void UpdateLocomotionPresentation(inout AgentData agent, float3 previousPosition
 // past the end of the death clip because that accumulator doubles as the corpse age.
 void UpdateAnimationTime(uint index, inout AgentData agent, int interval)
 {
-    if (battleStarted == 0) return;
+    if (battleStarted == 0 && (idleAnimateStopped == 0 || agent.currentState != STATE_IDLE || agent.presentationState != STATE_IDLE)) return;
     interval = max(interval, 1);
     if ((frameIndex % (uint)interval) != 0)
         return;

@@ -73,6 +73,7 @@ namespace MassEngine.Projectiles
 
             block.SetBuffer(ProjectileBufferId, projectiles);
             block.SetBuffer(ActiveProjectileIndicesId, activeIndices);
+            if (buffers.agentBuffer != null) block.SetBuffer(AgentBufferId, buffers.agentBuffer); // volley loft: target height
 
             Graphics.DrawMeshInstancedIndirect(
                 mesh,

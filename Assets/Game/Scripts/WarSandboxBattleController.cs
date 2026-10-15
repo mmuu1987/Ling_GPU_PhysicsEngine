@@ -257,6 +257,7 @@ namespace MassEngine.Game
         {
             if (!initialized)
                 RebuildArmyStates();
+            if (manager != null) manager.animateIdleWhileStopped = phase == WarSandboxBattlePhase.Setup; // stand-by idle before the start
 
             ConfigureControlPointTelemetry();
             ApplyStaticObstacleSettings();

@@ -64,6 +64,7 @@ namespace MassEngine
         // Team identity + combat globals
         public static readonly int CombatEnabledId = Shader.PropertyToID("combatEnabled");
         public static readonly int BattleStartedId = Shader.PropertyToID("battleStarted");
+        public static readonly int IdleAnimateStoppedId = Shader.PropertyToID("idleAnimateStopped");
         public static readonly int AttackerTeamIdId = Shader.PropertyToID("attackerTeamId");
         public static readonly int DefenderTeamIdId = Shader.PropertyToID("defenderTeamId");
         public static readonly int TeamCountId = Shader.PropertyToID("teamCount");

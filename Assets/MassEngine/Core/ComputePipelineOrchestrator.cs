@@ -314,6 +314,7 @@ namespace MassEngine
 
             shaders.SetInt(CombatEnabledId, context.combatEnabled ? 1 : 0);
             shaders.SetInt(BattleStartedId, context.battleStarted ? 1 : 0);
+            shaders.SetInt(IdleAnimateStoppedId, context.idleAnimateStopped ? 1 : 0);
             shaders.SetInt(AttackerTeamIdId, context.attackerTeamId);
             shaders.SetInt(DefenderTeamIdId, context.defenderTeamId);
             // Read from the buffer manager, not the frame context: this bounds every teamId

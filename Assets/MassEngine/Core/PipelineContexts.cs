@@ -140,6 +140,7 @@ namespace MassEngine
         public int projectileThreadGroupsX;
         public float simulationTime;
         public bool battleStarted;
+        public bool idleAnimateStopped;
         public bool combatEnabled;
         public int attackerTeamId;
         public int defenderTeamId;

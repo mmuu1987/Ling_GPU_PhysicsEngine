@@ -209,7 +209,7 @@ namespace MassEngine.Game
             dpTreeList = r.Q<ScrollView>("dp-tree-list");
             dpUnitPv = new TkUnitPreview(); dpUnitPreviewHost.Add(dpUnitPv);
             BuildStatCells(r.Q("dp-unit-stats"), dpUnitStats);
-            Tk.SetText(dpMapNote, "拖色块平移 · 选中后拖边/角改尺寸 · R旋转朝向 · Shift锁比例 · 松手校验 · Esc/移出取消");
+            Tk.SetText(dpMapNote, "拖色块平移 · 选中后拖边/角改尺寸 · R旋转朝向 · Shift锁比例 · 松手校验 · Esc/移出取消 · 滚轮缩放 · 右键拖动看图");
 
             // Header / footer — DrawDeploymentOverview, DrawTightHeader, DrawDeploymentFooter.
             dpTight = DpOn("dp-tight", () => { if (CommitFields()) { tightDialog = 1; clearFocusRequested = true; } });
@@ -431,6 +431,8 @@ namespace MassEngine.Game
         private readonly Dictionary<DeploymentResizeHandle, VisualElement> dpHandleViews = new Dictionary<DeploymentResizeHandle, VisualElement>();
         private Texture2D dpTerrainShown;
         private int tkMapPointer = -1;
+        // Zoom / pan (2026-10-15): 1x-6x about the cursor, right/middle drag pans, 适应 resets.
+        private float dpZoom = 1f; private Vector2 dpPan; private int dpPanPointer = -1; private Vector2 dpPanLast; private Button dpFit;
 
         private static VisualElement Layer(VisualElement parent, string cls = null)
         {
@@ -479,6 +481,63 @@ namespace MassEngine.Game
                 if (deployment != null) TranslationUpAt(e.localPosition, ScreenPixels(e.position));
             });
             dpMap.RegisterCallback<PointerCaptureOutEvent>(_ => { if (tkMapPointer != -1) { tkMapPointer = -1; CancelTranslation(); } });
+
+            // Zoom / pan: only the map element's size and offset change. Every layer is laid out in map-local
+            // pixels, so drag / resize / rotate keep working unchanged.
+            dpMapArea.style.overflow = Overflow.Hidden;
+            dpMapArea.RegisterCallback<WheelEvent>(e =>
+            {
+                if (deployment == null || tkMapPointer != -1) return;
+                ZoomMapAt(dpMapArea.WorldToLocal(e.mousePosition), e.delta.y < 0 ? 1.25f : 0.8f);
+                e.StopPropagation();
+            });
+            dpMapArea.RegisterCallback<PointerDownEvent>(e =>
+            {
+                if ((e.button != 1 && e.button != 2) || dpPanPointer != -1 || tkMapPointer != -1) return;
+                dpPanPointer = e.pointerId; dpPanLast = e.position; dpMapArea.CapturePointer(e.pointerId); e.StopPropagation();
+            });
+            dpMapArea.RegisterCallback<PointerMoveEvent>(e =>
+            {
+                if (e.pointerId != dpPanPointer) return;
+                Vector2 p = e.position; dpPan += p - dpPanLast; dpPanLast = p;
+            });
+            dpMapArea.RegisterCallback<PointerUpEvent>(e =>
+            {
+                if (e.pointerId != dpPanPointer) return;
+                dpPanPointer = -1; if (dpMapArea.HasPointerCapture(e.pointerId)) dpMapArea.ReleasePointer(e.pointerId);
+            });
+            dpMapArea.RegisterCallback<PointerCaptureOutEvent>(_ => dpPanPointer = -1);
+            dpFit = new Button(() => { dpZoom = 1f; dpPan = Vector2.zero; }) { text = "适应" };
+            dpFit.AddToClassList("btn"); dpFit.AddToClassList("btn--sm");
+            dpFit.style.position = Position.Absolute; dpFit.style.right = 8; dpFit.style.bottom = 8;
+            dpMapArea.Add(dpFit); Tk.Show(dpFit, false);
+        }
+
+        // Map frame inside the area: fit-to-area times zoom, centred, then panned and clamped so a zoomed map
+        // always covers the area. zoom 1 / pan 0 is exactly the previous fitted layout.
+        private Rect MapFrame(Rect area, Vector2 world, float zoom, ref Vector2 pan)
+        {
+            float scale = Mathf.Min((area.width - 4) / world.x, (area.height - 4) / world.y) * zoom;
+            float w = Mathf.Floor(world.x * scale), h = Mathf.Floor(world.y * scale);
+            float left = Mathf.Floor((area.width - w) / 2), top = Mathf.Floor((area.height - h) / 2);
+            pan.x = w <= area.width ? 0f : Mathf.Clamp(pan.x, area.width - w - left, -left);
+            pan.y = h <= area.height ? 0f : Mathf.Clamp(pan.y, area.height - h - top, -top);
+            return new Rect(Mathf.Floor(left + pan.x), Mathf.Floor(top + pan.y), w, h);
+        }
+
+        private void ZoomMapAt(Vector2 p, float factor)
+        {
+            var area = dpMapArea.contentRect; Vector2 world = deployment.WorldSize;
+            if (area.width < 8 || area.height < 8 || world.x <= 0 || world.y <= 0) return;
+            float next = Mathf.Clamp(dpZoom * factor, 1f, 6f);
+            if (Mathf.Approximately(next, dpZoom)) return;
+            Rect before = MapFrame(area, world, dpZoom, ref dpPan);
+            Vector2 u = new Vector2((p.x - before.x) / Mathf.Max(1f, before.width), (p.y - before.y) / Mathf.Max(1f, before.height));
+            dpZoom = next;
+            Vector2 none = Vector2.zero;
+            Rect centred = MapFrame(area, world, dpZoom, ref none);
+            dpPan = p - new Vector2(u.x * centred.width, u.y * centred.height) - centred.position;
+            MapFrame(area, world, dpZoom, ref dpPan);
         }
 
         private static Vector2 ScreenPixels(Vector3 panelPosition) => (Vector2)panelPosition * Tk.Scale;
@@ -489,10 +548,11 @@ namespace MassEngine.Game
             Vector2 world = deployment.WorldSize;
             if (area.width < 8 || area.height < 8 || world.x <= 0 || world.y <= 0) { Tk.Show(dpMap, false); return; }
             Tk.Show(dpMap, true);
-            float scale = Mathf.Min((area.width - 4) / world.x, (area.height - 4) / world.y);
-            float w = Mathf.Floor(world.x * scale), h = Mathf.Floor(world.y * scale);
-            dpMap.style.left = Mathf.Floor((area.width - w) / 2); dpMap.style.top = Mathf.Floor((area.height - h) / 2);
+            Rect frame = MapFrame(area, world, dpZoom, ref dpPan);
+            float w = frame.width, h = frame.height;
+            dpMap.style.left = frame.x; dpMap.style.top = frame.y;
             dpMap.style.width = w; dpMap.style.height = h;
+            if (dpFit != null) { Tk.Show(dpFit, dpZoom > 1.001f); dpFit.text = "适应（" + dpZoom.ToString("0.#") + "×）"; }
             var map = new Rect(0, 0, w, h);
             translationMap = map; translationWorld = world;
 
