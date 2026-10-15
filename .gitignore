@@ -145,6 +145,8 @@ sysinfo.txt
 # Rebuilt / baked character meshes (mesh .asset kept local, user 2026-10-10)
 /Assets/Game/Content/Characters/MaleWarrior-20261012/
 /Assets/Game/Content/Characters/MaleWarrior-20261012.meta
+/Assets/Game/Content/FarLod/Batch-20261015-01/
+/Assets/Game/Content/FarLod/Batch-20261015-01.meta
 /Assets/Game/Content/VertexAO/
 /Assets/Game/Content/VertexAO.meta
 # Unity test runner temp scenes

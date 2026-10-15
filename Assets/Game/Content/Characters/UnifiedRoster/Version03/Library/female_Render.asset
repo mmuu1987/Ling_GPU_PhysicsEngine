@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: female_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: 391a46043edc3be45a9f2bec200f675a, type: 2}
+  vatProfile: {fileID: 11400000, guid: df831d003012fe946830dfa1de83219b, type: 2}
   nearMesh: {fileID: 4300000, guid: 49530f134b183c546a5cd62ba9dc1ed2, type: 2}
   midMesh: {fileID: 4300000, guid: 6ddcc556835e27c47b72665e492c6a00, type: 2}
-  farMesh: {fileID: 4300000, guid: db2a4b402547afd41afc433760575880, type: 2}
+  farMesh: {fileID: 4352977829546428067, guid: df831d003012fe946830dfa1de83219b, type: 2}
   nearMaterial: {fileID: 2100000, guid: 0b1c398fcb1a10a479987758e20fba8e, type: 2}
   midMaterial: {fileID: 2100000, guid: c75e4de0790113e48a383419517881e1, type: 2}
   farMaterial: {fileID: 2100000, guid: c75e4de0790113e48a383419517881e1, type: 2}
