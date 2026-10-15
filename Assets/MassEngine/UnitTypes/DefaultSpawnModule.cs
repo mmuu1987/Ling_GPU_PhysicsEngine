@@ -38,6 +38,25 @@ namespace MassEngine
             float jitterZ = stepZ * jitterFraction;
             float yaw = Config != null && !float.IsNaN(Config.facingYawDegrees) && !float.IsInfinity(Config.facingYawDegrees) ? Config.facingYawDegrees : 0f;
 
+            Vector2[] custom = Config != null ? Config.customSpawnOffsets : null;
+            if (custom != null && custom.Length >= spawnedCount)
+            {
+                for (int i = offset; i < end; i++)
+                {
+                    int localIndex = i - offset; Vector2 o = custom[localIndex];
+                    buffer[i] = new AgentData
+                    {
+                        position = new Vector3(center.x + o.x, center.y, center.z + o.y),
+                        rotation = new Vector3(0f, yaw, 0f),
+                        scale = Vector3.one,
+                        velocity = Vector3.zero,
+                        currentState = (int)AgentState.Idle,
+                        currentAnimationTime = Hash01((uint)localIndex ^ ((uint)teamId * 0x9e3779b9u))
+                    };
+                }
+                return;
+            }
+
             for (int i = offset; i < end; i++)
             {
                 int localIndex = i - offset;
@@ -87,3 +106,4 @@ namespace MassEngine
         }
     }
 }
+

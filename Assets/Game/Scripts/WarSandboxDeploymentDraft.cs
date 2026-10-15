@@ -16,6 +16,9 @@ namespace MassEngine.Game
         public Vector3 manualSize;
         /// <summary>0 = auto (face nearest enemy formation); 1..4 = manual quarter, see WarSandboxDeploymentFacing.</summary>
         public int facing;
+        /// <summary>Brush deployment (2026-10-15): painted footprint, null = rectangle. Size/Bounds follow its cell rectangle;
+        /// the mask is immutable, so entries stay plain values for snapshots and Undo.</summary>
+        [NonSerialized] public WarSandboxBrushMask brush;
 
         public static WarSandboxDeploymentEntry From(UnitTypeConfig unit) => new WarSandboxDeploymentEntry
         {
@@ -83,7 +86,7 @@ namespace MassEngine.Game
         public static float MaximumDensity(UnitTypeConfig unit) =>
             unit != null && unit.flockingConfig != null ? Mathf.Min(SpawnConfig.PackingLimitPerSquareMeter, BodyDensityLimit(unit.flockingConfig.agentRadius)) : SpawnConfig.PackingLimitPerSquareMeter;
 
-        public Vector3 Size => SpawnConfig.ResolveSpawnSize(count, density, aspect, manualSize);
+        public Vector3 Size => brush != null ? new Vector3(brush.Size.x, 0f, brush.Size.y) : SpawnConfig.ResolveSpawnSize(count, density, aspect, manualSize);
         public Rect Bounds => new Rect(center.x - Size.x * 0.5f, center.z - Size.z * 0.5f, Size.x, Size.z);
         public string Name => template != null ? template.unitTypeName : "Missing template";
     }
@@ -338,10 +341,10 @@ namespace MassEngine.Game
                         var wall = obstacle.Bounds;
                         wall.xMin -= rules.staticObstacleClearance; wall.xMax += rules.staticObstacleClearance;
                         wall.yMin -= rules.staticObstacleClearance; wall.yMax += rules.staticObstacleClearance;
-                        if (Overlaps(bounds, wall)) { error = prefix + "部署脚印与障碍相交。"; return false; }
+                        if (WarSandboxBrushFootprint.Covers(e, wall)) { error = prefix + "部署脚印与障碍相交。"; return false; }
                     }
                 for (int j = 0; j < i; j++)
-                    if (Overlaps(bounds, entries[j].Bounds)) { error = prefix + "与编成 " + (j + 1) + " 的部署脚印重叠。"; return false; }
+                    if (WarSandboxBrushFootprint.Overlaps(e, entries[j])) { error = prefix + "与编成 " + (j + 1) + " 的部署脚印重叠。"; return false; }
             }
             return true;
         }
@@ -400,6 +403,13 @@ namespace MassEngine.Game
                     spawn.unitCount = e.count; spawn.spawnCenter = e.center;
                     spawn.formationDensity = e.density; spawn.formationAspect = e.aspect; spawn.spawnSize = e.manualSize;
                     spawn.facingYawDegrees = WarSandboxDeploymentFacing.ResolveYaw(entries, i);
+                    if (e.brush != null)
+                    {
+                        // Brush deployment: explicit positions inside the painted cells (front first, 2r clearance kept).
+                        float radius = unit.flockingConfig != null ? Mathf.Max(.05f, unit.flockingConfig.agentRadius) : .45f;
+                        spawn.spawnSize = e.Size;
+                        spawn.customSpawnOffsets = e.brush.Offsets(e.count, spawn.facingYawDegrees, WarSandboxBrushMask.Spacing(e.density, radius), radius, i * 7919 + e.teamId * 104729);
+                    }
                     Scenario.unitTypes[i] = unit;
                 }
             }
@@ -453,5 +463,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
