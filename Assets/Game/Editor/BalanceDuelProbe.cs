@@ -360,10 +360,6 @@ namespace MassEngine.Game.EditorTools
             var e = WarSandboxDeploymentEntry.From(t);
             e.teamId = team; e.count = count; e.manualSize = Vector3.zero; e.aspect = aspect; e.facing = 0;
             e.FitDensityToBody();
-            // Huge bodies with few units: grid rounding can leave a gap under 2r; grow the explicit footprint until it fits.
-            if (e.manualSize.x > 0f && t.flockingConfig != null)
-                for (int i = 0; i < 40 && !WarSandboxDeploymentResize.Fits(e, t.flockingConfig.agentRadius, .08f, out _); i++)
-                    e.manualSize = new Vector3(e.manualSize.x * 1.05f, e.manualSize.y, e.manualSize.z * 1.05f);
             return e;
         }
 

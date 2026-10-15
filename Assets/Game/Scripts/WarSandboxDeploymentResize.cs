@@ -39,6 +39,18 @@ namespace MassEngine.Game
             if((rows>1 && size.x/(rows-1)*f+.0001f<2*radius)||(cols>1 && size.z/(cols-1)*f+.0001f<2*radius))
             {error="实际行列间距/抖动不能容纳当前半径，请扩大占地；不会减人数或缩模型。";return false;}return true;
         }
+        /// <summary>Smallest uniform scale (1 = none) of the footprint after which the real lattice clears 2r once jitter
+        /// is taken off. Uniform scaling keeps the aspect, so rows/cols do not change. At most ~6.5% per side.</summary>
+        public static float LatticeGrowth(WarSandboxDeploymentEntry entry,float radius,float jitter)
+        {
+            var size=entry.Size;
+            if(entry.count<=1||!Finite(radius)||radius<=0||!Finite(jitter)||!Finite(size.x)||!Finite(size.z)||size.x<=0||size.z<=0)return 1f;
+            float a=Mathf.Max(.01f,size.z/Mathf.Max(.01f,size.x));int cols=Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(entry.count*a)),1,entry.count),rows=Mathf.CeilToInt(entry.count/(float)cols);
+            float f=1-2*Mathf.Clamp(jitter,0,.08f),k=1f;
+            if(rows>1)k=Mathf.Max(k,2*radius*(rows-1)/(f*size.x));
+            if(cols>1)k=Mathf.Max(k,2*radius*(cols-1)/(f*size.z));
+            return k>1f?k*1.0005f:1f;
+        }
         public static bool TryResize(WarSandboxDeploymentEntry original,DeploymentResizeHandle handle,Vector2 delta,bool locked,
             float radius,float jitter,out WarSandboxDeploymentEntry result,out string error)
         {
