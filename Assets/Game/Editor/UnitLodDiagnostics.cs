@@ -9,60 +9,14 @@ using UnityEngine;
 namespace MassEngine.Game.Editor
 {
     /// <summary>
-    /// Read-only diagnostic: renders the shipped VAT LOD paths of selected unit types
+    /// Read-only LOD preview helper (used by FarLodFixups / MaleWarriorRebuild): renders the shipped VAT LOD paths of a unit type
     /// (actual runtime mesh/material/MPB via the M5.3 GPU capture fixture) and writes
-    /// mesh/texture facts. Never writes to Assets; output goes to outputs/LodCheck-20261012.
+    /// mesh/texture facts. Never writes to Assets. The one-off male screenshot menu was archived 2026-10-15 to
+    /// outputs/Cleanup-20261015-01.
     /// </summary>
     public static class UnitLodDiagnostics
     {
-        private const string Output = "outputs/LodCheck-20261012";
         private const int Tile = 256;
-
-        private static readonly string[] Units =
-        {
-            "Assets/Game/Settings/AttackerMeleeUnitConfig.asset",
-            "Assets/Game/Settings/AttackerUnitConfig.asset",
-            "Assets/Game/Settings/DefenderUnitConfig.asset",
-        };
-
-        [MenuItem("Tools/诊断/男战士 LOD 截图（只读）")]
-        public static void Run()
-        {
-            string root = Path.GetDirectoryName(Application.dataPath);
-            string output = Path.Combine(root, Output);
-            Directory.CreateDirectory(output);
-            var report = new StringBuilder();
-            report.AppendLine("UnitLodDiagnostics " + DateTime.Now.ToString("s") + " device=" + SystemInfo.graphicsDeviceType);
-            try
-            {
-                if (EditorApplication.isPlayingOrWillChangePlaymode)
-                    throw new InvalidOperationException("Exit Play mode first.");
-                var units = new List<string>(Units);
-                string roster = "Assets/Game/Content/Characters/UnifiedRoster/Version03/Library";
-                if (Directory.Exists(Path.Combine(root, roster)))
-                    foreach (string f in Directory.GetFiles(Path.Combine(root, roster), "male*.asset"))
-                        units.Add(roster + "/" + Path.GetFileName(f));
-                foreach (string path in units)
-                {
-                    try { RunUnit(path, output, report); }
-                    catch (Exception e) { report.AppendLine("!! " + path + ": " + e); }
-                }
-                ReportPrefab("Assets/MassEngine/Tests/Editor/LegacyHumanoid/Prefab/MaleCharacterPBR.prefab", report);
-            }
-            catch (Exception e)
-            {
-                report.AppendLine("!! " + e);
-            }
-            File.WriteAllText(Path.Combine(output, "report.txt"), report.ToString());
-            Debug.Log("[LodCheck] done: " + Path.Combine(output, "report.txt"));
-        }
-
-        private static void RunUnit(string path, string output, StringBuilder report)
-        {
-            var unit = AssetDatabase.LoadAssetAtPath<UnitTypeConfig>(path);
-            if (unit == null) { report.AppendLine("-- skip (not UnitTypeConfig): " + path); return; }
-            RunUnitConfig(unit, path, output, report);
-        }
 
         /// <summary>Renders one (possibly in-memory) unit config. Atlas name = file name of label.</summary>
         public static void RunUnitConfig(UnitTypeConfig unit, string path, string output, StringBuilder report)
@@ -186,27 +140,6 @@ namespace MassEngine.Game.Editor
                 " sub0tris " + tris.Length / 3 + " welded " + weld.Count + " boundaryEdges " + boundary + " nonManifold " + nonManifold +
                 " degenerate " + degenerate + " unusedVerts " + unused + " bounds " + m.bounds.size.ToString("F2");
         }
-
-        private static void ReportPrefab(string path, StringBuilder report)
-        {
-            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-            report.AppendLine();
-            report.AppendLine("== prefab " + path + (prefab == null ? " MISSING" : ""));
-            if (prefab == null) return;
-            foreach (var r in prefab.GetComponentsInChildren<Renderer>(true))
-            {
-                Mesh mesh = r is SkinnedMeshRenderer s ? s.sharedMesh : r.GetComponent<MeshFilter>()?.sharedMesh;
-                report.AppendLine("   " + r.GetType().Name + " " + GetPath(r.transform, prefab.transform) + " activeSelf=" + r.gameObject.activeSelf +
-                    " enabled=" + r.enabled + " mesh=" + Name(mesh) + " v" + (mesh != null ? mesh.vertexCount : 0));
-            }
-        }
-
-        private static string GetPath(Transform t, Transform root)
-        {
-            var parts = new List<string>();
-            for (var c = t; c != null && c != root; c = c.parent) parts.Add(c.name);
-            parts.Reverse();
-            return string.Join("/", parts);
-        }
     }
 }
+

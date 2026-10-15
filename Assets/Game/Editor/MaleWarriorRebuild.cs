@@ -13,7 +13,9 @@ namespace MassEngine.Game.Editor
     ///  A  rebake the male VAT with the right-hand sword (OHS03) included as an attachment;
     ///  B1 rebuild mid (QEM ~2000 tris) and far (QEM 300 tris) from the new full mesh with the
     ///     seam-aware multi-pose QEM reducer, replacing the UV-welded 994-vertex mid mesh.
-    /// Only creates NEW assets under <see cref="Folder"/>. "Apply" repoints the two live male render configs.
+    /// Only creates NEW assets under <see cref="Folder"/> (needed after a clean clone; the assets are git-ignored).
+    /// The one-off preview / "switch to new VAT" menus were archived 2026-10-15 to outputs/Cleanup-20261015-01;
+    /// FarLodFixups repoints the render configs.
     /// </summary>
     public static class MaleWarriorRebuild
     {
@@ -30,12 +32,6 @@ namespace MassEngine.Game.Editor
         public const int MidTriangles = 2000;
         public const int FarTriangles = 300;
         private static readonly string[] Attachments = { "Hair01", "Head01_Male", "Shield08", "OHS03", "Eye01", "Mouth01" };
-        private static readonly string[] LiveRenderConfigs =
-        {
-            "Assets/Game/Settings/AttackerUnitConfig_Render.asset",
-            "Assets/Game/Content/Characters/UnifiedRoster/Version03/Library/male_Render.asset",
-        };
-
         [MenuItem("Tools/角色/男战士：重烘加剑 + 重建中远景（只生成新资产）")]
         public static void Build()
         {
@@ -120,39 +116,6 @@ namespace MassEngine.Game.Editor
             Debug.Log("[MaleWarriorRebuild] build finished: " + Path.Combine(output, "rebuild.txt"));
         }
 
-        [MenuItem("Tools/角色/男战士：渲染新 VAT 预览（只读）")]
-        public static void PreviewMenu()
-        {
-            string output = Path.Combine(Path.GetDirectoryName(Application.dataPath), Output);
-            var log = new StringBuilder("MaleWarriorRebuild.Preview " + DateTime.Now.ToString("s") + "\n");
-            try { Preview(Load<VATProfile>(FinalPath), output, log); }
-            catch (Exception e) { log.AppendLine("!! " + e); }
-            File.WriteAllText(Path.Combine(output, "preview.txt"), log.ToString());
-        }
-
-        [MenuItem("Tools/角色/男战士：切换到新 VAT")]
-        public static void Apply()
-        {
-            string output = Path.Combine(Path.GetDirectoryName(Application.dataPath), Output);
-            var log = new StringBuilder("MaleWarriorRebuild.Apply " + DateTime.Now.ToString("s") + "\n");
-            try
-            {
-                if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Exit Play mode first.");
-                var final = Load<VATProfile>(FinalPath);
-                if (!VatProfileValidation.TryValidate(final, out string error)) throw new InvalidOperationException(error);
-                foreach (string path in LiveRenderConfigs)
-                {
-                    var render = Load<RenderConfig>(path);
-                    log.AppendLine(path + ": " + AssetDatabase.GetAssetPath(render.vatProfile) + " -> " + FinalPath);
-                    render.vatProfile = final;
-                    EditorUtility.SetDirty(render);
-                    AssetDatabase.SaveAssetIfDirty(render);
-                }
-            }
-            catch (Exception e) { log.AppendLine("!! " + e); }
-            File.WriteAllText(Path.Combine(output, "apply.txt"), log.ToString());
-        }
-
         private static void Preview(VATProfile profile, string output, StringBuilder log)
         {
             var unit = Load<UnitTypeConfig>("Assets/Game/Settings/AttackerMeleeUnitConfig.asset");
@@ -196,3 +159,4 @@ namespace MassEngine.Game.Editor
         }
     }
 }
+

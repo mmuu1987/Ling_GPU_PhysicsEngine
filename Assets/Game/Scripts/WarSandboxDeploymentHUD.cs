@@ -267,6 +267,7 @@ namespace MassEngine.Game
                 double area = (double)e.manualSize.x * e.manualSize.z, want = n / System.Math.Max(1e-6, area);
                 double target = want > hi ? hi : want < lo ? lo : want;
                 if (target != want) { float k = (float)System.Math.Sqrt(want / target); e.manualSize = new Vector3(e.manualSize.x * k, e.manualSize.y, e.manualSize.z * k); }
+                e.GrowToLattice(); // body spacing ignores row/column rounding and jitter; grow just enough to pass count-lock B
             }
             bool shape=n!=original.count||manual!=(original.manualSize.x>0&&original.manualSize.z>0)||
                 (manual?e.manualSize!=original.manualSize:d!=original.density||a!=original.aspect);

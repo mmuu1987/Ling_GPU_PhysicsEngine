@@ -49,7 +49,20 @@ namespace MassEngine.Game
             float shape = Mathf.Clamp(float.IsNaN(aspect) ? 1f : aspect, .1f, 10f);
             float depth = Mathf.Sqrt(Mathf.Max(1, count) / limit / shape); // X, as SpawnConfig.ResolveSpawnSize
             manualSize = new Vector3(depth, 0f, depth * shape);
+            GrowToLattice();
         }
+
+        /// <summary>Explicit footprints of large bodies: the body density limit ignores row/column rounding and jitter, so
+        /// some counts land a little under 2r and count-lock B rejects them. Grow the footprint just enough (keeps aspect).</summary>
+        public void GrowToLattice()
+        {
+            if (template == null || template.flockingConfig == null || template.spawnConfig == null || manualSize.x <= 0 || manualSize.z <= 0) return;
+            float k = WarSandboxDeploymentResize.LatticeGrowth(this, template.flockingConfig.agentRadius, template.spawnConfig.formationJitterFraction);
+            if (k > 1f) manualSize = new Vector3(manualSize.x * k, manualSize.y, manualSize.z * k);
+        }
+
+        // Lattice growth adds at most ~13.4% area, so the sparsest allowed density sits this far below the body limit.
+        public const float LatticeAreaSlack = 1.15f;
 
         // SpawnConfig.ResolveSpawnSize clamps auto density to this floor.
         public const float AutoDensityFloor = .05f;
@@ -64,7 +77,7 @@ namespace MassEngine.Game
         /// <summary>Sparsest density an edit may produce: the 0.05 /m2 floor, or the body limit when the body is so
         /// large that even the floor packs it too tightly (dragons). Below 0.05 the footprint stays explicit.</summary>
         public static float MinimumDensity(UnitTypeConfig unit) =>
-            unit != null && unit.flockingConfig != null ? Mathf.Min(AutoDensityFloor, BodyDensityLimit(unit.flockingConfig.agentRadius)) : AutoDensityFloor;
+            unit != null && unit.flockingConfig != null ? Mathf.Min(AutoDensityFloor, BodyDensityLimit(unit.flockingConfig.agentRadius) / LatticeAreaSlack) : AutoDensityFloor;
 
         /// <summary>Densest density a count edit targets: the 1.5 /m2 packing limit, or the body limit if tighter.</summary>
         public static float MaximumDensity(UnitTypeConfig unit) =>
