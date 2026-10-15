@@ -27,7 +27,7 @@ namespace MassEngine.Game.EditorTools
         const string SrcTemplateId = "roster-giant-dino";
         const string FeaturedEntryId = "giants-dino";
         public const float Scale = 3f;
-        const float PriceScale = 5.0f;
+        const float PriceScale = 4.5f; // 2026-10-15: 5.0 tested weak (6 units at 61500); back to 4.5 (7 units)
         static readonly string[] Parts = { "", "_Spawn", "_Movement", "_Flocking", "_Animation", "_Combat", "_Render" };
         static readonly string[] Refs = { null, "spawnConfig", "movementConfig", "flockingConfig", "animationConfig", "combatConfig", "renderConfig" };
         static readonly StringBuilder Log = new StringBuilder();
