@@ -1763,6 +1763,9 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     bool selfLarge = IsLargeBodyRadius(bodyRadius);
     int bodyCellRadius = selfLarge ? CellReach(LargeStampReach(bodyRadius), LARGE_BODY_SCAN_MAX_CELL_RADIUS) : 1;
     int queryCellRadius = max(searchCellRadius, bodyCellRadius);
+    // Kaiju (2026-10-15): a large body's attack reach can lie past the 4-cell local target search, so a large
+    // agent sweeps enemies out to its body scan radius (<= LARGE_BODY_SCAN_MAX_CELL_RADIUS). Normal agents unchanged.
+    int enemyCellRadius = (selfLarge && searchCellRadius > 0) ? queryCellRadius : searchCellRadius;
     // Every team except the agent's own is hostile (no alliance concept yet), so the sweep
     // walks all teamCount-1 opposing buckets instead of one fixed slot. This is the only
     // place where widening the team dimension actually costs more work per agent. A teamId
@@ -1783,7 +1786,7 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                 continue;
 
             uint cellIndex = CellToIndex(cell);
-            if (sweepEnemies && abs(dx) <= searchCellRadius && abs(dz) <= searchCellRadius)
+            if (sweepEnemies && abs(dx) <= enemyCellRadius && abs(dz) <= enemyCellRadius)
             {
                 [loop]
                 for (uint enemyTeamSlot = 0; enemyTeamSlot < teamSlotCount; enemyTeamSlot++)
