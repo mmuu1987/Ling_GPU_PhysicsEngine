@@ -171,3 +171,7 @@ sysinfo.txt
 /Docs/**/*.mp4
 /Docs/InteractionRefinement-20261007/*.html
 /Docs/ReferenceStudies/UEBS2-*
+
+# 程序化建筑：生成的网格和预制体留在本地（菜单 Tools/程序化建筑/生成建筑库 重建）
+/Assets/Game/Content/ProcBuildings/
+/Assets/Game/Content/ProcBuildings.meta

@@ -18,7 +18,7 @@ namespace MassEngine.Game.Editor
     /// Props reuse the procedural library; the 2,000,000-triangle budget is unchanged, so density per area is ≈1/4
     /// of the 1024 maps and props go to forests, ridges, cliffs and the map edge.
     /// </summary>
-    public abstract class Proc2048MapBase : MapSpec
+    public abstract partial class Proc2048MapBase : MapSpec
     {
         public override BattlefieldMapSize Size => BattlefieldMapSize.S2048;
         public override float ControlPointRadius => 50f;
@@ -315,7 +315,7 @@ namespace MassEngine.Game.Editor
             float trail = Field2048.Sample(field.Trail, x, z) * (1f - Smooth(Size.EdgeBlock - 20f, Size.EdgeBlock, EdgeDistance2(x, z)));
             float steep = Smooth(.13f, .3f, slope);
             float worn = Smooth(.72f, .86f, Noise(x, z, .011f, 13f)) * .3f;
-            float dirt = Mathf.Max(Mathf.Max(trail * .8f, worn), ExtraDirt(x, z, height, slope)) * (1f - rock) * (1f - forest * .85f);
+            float dirt = Mathf.Max(Mathf.Max(trail * .8f, worn), Mathf.Max(ExtraDirt(x, z, height, slope), TownDirt(x, z))) * (1f - rock) * (1f - forest * .85f);
             float scree = Smooth(.8f, .93f, Noise(x, z, .03f, 29f)) * Smooth(.05f, .12f, slope) * .6f;
             float meadow = Smooth(.42f, .78f, Noise(x, z, .004f, 23f)) * .75f * (1f - forest) * (1f - steep);
             return new Color32(B(dirt), B(Mathf.Max(Mathf.Max(rock, steep), scree)), B(forest), B(meadow));
@@ -403,10 +403,10 @@ namespace MassEngine.Game.Editor
                 (x, z) => d.Blocked(x, z) && forest(x, z) > .3f && !d.DeepBlocked(x, z, 6f) && rock(x, z) <= .5f && d.Chance(f.UnderChance),
                 (x, z) => { string c = Weighted(d, f.Under); return new Decorator.Choice(d.Pick(Pool(c), false), SmallHeight(d, c), false, false, .1f); });
             d.Scatter("草甸花草", -lim, -lim, lim, lim, 22f, f.MaxMeadow,
-                (x, z) => !d.Blocked(x, z) && !InZone(x, z, 10f) && d.Chance(f.MeadowDensity * Smooth(.45f, .7f, Noise(x, z, .006f, 41f))),
+                (x, z) => !d.Blocked(x, z) && !InZone(x, z, 10f) && d.Chance(f.MeadowDensity * Smooth(.45f, .7f, Noise(x, z, .006f, 41f))) && !InTown(x, z),
                 (x, z) => { string c = Weighted(d, f.Meadow); return new Decorator.Choice(d.Pick(Pool(c), false), SmallHeight(d, c), false, false, .05f); });
             d.Scatter("碎石", -lim, -lim, lim, lim, 18f, 450,
-                (x, z) => !d.Blocked(x, z) && (rock(x, z) > .15f || SlopeAt(d, x, z) > .45f) && d.Chance(.5f),
+                (x, z) => !d.Blocked(x, z) && (rock(x, z) > .15f || SlopeAt(d, x, z) > .45f) && d.Chance(.5f) && !InTown(x, z),
                 (x, z) => new Decorator.Choice(d.Pick(Pool(f.Pebbles), false), d.Rand(.3f, .6f), false, false, .05f));
             var far = Pool(f.Distant);
             d.Scatter("远景树林", -H - 1100f, -H - 1100f, H + 1100f, H + 1100f, 32f, f.MaxDistant,
@@ -423,6 +423,7 @@ namespace MassEngine.Game.Editor
                 float a = i * Mathf.PI * 2f / f.Mountains + d.Rand(-.15f, .15f), r = d.Rand(2900f, 4300f);
                 d.Place(d.Pick(Pool(f.Mountain), false), Mathf.Cos(a) * r, Mathf.Sin(a) * r, d.Rand(200f, 360f), g, false, false, 0f);
             }
+            DecorateTowns(d);   // 2026-10-15 procedural settlements (decoration only, placed last)
         }
     }
 
