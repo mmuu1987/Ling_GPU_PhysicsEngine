@@ -22,14 +22,23 @@ namespace MassEngine
         public const int FlowTargetSlotsPerTeam = 8;
         /// <summary>Default team count; two-team combat (attacker vs defender) is the historical layout.</summary>
         public const int DefaultTeamCount = 2;
+        /// <summary>Uints per grid cell in largeCells: [stamp count, 8 agent slots]. Mirrors LARGE_CELL_STRIDE in AgentDataCommon.hlsl.</summary>
+        public const int LargeCellStride = 9;
 
         public ComputeBuffer agentBuffer;
+        // One word per agent: LOD tier, previous tier, crossfade progress (AgentDataCommon.hlsl ResolveLodTier). 0 = not classified yet.
+        public ComputeBuffer agentLodStateBuffer;
+        private bool[] lodCrossfadeByType;
+        public bool IsLodCrossfade(int unitTypeIndex) { return lodCrossfadeByType != null && unitTypeIndex >= 0 && unitTypeIndex < lodCrossfadeByType.Length && lodCrossfadeByType[unitTypeIndex]; }
         public ComputeBuffer agentPositionReadBuffer;
         public ComputeBuffer agentPositionWriteBuffer;
         public ComputeBuffer gridCountsBuffer;
         public ComputeBuffer gridAgentIndicesBuffer;
         public ComputeBuffer teamGridCountsBuffer;
         public ComputeBuffer teamGridAgentIndicesBuffer;
+        // C1: per-cell large-body stamps (count + 8 agent slots per cell). Frame stats live in
+        // spatialHashStats[1..2] (large agents stamped, largest body radius bits).
+        public ComputeBuffer largeCellsBuffer;
         /// <summary>Team-partitioned flow field: teamId * FlowCellCount + cellIndex.</summary>
         public ComputeBuffer flowFieldDirectionsBuffer;
         /// <summary>Team-partitioned enemy density scratch: teamId * FlowCellCount + cellIndex.</summary>
@@ -49,6 +58,7 @@ namespace MassEngine
         /// <summary>One preview texture per team, indexed by raw teamId. Read through GetFlowPreviewTexture.</summary>
         private RenderTexture[] runtimeFlowPreviewTextures = System.Array.Empty<RenderTexture>();
         public RenderTexture densityMapTexture;
+        public ComputeBuffer rangedBlockBuffer; // RangedAreaFire.hlsl enemy blocks
         public RenderTexture attackerDensityMapTexture;
         public RenderTexture defenderDensityMapTexture;
 
@@ -139,6 +149,8 @@ namespace MassEngine
             }
 
             agentBuffer = new ComputeBuffer(AgentCount, AgentStrideBytes);
+            agentLodStateBuffer = new ComputeBuffer(AgentCount, sizeof(uint));
+            agentLodStateBuffer.SetData(new uint[AgentCount]);
             agentPositionReadBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 2);
             agentPositionWriteBuffer = new ComputeBuffer(AgentCount, sizeof(float) * 2);
             gridCountsBuffer = new ComputeBuffer(GridCellCount, sizeof(int));
@@ -163,6 +175,7 @@ namespace MassEngine
 
             teamGridCountsBuffer = new ComputeBuffer(GridCellCount * TeamCount, sizeof(int));
             teamGridAgentIndicesBuffer = new ComputeBuffer((int)teamGridIndexCapacity, sizeof(int));
+            largeCellsBuffer = new ComputeBuffer(checked(GridCellCount * LargeCellStride), sizeof(uint));
 
             long flowSliceCapacity = (long)safeFlowCellCount * TeamCount;
             if (flowSliceCapacity > int.MaxValue / (sizeof(float) * 2))
@@ -187,7 +200,8 @@ namespace MassEngine
             teamStanceBuffer = new ComputeBuffer(TeamCount, sizeof(int));
             // stats[3] carries a sentinel no kernel ever writes: if a telemetry readback
             // sees it gone, GPU memory was wiped (device reset/TDR) and the manager
-            // reinitializes. Slots 1-2 stay reserved; slot 0 is the overflow counter.
+            // reinitializes. Slot 0 is the overflow counter; slots 1-2 carry the C1 large-body
+            // stats (stamped count, largest body radius bits), rewritten every frame.
             spatialHashStatsBuffer.SetData(new[] { 0, 0, 0, DeviceResetSentinel });
             teamSpatialStatsBuffer.SetData(new int[TeamStatsSlotCount]);
             // Hold is 0, so a stance buffer nobody uploaded freezes every team. That is a
@@ -203,6 +217,10 @@ namespace MassEngine
             densityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
             attackerDensityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
             defenderDensityMapTexture = CreateDensityMapTexture(safeFlowResolutionX, safeFlowResolutionZ);
+            // Ranged area fire: 2 battle teams x blocks of >= 2x2 flow cells x 9 words (count + 8 members).
+            int rangedBlockWords = checked(2 * ((safeFlowResolutionX + 1) / 2) * ((safeFlowResolutionZ + 1) / 2) * 9);
+            rangedBlockBuffer = new ComputeBuffer(rangedBlockWords, sizeof(uint));
+            rangedBlockBuffer.SetData(new uint[rangedBlockWords]);
 
             // GPU buffer contents are undefined after allocation; zero-fill everything a
             // kernel may read before its first producer runs.
@@ -212,6 +230,7 @@ namespace MassEngine
             runtimeFlowTargetsBuffer.SetData(new Vector4[FlowTargetSlotsPerTeam * TeamCount]);
             gridCountsBuffer.SetData(new int[GridCellCount]);
             teamGridCountsBuffer.SetData(new int[GridCellCount * TeamCount]);
+            largeCellsBuffer.SetData(new uint[GridCellCount * LargeCellStride]);
 
             combatBuffers.teamIdBuffer = new ComputeBuffer(AgentCount, sizeof(int));
             combatBuffers.hpReadBuffer = new ComputeBuffer(AgentCount, sizeof(int));
@@ -256,6 +275,7 @@ namespace MassEngine
             foreach (var agent in agents)
                 maxAgentScaleXZ = Mathf.Max(maxAgentScaleXZ, Mathf.Max(Mathf.Abs(agent.scale.x), Mathf.Abs(agent.scale.z)));
             agentBuffer.SetData(agents);
+            if (agentLodStateBuffer != null) agentLodStateBuffer.SetData(new uint[agentLodStateBuffer.count]);
 
             Vector2[] positions = new Vector2[agents.Length];
             Vector3[] homePositions = new Vector3[agents.Length];
@@ -363,9 +383,11 @@ namespace MassEngine
             if (unitTypes == null)
                 return;
 
+            lodCrossfadeByType = new bool[UnitTypeCount];
             for (int i = 0; i < unitTypes.Count && i < UnitTypeCount; i++)
             {
                 ResolvedUnitTypeRuntime runtime = unitTypes[i].RenderRuntime;
+                lodCrossfadeByType[i] = runtime != null && runtime.SupportsLodCrossfade;
                 for (int lod = 0; lod < LodLevels; lod++)
                     SetArgs(GetDrawArgsBuffer(i, lod), runtime != null ? runtime.GetMesh(lod) : null);
             }
@@ -388,12 +410,15 @@ namespace MassEngine
             combatBuffers.ReleaseAll();
 
             ReleaseBuffer(ref agentBuffer);
+            ReleaseBuffer(ref agentLodStateBuffer);
+            lodCrossfadeByType = null;
             ReleaseBuffer(ref agentPositionReadBuffer);
             ReleaseBuffer(ref agentPositionWriteBuffer);
             ReleaseBuffer(ref gridCountsBuffer);
             ReleaseBuffer(ref gridAgentIndicesBuffer);
             ReleaseBuffer(ref teamGridCountsBuffer);
             ReleaseBuffer(ref teamGridAgentIndicesBuffer);
+            ReleaseBuffer(ref largeCellsBuffer);
             ReleaseBuffer(ref flowFieldDirectionsBuffer);
             ReleaseBuffer(ref runtimeFlowTargetDensityBuffer);
             ReleaseBuffer(ref runtimeFlowStatsBuffer);
@@ -421,6 +446,7 @@ namespace MassEngine
             ReleaseRenderTexture(ref densityMapTexture);
             ReleaseRenderTexture(ref attackerDensityMapTexture);
             ReleaseRenderTexture(ref defenderDensityMapTexture);
+            ReleaseBuffer(ref rangedBlockBuffer);
 
             AgentCount = 0;
             GridCellCount = 0;
@@ -521,4 +547,5 @@ namespace MassEngine
         }
     }
 }
+
 

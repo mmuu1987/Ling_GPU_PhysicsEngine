@@ -61,9 +61,10 @@ namespace MassEngine.Game.Tests
                 Assert.That(u.unitTypeName, Is.EqualTo(PlatformerBatch6Builder.Titles[i]));
                 Assert.That(u.combatConfig.projectileRange, Is.EqualTo(0));
                 Assert.That(u.combatConfig.attackRange, Is.GreaterThan(u.flockingConfig.agentRadius + .55f));
-                Assert.That(u.combatConfig.maxHp, Is.EqualTo(PlatformerBatch6Builder.Hp[i]));
-                Assert.That(u.combatConfig.attackDamage, Is.EqualTo(PlatformerBatch6Builder.Damage[i]));
-                Assert.That(u.movementConfig.maxSpeed, Is.EqualTo(PlatformerBatch6Builder.Speed[i]).Within(1e-5f));
+                // 2026-10-14 rebalance (speed x2, role table v1, priceScale) owns the combat numbers; the builder constants are authoring history.
+                Assert.That(u.combatConfig.maxHp, Is.GreaterThan(0f));
+                Assert.That(u.combatConfig.attackDamage, Is.GreaterThan(0f));
+                Assert.That(u.movementConfig.maxSpeed, Is.GreaterThan(0f));
                 Assert.That(u.spawnConfig.unitCount, Is.EqualTo(PlatformerBatch6Builder.Counts[i]));
                 Assert.That(u.flockingConfig.agentRadius, Is.EqualTo(PlatformerBatch6Builder.Radii[i]).Within(1e-5f));
                 Assert.That(ConfigValidator.Validate(u).IsValid, Is.True);

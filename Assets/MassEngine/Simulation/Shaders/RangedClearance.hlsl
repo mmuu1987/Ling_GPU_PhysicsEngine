@@ -56,7 +56,8 @@ bool RangedPathClear(uint index, AgentData source, int target, UnitTypeSettings 
     ProjectileData shot = (ProjectileData)0;
     shot.sourceAgentIndexPlusOne = (int)index + 1;
     shot.hitRadius = settings.projectileHitRadius;
-    float padding = max(0.0, projectileQueryRadius) + max(0.0, shot.hitRadius);
+    shot.sourceTeamId = teamIdReadBuffer[index]; // allies never block a projectile
+    float padding = ProjectileNormalQueryRadius() + max(0.0, shot.hitRadius); // large bodies: stamps below (C2)
     uint agentCount, stride; agentBuffer.GetDimensions(agentCount, stride);
     int segments = clamp((int)ceil(distance / max(0.5, cellSize)), 4, 16);
     float3 start = origin;
@@ -87,6 +88,14 @@ bool RangedPathClear(uint index, AgentData source, int target, UnitTypeSettings 
             [loop] for (uint slot=0; slot<count; slot++)
             {
                 uint other = gridAgentIndicesReadBuffer[cell*maxAgentsPerCell+slot];
+                if (other < agentCount) ConsiderProjectileUnit(other, shot, start, end-start, nearest, hit);
+            }
+            uint largeRecord = cell * LARGE_CELL_STRIDE;
+            uint largeCount = largeCellsReadBuffer[largeRecord];
+            if (largeCount > LARGE_SLOTS_PER_CELL) return false;
+            [loop] for (uint largeSlot=0; largeSlot<largeCount; largeSlot++)
+            {
+                uint other = largeCellsReadBuffer[largeRecord + 1u + largeSlot];
                 if (other < agentCount) ConsiderProjectileUnit(other, shot, start, end-start, nearest, hit);
             }
         }
@@ -211,4 +220,5 @@ void LimitRangedReposition(inout AgentData agent, UnitTypeSettings settings, Con
     if (actual > speed) agent.velocity.xz *= speed / max(actual,0.0001);
 }
 #endif
+
 

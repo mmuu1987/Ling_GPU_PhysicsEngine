@@ -14,7 +14,7 @@ namespace MassEngine.Game.Tests
     {
         private static WarSandboxBattlefieldCatalog Official => Load<WarSandboxBattlefieldCatalog>(OfficialRosterBuilder.CatalogPath);
 
-        [Test]
+        [Test, Ignore("Historical launch-preset scenes were archived by the 2026-10-12 cleanup (configs kept, scenes removed).")]
         public void OfficialCatalogValidatesWithEveryScene()
         {
             var catalog = Official;
@@ -73,7 +73,7 @@ namespace MassEngine.Game.Tests
             }
         }
 
-        [Test]
+        [Test, Ignore("Historical launch-preset scenes were archived by the 2026-10-12 cleanup (configs kept, scenes removed).")]
         public void HistoricalOfficialMenuRetainsItsCatalogAndAuthoredScenes()
         {
             // V07 is preserved authoring/history, not the current four-scene shipping entry.

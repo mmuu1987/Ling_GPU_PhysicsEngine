@@ -5,7 +5,7 @@
         "MassEngine",
         "MassEngine.Editor",
         "Unity.ugui",
-        "Game"
+        "Game", "Game.Harness"
     ],
     "includePlatforms": [
         "Editor"

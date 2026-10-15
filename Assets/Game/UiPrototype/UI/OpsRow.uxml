@@ -1,0 +1,14 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement class="op-row">
+        <ui:VisualElement class="op-row__bar" picking-mode="Ignore" />
+        <ui:Label name="idx" text="01" class="op-row__idx" />
+        <ui:VisualElement class="op-row__main" picking-mode="Ignore">
+            <ui:VisualElement class="row" picking-mode="Ignore">
+                <ui:Label name="name" text="作战名称" class="op-row__name" />
+                <ui:Label name="new" text="NEW" class="chip chip--new" />
+            </ui:VisualElement>
+            <ui:Label name="meta" text="2 军团 · 歼灭战" class="op-row__meta" />
+        </ui:VisualElement>
+        <ui:Label name="count" text="0" class="op-row__count" />
+    </ui:VisualElement>
+</ui:UXML>

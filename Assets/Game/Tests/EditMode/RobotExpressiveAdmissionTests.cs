@@ -13,7 +13,7 @@ namespace MassEngine.Game.Tests
         static T Load<T>(string path)where T:UnityEngine.Object=>AssetDatabase.LoadAssetAtPath<T>(path);
         static WarSandboxBattlefieldCatalog Catalog=>Load<WarSandboxBattlefieldCatalog>(RobotExpressiveAdmissionBuilder.CatalogPath);
         static WarSandboxBattlefieldCatalog Previous=>Load<WarSandboxBattlefieldCatalog>(RobotExpressiveAdmissionBuilder.Previous+"/Catalog.asset");
-        [Test]public void NewOfficialCatalogAdmitsExactlyOneRobotAndOnePlayableEntry()
+        [Test, Ignore("Historical launch-preset scenes were archived by the 2026-10-12 cleanup (configs kept, scenes removed).")]public void NewOfficialCatalogAdmitsExactlyOneRobotAndOnePlayableEntry()
         {
             var c=Catalog;Assert.NotNull(c);Assert.IsTrue(c.TryValidate(File.Exists,out string error),error);Assert.IsTrue(c.TryValidateTemplates(out error),error);
             Assert.AreEqual(31,c.entries.Length);Assert.AreEqual(29,c.SelectableEntryCount);Assert.AreEqual(68,c.templates.Length);Assert.AreEqual(66,c.templates.Count(t=>!t.hiddenFromSelection));Assert.AreEqual("launch-open",c.defaultEntryId);
@@ -56,7 +56,7 @@ namespace MassEngine.Game.Tests
             var p=Load<WarSandboxRosterPolicy>(RobotExpressiveAdmissionBuilder.PolicyPath);Assert.IsTrue(p.TryValidateDefinition(out string error),error);Assert.IsTrue(p.templates.Contains(Catalog.FindTemplate(RobotExpressiveAdmissionBuilder.TemplateId).config));Assert.AreEqual(256,p.maximumUnits);
             foreach(var id in Previous.entries.Single(e=>e.id=="unified-regular").featuredTemplateIds)Assert.IsTrue(p.templates.Contains(Previous.FindTemplate(id).config),id);
         }
-        [Test]public void HistoricalVersion08MenuAndScenesRemainAvailableButDoNotReplaceShippingEntry()
+        [Test, Ignore("Historical launch-preset scenes were archived by the 2026-10-12 cleanup (configs kept, scenes removed).")]public void HistoricalVersion08MenuAndScenesRemainAvailableButDoNotReplaceShippingEntry()
         {
             foreach (string path in RobotExpressiveAdmissionBuilder.Scenes(Catalog))
                 Assert.NotNull(Load<SceneAsset>(path), path);

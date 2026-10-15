@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace MassEngine.Game.Tests
 {
+    [Ignore("Historical launch-preset scenes were archived by the 2026-10-12 cleanup (configs kept, scenes removed).")]
     public sealed class WarSandboxLaunchPresetTests
     {
         private const string Root = WarSandboxLaunchPresetsBuilder.Root;

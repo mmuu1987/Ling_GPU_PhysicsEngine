@@ -24,7 +24,7 @@ Shader "MassEngine/Seasonal Props 22" {
  if(_MountainGrade>.5){float moss=smoothstep(.03,.14,t.g-t.r);t.rgb=lerp(half3(.17,.22,.23),half3(.19,.30,.22),moss)*(.85+.35*value);}
  if(_Season>.5&&_Season<1.5){if(_Kind>.5&&_Kind<1.5){half3 warm=lerp(half3(.56,.32,.045),half3(.43,.095,.018),_Palette);t.rgb=lerp(t.rgb,warm*(.64+1.15*value),leaf*.96);}if(_Kind>2.5)t.rgb*=half3(1.12,.94,.70);}
  if(_Season>1.5){if(_Kind>.5&&_Kind<1.5)t.rgb=lerp(t.rgb,t.rgb*half3(.55,.78,.85),leaf*.85);float eligibility=(_Kind>1.5)?1:leaf;float patch=.96;float snow=smoothstep(.05,.63,n.y)*eligibility*patch;t.rgb=lerp(t.rgb,half3(.70,.77,.79),snow*.94);}
- Light l=GetMainLight(TransformWorldToShadowCoord(i.w));half illumination=.43+.57*saturate(dot(n,l.direction))*lerp(l.shadowAttenuation,1,_Far);if(_Far>.5)illumination=.46+.54*saturate(dot(n,l.direction));float haze=smoothstep(370,1100,length(i.w.xz));return half4(lerp(t.rgb*illumination,_HazeColor.rgb,haze),1);}
+ Light l=GetMainLight(TransformWorldToShadowCoord(i.w),i.w,half4(1,1,1,1));half illumination=.43+.57*saturate(dot(n,l.direction))*lerp(l.shadowAttenuation,1,_Far);if(_Far>.5)illumination=.46+.54*saturate(dot(n,l.direction));float haze=smoothstep(370,1100,length(i.w.xz));return half4(lerp(t.rgb*illumination,_HazeColor.rgb,haze),1);}
  ENDHLSL
  }
  Pass {Name "ShadowCaster" Tags{"LightMode"="ShadowCaster"} ZWrite On ZTest LEqual ColorMask 0

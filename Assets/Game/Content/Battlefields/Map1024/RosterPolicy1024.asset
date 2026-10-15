@@ -27,9 +27,33 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7230ee0042a9b6a4298ed482cd3d686d, type: 2}
   - {fileID: 11400000, guid: a34495fa4ccbe2f4aa824e4c2d25198d, type: 2}
   - {fileID: 11400000, guid: 82a28b4a53a360345ac88bab2d40725e, type: 2}
+  - {fileID: 11400000, guid: 3e3413676b4367948940e50b446d3224, type: 2}
+  - {fileID: 11400000, guid: 1d183cf270e4cb74b8ab9fdc1781f60f, type: 2}
+  - {fileID: 11400000, guid: ae1bd13a58cd9cd4baf1a3ca377d151f, type: 2}
+  - {fileID: 11400000, guid: 1052ae1a6fa863d4a96051994f742497, type: 2}
+  - {fileID: 11400000, guid: 0334cf8115bcaac42895a2a710253529, type: 2}
+  - {fileID: 11400000, guid: 2394bbd1c61c6fa488ad079a6b82e1d6, type: 2}
+  - {fileID: 11400000, guid: 0dccacb0a12a81443921aa804d76d7d7, type: 2}
+  - {fileID: 11400000, guid: 4579a34ad0fcf4b439e290856416f655, type: 2}
+  - {fileID: 11400000, guid: 536a890d47c3f194ebfa89104480eae9, type: 2}
+  - {fileID: 11400000, guid: deb2592f0ea467741b8ee0e7bf477034, type: 2}
+  - {fileID: 11400000, guid: be2c2bda6adcfbb41a1da6fc81ca0678, type: 2}
+  - {fileID: 11400000, guid: 29aedb0cf41ee8e4c8a5698a95a516cc, type: 2}
+  - {fileID: 11400000, guid: 542a266b831e6ab4794f67d0a6f2046d, type: 2}
+  - {fileID: 11400000, guid: ccc7b1b9d4402b14cb0f0d78ddcd0da8, type: 2}
+  - {fileID: 11400000, guid: 0f956bc584647d94ca324fd1f84d434a, type: 2}
+  - {fileID: 11400000, guid: 56a1ddc75a531bf429dd21bf09fde16e, type: 2}
+  - {fileID: 11400000, guid: d811f4bc652401a48823fce5878144ce, type: 2}
+  - {fileID: 11400000, guid: a889200539954184d905ec2dc784ac72, type: 2}
+  - {fileID: 11400000, guid: 1b5fb98e6fdb92c4493ce5ef27497dce, type: 2}
+  - {fileID: 11400000, guid: e479a92458964df4f917d8d0e04ec059, type: 2}
+  - {fileID: 11400000, guid: af14931012c34694a8992e6102bcb8e6, type: 2}
+  - {fileID: 11400000, guid: ba3d8aa5e62d8504ba85005f88eab1e9, type: 2}
+  - {fileID: 11400000, guid: bb9ede6e3c3011546b07e7fa4fa424fc, type: 2}
   maximumUnits: 200000
-  maximumRadius: 0.8
+  maximumRadius: 4.8
   useTemplateSpawnDefaults: 0
   restrictLargeToTeamZero: 0
+  maximumLargeUnits: 2000
   explanation: "1024\xD71024 \u6D4B\u8BD5\u6218\u573A\uFF08\u7531\u7FE0\u7EFF\u6797\u5730512\u6D3E\u751F\uFF0C\u4EC5\u7528\u4E8E20\u4E07\u4EBA\u89C4\u6A21\u6D4B\u8BD5\uFF09\uFF1A\u9ED8\u8BA42048\u4EBA\uFF0C\u6D4B\u8BD5\u4E0A\u9650\u5408\u8BA120\u4E07\u4EBA\uFF1B\u5BFC\u822A/\u6D41\u573A
     256\xD7256@4\u7C73\u3002\u4EBA\u6570\u4E0A\u9650\u4E0D\u662F\u6027\u80FD\u4FDD\u8BC1\u3002"

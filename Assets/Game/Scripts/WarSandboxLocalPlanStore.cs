@@ -61,6 +61,18 @@ namespace MassEngine.Game
         public float staticObstacleClearance;
         [DataMember(IsRequired = true)]
         public WarSandboxPlanObstacle[] staticObstacles;
+        // Challenge mode (2026-10-14). Optional so plans saved before it still load (as "free command").
+        [DataMember(IsRequired = false)]
+        public bool challengeEnabled;
+        [DataMember(IsRequired = false)]
+        public int challengeTeam;
+        // Budget battle (2026-10-14), optional as well: old plans load with the budget off.
+        [DataMember(IsRequired = false)]
+        public bool budgetEnabled;
+        [DataMember(IsRequired = false)]
+        public int budgetPoints;
+        [DataMember(IsRequired = false)]
+        public int[] budgetTeamPoints;
 
         public static WarSandboxPlanRules From(WarSandboxBattlefieldRules source)
         {
@@ -73,7 +85,10 @@ namespace MassEngine.Game
                 controlPointCaptureSeconds = source.controlPointCaptureSeconds,
                 staticObstaclesEnabled = source.staticObstaclesEnabled,
                 staticObstacleClearance = source.staticObstacleClearance,
-                staticObstacles = obstacles.Select(WarSandboxPlanObstacle.From).ToArray()
+                staticObstacles = obstacles.Select(WarSandboxPlanObstacle.From).ToArray(),
+                challengeEnabled = source.challengeEnabled, challengeTeam = source.challengeTeam,
+                budgetEnabled = source.budgetEnabled, budgetPoints = source.budgetPoints,
+                budgetTeamPoints = source.budgetTeamPoints != null ? (int[])source.budgetTeamPoints.Clone() : null
             };
         }
 
@@ -99,7 +114,10 @@ namespace MassEngine.Game
                 gameMode = gameMode, controlPointCenter = controlPointCenter.ToRuntime(),
                 controlPointRadius = controlPointRadius, controlPointCaptureSeconds = controlPointCaptureSeconds,
                 staticObstaclesEnabled = staticObstaclesEnabled, staticObstacleClearance = staticObstacleClearance,
-                staticObstacles = obstacles
+                staticObstacles = obstacles,
+                challengeEnabled = challengeEnabled, challengeTeam = challengeTeam,
+                budgetEnabled = budgetEnabled, budgetPoints = budgetPoints,
+                budgetTeamPoints = budgetTeamPoints != null ? (int[])budgetTeamPoints.Clone() : null
             };
             return result.TryValidate(out error);
         }

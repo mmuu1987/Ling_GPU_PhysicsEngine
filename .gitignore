@@ -129,3 +129,43 @@ sysinfo.txt
 /Assets/Game/Experiments/ForestPrototype/GroundMesh.asset.meta
 /Assets/Game/Experiments/TerrainAtmosphere/Backdrop.asset
 /Assets/Game/Experiments/TerrainAtmosphere/Backdrop.asset.meta
+# Kept local, not committed (user 2026-10-15)
+# Generated battlefield scenes and meshes: regenerate with the Tools/战场 1024 and Tools/战场 2048 menus
+/Assets/Game/Content/Battlefields/Maps1024/
+/Assets/Game/Content/Battlefields/Maps1024.meta
+/Assets/Game/Content/Battlefields/Maps2048/
+/Assets/Game/Content/Battlefields/Maps2048.meta
+/Assets/Game/Content/Battlefields/Map2048/Green2048.unity
+/Assets/Game/Content/Battlefields/Map2048/Green2048.unity.meta
+/Assets/ThirdParty/_Derived/
+/Assets/ThirdParty/_Derived.meta
+# Procedural props (regenerate with the ProcProps menus)
+/Assets/Game/Content/ProcProps/
+/Assets/Game/Content/ProcProps.meta
+# Rebuilt / baked character meshes (mesh .asset kept local, user 2026-10-10)
+/Assets/Game/Content/Characters/MaleWarrior-20261012/
+/Assets/Game/Content/Characters/MaleWarrior-20261012.meta
+/Assets/Game/Content/VertexAO/
+/Assets/Game/Content/VertexAO.meta
+# Unity test runner temp scenes
+/Assets/InitTestScene*
+# Assistant and local working folders
+/AssistantArchives/
+/_DownloadedModels/
+/outputs/
+/.workbuddy-ai/
+/.local-mcp-audit/
+/Tools/AssetsLayout/
+/Tools/BuildCleanup/
+/Tools/InteractionRefinement/
+/Tools/GameLayout*20261007.py
+/Tools/audit_game_layout.py
+/Tools/prepare_game_layout.py
+# Docs: screenshots, GIFs, videos and HTML previews stay local; .md is committed
+/Docs/**/*.png
+/Docs/**/*.jpg
+/Docs/**/*.jpeg
+/Docs/**/*.gif
+/Docs/**/*.mp4
+/Docs/InteractionRefinement-20261007/*.html
+/Docs/ReferenceStudies/UEBS2-*

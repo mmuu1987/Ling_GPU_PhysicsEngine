@@ -1,0 +1,87 @@
+/* =====================================================================
+   前台（主菜单 / 选择战场 / 载入 / 失败 / 战斗系统栏 / 确认弹窗）
+   - 基于 WarSandboxUi.Toy.uss（Q 版）；这里只放前台专用布局。
+   - 面板单位参照 1440 × 810（WarSandboxUiToolkit.ReferenceWidth/Height）。
+   ===================================================================== */
+
+.fe { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.fe-page { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.fe-center { align-items: center; justify-content: center; }
+.fe-block { margin: 12px 0 0 0; }
+.fe-missing { position: absolute; left: 0; right: 0; top: 0; bottom: 0; -unity-text-align: middle-center; font-size: 14px; color: var(--c-muted); }
+
+/* ---------- 主菜单 ---------- */
+.fe-home { flex-direction: row; align-items: center; padding: 40px 72px 64px 72px; }
+.fe-home__left { flex-grow: 1; flex-basis: 0; justify-content: center; padding-right: 40px; }
+.fe-home__eyebrow { font-size: 20px; color: #E07F00; -unity-font-style: bold; }
+.fe-home__title { font-size: 76px; -unity-font-style: bold; color: var(--c-ink); margin: 6px 0 10px -4px; }
+.fe-home__desc { font-size: 22px; color: var(--c-ink2); white-space: normal; margin-bottom: 34px; }
+.fe-home__play { align-self: flex-start; width: 320px; margin-left: 0; }
+.fe-home__row { margin-top: 18px; }
+.fe-home__btn { margin-left: 0; margin-right: 12px; }
+.fe-home__quit { align-self: flex-start; margin: 14px 0 0 0; padding-left: 8px; }
+.fe-home__card { width: 40%; max-width: 560px; height: 78%; padding: 20px 20px 26px 20px; }
+.fe-home__portrait { flex-grow: 1; -unity-background-scale-mode: scale-to-fit; border-radius: 14px; background-color: #F4EEDF; }
+.fe-home__note { font-size: 22px; -unity-font-style: bold; color: var(--c-ink); -unity-text-align: middle-center; margin-top: 14px; }
+.fe-home__footer { position: absolute; left: 76px; bottom: 26px; font-size: 14px; color: var(--c-ink2); }
+
+/* ---------- 选择战场 ---------- */
+.page--ops.fe-page { padding: 82px 28px 28px 28px; }
+.fe-ops-list { width: 440px; }
+.fe-top-home { margin-left: 0; margin-right: 16px; }
+.fe-cat-title { font-size: 40px; white-space: normal; margin: 2px 0 14px 0; }
+.ops-detail .stat__v { font-size: 30px; }
+.ops-detail .stat__v--text { font-size: 22px; margin: 8px 0 4px 0; }
+.ops-detail .stat { padding: 10px 16px; }
+.fe-brief { flex-grow: 1; flex-basis: 0; width: auto; margin-top: 4px; }
+.fe-brief .h-sub { margin-top: 14px; }
+.fe-brief .para { font-size: 16px; white-space: normal; margin-top: 8px; }
+.fe-brief .callout__text { font-size: 14px; }
+.fe-chip { margin: 8px 8px 0 0; }
+.fe-chip--on { background-color: #E3F2FD; border-color: #8CC6F2; color: #1F5F96; }
+.fe-media { width: 46%; margin: 18px 0 0 24px; }
+.fe-preview { flex-grow: 1; flex-basis: 0; min-height: 120px; }
+.fe-preview__img { flex-grow: 1; -unity-background-scale-mode: scale-and-crop; }
+.fe-unit { height: 186px; margin-top: 12px; flex-direction: row; padding: 10px; }
+.fe-unit__img { width: 150px; -unity-background-scale-mode: scale-to-fit; border-radius: 10px; background-color: #FFFFFF; }
+.fe-unit .fe-missing { width: 150px; right: auto; white-space: normal; padding: 10px; }
+.fe-unit__info { flex-grow: 1; margin-left: 14px; }
+.fe-unit__name { font-size: 20px; -unity-font-style: bold; color: var(--c-ink); margin: 6px 0 4px 0; white-space: normal; }
+.fe-unit__zoom { margin: 8px 0 0 0; align-self: flex-start; }
+.fe-pager { width: 40px; margin-left: 0; padding: 0; font-size: 18px; }
+.fe-pager__n { width: 64px; -unity-text-align: middle-center; font-size: 14px; color: var(--c-ink2); }
+.fe-error-inline { font-size: 14px; color: var(--c-danger); white-space: normal; max-width: 420px; margin-right: 16px; }
+.fe-empty { position: absolute; left: 28px; right: 28px; top: 96px; padding: 24px 28px 30px 28px; }
+.fe-empty .para { margin-top: 10px; font-size: 18px; color: var(--c-danger); }
+.unit-chips .chip--unit { margin: 8px 8px 0 0; }
+
+/* ---------- 载入 / 失败 ---------- */
+.fe-card { width: 600px; padding: 28px 32px 34px 32px; }
+.fe-card--wide { width: 760px; max-height: 88%; }
+.fe-card .h-page { margin: 6px 0 18px 0; }
+.fe-progress { height: 14px; border-radius: 7px; background-color: #EFE6D3; overflow: hidden; margin-bottom: 12px; }
+.fe-progress__fill { height: 100%; width: 0; border-radius: 7px; background-color: var(--c-amber); }
+.fe-code-danger { color: var(--c-danger); -unity-font-style: bold; }
+.fe-fail-scroll { flex-grow: 1; flex-shrink: 1; min-height: 120px; max-height: 420px; background-color: #FFFFFF; border-radius: 14px; border-width: 2px; border-color: #F3C7C1; padding: 12px 14px; }
+.fe-fail-text { color: #B4362D; font-size: 15px; }
+
+/* ---------- 战斗系统栏（位置/尺寸由代码按 NavigationRect 设置） ---------- */
+.fe-nav { position: absolute; flex-direction: row; }
+.fe-nav__btn {
+    height: 100%; margin: 0 4px 0 0; padding: 0;
+    border-radius: 14px; border-width: 2px; border-bottom-width: 3px; border-color: #DCD0BA;
+    background-color: #FFFFFF; color: var(--c-ink); font-size: 14px; -unity-font-style: bold;
+}
+.fe-nav__btn:hover:enabled { background-color: #FFF6E3; border-color: #E8C98E; }
+.fe-nav__btn:active:hover:enabled { background-color: #FFEFD0; translate: 0 1px; }
+.fe-nav__btn--s { flex-grow: 56; flex-basis: 0; }
+.fe-nav__btn--l { flex-grow: 88; flex-basis: 0; }
+.fe-nav__btn--q { flex-grow: 52; flex-basis: 0; margin-right: 0; color: #D9372C; border-color: #F4B3AB; background-color: #FFF5F3; }
+.fe-nav__btn--q:hover:enabled { background-color: #FFE6E2; border-color: #F0453A; }
+.fe-nav-error { position: absolute; width: 420px; padding: 12px 16px 16px 16px; }
+.fe-error-text { font-size: 14px; color: #B4362D; white-space: normal; }
+
+/* ---------- 确认弹窗 ---------- */
+.fe-modal { width: 520px; padding: 26px 30px 30px 30px; --frame-fill: #FFFCF4; --frame-radius: 26; --frame-shadow: 0.22; }
+.fe-modal .h-page { margin: 4px 0 10px 0; }
+.fe-modal__body { font-size: 16px; white-space: normal; margin-bottom: 10px; }

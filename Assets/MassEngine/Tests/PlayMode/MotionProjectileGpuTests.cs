@@ -117,6 +117,7 @@ namespace MassEngine.Tests
             using (var settings = new ComputeBuffer(1, UnitTypeGpuSettings.StrideBytes))
             using (var grid = new ComputeBuffer(cells, 4))
             using (var ids = new ComputeBuffer(cells * capacity, 4))
+            using (var largeCellsFx = new ComputeBuffer(cells * MassGpuBufferManager.LargeCellStride, 4)) // C2 (2026-10-12): the projectile collision also reads largeCellsReadBuffer; an unbound buffer skips the dispatch.
             {
                 var shot = ProjectileGpuData.CreateEmpty();
                 shot.position = new Vector3(0, above ? 3 : 1, 1); shot.velocity = new Vector3(10, ballistic ? 4.9f : 0, 0);
@@ -139,6 +140,7 @@ namespace MassEngine.Tests
                 projectile.SetBuffer(k, "teamIdReadBuffer", team); projectile.SetBuffer(k, "pendingDamageBuffer", damage);
                 projectile.SetBuffer(k, "unitTypeIndexReadBuffer", type); projectile.SetBuffer(k, "unitTypeSettings", settings);
                 projectile.SetBuffer(k, "gridCountsReadBuffer", grid); projectile.SetBuffer(k, "gridAgentIndicesReadBuffer", ids);
+                largeCellsFx.SetData(new uint[cells * MassGpuBufferManager.LargeCellStride]); projectile.SetBuffer(k, "largeCellsReadBuffer", largeCellsFx);
                 projectile.SetInt("maxProjectiles", 1); projectile.SetInt("maxAgentsPerCell", capacity);
                 projectile.SetInts("gridResolution", overflow ? 1 : width, overflow ? 1 : 3);
                 projectile.SetVector("gridOrigin", new Vector4(-2, -2, 0, 0)); projectile.SetFloat("cellSize", 2);
@@ -162,7 +164,7 @@ namespace MassEngine.Tests
                 finally { terrain?.Dispose(); }
             }
         }
-        [Test] public void FriendlyBodyBlocksWithoutFriendlyFireAcrossSeveralCells()
+        [Test, Ignore("方案 B 远程覆盖射击（2026-10-14 已批准）：友军不再挡箭。本测试验证的是旧的友军遮挡规则。")] public void FriendlyBodyBlocksWithoutFriendlyFireAcrossSeveralCells()
         {
             var r = Sweep(true); Assert.AreEqual(-1, r.Shot.targetAgentIndex);
             CollectionAssert.AreEqual(new[] { 0, 0, 0 }, r.Damage);
@@ -180,7 +182,7 @@ namespace MassEngine.Tests
         {
             var r = Sweep(true, above: true); CollectionAssert.AreEqual(new[] { 0, 0, 7 }, r.Damage);
         }
-        [Test] public void LargeBodyOutsideSegmentCellsStillBlocks()
+        [Test, Ignore("方案 B 远程覆盖射击（2026-10-14 已批准）：友军不再挡箭。本测试验证的是旧的友军遮挡规则。")] public void LargeBodyOutsideSegmentCellsStillBlocks()
         {
             var r = Sweep(true, large: true); Assert.AreEqual(-1, r.Shot.targetAgentIndex);
             Assert.Less(r.Shot.position.x, 4);
@@ -204,7 +206,7 @@ namespace MassEngine.Tests
             Assert.That(r.Shot.position.y, Is.EqualTo(1).Within(.001f));
         }
 
-        [Test] public void CloseLoftClearsRealFriendlyCapsuleWhereOriginalLowArcHitsIt()
+        [Test, Ignore("方案 B 远程覆盖射击（2026-10-14 已批准）：友军不再挡箭。本测试验证的是旧的友军遮挡规则。")] public void CloseLoftClearsRealFriendlyCapsuleWhereOriginalLowArcHitsIt()
         {
             var low = Sweep(true,closeLoft:1); var high = Sweep(true,closeLoft:2);
             Assert.AreEqual(0,low.Damage[2],"Control: original short arc is intercepted by the front rank.");
@@ -213,7 +215,7 @@ namespace MassEngine.Tests
             Assert.AreEqual(0,high.Damage[1]);
         }
 
-        [Test] public void TwentyMeterLoftClearsTightFrontRankWithoutPiercingIt()
+        [Test, Ignore("方案 B 远程覆盖射击（2026-10-14 已批准）：友军不再挡箭。本测试验证的是旧的友军遮挡规则。")] public void TwentyMeterLoftClearsTightFrontRankWithoutPiercingIt()
         {
             var shortApex = Sweep(true,closeLoft:4); var rangeAware = Sweep(true,closeLoft:3);
             Assert.AreEqual(0,shortApex.Damage[2],"Control: a short-shot apex alone cannot clear a near neighbor at twenty meters.");

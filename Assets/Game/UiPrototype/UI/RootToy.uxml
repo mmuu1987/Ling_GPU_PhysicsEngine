@@ -1,0 +1,54 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.UiPrototype" editor-extension-mode="False">
+    <Style src="UiProtoToy.uss" />
+    <ui:Template name="Ops" src="Ops.uxml" />
+    <ui:Template name="Deploy" src="Deploy.uxml" />
+    <ui:Template name="Battle" src="Battle.uxml" />
+    <ui:Template name="Result" src="Result.uxml" />
+    <ui:Template name="Settings" src="Settings.uxml" />
+    <ui:VisualElement name="app" class="app">
+        <tac:TacBackdrop name="backdrop" class="fill" picking-mode="Ignore" />
+        <ui:VisualElement class="fill vignette" picking-mode="Ignore" />
+        <ui:VisualElement name="screens" class="fill" picking-mode="Ignore">
+            <ui:Instance template="Ops" name="screen-ops" class="screen" />
+            <ui:Instance template="Deploy" name="screen-deploy" class="screen" />
+            <ui:Instance template="Battle" name="screen-battle" class="screen" />
+        </ui:VisualElement>
+        <ui:VisualElement name="topbar" class="topbar">
+            <tac:TacIcon icon="logo" class="brand-mark" />
+            <ui:Label text="MASS WAR SANDBOX" class="brand" />
+            <ui:Label text="//" class="crumb-sep" />
+            <ui:Label name="crumb" text="作战选择" class="crumb" />
+            <ui:VisualElement class="spacer" />
+            <ui:Label name="clock" text="SYS 00:00:00" class="sys-clock mono" />
+            <ui:Button name="top-library" class="sysbtn">
+                <tac:TacIcon icon="library" class="sysbtn__icon" />
+                <ui:Label text="兵种库" />
+            </ui:Button>
+            <ui:Button name="top-settings" class="sysbtn">
+                <tac:TacIcon icon="settings" class="sysbtn__icon" />
+                <ui:Label text="设置" />
+            </ui:Button>
+            <ui:Button name="top-exit" class="sysbtn sysbtn--danger">
+                <tac:TacIcon icon="exit" class="sysbtn__icon" />
+                <ui:Label text="退出" />
+            </ui:Button>
+        </ui:VisualElement>
+        <ui:VisualElement name="modals" class="fill" picking-mode="Ignore">
+            <ui:Instance template="Result" name="modal-result" class="modal" />
+            <ui:Instance template="Settings" name="modal-settings" class="modal" />
+        </ui:VisualElement>
+        <ui:VisualElement class="fill scanlines" picking-mode="Ignore" />
+        <ui:VisualElement name="toast" class="toast" picking-mode="Ignore">
+            <tac:TacIcon icon="info" class="toast__icon" />
+            <ui:Label name="toast-text" text="" class="toast__text" />
+        </ui:VisualElement>
+        <ui:VisualElement name="protonav" class="protonav">
+            <ui:Label text="UI 原型 · 无游戏逻辑 · 数据为模拟" class="protonav__tag" />
+            <ui:Button name="nav-ops" text="F5 作战选择" class="protonav__btn" />
+            <ui:Button name="nav-deploy" text="F6 配兵布阵" class="protonav__btn" />
+            <ui:Button name="nav-battle" text="F7 战斗" class="protonav__btn" />
+            <ui:Button name="nav-result" text="F8 结算" class="protonav__btn" />
+            <ui:Button name="nav-settings" text="F9 设置" class="protonav__btn" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

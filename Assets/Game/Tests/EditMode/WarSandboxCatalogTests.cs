@@ -101,15 +101,19 @@ namespace MassEngine.Game.Tests
         {
             const string menu = "Assets/Game/Scenes/MainMenu.unity";
             const string catalogPath = "Assets/Game/Scenes/Catalog.asset";
-            string[] formal = { menu, "Assets/Game/Scenes/Green.unity", "Assets/Game/Scenes/Autumn.unity", "Assets/Game/Scenes/Winter.unity" };
+            const string m1 = "Assets/Game/Content/Battlefields/Maps1024/", m2 = "Assets/Game/Content/Battlefields/Maps2048/";
+            string[] formal = { menu, "Assets/Game/Content/Battlefields/Map1024/Green1024.unity", m1 + "Plains/Plains.unity", m1 + "ForestHills/ForestHills.unity",
+                m1 + "ProcRockySteppe/ProcRockySteppe.unity", m1 + "ProcAutumnWoods/ProcAutumnWoods.unity", m1 + "ProcSnowHighlands/ProcSnowHighlands.unity",
+                m1 + "ProcStoneForest/ProcStoneForest.unity", m1 + "ProcDeepWoods/ProcDeepWoods.unity", m2 + "TestPlain2048/TestPlain2048.unity",
+                m2 + "Hills2048/Hills2048.unity", m2 + "RidgePass2048/RidgePass2048.unity", m2 + "CanyonMesa2048/CanyonMesa2048.unity", m2 + "CliffPlateau2048/CliffPlateau2048.unity" };
             CollectionAssert.AreEqual(formal, System.Array.ConvertAll(EditorBuildSettings.scenes, s => s.path));
             Assert.That(System.Array.TrueForAll(EditorBuildSettings.scenes, s => s.enabled), Is.True);
             var shipped = AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>(catalogPath);
             Assert.That(shipped, Is.Not.Null);
             Assert.That(shipped.TryValidate(WarSandboxEntryBuilder.IsIncludedScene, out var error), Is.True, error);
             Assert.That(shipped.TryValidateTemplates(out error), Is.True, error);
-            Assert.That(shipped.defaultEntryId, Is.EqualTo("forest-green22"));
-            CollectionAssert.AreEqual(new[] { formal[1], formal[2], formal[3] }, System.Array.ConvertAll(shipped.entries, e => e.scenePath));
+            Assert.That(shipped.defaultEntryId, Is.EqualTo("plains-1024"));
+            CollectionAssert.AreEquivalent(System.Linq.Enumerable.Skip(formal, 1), System.Array.ConvertAll(shipped.entries, e => e.scenePath));
             string guid = AssetDatabase.AssetPathToGUID(catalogPath);
             Assert.That(guid, Is.Not.Empty);
             StringAssert.Contains("catalog: {fileID: 11400000, guid: " + guid, System.IO.File.ReadAllText(menu));

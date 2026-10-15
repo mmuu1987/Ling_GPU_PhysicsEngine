@@ -47,8 +47,13 @@ namespace MassEngine.Game
                 var entry = candidate[i];
                 var center = new Vector2(entry.center.x, entry.center.z);
                 var size = entry.Size;
+                // C4 (2026-10-12): edge members stand on the footprint boundary. The nav mask already
+                // keeps crowd radii clear; a body wider than that clearance (large units, which do not
+                // widen the shared mask) needs the remainder checked explicitly.
+                float overhang = entry.template != null && entry.template.flockingConfig != null
+                    ? Mathf.Max(0f, entry.template.flockingConfig.agentRadius - navigation.Clearance) : 0f;
                 if (!surface.TrySample(center, out _) ||
-                    !navigation.IsFootprintWalkable(center, new Vector2(size.x, size.z)))
+                    !navigation.IsFootprintWalkable(center, new Vector2(size.x + 2f * overhang, size.z + 2f * overhang)))
                 { error = "编成 " + (i + 1) + "：完整部署脚印覆盖禁行地形、陡坡、障碍或边界留白。"; return false; }
             }
             return true;

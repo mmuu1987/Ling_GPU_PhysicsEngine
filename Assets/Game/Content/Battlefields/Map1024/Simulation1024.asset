@@ -15,4 +15,4 @@ MonoBehaviour:
   simulationWorldSize: {x: 1024, y: 1024}
   boundaryPadding: 2
   cellSize: 3
-  maxAgentsPerCell: 18
+  maxAgentsPerCell: 54

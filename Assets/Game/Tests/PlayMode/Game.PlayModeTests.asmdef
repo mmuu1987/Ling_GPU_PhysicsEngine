@@ -1,7 +1,7 @@
 {
     "name": "Game.PlayModeTests",
     "rootNamespace": "MassEngine.Game.Tests",
-    "references": ["MassEngine", "Game", "UnityEngine.UI", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+    "references": ["MassEngine", "Game", "Game.Harness", "UnityEngine.UI", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

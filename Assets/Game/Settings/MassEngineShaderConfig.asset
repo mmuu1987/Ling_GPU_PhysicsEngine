@@ -16,3 +16,4 @@ MonoBehaviour:
   runtimeFlowShader: {fileID: 7200000, guid: 0d7a3f16661466f4a9afeeaa491c347c, type: 3}
   combatSimulationShader: {fileID: 7200000, guid: 79e52f9c40245924db5b507171e4a0a3, type: 3}
   lodClassificationShader: {fileID: 7200000, guid: 74899bb940eb73d4997dd2a13b913d51, type: 3}
+  gpuNavFieldShader: {fileID: 7200000, guid: e97e0bb09475fe9429fef61e9d03915c, type: 3}

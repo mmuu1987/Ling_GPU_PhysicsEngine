@@ -12,14 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010005, type: 3}
   m_Name: DefenderUnitConfig_Animation
   m_EditorClassIdentifier: 
-  idleClipFrameRange: {x: 0, y: 30}
-  moveClipFrameRange: {x: 0, y: 30}
-  attackClipFrameRange: {x: 0, y: 30}
-  deathClipFrameRange: {x: 0, y: 30}
-  idleClipFrameRate: 30
-  moveClipFrameRate: 30
-  attackClipFrameRate: 30
-  deathClipFrameRate: 30
-  nearAnimationInterval: 1
-  midAnimationInterval: 2
-  farAnimationInterval: 4
+  moveReferenceSpeed: 6
+  moveStopSpeed: 0.05
+  moveStartSpeed: 0.12
+  moveAnimationSpeedMin: 0.2
+  moveAnimationSpeedMax: 2

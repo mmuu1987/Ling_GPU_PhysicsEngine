@@ -102,11 +102,13 @@ namespace MassEngine.Game
             {
                 var selected = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
                 var field = selected != null ? selected.GetComponent<InputField>() : null;
-                return field != null && field.isFocused;
+                return field != null && field.isFocused || Ui.WarSandboxUiToolkit.IsTyping;
             }
         }
+        /// <summary>Over any visible sandbox UI: these uGUI canvases or a UI Toolkit document (see WarSandboxUiToolkit).</summary>
         public static bool PointerOverUI()
         {
+            if (Ui.WarSandboxUiToolkit.PointerOverUI()) return true;
             if (EventSystem.current == null) return false;
             var data = new PointerEventData(EventSystem.current) { position = Input.mousePosition };
             foreach (var ui in instances)
@@ -431,6 +433,7 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
 

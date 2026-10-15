@@ -103,6 +103,15 @@ namespace MassEngine
         public float corpseLingerSeconds;
         public float corpseSinkSeconds;
         public float corpseSinkDepth;
+        // Presentation hold (LodConfig). 0 = shown clip follows the logic state immediately.
+        public float presentationHoldSeconds;
+        public float attackPresentationHoldSeconds;
+        // Round 6 locomotion presentation (LodConfig). All 0 = legacy.
+        public float locomotionStartSpeed;
+        public float locomotionStopSpeed;
+        public float minStandSeconds;
+        public float minWalkSeconds;
+        public float moveAnimationSpeedFloor;
         public Vector4[] frustumPlanes;
         public int nearAnimationInterval;
         public int midAnimationInterval;
@@ -110,6 +119,9 @@ namespace MassEngine
         public int nearSimulationInterval;
         public int midSimulationInterval;
         public int farSimulationInterval;
+        // LOD transition (2026-10-13). 0 / 0 = hard ring, instant switch (legacy).
+        public float lodHysteresis;
+        public float lodCrossfadeSeconds;
     }
 
     /// <summary>
@@ -158,3 +170,4 @@ namespace MassEngine
         public ComputePipelineOrchestrator pipeline;
     }
 }
+

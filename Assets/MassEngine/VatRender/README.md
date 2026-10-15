@@ -119,3 +119,9 @@ Female 的现役三级路径为 4066/2018/39 顶点，本轮未重烘 Female，�
 默认停下/启动阈值为0.05/0.12m/s（随scale.y缩放），非静止速度做轻量平滑；Idle使用自己的片段周期。
 大型模型可在独立AnimationConfig中调 moveReferenceSpeed，不能直接改共享模板而误影响其他兵种；这只是步频近似，不是真正Walk素材。
 远程Attack的进度由战斗周期写入，分类kernel不再重复推进，LOD不改变出手节奏；暂停冻结所有片段时间，Death年龄不被表现切换重置。
+
+## 顶点 AO（可选，2026-10-13）
+
+离线烘焙每顶点遮蔽到 AO 网格副本的 uv3.x（`MassEngine/顶点AO` 菜单，`Editor/VertexAoBaker.cs`），
+`VertexAoLibrary` 在兵种解析时替换网格并写 `_VertexAO` / `_VertexAODirect`；未烘焙或开关关闭时 AO 恒为 1，渲染不变。
+原 profile/网格/贴图不改。详见 [顶点AO](../../../Docs/VertexAO-20261013.md)。

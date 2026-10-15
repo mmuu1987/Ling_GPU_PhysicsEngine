@@ -47,6 +47,7 @@ namespace MassEngine.Tests
             using (var settings = new ComputeBuffer(1, UnitTypeGpuSettings.StrideBytes))
             using (var grid = new ComputeBuffer(cells, 4))
             using (var ids = new ComputeBuffer(cells * capacity, 4))
+            using (var largeCellsFx = new ComputeBuffer(cells * MassGpuBufferManager.LargeCellStride, 4)) // C2 (2026-10-12): the projectile collision also reads largeCellsReadBuffer; an unbound buffer skips the dispatch.
             {
                 var shot = ProjectileGpuData.CreateEmpty();
                 shot.position = new Vector3(0, 1, 1); shot.velocity = new Vector3(10, 0, 0);
@@ -61,6 +62,7 @@ namespace MassEngine.Tests
                 projectile.SetBuffer(k, "teamIdReadBuffer", team); projectile.SetBuffer(k, "pendingDamageBuffer", damage);
                 projectile.SetBuffer(k, "unitTypeIndexReadBuffer", type); projectile.SetBuffer(k, "unitTypeSettings", settings);
                 projectile.SetBuffer(k, "gridCountsReadBuffer", grid); projectile.SetBuffer(k, "gridAgentIndicesReadBuffer", ids);
+                largeCellsFx.SetData(new uint[cells * MassGpuBufferManager.LargeCellStride]); projectile.SetBuffer(k, "largeCellsReadBuffer", largeCellsFx);
                 projectile.SetInt("maxProjectiles", 1); projectile.SetInt("maxAgentsPerCell", capacity);
                 projectile.SetInts("gridResolution", width, height);
                 projectile.SetVector("gridOrigin", new Vector4(-2, -2, 0, 0)); projectile.SetFloat("cellSize", 2);

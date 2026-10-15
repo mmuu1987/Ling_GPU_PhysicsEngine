@@ -1,20 +1,16 @@
 #ifndef MASS_LOCAL_PARTITION_INCLUDED
 #define MASS_LOCAL_PARTITION_INCLUDED
-// 4 admitted groups * 4096 members. Sorted IDs, independent of army size.
-// Exactly 64 KiB in a separate cbuffer; no additional UAV/SRV or dummy resource.
-cbuffer MassLocalPartitionMembers { int4 _LocalPartitionIds[4096]; };
-int _LocalPartitionCount;
+// Membership bitset: bit (index & 31) of 32-bit word (index >> 5) marks an agent admitted to a partitioned local order.
+// 4096 int4 = 16384 words = 524288 agents, exactly 64 KiB in a separate cbuffer; no additional UAV/SRV or dummy resource.
+// One warp-coherent read per agent (32 consecutive agents share a word); no per-group or per-order member limit.
+cbuffer MassLocalPartitionMembers { int4 _LocalPartitionBits[4096]; };
+int _LocalPartitionCount; // words in use; 0 = partition inactive
 bool LocalPartitionContains(uint index)
 {
-    if (_LocalPartitionCount <= 0) return false;
-    int lo=0, hi=min(_LocalPartitionCount,16384);
-    [loop] while(lo<hi) {
-        int mid=lo+(hi-lo)/2;
-        uint member=(uint)_LocalPartitionIds[mid>>2][mid&3];
-        if(member==index) return true;
-        if(member<index) lo=mid+1; else hi=mid;
-    }
-    return false;
+    uint word = index >> 5;
+    if (_LocalPartitionCount <= 0 || word >= (uint)min(_LocalPartitionCount, 16384)) return false;
+    uint bits = (uint)_LocalPartitionBits[word >> 2][word & 3];
+    return ((bits >> (index & 31)) & 1u) != 0;
 }
 #if defined(LP_ATTACKMELEE)
 #define LP_STANCE 1

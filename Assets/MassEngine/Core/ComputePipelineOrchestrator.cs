@@ -44,6 +44,8 @@ namespace MassEngine
         // Opt-in melee charge table; null keeps SimulateCombatAndAccumulateDamage on its legacy variant.
         public MeleeChargeParams MeleeCharge { get; set; }
         public LocalOrderChannel LocalCommands { get; set; }
+        /// <summary>N1 shadow GPU nav field (Docs/GPU-NAVFIELD-N0-20261013.md); null = off. Relaxed after the runtime flow pass.</summary>
+        public GpuNavField FineNavigation { get; set; }
         private bool localPartitionActive;
         private static readonly string[] LocalLabels={"SimulateLocalAttackMelee","SimulateLocalAttackRanged","SimulateLocalMoveMelee","SimulateLocalMoveRanged","SimulateLocalHoldMelee","SimulateLocalHoldRanged"};
 
@@ -76,6 +78,7 @@ namespace MassEngine
             DispatchSpatialHash(frameContext);
 
             DispatchRuntimeFlow(frameContext);
+            if (frameContext.terrain != null) FineNavigation?.Tick(buffers, frameContext);
 
             if (frameContext.rebuildDensityMap)
                 DispatchDensityMap(frameContext);
@@ -172,18 +175,21 @@ namespace MassEngine
                 MeleeCharge.Bind(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage);
             else if (shaders.CombatSimulationShader != null)
                 MeleeChargeParams.Unbind(shaders.CombatSimulationShader);
+            bool gpuNavSampling = GpuNavField.BeginSampling(FineNavigation, shaders, context.terrain != null);
             if(localPartitionActive) {
                 for(int role=0;role<6;role++) {
                     if(!LocalCommands.UsesPartition(role))continue;
                     int kernel=shaders.LocalKernel(role);
                     BindSimulationBuffers(kernel);
                     context.terrain.Bind(shaders.ForSimulationKernel(kernel));
+                    if(gpuNavSampling)FineNavigation.BindSampling(shaders.CombatSimulationShader,kernel);
                     LocalCommands.BindPartitionKernel(shaders.CombatSimulationShader,kernel);
                     if(charge)MeleeCharge.Bind(shaders.CombatSimulationShader,kernel);
                     Dispatch(shaders.CombatSimulationShader,kernel,Mathf.Max(1,context.agentThreadGroupsX),LocalLabels[role]);
                 }
             }
             Dispatch(shaders.CombatSimulationShader, shaders.SimulateCombatAndAccumulateDamage, Mathf.Max(1, context.agentThreadGroupsX), "SimulateCombatAndAccumulateDamage");
+            GpuNavField.EndSampling(shaders, gpuNavSampling);
             // The compute asset is shared (kernel tests dispatch it directly): never leave the keyword on.
             if (charge)
                 MeleeChargeParams.Unbind(shaders.CombatSimulationShader);
@@ -253,7 +259,10 @@ namespace MassEngine
                 ComputeShader shader = shaders.LodClassificationShader;
                 int kernel = shaders.ClassifyVisibleAgentsForUnitType;
                 if (shader != null)
+                {
                     shader.SetInt(ClassifyUnitTypeIndexId, unitTypeIndex);
+                    shader.SetInt(LodCrossfadeEnabledId, buffers.IsLodCrossfade(unitTypeIndex) ? 1 : 0);
+                }
                 SetBuffer(shader, kernel, NearVisibleAgentIndicesId, buffers.GetVisibleIndexBuffer(unitTypeIndex, 0));
                 SetBuffer(shader, kernel, MidVisibleAgentIndicesId, buffers.GetVisibleIndexBuffer(unitTypeIndex, 1));
                 SetBuffer(shader, kernel, FarVisibleAgentIndicesId, buffers.GetVisibleIndexBuffer(unitTypeIndex, 2));
@@ -279,12 +288,21 @@ namespace MassEngine
             // a dead agent's animation time at its death clip, as it did before.
             shaders.SetFloat(CorpseLingerSecondsId, Mathf.Max(0f, context.lod.corpseLingerSeconds));
             shaders.SetFloat(CorpseSinkSecondsId, Mathf.Max(0f, context.lod.corpseSinkSeconds));
+            shaders.SetFloat(PresentationHoldSecondsId, Mathf.Max(0f, context.lod.presentationHoldSeconds));
+            shaders.SetFloat(AttackPresentationHoldSecondsId, Mathf.Max(0f, context.lod.attackPresentationHoldSeconds));
+            shaders.SetFloat(LocomotionStartSpeedFloorId, Mathf.Max(0f, context.lod.locomotionStartSpeed));
+            shaders.SetFloat(LocomotionStopSpeedFloorId, Mathf.Max(0f, context.lod.locomotionStopSpeed));
+            shaders.SetFloat(MinStandSecondsId, Mathf.Max(0f, context.lod.minStandSeconds));
+            shaders.SetFloat(MinWalkSecondsId, Mathf.Max(0f, context.lod.minWalkSeconds));
+            shaders.SetFloat(MoveAnimationSpeedFloorId, Mathf.Max(0f, context.lod.moveAnimationSpeedFloor));
             shaders.SetInt(NearAnimationIntervalId, Mathf.Max(1, context.lod.nearAnimationInterval));
             shaders.SetInt(MidAnimationIntervalId, Mathf.Max(1, context.lod.midAnimationInterval));
             shaders.SetInt(FarAnimationIntervalId, Mathf.Max(1, context.lod.farAnimationInterval));
             shaders.SetInt(NearSimulationIntervalId, Mathf.Max(1, context.lod.nearSimulationInterval));
             shaders.SetInt(MidSimulationIntervalId, Mathf.Max(1, context.lod.midSimulationInterval));
             shaders.SetInt(FarSimulationIntervalId, Mathf.Max(1, context.lod.farSimulationInterval));
+            shaders.SetFloat(LodHysteresisRatioId, 1f + Mathf.Max(0f, context.lod.lodHysteresis));
+            shaders.SetFloat(LodCrossfadeSecondsId, Mathf.Max(0f, context.lod.lodCrossfadeSeconds));
 
             shaders.SetInt(GridCellCountId, Mathf.Max(1, context.grid.resolutionX * context.grid.resolutionZ));
             shaders.SetInts(GridResolutionId, Mathf.Max(1, context.grid.resolutionX), Mathf.Max(1, context.grid.resolutionZ));
@@ -379,6 +397,7 @@ namespace MassEngine
             SetBuffer(shaders.SpatialHashShader, shaders.ClearGrid, GridCountsId, buffers.gridCountsBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.ClearGrid, TeamGridCountsId, buffers.teamGridCountsBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.ClearGrid, SpatialHashStatsId, buffers.spatialHashStatsBuffer);
+            SetBuffer(shaders.SpatialHashShader, shaders.ClearGrid, LargeCellsId, buffers.largeCellsBuffer);
 
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, AgentBufferId, buffers.agentBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
@@ -389,6 +408,11 @@ namespace MassEngine
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, TeamGridAgentIndicesId, buffers.teamGridAgentIndicesBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
             SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, SpatialHashStatsId, buffers.spatialHashStatsBuffer);
+            // C1: large-body stamping needs each agent's body radius (type radius x spawn scale).
+            SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, UnitTypeSettingsId, buffers.unitTypeSettingsBuffer);
+            SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, UnitTypeIndexReadBufferId, buffers.unitTypeIndexBuffer);
+            // Seven UAVs in total: D3D11.0 allows eight per dispatch.
+            SetBuffer(shaders.SpatialHashShader, shaders.BuildSpatialHash, LargeCellsId, buffers.largeCellsBuffer);
         }
 
         private void BindRuntimeFlowBuffers()
@@ -435,6 +459,7 @@ namespace MassEngine
             SetTexture(combat, shaders.ClearDensityMap, DensityMapWriteId, buffers.densityMapTexture);
             SetTexture(combat, shaders.ClearDensityMap, AttackerDensityMapWriteId, buffers.attackerDensityMapTexture);
             SetTexture(combat, shaders.ClearDensityMap, DefenderDensityMapWriteId, buffers.defenderDensityMapTexture);
+            SetBuffer(combat, shaders.ClearDensityMap, RangedBlockBufferId, buffers.rangedBlockBuffer);
 
             SetBuffer(combat, shaders.BuildDensityMap, AgentBufferId, buffers.agentBuffer);
             SetBuffer(combat, shaders.BuildDensityMap, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
@@ -442,6 +467,7 @@ namespace MassEngine
             SetTexture(combat, shaders.BuildDensityMap, DensityMapWriteId, buffers.densityMapTexture);
             SetTexture(combat, shaders.BuildDensityMap, AttackerDensityMapWriteId, buffers.attackerDensityMapTexture);
             SetTexture(combat, shaders.BuildDensityMap, DefenderDensityMapWriteId, buffers.defenderDensityMapTexture);
+            SetBuffer(combat, shaders.BuildDensityMap, RangedBlockBufferId, buffers.rangedBlockBuffer);
 
             SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, AgentBufferId, buffers.agentBuffer);
             SetBuffer(combat, shaders.BuildEngagementSlotOccupancy, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
@@ -466,6 +492,8 @@ namespace MassEngine
             SetBuffer(combat, simulate, GridAgentIndicesReadBufferId, buffers.gridAgentIndicesBuffer);
             SetBuffer(combat, simulate, TeamGridCountsReadBufferId, buffers.teamGridCountsBuffer);
             SetBuffer(combat, simulate, TeamGridAgentIndicesReadBufferId, buffers.teamGridAgentIndicesBuffer);
+            SetBuffer(combat, simulate, LargeCellsReadBufferId, buffers.largeCellsBuffer);
+            SetBuffer(combat, simulate, SpatialHashStatsReadBufferId, buffers.spatialHashStatsBuffer);
             SetBuffer(combat, simulate, TeamIdReadBufferId, buffers.combatBuffers.teamIdBuffer);
             // Only SimulateCombatAndAccumulateDamage reads stances: the locomotion branch and
             // the target-usability test both live there. Other kernels never ask.
@@ -490,6 +518,7 @@ namespace MassEngine
             SetTexture(combat, simulate, DensityMapId, buffers.densityMapTexture);
             SetTexture(combat, simulate, AttackerDensityMapId, buffers.attackerDensityMapTexture);
             SetTexture(combat, simulate, DefenderDensityMapId, buffers.defenderDensityMapTexture);
+            SetBuffer(combat, simulate, RangedBlockReadBufferId, buffers.rangedBlockBuffer); // SRV: 8-UAV limit
         }
 
         private void BindProjectileBuffers()
@@ -506,6 +535,8 @@ namespace MassEngine
             SetBuffer(projectile, simulate, UnitTypeIndexReadBufferId, buffers.unitTypeIndexBuffer);
             SetBuffer(projectile, simulate, GridCountsReadBufferId, buffers.gridCountsBuffer);
             SetBuffer(projectile, simulate, GridAgentIndicesReadBufferId, buffers.gridAgentIndicesBuffer);
+            // C2: large bodies come from their footprint stamps; the swept padding covers normal bodies only.
+            SetBuffer(projectile, simulate, LargeCellsReadBufferId, buffers.largeCellsBuffer);
 
             SetBuffer(projectile, simulate, ProjectileBufferId, buffers.projectileBuffer);
             SetBuffer(projectile, simulate, AgentPositionReadBufferId, buffers.agentPositionReadBuffer);
@@ -523,6 +554,7 @@ namespace MassEngine
             SetBuffer(lod, classify, HpReadBufferId, buffers.combatBuffers.hpReadBuffer);
             SetBuffer(lod, classify, UnitTypeSettingsId, buffers.unitTypeSettingsBuffer);
             SetBuffer(lod, classify, UnitTypeIndexReadBufferId, buffers.unitTypeIndexBuffer);
+            SetBuffer(lod, classify, AgentLodStateBufferId, buffers.agentLodStateBuffer);
             // The three per-unit-type append buffers are bound inside DispatchLodClassification.
         }
 
@@ -581,5 +613,7 @@ namespace MassEngine
         }
     }
 }
+
+
 
 

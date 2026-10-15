@@ -225,7 +225,6 @@ namespace MassEngine
                     agentScales: agentSpawnScales,
                     flatGroundHeights: agentFlatGroundHeights
                 );
-                projectileManager.ClearExpiredProjectiles(Time.time);
             }
 
             Bounds renderBounds = ResolveRenderBounds();
@@ -605,6 +604,7 @@ namespace MassEngine
         public void Release()
         {
             DisableLocalOrderPrototype();
+            DisableGpuNavField();
             ReleaseTerrain();
             if (unitTypeRegistry != null)
                 unitTypeRegistry.ReleaseAll();
@@ -845,13 +845,22 @@ namespace MassEngine
                     corpseLingerSeconds = Lod.corpseLingerSeconds,
                     corpseSinkSeconds = Lod.corpseSinkSeconds,
                     corpseSinkDepth = Lod.corpseSinkDepth,
+                    presentationHoldSeconds = Lod.presentationHoldSeconds,
+                    attackPresentationHoldSeconds = Lod.attackPresentationHoldSeconds,
+                    locomotionStartSpeed = Lod.locomotionStartSpeed,
+                    locomotionStopSpeed = Lod.locomotionStopSpeed,
+                    minStandSeconds = Lod.minStandSeconds,
+                    minWalkSeconds = Lod.minWalkSeconds,
+                    moveAnimationSpeedFloor = Lod.moveAnimationSpeedFloor,
                     frustumPlanes = BuildFrustumPlanes(),
                     nearAnimationInterval = Lod.nearAnimationInterval,
                     midAnimationInterval = Lod.midAnimationInterval,
                     farAnimationInterval = Lod.farAnimationInterval,
                     nearSimulationInterval = Lod.nearSimulationInterval,
                     midSimulationInterval = Lod.midSimulationInterval,
-                    farSimulationInterval = Lod.farSimulationInterval
+                    farSimulationInterval = Lod.farSimulationInterval,
+                    lodHysteresis = Lod.lodHysteresis,
+                    lodCrossfadeSeconds = Lod.lodCrossfadeSeconds
                 }
             };
         }
@@ -1266,4 +1275,5 @@ namespace MassEngine
         }
     }
 }
+
 

@@ -35,6 +35,21 @@ namespace MassEngine
         public MaterialPropertyBlock midBlock;
         public MaterialPropertyBlock farBlock;
 
+        /// <summary>
+        /// LOD crossfade (2026-10-13): true when every LOD material's shader dithers by _MassLodState
+        /// (SubShader tag MassLodCrossfade = 1). Only then does the classification draw an agent in
+        /// both tiers while it changes tier; other shaders keep the instant switch (with hysteresis).
+        /// </summary>
+        public bool SupportsLodCrossfade
+        {
+            get { return LodCrossfadeTagged(nearMaterial) && LodCrossfadeTagged(midMaterial) && LodCrossfadeTagged(farMaterial); }
+        }
+
+        private static bool LodCrossfadeTagged(Material material)
+        {
+            return material == null || material.GetTag("MassLodCrossfade", false) == "1";
+        }
+
         public Mesh GetMesh(int lodLevel)
         {
             if (lodLevel <= 0) return nearMesh;
@@ -123,7 +138,23 @@ namespace MassEngine
             resolved.midBlock = BuildBlock(profile, 1);
             resolved.farBlock = BuildBlock(profile, 2);
 
+            // Optional vertex AO: the AO copy of each LOD mesh (same vertices, AO in uv3.x) plus its strength for the shader.
+            // No library entry or switch off -> same mesh, strength 0 -> identical rendering.
+            resolved.nearMesh = ApplyVertexAo(resolved.nearMesh, resolved.nearBlock);
+            resolved.midMesh = ApplyVertexAo(resolved.midMesh, resolved.midBlock);
+            resolved.farMesh = ApplyVertexAo(resolved.farMesh, resolved.farBlock);
+
             return resolved;
+        }
+
+        private static readonly int VertexAOId = Shader.PropertyToID("_VertexAO");
+        private static readonly int VertexAODirectId = Shader.PropertyToID("_VertexAODirect");
+
+        private static Mesh ApplyVertexAo(Mesh mesh, MaterialPropertyBlock block)
+        {
+            Mesh result = VertexAoLibrary.Substitute(mesh, out float strength, out float direct);
+            if (block != null) { block.SetFloat(VertexAOId, strength); block.SetFloat(VertexAODirectId, direct); }
+            return result;
         }
 
         private static Mesh ResolveVatMesh(string slotName, Mesh authored, Mesh pairedWithVat, UnitTypeConfig context)

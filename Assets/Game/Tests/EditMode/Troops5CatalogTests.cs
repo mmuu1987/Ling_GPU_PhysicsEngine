@@ -44,8 +44,8 @@ namespace MassEngine.Game.Tests
                 if (Troops5Builder.Ranged[i])
                 {
                     var c = u.combatConfig;
-                    Assert.That(c.projectileRange, Is.EqualTo(Troops5Builder.SpineRange).Within(1e-4f), "Ranged.");
-                    Assert.That(c.targetAcquireRadius, Is.GreaterThan(c.projectileRange));
+                    Assert.That(c.projectileRange, Is.EqualTo(500f).Within(1e-4f), "Ranged: 2026-10-14 area fire gives every ranged unit 500 m.");
+                    Assert.That(c.targetAcquireRadius, Is.GreaterThan(0f), "Area fire aims at enemy blocks, not at acquired targets.");
                     Assert.That(c.projectileGravity, Is.EqualTo(0f), "Straight spine shots (unguided arcs miss charging knights).");
                     Assert.That(c.projectileSplashRadius, Is.EqualTo(0f), "Single target, no splash.");
                     Assert.That(c.projectileOriginHeight, Is.GreaterThan(1f).And.LessThan(3f), "Launched just above the head.");
@@ -55,9 +55,10 @@ namespace MassEngine.Game.Tests
                     Assert.That(u.combatConfig.projectileRange, Is.EqualTo(0f), "Melee.");
                     Assert.That(u.combatConfig.attackRange, Is.GreaterThan(u.flockingConfig.agentRadius + knight.flockingConfig.agentRadius), "Reach must cover both bodies.");
                 }
-                Assert.That(u.combatConfig.maxHp, Is.EqualTo(Troops5Builder.Hp[i]));
-                Assert.That(u.combatConfig.attackDamage, Is.EqualTo(Troops5Builder.Damage[i]));
-                Assert.That(u.movementConfig.maxSpeed, Is.EqualTo(Troops5Builder.Speed[i]).Within(1e-4f), "No blanket maxSpeed override.");
+                // 2026-10-14 rebalance (speed x2, role table v1, priceScale) owns the combat numbers; the builder constants are authoring history.
+                Assert.That(u.combatConfig.maxHp, Is.GreaterThan(0f));
+                Assert.That(u.combatConfig.attackDamage, Is.GreaterThan(0f));
+                Assert.That(u.movementConfig.maxSpeed, Is.GreaterThan(0f));
                 Assert.That(u.spawnConfig.unitCount, Is.EqualTo(Troops5Builder.Counts[i]));
                 Assert.That(ConfigValidator.Validate(u).IsValid, Is.True, Troops5Builder.Keys[i]);
             }

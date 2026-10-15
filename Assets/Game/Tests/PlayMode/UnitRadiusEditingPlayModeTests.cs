@@ -16,7 +16,7 @@ namespace MassEngine.Game.Tests
 {
     public class UnitRadiusEditingPlayModeTests
     {
-        private const string Green = "Assets/Game/Scenes/Green.unity";
+        private const string Green = "Assets/Game/Content/Battlefields/Map1024/Green1024.unity";
         private Scene battleScene;
         private GameObject uiOwner, cameraOwner;
         private static string Output

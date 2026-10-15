@@ -53,10 +53,11 @@ namespace MassEngine.Game.Tests
         {Object.DestroyImmediate(root);foreach(var u in new[]{a,b}){Object.DestroyImmediate(u.spawnConfig);Object.DestroyImmediate(u);}Object.DestroyImmediate(source);Object.DestroyImmediate(system.simulationConfig);Object.DestroyImmediate(system.runtimeFlowConfig);Object.DestroyImmediate(system);Time.timeScale=1;}
         [Test] public void ValidMoveCommitsOnceAndUndoRedoPreserveEverythingElse()
         {var draft=d.Draft;var e=draft[0];var other=draft[1];var buffer=m.Buffers;int rev=draft.Revision;Assert.IsTrue(d.TryTranslateDraft(draft,rev,0,e,e.center+new Vector3(-5,99,0),out var error),error);Assert.AreEqual(rev+1,draft.Revision);var expected=e;expected.center.x-=5;Assert.AreEqual(expected,draft[0]);Assert.AreEqual(other,draft[1]);Assert.AreSame(buffer,m.Buffers);Assert.AreEqual(e.center,a.spawnConfig.spawnCenter);Assert.IsTrue(draft.Undo());Assert.AreEqual(e,draft[0]);Assert.IsFalse(draft.CanUndo);Assert.IsTrue(draft.Redo());Assert.AreEqual(expected,draft[0]);}
-        [Test] public void BoundsViolationKeepsDraftHistoryAndGpu()
-        {var draft=d.Draft;var e=draft[0];var buffer=m.Buffers;Assert.IsFalse(d.TryTranslateDraft(draft,draft.Revision,0,e,new Vector3(99,0,0),out var error));Assert.IsNotEmpty(error);Assert.AreEqual(e,draft[0]);Assert.IsFalse(draft.CanUndo);Assert.AreSame(buffer,m.Buffers);}
-        [Test] public void OtherFormationOverlapRejected()
-        {var draft=d.Draft;var e=draft[0];Assert.IsFalse(d.TryTranslateDraft(draft,draft.Revision,0,e,draft[1].center,out var error));StringAssert.Contains("重叠",error);Assert.IsFalse(draft.CanUndo);}
+        // Count-lock B (2026-10-13): an out-of-bounds or overlapping move is written to the draft (shown red); Apply/Start validation rejects it.
+        [Test] public void BoundsViolationIsWrittenButBlocksApplyAndKeepsGpu()
+        {var draft=d.Draft;var e=draft[0];var buffer=m.Buffers;Assert.IsTrue(d.TryTranslateDraft(draft,draft.Revision,0,e,new Vector3(99,0,0),out var error),error);Assert.AreEqual(99f,draft[0].center.x);Assert.IsTrue(draft.CanUndo);Assert.AreSame(buffer,m.Buffers);Assert.IsFalse(d.TryValidate(out error));Assert.IsNotEmpty(error);}
+        [Test] public void OtherFormationOverlapIsWrittenButBlocksApply()
+        {var draft=d.Draft;var e=draft[0];Assert.IsTrue(d.TryTranslateDraft(draft,draft.Revision,0,e,draft[1].center,out var error),error);Assert.IsTrue(draft.CanUndo);Assert.IsFalse(d.TryValidate(out error));StringAssert.Contains("重叠",error);}
         [Test] public void StaleRevisionCannotMoveAnotherEntryAfterRemoval()
         {var draft=d.Draft;var e=draft[0];int rev=draft.Revision;draft.Remove(0);var remaining=draft[0];Assert.IsFalse(d.TryTranslateDraft(draft,rev,0,e,new Vector3(-60,0,0),out _));Assert.AreEqual(remaining,draft[0]);}
         [Test] public void NoOpHasNoUndoAndNaNIsRejected()

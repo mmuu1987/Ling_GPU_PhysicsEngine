@@ -21,7 +21,7 @@ Shader "MassEngine/Battlefield Backdrop Haze" {
  struct V {float4 p:SV_POSITION;float3 world:TEXCOORD0;half3 n:TEXCOORD1;half4 c:COLOR;};
  V vert(A i){V o;o.world=TransformObjectToWorld(i.p);o.p=TransformWorldToHClip(o.world);o.n=TransformObjectToWorldNormal(i.n);o.c=lerp(half4(1,1,1,1),i.c,_VertexTint)*_BaseColor;return o;}
  half4 frag(V i):SV_Target {
-  Light l=GetMainLight(TransformWorldToShadowCoord(i.world));
+  Light l=GetMainLight(TransformWorldToShadowCoord(i.world),i.world,half4(1,1,1,1));
   half lighting=.38+.62*saturate(dot(normalize(i.n),l.direction))*l.shadowAttenuation;
   float t=saturate((length(i.world.xz)-_HazeStart)/max(1,_HazeEnd-_HazeStart));
   t=t*t*(3-2*t);

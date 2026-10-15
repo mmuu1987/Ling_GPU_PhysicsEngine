@@ -1,0 +1,380 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.Game.Ui" editor-extension-mode="False">
+    <Style src="WarSandboxUi.Toy.uss" />
+    <Style src="Pages.uss" />
+    <Style src="Deploy.uss" />
+    <ui:VisualElement name="dp" class="app fill dp">
+
+        <!-- Overview: army tree | map | inspector (WarSandboxDeploymentHUD.Merged) -->
+        <ui:VisualElement name="dp-ov" class="fill dp-page">
+            <tac:TacFrame class="row dp-head">
+                <ui:Label name="dp-title" text="战前布阵" class="h-page dp-head__title" />
+                <ui:Button name="dp-challenge" text="指挥：自由" class="btn dp-head__btn dp-challenge" />
+                <ui:Button name="dp-budget" text="预算：关" class="btn dp-head__btn" />
+                <ui:VisualElement class="spacer" />
+                <ui:Button name="dp-tight" text="十万人压力试验" class="btn dp-head__btn" />
+                <ui:Button name="dp-plans" class="btn dp-head__btn">
+                    <tac:TacIcon icon="save" class="btn__icon" />
+                    <ui:Label text="方案库" />
+                </ui:Button>
+            </tac:TacFrame>
+            <ui:VisualElement class="row dp-cols">
+                <tac:TacFrame name="dp-tree" class="dp-tree">
+                    <ui:Label text="军团与编成" class="h-panel dp-panel-title" />
+                    <ui:ScrollView name="dp-tree-list" class="bh-grow" />
+                    <ui:Button name="dp-army-add" text="＋ 新建军团" class="btn dp-wide" />
+                </tac:TacFrame>
+                <tac:TacFrame class="dp-mapcard">
+                    <ui:VisualElement class="row dp-maphead">
+                        <ui:VisualElement class="bh-grow">
+                            <ui:Label text="战前位置与阵型" class="code" />
+                            <ui:Label text="部署预览" class="h-panel" />
+                        </ui:VisualElement>
+                        <ui:Button name="dp-place" text="点击放置" class="btn btn--sm" />
+                    </ui:VisualElement>
+                    <ui:Label name="dp-map-note" text="" class="hint hint--wrap dp-map-note" />
+                    <ui:VisualElement name="dp-map-area" class="dp-map-area">
+                        <ui:VisualElement name="dp-map" class="dp-map" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+                <tac:TacFrame name="dp-insp" class="dp-insp">
+                    <ui:Label name="dp-insp-empty" text="还没有编成。&#10;点左侧「＋ 新建军团」开始。" class="para dp-muted" />
+                    <ui:VisualElement name="dp-insp-head" class="dp-insp-head">
+                        <ui:Label name="dp-insp-scope" text="" class="dp-scope" />
+                        <ui:VisualElement class="row">
+                            <ui:Label name="dp-insp-name" text="" class="dp-name bh-grow" />
+                            <ui:Label name="dp-insp-count" text="" class="dp-count" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="dp-insp-army" class="bh-grow">
+                        <ui:Label name="dp-army-text" text="" class="dp-box para" />
+                        <ui:VisualElement name="dp-army-budget-row" class="row dp-btnrow">
+                            <ui:Button name="dp-army-budget-down" text="预算 −" class="btn btn--sm bh-grow" />
+                            <ui:Button name="dp-army-budget-up" text="预算 ＋" class="btn btn--sm bh-grow" />
+                            <ui:Button name="dp-army-budget-reset" text="跟随默认" class="btn btn--sm bh-grow" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="row dp-btnrow">
+                            <ui:Button name="dp-army-add-formation" text="＋ 添加编成" class="btn bh-grow dp-half" />
+                            <ui:Button name="dp-army-details" text="军团详情  ›" class="btn bh-grow dp-half" />
+                        </ui:VisualElement>
+                        <ui:Button name="dp-army-remove" text="移除军团" class="btn btn--danger dp-wide" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="dp-insp-form" class="bh-grow">
+                        <ui:VisualElement class="row tabs dp-tabs">
+                            <ui:Button name="dp-tab-unit" text="兵种与人数" class="tab bh-grow" />
+                            <ui:Button name="dp-tab-place" text="位置与阵型" class="tab bh-grow" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="dp-unit" class="bh-grow">
+                            <ui:VisualElement name="dp-unit-preview" class="dp-unit-preview" />
+                            <ui:VisualElement name="dp-unit-stats" class="row dp-stats" />
+                            <ui:VisualElement class="row dp-countrow">
+                                <ui:Label text="人数" class="dp-k" />
+                                <ui:TextField name="dp-unit-count" class="tfield bh-grow dp-field" />
+                                <ui:Button name="dp-unit-update" text="更新" class="btn btn--sm dp-update" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="row dp-btnrow">
+                                <ui:Button name="dp-unit-template" text="更换兵种" class="btn btn--sm bh-grow dp-half" />
+                                <ui:Button name="dp-unit-stats-open" text="详细属性  ›" class="btn btn--sm bh-grow dp-half" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="row dp-btnrow">
+                                <ui:Button name="dp-unit-army" text="调整归属军团" class="btn btn--sm bh-grow dp-half" />
+                                <ui:Button name="dp-unit-remove" text="移除编成" class="btn btn--sm btn--danger bh-grow dp-half" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:ScrollView name="dp-place-scroll" class="bh-grow">
+                            <ui:VisualElement name="dp-tight-presets">
+                                <ui:VisualElement class="row dp-btnrow">
+                                    <ui:Button name="dp-preset-standard" text="标准 0.4" class="btn btn--sm bh-grow dp-half" />
+                                    <ui:Button name="dp-preset-tight" text="紧密 0.7" class="btn btn--sm bh-grow dp-half" />
+                                </ui:VisualElement>
+                                <ui:Label text="切回自动占地；不改人数、位置和角色大小" class="hint hint--wrap dp-gap" />
+                            </ui:VisualElement>
+                            <ui:Label name="dp-facing-label" text="朝向" class="dp-sub" />
+                            <ui:VisualElement class="row dp-btnrow">
+                                <ui:Button name="dp-facing-ccw" text="左转90°" class="btn btn--sm bh-grow dp-third" />
+                                <ui:Button name="dp-facing-cw" text="右转90°" class="btn btn--sm bh-grow dp-third" />
+                                <ui:Button name="dp-facing-auto" text="自动朝敌" class="btn btn--sm bh-grow dp-third" />
+                            </ui:VisualElement>
+                            <ui:Label text="R 右转 · Shift+R 左转 · 整块连同占地一起转" class="hint hint--wrap dp-gap" />
+                            <ui:VisualElement class="row dp-frow">
+                                <ui:Label text="中心 X" class="dp-k dp-k--w" />
+                                <ui:TextField name="dp-f-x" class="tfield bh-grow dp-field" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="row dp-frow">
+                                <ui:Label text="中心 Z" class="dp-k dp-k--w" />
+                                <ui:TextField name="dp-f-z" class="tfield bh-grow dp-field" />
+                            </ui:VisualElement>
+                            <ui:Button name="dp-manual" text="阵型：密度 / 宽深比" class="btn btn--sm dp-wide" />
+                            <ui:VisualElement name="dp-manual-on">
+                                <ui:VisualElement class="row dp-frow">
+                                    <ui:Label text="纵深 X" class="dp-k dp-k--w" />
+                                    <ui:TextField name="dp-f-depth" class="tfield bh-grow dp-field" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="row dp-frow">
+                                    <ui:Label text="宽度 Z" class="dp-k dp-k--w" />
+                                    <ui:TextField name="dp-f-width" class="tfield bh-grow dp-field" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:VisualElement name="dp-manual-off">
+                                <ui:VisualElement class="row dp-frow">
+                                    <ui:Label text="密度" class="dp-k dp-k--w" />
+                                    <ui:TextField name="dp-f-density" class="tfield bh-grow dp-field" />
+                                </ui:VisualElement>
+                                <ui:VisualElement class="row dp-frow">
+                                    <ui:Label text="宽深比" class="dp-k dp-k--w" />
+                                    <ui:TextField name="dp-f-aspect" class="tfield bh-grow dp-field" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                            <ui:Button name="dp-place-update" text="更新位置与阵型" class="btn btn--primary dp-wide" />
+                            <ui:Label name="dp-resize-values" text="" class="hint hint--wrap dp-resize" />
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+                </tac:TacFrame>
+            </ui:VisualElement>
+            <tac:TacFrame class="row dp-foot">
+                <ui:Button name="dp-undo" class="btn btn--sm dp-foot__small">
+                    <tac:TacIcon icon="undo" class="btn__icon" />
+                    <ui:Label text="撤销" />
+                </ui:Button>
+                <ui:Button name="dp-redo" class="btn btn--sm dp-foot__small">
+                    <tac:TacIcon icon="redo" class="btn__icon" />
+                    <ui:Label text="重做" />
+                </ui:Button>
+                <ui:Label name="dp-status" text="" class="dp-status bh-grow" />
+                <ui:Button name="dp-fix" text="定位问题" class="btn btn--sm dp-fix" />
+                <ui:Button name="dp-cancel" text="取消修改" class="btn" />
+                <ui:Button name="dp-apply" text="应用布阵" class="btn" />
+                <ui:Button name="dp-start" text="应用并开战  →" class="btn btn--primary btn--lg dp-start" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Legion page (军团详情) -->
+        <ui:VisualElement name="dp-lg" class="fill dp-page">
+            <tac:TacFrame class="row dp-head">
+                <ui:Button name="lg-back" class="btn dp-head__btn dp-head__back">
+                    <tac:TacIcon icon="chev-l" class="btn__icon" />
+                    <ui:Label text="返回布阵" />
+                </ui:Button>
+                <ui:Label name="lg-name" text="" class="h-page dp-head__center bh-grow" />
+                <ui:Label name="lg-total" text="" class="chip dp-total" />
+            </tac:TacFrame>
+            <ui:Label name="lg-composition" text="" class="dp-summary" />
+            <ui:VisualElement class="row dp-cols">
+                <tac:TacFrame class="lg-left">
+                    <ui:ScrollView name="lg-roster" class="bh-grow" />
+                    <ui:VisualElement class="row dp-btnrow lg-actions">
+                        <ui:Button name="lg-add" text="＋ 添加编成" class="btn bh-grow" />
+                        <ui:Button name="lg-remove" text="移除编成" class="btn" />
+                        <ui:Button name="lg-remove-army" text="移除军团" class="btn btn--danger" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+                <tac:TacFrame name="lg-dossier" class="lg-dossier tac-frame--hi">
+                    <ui:Label name="lg-unit-name" text="" class="dp-name dp-center" />
+                    <ui:VisualElement class="row lg-pic">
+                        <ui:VisualElement name="lg-preview" class="lg-preview" />
+                        <ui:Label name="lg-role" text="" class="para dp-muted lg-role" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="lg-stats" class="row dp-stats" />
+                    <ui:VisualElement class="row dp-countrow">
+                        <ui:Label text="人数" class="dp-k" />
+                        <ui:TextField name="lg-count" class="tfield dp-field lg-count" />
+                        <ui:Button name="lg-update" text="更新" class="btn btn--sm dp-update" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Button name="lg-template" text="更换兵种" class="btn btn--sm lg-template" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="row dp-btnrow">
+                        <ui:Button name="lg-stats-open" text="详细属性  ›" class="btn btn--sm bh-grow dp-half" />
+                        <ui:Button name="lg-army" text="调整归属军团" class="btn btn--sm bh-grow dp-half" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+            </ui:VisualElement>
+            <tac:TacFrame class="row dp-foot">
+                <ui:Label name="lg-status" text="" class="dp-status bh-grow" />
+                <ui:Button name="lg-fix" text="定位问题" class="btn btn--sm dp-fix" />
+                <ui:Button name="lg-done" text="完成并返回布阵  →" class="btn btn--primary btn--lg dp-start" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Template picker (更换兵种) -->
+        <ui:VisualElement name="dp-pk" class="fill dp-page">
+            <tac:TacFrame class="row dp-head">
+                <ui:Label name="pk-title" text="" class="h-page dp-head__title bh-grow" />
+                <ui:Button name="pk-back" text="取消更换" class="btn dp-head__btn" />
+            </tac:TacFrame>
+            <ui:Label name="pk-scope" text="" class="para dp-muted dp-pk-scope" />
+            <ui:VisualElement class="row pk-filters">
+                <ui:Button name="pk-f0" text="" class="btn btn--sm pk-filter" />
+                <ui:Button name="pk-f1" text="" class="btn btn--sm pk-filter" />
+                <ui:Button name="pk-f2" text="" class="btn btn--sm pk-filter" />
+                <ui:Label name="pk-note" text="" class="hint bh-grow pk-note" />
+            </ui:VisualElement>
+            <ui:ScrollView name="pk-grid" class="bh-grow">
+                <ui:Label name="pk-empty" text="当前战场没有此类兵种，试试其他分类。" class="para dp-muted" />
+                <ui:VisualElement name="pk-cards" class="pk-cards" />
+            </ui:ScrollView>
+        </ui:VisualElement>
+
+        <!-- Unit dossier (详细属性) -->
+        <ui:VisualElement name="dp-st" class="fill dp-page dp-page--shade">
+            <tac:TacFrame class="st-card">
+                <ui:VisualElement class="row lib-card__head">
+                    <ui:VisualElement class="bh-grow">
+                        <ui:Label text="兵种档案" class="code code--accent" />
+                        <ui:Label name="st-name" text="" class="lib-name" />
+                        <ui:Label name="st-id" text="" class="hint" />
+                    </ui:VisualElement>
+                    <ui:VisualElement>
+                        <ui:VisualElement class="row st-legend">
+                            <ui:Label name="st-custom" text="自定义" class="chip lib-chip lib-chip--dirty" />
+                            <ui:Label text="本局" class="chip lib-chip dp-chip--local" />
+                            <ui:Label text="全局" class="chip lib-chip lib-chip--global" />
+                            <ui:Label text="官方" class="chip lib-chip lib-chip--official" />
+                        </ui:VisualElement>
+                        <ui:Label text="优先级  本局 › 全局 › 官方" class="hint st-legend__note" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="row st-body">
+                    <ui:VisualElement class="st-left">
+                        <ui:Label name="st-list-title" text="" class="code code--accent st-list-title" />
+                        <ui:ScrollView name="st-list" class="st-list" />
+                        <ui:VisualElement class="dp-box st-ro">
+                            <ui:Label text="只读参数 · 由兵种资源决定" class="st-ro__title" />
+                            <ui:Label name="st-ro-body" text="" class="hint hint--wrap" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="st-preview" class="st-preview" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="st-right">
+                        <ui:VisualElement class="row st-cols">
+                            <ui:Label text="字段" class="hint st-col0" />
+                            <ui:Label text="调整  ·  竖线为官方值" class="hint bh-grow st-col1" />
+                            <ui:Label text="数值" class="hint st-col2" />
+                            <ui:Label text="来源" class="hint st-col3" />
+                        </ui:VisualElement>
+                        <ui:ScrollView name="st-table" class="bh-grow lib-table">
+                            <ui:VisualElement name="st-rows" class="lib-rows" />
+                        </ui:ScrollView>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="lib-foot">
+                    <ui:Label name="st-foot-note" text="" class="lib-foot__note" />
+                    <ui:VisualElement class="row">
+                        <ui:Button name="st-reset" text="恢复本兵种" class="btn btn--first" />
+                        <ui:Button name="st-undo-global" text="撤销上次全局修改" class="btn" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Button name="st-push" text="" class="btn lib-save" />
+                        <ui:Button name="st-done" text="完成" class="btn btn--primary" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </tac:TacFrame>
+            <ui:VisualElement name="st-push-modal" class="fill dimmer modal-root">
+                <tac:TacFrame class="pg-modal st-push">
+                    <ui:Label text="推送到全局" class="code dp-purple" />
+                    <ui:Label name="push-title" text="" class="h-page" />
+                    <ui:Label name="push-note" text="" class="para pg-modal__body" />
+                    <ui:VisualElement class="row st-push__head">
+                        <ui:Label text="字段" class="hint bh-grow" />
+                        <ui:Label text="当前全局 / 官方" class="hint st-push__before" />
+                        <ui:Label text="" class="st-push__arrow" />
+                        <ui:Label text="推送后" class="hint st-push__after" />
+                    </ui:VisualElement>
+                    <ui:ScrollView name="push-rows" class="st-push__rows" />
+                    <ui:Button name="push-clear-local" text="" class="btn btn--sm dp-wide st-push__toggle" />
+                    <ui:Label text="下次应用布阵或进入战场时生效。可在兵种档案或兵种库里“撤销上次全局修改”。" class="hint hint--wrap dp-gap" />
+                    <ui:VisualElement class="row">
+                        <ui:Button name="push-cancel" text="取消" class="btn btn--lg bh-grow btn--first" />
+                        <ui:Button name="push-confirm" text="确认推送" class="btn btn--lg bh-grow lib-save" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Local plans (方案库) -->
+        <ui:VisualElement name="dp-pl" class="fill dp-page">
+            <ui:VisualElement class="pl-col">
+                <ui:VisualElement class="row pl-head">
+                    <ui:VisualElement class="bh-grow">
+                        <ui:Label text="本地方案" class="code code--accent" />
+                        <ui:Label text="本地方案库" class="h-page" />
+                    </ui:VisualElement>
+                    <ui:Button name="pl-refresh" text="刷新列表" class="btn dp-head__btn" />
+                    <ui:Button name="pl-back" text="返回布阵" class="btn btn--primary dp-head__btn" />
+                </ui:VisualElement>
+                <tac:TacFrame name="pl-confirm" class="pl-card">
+                    <ui:Label name="pl-confirm-title" text="" class="h-page" />
+                    <ui:Label name="pl-confirm-note" text="" class="para pg-modal__body" />
+                    <ui:VisualElement class="row">
+                        <ui:Button name="pl-confirm-yes" text="" class="btn btn--primary btn--lg bh-grow btn--first" />
+                        <ui:Button name="pl-confirm-no" text="取消" class="btn btn--lg bh-grow" />
+                    </ui:VisualElement>
+                </tac:TacFrame>
+                <ui:VisualElement name="pl-main" class="bh-grow">
+                    <tac:TacFrame class="pl-card">
+                        <ui:Label name="pl-save-heading" text="" class="h-panel" />
+                        <ui:VisualElement class="row dp-frow pl-fields">
+                            <ui:Label text="编号" class="dp-k" />
+                            <ui:TextField name="pl-slot" class="tfield dp-field pl-slot" />
+                            <ui:Label text="名称" class="dp-k pl-name-k" />
+                            <ui:TextField name="pl-name" class="tfield dp-field bh-grow" />
+                        </ui:VisualElement>
+                        <ui:Button name="pl-save" text="" class="btn btn--primary dp-wide" />
+                        <ui:Label name="pl-save-blocked" text="" class="dp-danger hint--wrap" />
+                    </tac:TacFrame>
+                    <ui:Label name="pl-list-heading" text="" class="h-panel pl-list-heading" />
+                    <tac:TacFrame class="pl-listframe">
+                        <ui:ScrollView name="pl-list" class="bh-grow">
+                            <ui:Label name="pl-empty" text="还没有方案。保存当前布阵后，下次启动仍能继续使用。" class="para dp-muted" />
+                        </ui:ScrollView>
+                    </tac:TacFrame>
+                    <ui:Button name="pl-load" text="载入选中方案" class="btn btn--primary btn--lg dp-wide" />
+                </ui:VisualElement>
+                <ui:Label name="pl-message" text="" class="pl-message" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Redeploy confirmation -->
+        <ui:VisualElement name="dp-cf" class="fill modal-root">
+            <tac:TacFrame class="pg-modal">
+                <ui:Label text="重新布阵" class="code code--accent" />
+                <ui:Label text="结束本局并返回布阵？" class="h-page" />
+                <ui:Label text="当前战斗进度不会保留，战前方案仍可继续修改。" class="para pg-modal__body" />
+                <ui:Button name="cf-yes" text="结束并布阵" class="btn btn--primary btn--lg dp-wide" />
+                <ui:Button name="cf-no" text="取消，回到战场" class="btn dp-wide" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Army reassignment -->
+        <ui:VisualElement name="dp-am" class="fill dimmer modal-root">
+            <tac:TacFrame class="pg-modal">
+                <ui:Label text="将当前编成编入…" class="h-page" />
+                <ui:Label text="保留兵种、人数与位置，仅调整本局军团归属。" class="para pg-modal__body" />
+                <ui:VisualElement name="am-list" class="am-list" />
+                <ui:VisualElement class="row">
+                    <ui:Button name="am-new" text="＋ 独立为新军团" class="btn bh-grow btn--first" />
+                    <ui:Button name="am-cancel" text="取消" class="btn bh-grow" />
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Remove army -->
+        <ui:VisualElement name="dp-ra" class="fill dimmer modal-root">
+            <tac:TacFrame class="pg-modal">
+                <ui:Label text="移除这个军团的全部编成？&#10;仅修改本局草稿，返回布阵后可撤销。" class="para pg-modal__body dp-big" />
+                <ui:VisualElement class="row">
+                    <ui:Button name="ra-confirm" text="确认移除" class="btn btn--danger btn--lg bh-grow btn--first" />
+                    <ui:Button name="ra-cancel" text="保留军团" class="btn btn--primary btn--lg bh-grow" />
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- High-load trial dialog -->
+        <ui:VisualElement name="dp-td" class="fill dimmer modal-root">
+            <tac:TacFrame class="pg-modal td-card">
+                <ui:Label name="td-title" text="" class="h-page" />
+                <ui:Label name="td-warning" text="" class="para pg-modal__body" />
+                <ui:VisualElement class="row">
+                    <ui:Button name="td-cancel" text="取消" class="btn btn--lg bh-grow btn--first" />
+                    <ui:Button name="td-confirm" text="" class="btn btn--primary btn--lg bh-grow" />
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

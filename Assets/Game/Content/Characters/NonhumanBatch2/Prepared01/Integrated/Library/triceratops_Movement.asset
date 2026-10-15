@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010003, type: 3}
   m_Name: triceratops_Movement
   m_EditorClassIdentifier: 
-  maxSpeed: 2.5
+  maxSpeed: 8
   flowFieldResponsiveness: 6
   flowFieldWeight: 1
   velocityDamping: 5

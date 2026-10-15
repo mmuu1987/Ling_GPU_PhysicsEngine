@@ -20,11 +20,11 @@ MonoBehaviour:
   attackDamage: 45
   attackInterval: 0.86666673
   maxHp: 1100
-  projectileRange: 16
-  projectileSpeed: 22
+  projectileRange: 500
+  projectileSpeed: 75
   projectileGravity: 0
   projectileHitRadius: 0.6
-  projectileMaxLifetime: 2
+  projectileMaxLifetime: 10
   projectileTrailLength: 2.5
   projectileSplashRadius: 0
   chargeDamageMultiplier: 1

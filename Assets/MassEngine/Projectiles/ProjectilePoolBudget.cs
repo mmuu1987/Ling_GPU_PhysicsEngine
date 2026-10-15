@@ -7,7 +7,7 @@ namespace MassEngine.Projectiles
         // 16 MiB for the 64-byte projectile records, excluding indices/staging/CPU leases.
         // Custom extreme rates still queue at this ceiling; this is not unlimited spawning.
         public const int MaxProjectiles = 262144;
-        public const int MaxSlotsPerRangedAgent = 8;
+        public const int MaxSlotsPerRangedAgent = 12; // area fire: 500 m flights last ~7 s
         public static int Calculate(ScenarioConfig scenario, int agentCount)
         {
             if (agentCount <= 0) return 0;

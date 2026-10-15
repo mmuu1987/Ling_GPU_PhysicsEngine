@@ -121,7 +121,7 @@ namespace MassEngine.Game.Tests
         }
         [Test] public void LocalPlanRadiusRoundTripPreservesTemplateIdentity()
         {
-            var battlefield = new WarSandboxBattlefieldEntry { id = "radius-test", scenePath = "Assets/Game/Scenes/Green.unity" };
+            var battlefield = new WarSandboxBattlefieldEntry { id = "radius-test", scenePath = "Assets/Game/Content/Battlefields/Map1024/Green1024.unity" };
             var rules = WarSandboxBattlefieldRules.Default; var local = new WarSandboxStatOverrides(); local.Set(unit, Radius, .7f);
             var plan = WarSandboxLocalPlanStore.Create("Radius", "P2 isolated local", battlefield.id, battlefield.contentVersion, battlefield.terrainId, battlefield.terrainVersion, new Vector2(200, 200), 0, rules, Draft().Snapshot(), catalog, local, out _);
             var store = new WarSandboxLocalPlanStore(Path.Combine(directory, "Plans")); Assert.That(store.TrySave(plan, false, out string error), Is.True, error);
@@ -132,8 +132,9 @@ namespace MassEngine.Game.Tests
         }
         [Test] public void GridDensityAndFootprintGateWithoutAutomaticCorrections()
         {
-            var draft = Draft(); var r = new WarSandboxStatResolver(catalog, Global(1.6f), draft.Stats);
-            Assert.That(WarSandboxRadiusPolicy.TryValidate(manager, draft, r, out _, out string error), Is.False); StringAssert.Contains("网格", error);
+            // C4 (2026-10-12): radii above half a cell use the large-body path (up to 2 cells - 0.01 m); the grid gate guards that limit.
+            var draft = Draft(); system.simulationConfig.cellSize = 2; var r = new WarSandboxStatResolver(catalog, Global(4.5f), draft.Stats);
+            Assert.That(WarSandboxRadiusPolicy.TryValidate(manager, draft, r, out _, out string error), Is.False); StringAssert.Contains("网格", error); system.simulationConfig.cellSize = 3;
             r = new WarSandboxStatResolver(catalog, Global(.8f), draft.Stats); var entry = draft[0]; entry.manualSize = new Vector3(1, 0, 1); draft.Set(0, entry);
             Assert.That(WarSandboxRadiusPolicy.TryValidate(manager, draft, r, out _, out error), Is.False); StringAssert.Contains("间距", error);
             Assert.That(draft[0].count, Is.EqualTo(16)); Assert.That(draft[0].manualSize, Is.EqualTo(entry.manualSize));

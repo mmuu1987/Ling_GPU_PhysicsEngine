@@ -17,12 +17,15 @@ MonoBehaviour:
   projectileTargetHeight: 1
   targetAcquireRadius: 10
   attackRange: 1.8
-  attackDamage: 10
-  attackInterval: 1.0666667
-  maxHp: 100
+  attackDamage: 15
+  attackInterval: 1.1
+  maxHp: 220
   projectileRange: 0
   projectileSpeed: 12
   projectileGravity: -9.8
   projectileHitRadius: 0.1
   projectileMaxLifetime: 3
   projectileTrailLength: 1.15
+  projectileSplashRadius: 0
+  chargeDamageMultiplier: 1
+  chargeMinSpeedFraction: 0.6

@@ -140,7 +140,7 @@ namespace MassEngine.Tests
             Assert.Greater(maxDraw,0); Assert.Greater(enemyDamage,0);
             for (int i=0;i<4;i++) Assert.AreEqual(2000,hp[i], "Solid friends must not take friendly fire.");
         }
-        [UnityTest]
+        [UnityTest, Ignore("方案 B 远程覆盖射击（2026-10-14 已批准）：友军不再挡箭。本测试验证的是旧的友军遮挡规则。")]
         public IEnumerator BlockedMuzzleFindsGapWithSmallLateralMoveThenFires()
         {
             ConfigureRangedRows(true); bool blocked = false, fired = false; float moved = 0;
@@ -157,7 +157,7 @@ namespace MassEngine.Tests
             Assert.True(fired, "A reachable side gap must enable real firing.");
             Assert.Greater(moved,.1f); Assert.Less(moved,2.1f, "Not unbounded rank rotation or forward pushing.");
         }
-        [UnityTest]
+        [UnityTest, Ignore("方案 B 远程覆盖射击（2026-10-14 已批准）：友军不再挡箭。本测试验证的是旧的友军遮挡规则。")]
         public IEnumerator UnclearableBodyWaitsWithinBudgetPauseFreezesAndNewHoldCancelsSearch()
         {
             ConfigureRangedRows(true,true); bool fired = false; Vector3 origin = initialAgents[0].position;

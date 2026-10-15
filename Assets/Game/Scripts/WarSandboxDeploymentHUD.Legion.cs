@@ -56,6 +56,9 @@ namespace MassEngine.Game
         private void RefreshUGUI()
         {
             if (translation.Active) return; // Map layout is frozen for the captured gesture; ghost alone follows the pointer.
+            // UI Toolkit presenter (Tools/战争沙盒 UI): same state and actions, see WarSandboxDeploymentHUD.Toolkit*.cs.
+            if (Ui.WarSandboxUiToolkit.Enabled) { runtimeUi?.SetVisible(false); RefreshDeployToolkit(); return; }
+            HideDeployToolkit();
             if (runtimeUi == null) runtimeUi = new WarSandboxUGUI(transform, "Deployment Canvas", 100);
             if (clearFocusRequested) { EventSystem.current?.SetSelectedGameObject(null); clearFocusRequested = false; }
             runtimeUi.SetVisible(true);
@@ -95,53 +98,11 @@ namespace MassEngine.Game
             ui.Label("deployment-title", new Rect(32, 58, w - 350, 44), FlowPolish23.Active(deployment) ? "编成 → 布阵 → 开战" : "战前布阵", FlowPolish23.Active(deployment) ? 25 : 29, WarSandboxUGUI.Ink, true);
             ui.Button("deployment-plans", new Rect(w - 200, 62, 164, 38), "方案库", OpenPlanLibrary);
             DrawTightHeader(ui);
-            float top = 130, body = h - (Check32 ? 252 : 236), left = 244, right = spatialSelection ? 248 : 0;
-            var draft = deployment.Draft; var ids = ArmyIds();
-            ui.Panel("army-overview", new Rect(16, top, left, body));
-            ui.Label("army-overview-title", new Rect(28, top + 12, left - 24, 36), "我的军团", 22, WarSandboxUGUI.Ink, true);
-            ui.Scroll("army-overview-list", new Rect(28, top + 60, left - 24, body - 124), ids.Count * (Info31 ? 140 : 112));
-            for (int n = 0; n < ids.Count; n++)
-            {
-                int team = ids[n], first = -1, population = 0, formations = 0;
-                for (int i = 0; i < draft.Count; i++) if (draft[i].teamId == team) { if (first < 0) first = i; population += draft[i].count; formations++; }
-                int index = first; float y = n * (Info31 ? 140 : 112);
-                ui.Button("army-details-" + team, new Rect(0, y, left - 28, Info31 ? 128 : 100), "", () => OpenLegion(index), false, true, draft.Count > 0 && draft[selected].teamId == team);
-                ui.Label("army-name-" + team, new Rect(8, y + 6, left - 48, 30), WarSandboxBattleController.DefaultArmyName(team) + (Info31 && draft.Count > 0 && draft[selected].teamId == team ? " · 当前" : ""), 20, WarSandboxUGUI.Ink, true);
-                ui.Label("army-summary-" + team, new Rect(8, y + 39, left - 48, 24), population.ToString("N0") + " 人 · " + formations + " 个编成", 14, WarSandboxUGUI.Muted);
-                if (Info31) ui.Label("army-composition31-" + team, new Rect(8, y + 65, left - 48, 24), RosterInfo31.Composition(draft, team), 12, WarSandboxUGUI.Muted);
-                ui.Label("army-open-note-" + team, new Rect(8, y + (Info31 ? 93 : 65), left - 116, 28), "军团详情  →", 14, WarSandboxUGUI.Accent);
-                ui.Button("army-position-" + team, new Rect(left - 102, y + (Info31 ? 94 : 66), 66, 26), "布阵", () => { if (SelectFormation(index)) spatialSelection = true; });
-            }
-            ui.EndScroll();
-            ui.Button("army-add", new Rect(28, top + body - 50, left - 24, 38), "＋ 新建军团", () => { if (AddFormation(true)) legionOpen = true; });
-            float mapX = left + 36;
-            DrawUGUIMap(ui, new Rect(mapX, top, w - mapX - right - 36, body));
-            float rx = w - right - 16;
-            if (spatialSelection)
-            {
-            ui.Panel("placement-card", new Rect(rx, top, right, body));
-            ui.Label("placement-title", new Rect(rx + 10, top + 12, right - 72, 38), "阵型编辑", 20, WarSandboxUGUI.Ink, true);
-            if (draft.Count > 0)
-            {
-                ui.Label("placement-unit", new Rect(rx + 10, top + 50, right - 90, 44), Check32 ? DeploymentCheck32.Scope(draft, selected) + "\n" + draft[selected].Name : draft[selected].Name, 15, WarSandboxUGUI.Muted);
-                ui.Button("placement-prev", new Rect(rx + right - 76, top + 54, 30, 32), "‹", () => SelectFormation((selected + draft.Count - 1) % draft.Count));
-                ui.Button("placement-next", new Rect(rx + right - 40, top + 54, 30, 32), "›", () => SelectFormation((selected + 1) % draft.Count));
-                ui.Scroll("placement-fields", new Rect(rx + 12, top + 104, right - 24, body - 120), TightEnabled ? 610 : 510);
-                float fy = 0, fw = right - 32;
-                DrawTightPresets(ui, ref fy, fw);
-                DrawFacingControls(ui, ref fy, fw);
-                UGUIField(ui, "x", "中心 X", x, v => x = v, ref fy, fw);
-                UGUIField(ui, "z", "中心 Z", z, v => z = v, ref fy, fw);
-                ui.Button("field-manual", new Rect(0, fy, fw, 36), manual ? "阵型：手动尺寸" : "阵型：密度 / 宽深比", () => manual = !manual); fy += 46;
-                if (manual) { UGUIField(ui, "depth", "纵深 X", depth, v => depth = v, ref fy, fw); UGUIField(ui, "width", "宽度 Z", width, v => width = v, ref fy, fw); }
-                else { UGUIField(ui, "density", "密度", density, v => density = v, ref fy, fw); UGUIField(ui, "aspect", "宽深比", aspect, v => aspect = v, ref fy, fw); }
-                ui.Button("field-update", new Rect(0, fy + 4, fw, 38), "更新位置与阵型", () => { if (CommitFields()) RefreshAfterUiChange(); });
-                ui.Label("resize-values",new Rect(0,fy+50,fw,105),"边/角调整尺寸 · Shift锁比例\n松手校验，人数和体型不变\n编辑尺寸后切为自动占地",12,WarSandboxUGUI.Muted);
-                ui.EndScroll();
-            }
-            ui.Button("placement-clear", new Rect(rx + right - 62, top + 12, 52, 30), "收起", () => { if (CommitFields()) { spatialSelection = placing = false; nextUiRefresh = 0; } });
-            }
+            float top = 130, body = h - (Check32 ? 252 : 236);
+            // 2026-10-10 feedback: 编成 and 布阵 on one page (tree | map | inspector), see WarSandboxDeploymentHUD.Merged.cs.
+            DrawMergedOverview(ui, top, body);
             DrawDeploymentFooter(ui);
+            if (deployment.Draft.Count > 0) DrawLegionOverlays(ui, deployment.Draft[selected].teamId);
         }
         private void DrawDeploymentFooter(WarSandboxUGUI ui)
         {
@@ -217,32 +178,7 @@ namespace MassEngine.Game
             ui.Panel("legion-footer", new Rect(12, h - 86, w - 24, 74), WarSandboxUGUI.Bar);
             DraftStatus(ui, new Rect(24, h - 78, w - 372, 56));
             ui.Button("legion-done", new Rect(w - 320, h - 72, 286, 46), "完成并返回布阵  →", ReturnFromLegion, true);
-            if (armyMenu)
-            {
-                ui.Panel("army-picker-shade", new Rect(0, 0, w, h), WarSandboxUGUI.Shade);
-                float ax = (w - 520) / 2, ay = (h - 400) / 2;
-                ui.Panel("army-picker-card", new Rect(ax, ay, 520, 400));
-                ui.Label("army-picker-heading", new Rect(ax + 20, ay + 16, 480, 42), "将当前编成编入…", 25, WarSandboxUGUI.Ink, true);
-                ui.Label("army-picker-note", new Rect(ax + 20, ay + 62, 480, 42), "保留兵种、人数与位置，仅调整本局军团归属。", 14, WarSandboxUGUI.Muted);
-                var ids = ArmyIds();
-                for (int n = 0; n < ids.Count; n++)
-                {
-                    int target = ids[n];
-                    ui.Button("army-assign-" + target, new Rect(ax + 24 + n % 2 * 242, ay + 116 + n / 2 * 48, 232, 38), WarSandboxBattleController.DefaultArmyName(target), () => AssignFormationArmy(target), false, true, target == team);
-                }
-                int next = draft.NextArmyId();
-                ui.Button("army-assign-new", new Rect(ax + 24, ay + 338, 232, 40), "＋ 独立为新军团", () => AssignFormationArmy(next), false, next >= 0);
-                ui.Button("army-assign-cancel", new Rect(ax + 266, ay + 338, 232, 40), "取消", () => { armyMenu = false; nextUiRefresh = 0; });
-            }
-            if (removeArmyConfirm)
-            {
-                ui.Panel("legion-remove-shade", new Rect(0, 0, w, h), WarSandboxUGUI.Shade);
-                float cx = (w - 460) / 2, cy = (h - 220) / 2;
-                ui.Panel("legion-remove-card", new Rect(cx, cy, 460, 220));
-                ui.Label("legion-remove-note", new Rect(cx + 20, cy + 20, 420, 80), "移除这个军团的全部编成？\n仅修改本局草稿，返回布阵后可撤销。", 20);
-                ui.Button("legion-remove-confirm", new Rect(cx + 20, cy + 132, 200, 44), "确认移除", () => { draft.RemoveArmy(team); ClampSelection(); RefreshAfterUiChange(); removeArmyConfirm = false; legionOpen = false; });
-                ui.Button("legion-remove-cancel", new Rect(cx + 238, cy + 132, 200, 44), "保留军团", () => removeArmyConfirm = false, true);
-            }
+            DrawLegionOverlays(ui, team);
         }
         private void AssignFormationArmy(int team)
         {
@@ -298,5 +234,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 

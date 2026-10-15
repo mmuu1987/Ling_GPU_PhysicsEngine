@@ -32,12 +32,29 @@ namespace MassEngine.Game
                 if (editor != null) { editor.RequestEdit(); openDeploymentOnEnter = false; }
             }
             Guide30.For(session)?.Tick();
+            // UI Toolkit migration (WarSandboxFrontEnd.Toolkit.cs): the new UI owns the migrated pages; uGUI keeps the rest.
+            bool toolkit = ToolkitOwnsScreen();
+            if (toolkit) ToolkitUpdate(); else HideToolkit();
+            bool zoom = unitPreviewOpen && session.State == WarSandboxEntryState.Menu && !session.SettingsOpen && !session.ConfirmationOpen && !session.HelpOpen;
+            if (toolkit) // phase 4: every front-end page, including settings/help/library/unit zoom, is drawn by UI Toolkit
+            {
+                if (session.State != WarSandboxEntryState.Menu) unitPreviewOpen = false;
+                ui?.SetVisible(false);
+                return;
+            }
             if (ui == null) ui = new WarSandboxUGUI(transform, "Front End Canvas", 200);
             var size = new Vector2(ui.Width, ui.Height);
             if (size != lastUiSize) { lastUiSize = size; nextRefresh = 0; } // Resize must redraw now, not leave a clipped old layout.
             if (Time.unscaledTime < nextRefresh) return;
             nextRefresh = Time.unscaledTime + 0.1f;
             ui.Begin();
+            DrawLegacyPage();
+            if (zoom) DrawExpandedUnitPreview();
+            else if (session.State != WarSandboxEntryState.Menu) unitPreviewOpen = false;
+            ui.End();
+        }
+        private void DrawLegacyPage()
+        {
             if (session.HelpOpen) DrawHelp30();
             else if (session.SettingsOpen) DrawSettings();
             else if (session.ConfirmationOpen) DrawConfirmation();
@@ -48,10 +65,6 @@ namespace MassEngine.Game
                 case WarSandboxEntryState.Failed: DrawFailure(); break;
                 default: if (libraryOpen) DrawLibrary(); else DrawCatalog(); break;
             }
-            if (unitPreviewOpen && session.State == WarSandboxEntryState.Menu && !session.SettingsOpen && !session.ConfirmationOpen && !session.HelpOpen)
-                DrawExpandedUnitPreview();
-            else if (session.State != WarSandboxEntryState.Menu) unitPreviewOpen = false;
-            ui.End();
         }
 
         // ---- Battle system strip (top right): 设置 / 战场目录 / 退出 ----
@@ -299,7 +312,8 @@ namespace MassEngine.Game
             ui.Button("modal-cancel", new Rect(x + 24, y + 228, w - 48, 34), "取消", session.CancelConfirmation);
         }
         private void OnEnable() { nextRefresh = 0; }
-        private void OnDisable() { ui?.SetVisible(false); }
-        private void OnDestroy() { ui?.Dispose(); }
+        private void OnDisable() { ui?.SetVisible(false); HideToolkit(); }
+        private void OnDestroy() { ui?.Dispose(); DestroyToolkit(); }
     }
 }
+

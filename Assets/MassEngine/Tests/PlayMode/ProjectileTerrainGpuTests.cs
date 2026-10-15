@@ -332,6 +332,7 @@ namespace MassEngine.Tests
             private readonly ComputeBuffer unitSettings = new ComputeBuffer(2, UnitTypeGpuSettings.StrideBytes);
             private readonly ComputeBuffer grid = new ComputeBuffer(1, 4);
             private readonly ComputeBuffer indices = new ComputeBuffer(2, 4);
+            private readonly ComputeBuffer largeCells = new ComputeBuffer(MassGpuBufferManager.LargeCellStride, 4); // C2 (2026-10-12): the projectile collision also reads largeCellsReadBuffer; an unbound buffer skips the dispatch.
 
             public RequestRig(ComputeShader shader, TerrainSurface surface, Vector2 source, Vector2 target, int poolCapacity = 2)
             {
@@ -386,6 +387,7 @@ namespace MassEngine.Tests
                 projectile.SetBuffer(kernel, "unitTypeSettings", unitSettings);
                 projectile.SetBuffer(kernel, "gridCountsReadBuffer", grid);
                 projectile.SetBuffer(kernel, "gridAgentIndicesReadBuffer", indices);
+                largeCells.SetData(new uint[MassGpuBufferManager.LargeCellStride]); projectile.SetBuffer(kernel, "largeCellsReadBuffer", largeCells);
                 projectile.SetInts("gridResolution", 1, 1);
                 projectile.SetVector("gridOrigin", Vector4.zero);
                 projectile.SetFloat("cellSize", 32); projectile.SetInt("maxAgentsPerCell", 2);
@@ -409,7 +411,7 @@ namespace MassEngine.Tests
                 Manager.Dispose(); gpu?.Dispose();
                 pool.Release(); requests.Release(); positions.Release(); targets.Release();
                 hp.Release(); teams.Release(); damage.Release(); Object.DestroyImmediate(combat);
-                bodies.Release(); types.Release(); unitSettings.Release(); grid.Release(); indices.Release();
+                bodies.Release(); types.Release(); unitSettings.Release(); grid.Release(); indices.Release(); largeCells.Release();
             }
 
             private static UnitTypeGpuSettings MakeSettings(int team)

@@ -1,0 +1,20 @@
+{
+    "name": "Game.Harness",
+    "rootNamespace": "MassEngine.Game",
+    "references": [
+        "MassEngine",
+        "Game",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_EDITOR || MASS_HARNESS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

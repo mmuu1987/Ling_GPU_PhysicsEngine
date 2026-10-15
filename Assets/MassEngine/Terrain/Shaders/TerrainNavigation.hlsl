@@ -98,7 +98,60 @@ void TerrainAnchor(inout AgentData agent)
     if (sample.w >= 0) agent.position.y = sample.x;
 }
 
-void TerrainIntegrate(inout AgentData agent, float dt)
+// C3a (2026-10-12): edge probes for LARGE bodies (body radius > half a spatial cell). The navigation
+// mask is inflated only by the normal clearance - inflating it by a dragon's radius would close every
+// narrow path for the whole army - so a large body checks points on its own edge instead: a ring at
+// R - LARGE_TERRAIN_PROBE_INSET (an open point has at least the clearance floor of free space around
+// it) and, when that ring is wider than half a nav cell, a second ring at half the radius so a blocked
+// row between the centre and the outer ring is not skipped. A move may not put more probes into
+// blocked cells, nor press further toward the blocked side; the into-wall part is removed (the body
+// slides along the edge) and only if that is still refused does it stop. Normal bodies pass 0 and
+// keep the exact centre-only behaviour. The flow field still ignores size (C3b, not done): a large
+// body sent into a passage narrower than itself slides along the mouth and waits there.
+#define LARGE_TERRAIN_PROBE_INSET 0.45
+static const float2 LargeTerrainProbeDirections[8] =
+{
+    float2(1.0, 0.0), float2(0.70710678, 0.70710678), float2(0.0, 1.0), float2(-0.70710678, 0.70710678),
+    float2(-1.0, 0.0), float2(-0.70710678, -0.70710678), float2(0.0, -1.0), float2(0.70710678, -0.70710678)
+};
+
+// Number of blocked edge probes; blockedDirection = sum of unit directions toward them.
+int LargeBodyTerrainProbe(float2 centre, float bodyRadius, out float2 blockedDirection)
+{
+    blockedDirection = 0.0;
+    int blocked = 0;
+    float outer = max(0.0, bodyRadius - LARGE_TERRAIN_PROBE_INSET);
+    bool inner = outer > 0.5 * flowFieldCellSize;
+    [loop] for (int i = 0; i < 8; i++)
+    {
+        float2 probe = LargeTerrainProbeDirections[i];
+        bool open = TerrainNavPointOpen(centre + probe * outer);
+        if (open && inner) open = TerrainNavPointOpen(centre + probe * (outer * 0.5));
+        if (!open) { blocked++; blockedDirection += probe; }
+    }
+    return blocked;
+}
+
+// A large-body move is refused when it adds blocked probes, or keeps the same number while pressing
+// toward the side that was already blocked. Fewer blocked probes (backing out) is always allowed.
+bool LargeBodyMoveAllowed(int blockedBefore, float2 directionBefore, int blockedAfter, float2 move)
+{
+    if (blockedAfter == 0 || blockedAfter < blockedBefore) return true;
+    if (blockedAfter > blockedBefore) return false;
+    return dot(move, directionBefore) <= 1e-5;
+}
+
+// Removes the component of `move` pointing into the blocked side (zero when nothing is known).
+float2 LargeBodySlide(float2 move, float2 directionBefore, float2 directionAfter)
+{
+    float2 wall = directionBefore + directionAfter;
+    float wallLength = length(wall);
+    if (wallLength <= 1e-4) return 0.0;
+    wall /= wallLength;
+    return move - wall * max(0.0, dot(move, wall));
+}
+
+void TerrainIntegrate(inout AgentData agent, float dt, float largeBodyRadius)
 {
     float3 before = agent.position;
     float horizontal = length(agent.velocity.xz), speed = length(agent.velocity);
@@ -106,6 +159,26 @@ void TerrainIntegrate(inout AgentData agent, float dt)
     if (sample.w < .5 || horizontal <= 1e-6 || dt <= 0) { agent.velocity = 0; TerrainAnchor(agent); return; }
     float2 direction = agent.velocity.xz / horizontal;
     float3 tangent = normalize(float3(direction.x, dot(direction, sample.yz), direction.y)) * speed;
+    if (largeBodyRadius > 0.0)
+    {
+        // Mask reads only (no texture sampling) inside this branch; the surface step below stays
+        // unconditional (FXC miscompiles texture-sampling loops called under a condition).
+        float2 directionBefore, directionAfter;
+        int blockedBefore = LargeBodyTerrainProbe(before.xz, largeBodyRadius, directionBefore);
+        int blockedAfter = LargeBodyTerrainProbe(before.xz + tangent.xz * dt, largeBodyRadius, directionAfter);
+        if (!LargeBodyMoveAllowed(blockedBefore, directionBefore, blockedAfter, tangent.xz))
+        {
+            float2 slid = LargeBodySlide(direction, directionBefore, directionAfter);
+            float slidLength = length(slid);
+            if (slidLength < 0.05) { agent.velocity = 0; return; } // head-on into the edge
+            float2 slidDirection = slid / slidLength;
+            speed *= slidLength;
+            tangent = normalize(float3(slidDirection.x, dot(slidDirection, sample.yz), slidDirection.y)) * speed;
+            blockedAfter = LargeBodyTerrainProbe(before.xz + tangent.xz * dt, largeBodyRadius, directionAfter);
+            if (!LargeBodyMoveAllowed(blockedBefore, directionBefore, blockedAfter, tangent.xz))
+            { agent.velocity = 0; return; }
+        }
+    }
     float2 offset = tangent.xz * dt;
     float budget = speed * dt;
     float3 candidate = before;
@@ -132,12 +205,46 @@ void TerrainIntegrate(inout AgentData agent, float dt)
     agent.velocity = tangent;
 }
 
-void TerrainConstrainPosition(float3 previousPosition, inout AgentData agent)
+void TerrainIntegrate(inout AgentData agent, float dt)
+{
+    TerrainIntegrate(agent, dt, 0.0);
+}
+
+void TerrainConstrainPosition(float3 previousPosition, inout AgentData agent, float largeBodyRadius)
 {
     if (!TerrainSegmentClear(previousPosition.xz, agent.position.xz))
     { agent.position = previousPosition; agent.velocity = 0; }
+    else if (largeBodyRadius > 0.0)
+    {
+        // C3a: post-integration moves (home clamp) obey the same edge rule; keep the along-edge
+        // part when possible, otherwise stay at the previous position.
+        float2 move = agent.position.xz - previousPosition.xz;
+        if (dot(move, move) > 1e-10)
+        {
+            float2 directionBefore, directionAfter;
+            int blockedBefore = LargeBodyTerrainProbe(previousPosition.xz, largeBodyRadius, directionBefore);
+            int blockedAfter = LargeBodyTerrainProbe(agent.position.xz, largeBodyRadius, directionAfter);
+            if (!LargeBodyMoveAllowed(blockedBefore, directionBefore, blockedAfter, move))
+            {
+                float2 slid = LargeBodySlide(move, directionBefore, directionAfter);
+                float2 target = previousPosition.xz + slid;
+                blockedAfter = LargeBodyTerrainProbe(target, largeBodyRadius, directionAfter);
+                if (dot(slid, slid) > 1e-10 && LargeBodyMoveAllowed(blockedBefore, directionBefore, blockedAfter, slid)
+                    && TerrainSegmentClear(previousPosition.xz, target))
+                    agent.position.xz = target;
+                else
+                { agent.position = previousPosition; agent.velocity = 0; }
+            }
+        }
+    }
     TerrainAnchor(agent);
 }
+
+void TerrainConstrainPosition(float3 previousPosition, inout AgentData agent)
+{
+    TerrainConstrainPosition(previousPosition, agent, 0.0);
+}
 #endif
+
 
 

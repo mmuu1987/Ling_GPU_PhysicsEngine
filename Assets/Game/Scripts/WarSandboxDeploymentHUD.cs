@@ -76,9 +76,9 @@ namespace MassEngine.Game
         private void Update()
         {
             if (CheckTranslation()) return;
-            if (WarSandboxSceneSession.Instance != null && WarSandboxSceneSession.Instance.InputBlocked) { runtimeUi?.SetVisible(false); return; }
+            if (WarSandboxSceneSession.Instance != null && WarSandboxSceneSession.Instance.InputBlocked) { runtimeUi?.SetVisible(false); HideDeployToolkit(); return; }
             if (deployment == null) return;
-            if (!Confirming && !deployment.IsEditing) { runtimeUi?.SetVisible(false); ReleaseCamera(); return; }
+            if (!Confirming && !deployment.IsEditing) { runtimeUi?.SetVisible(false); HideDeployToolkit(); ReleaseCamera(); return; }
             CaptureCamera();
             if (deployment.IsEditing && (displayedDraft != deployment.Draft || displayedRevision != deployment.Draft.Revision))
             { ClampSelection(); ReadFields(); }
@@ -98,6 +98,8 @@ namespace MassEngine.Game
                 if (armyMenu) { armyMenu = false; nextUiRefresh = 0; return; }
                 if (removeArmyConfirm) { removeArmyConfirm = false; nextUiRefresh = 0; return; }
                 if (pickerOpen) { pickerOpen = false; clearFocusRequested = true; nextUiRefresh = 0; return; }
+                // Deployment B: Esc discards text that could not be written (the draft keeps its last values).
+                if (deployment.IsEditing && !Confirming && HasPendingInputs()) { ReadFields(); clearFocusRequested = true; nextUiRefresh = 0; return; }
                 if (legionOpen && !Confirming) { ReturnFromLegion(); return; }
                 if (Confirming) CancelConfirmation();
                 else { placing = templateMenu = armyMenu = false; clearFocusRequested = true; }
@@ -113,8 +115,8 @@ namespace MassEngine.Game
             resumeAfterConfirmation = false; ReleaseCamera();
         }
 
-        private void OnDisable() { CancelTranslation(); Confirming = false; runtimeUi?.SetVisible(false); ReleaseCamera(); }
-        private void OnDestroy() { CancelTranslation(); ReleaseTerrainMap(); runtimeUi?.Dispose(); if (font != null) Destroy(font); }
+        private void OnDisable() { CancelTranslation(); Confirming = false; runtimeUi?.SetVisible(false); HideDeployToolkit(); ReleaseCamera(); }
+        private void OnDestroy() { CancelTranslation(); ReleaseTerrainMap(); runtimeUi?.Dispose(); DestroyDeployToolkit(); if (font != null) Destroy(font); }
 
         // Legacy reference only; the player uses the retained uGUI presenter.
         private void DrawLegacyEditor()
@@ -256,6 +258,16 @@ namespace MassEngine.Game
             e.count = n; e.center = new Vector3(px, e.center.y, pz); e.density = d; e.aspect = a;
             if (manual) { Parse(depth, out float sx); Parse(width, out float sz); if(sx<=0||sz<=0){inputError="手工纵深、正面宽必须大于零。";return false;} e.manualSize = new Vector3(sx, e.manualSize.y, sz); }
             else e.manualSize = Vector3.zero;
+            if (manual && n != original.count)
+            {
+                // Deployment B: a count change on a hand-sized block keeps centre and proportions and grows/shrinks the
+                // footprint only as far as needed to stay within [MinimumDensity, MaximumDensity]: 0.05-1.5 /m2 narrowed
+                // by what the body allows (a dragon lands exactly on its body spacing). Overlap/bounds become red.
+                double lo = WarSandboxDeploymentEntry.MinimumDensity(e.template), hi = WarSandboxDeploymentEntry.MaximumDensity(e.template);
+                double area = (double)e.manualSize.x * e.manualSize.z, want = n / System.Math.Max(1e-6, area);
+                double target = want > hi ? hi : want < lo ? lo : want;
+                if (target != want) { float k = (float)System.Math.Sqrt(want / target); e.manualSize = new Vector3(e.manualSize.x * k, e.manualSize.y, e.manualSize.z * k); }
+            }
             bool shape=n!=original.count||manual!=(original.manualSize.x>0&&original.manualSize.z>0)||
                 (manual?e.manualSize!=original.manualSize:d!=original.density||a!=original.aspect);
             if(shape){if(!WarSandboxDeploymentResize.TryFromSize(e,e.center,new Vector2(e.Size.x,e.Size.z),out var converted,out inputError))return false;if(manual)e=converted;}
@@ -396,5 +408,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 

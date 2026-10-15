@@ -22,9 +22,10 @@ namespace MassEngine
         public ComputeBuffer launchRequestBuffer;
         public ComputeBuffer movementCommandRevisionBuffer;
         // DX11 combat already uses all eight UAV slots. Keep slot assignments in the
-        // first N ints and an owner-only 12-word congestion/ranged record per agent in the tail.
+        // first N ints and an owner-only 13-word record per agent in the tail: 12 congestion/
+        // ranged words plus the presentation-hold timer (word 12).
         // AgentData/VAT layouts and the attack cooldown buffer remain unchanged.
-        public const int CongestionWordsPerAgent = 12;
+        public const int CongestionWordsPerAgent = 13;
         private int[] movementCommandRevisions;
 
         public void InitializeMovementCommands(int teamCount)
@@ -75,3 +76,4 @@ namespace MassEngine
         }
     }
 }
+

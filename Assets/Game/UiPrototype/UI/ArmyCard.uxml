@@ -1,0 +1,19 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement class="army-card">
+        <ui:VisualElement name="stripe" class="army-card__stripe" picking-mode="Ignore" />
+        <ui:Label name="key" text="1" class="army-card__key" />
+        <ui:VisualElement class="army-card__body" picking-mode="Ignore">
+            <ui:VisualElement class="row" picking-mode="Ignore">
+                <ui:Label name="name" text="攻方 · 长剑步兵" class="army-card__name" />
+                <ui:VisualElement class="spacer" />
+                <ui:Label name="order" text="进攻" class="chip chip--order" />
+            </ui:VisualElement>
+            <ui:VisualElement class="row row--center" picking-mode="Ignore">
+                <ui:VisualElement class="hp grow" picking-mode="Ignore">
+                    <ui:VisualElement name="hp" class="hp__fill" />
+                </ui:VisualElement>
+                <ui:Label name="count" text="4,000" class="army-card__count mono" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

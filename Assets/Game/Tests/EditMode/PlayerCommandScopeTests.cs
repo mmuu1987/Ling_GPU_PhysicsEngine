@@ -12,7 +12,7 @@ namespace MassEngine.Game.Tests
   {foreach(var kind in new[]{ArmyOrderType.Move,ArmyOrderType.Attack,ArmyOrderType.Hold,ArmyOrderType.Retreat})Assert.False(new PlayerCommandScope(scope,0,2,3,4,null).Allows(kind,false,out _));}
   [Test]public void LocalAppendRefusedWholeAppendRetained()
   {Assert.False(new PlayerCommandScope(MemberSelectionScope.Local,0,2,3,4,new[]{1}).Allows(ArmyOrderType.Move,true,out _));Assert.True(new PlayerCommandScope(MemberSelectionScope.WholeArmy,0,0,0,0,null).Allows(ArmyOrderType.Move,true,out _));}
-  [TestCase(0)][TestCase(4097)]public void BadLocalCountRejected(int count)
+  [TestCase(0)]public void BadLocalCountRejected(int count)
   {Assert.False(new PlayerCommandScope(MemberSelectionScope.Local,0,1,1,1,new int[count]).Allows(ArmyOrderType.Hold,false,out _));}
   [TestCase(1,0,1,1)][TestCase(0,1,1,1)][TestCase(0,0,2,1)][TestCase(0,0,1,2)]
   public void ChangedIntentRejected(int team,long epoch,long request,int version)

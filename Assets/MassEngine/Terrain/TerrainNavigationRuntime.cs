@@ -27,6 +27,11 @@ namespace MassEngine
         private readonly AsyncGPUReadbackRequest[] requests;
         private readonly bool[] pending;
         private readonly float[] requestedStopRadius;
+        // N5d final: GPU-covered teams refresh the CPU dynamic field slowly (fallback only). null = always refresh (tests, GPU off).
+        public Func<int, bool> GpuCoversTeam { get; set; }
+        public const double GpuCoveredRefreshSeconds = 2.0;
+        public int GpuCoveredSkips { get; private set; }
+        private readonly double[] lastDynamicRequest;
         private readonly List<Vector2>[] readyTargets;
         private readonly bool[] ready;
         private readonly double[] readySince;
@@ -140,6 +145,8 @@ namespace MassEngine
             densityCopies = new Unity.Collections.NativeArray<uint>[teamCount]; readyNative = new bool[teamCount];
             requests = new AsyncGPUReadbackRequest[teamCount]; pending = new bool[teamCount];
             requestedStopRadius = new float[teamCount]; empty = new Vector2[navigation.CellCount];
+            lastDynamicRequest = new double[teamCount];
+            for (int team = 0; team < teamCount; team++) lastDynamicRequest[team] = double.NegativeInfinity;
             readyTargets = new List<Vector2>[teamCount]; ready = new bool[teamCount]; readySince = new double[teamCount];
             for (int team = 0; team < teamCount; team++) readyTargets[team] = new List<Vector2>();
             try
@@ -165,7 +172,6 @@ namespace MassEngine
             combatShader = shaders.CombatSimulationShader; projectileShader = shaders.ProjectileShader;
             if (combatShader != null && shaders.SimulateCombatAndAccumulateDamage >= 0)
             {
-                combatShader.SetInt("terrainLaneApproach33", LaneApproach33 ? 1 : 0);
                 surfaceGpu.Bind(combatShader, shaders.SimulateCombatAndAccumulateDamage);
                 combatShader.SetBuffer(shaders.SimulateCombatAndAccumulateDamage, "_NavigationWalkable", navigationMask);
             }
@@ -311,6 +317,9 @@ namespace MassEngine
             }
             else if (!pending[team] && !ready[team])
             {
+                double now = Time.realtimeSinceStartupAsDouble;
+                if (GpuCoversTeam != null && GpuCoversTeam(team) && now - lastDynamicRequest[team] < GpuCoveredRefreshSeconds) { GpuCoveredSkips++; return; }
+                lastDynamicRequest[team] = now;
                 requestedStopRadius[team] = flow.targetStopRadius;
                 requests[team] = AsyncGPUReadback.Request(buffers.runtimeFlowTargetDensityBuffer,
                     Navigation.CellCount * 4, team * Navigation.CellCount * 4);
@@ -608,7 +617,7 @@ namespace MassEngine {
    for (int x = 0; x < rx; x++) { columnStart[x + 1] += columnStart[x]; columnCursor[x] = columnStart[x]; }
    for (int k = 0; k < count; k++) { int c = solve.targetCells[k]; rowCells[rowCursor[c / rx]++] = c; columnCells[columnCursor[c % rx]++] = c; }
    SortBuckets(rowStart, rowCells, ResolutionZ); SortBuckets(columnStart, columnCells, rx);
-   for (int cell = 0; cell < n; cell++) {
+   if (lane) for (int cell = 0; cell < n; cell++) {
     Vector2 original = solve.result[cell]; if (original.sqrMagnitude < .0001f) continue;
     int row = cell / rx, column = cell % rx;
     if (rowStart[row] == rowStart[row + 1] && columnStart[column] == columnStart[column + 1]) continue;

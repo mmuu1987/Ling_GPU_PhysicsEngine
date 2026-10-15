@@ -18,7 +18,7 @@ namespace MassEngine.Game.Tests
         {
             var arg=Environment.GetCommandLineArgs().FirstOrDefault(x=>((x.StartsWith("--interaction-p6-output=")||x.StartsWith("--interaction-p8-output="))||x.StartsWith("--interaction-p7-output=")));if(arg==null)Assert.Ignore("P6 owned opt-in required");output=arg.Substring("--interaction-p6-output=".Length);
             oldDelta=Time.captureDeltaTime;initialized=true;Time.captureDeltaTime=1f/60;
-            Assert.IsNull(WarSandboxSceneSession.Instance);yield return SceneManager.LoadSceneAsync("Assets/Game/Scenes/Green.unity",LoadSceneMode.Additive);scene=SceneManager.GetSceneByPath("Assets/Game/Scenes/Green.unity");yield return Frames(3);
+            Assert.IsNull(WarSandboxSceneSession.Instance);yield return SceneManager.LoadSceneAsync("Assets/Game/Content/Battlefields/Map1024/Green1024.unity",LoadSceneMode.Additive);scene=SceneManager.GetSceneByPath("Assets/Game/Content/Battlefields/Map1024/Green1024.unity");yield return Frames(3);
             m=WarSandboxSceneSession.FindManager(scene,out _);c=WarSandboxRuntimeBootstrap.EnsureControls(m);c.RebuildArmyStates();Assert.IsTrue(c.IssueOrder(ArmyOrder.Hold(0)));Assert.IsTrue(c.IssueOrder(ArmyOrder.Hold(1)));yield return Frames(20);
         }
         [UnityTearDown] public IEnumerator Cleanup(){if(!initialized)yield break;if(m!=null){m.DisableLocalOrderPrototype();if(savedScenario!=null){m.enabled=false;m.scenarioConfig=savedScenario;}}if(scene.IsValid()&&scene.isLoaded)yield return SceneManager.UnloadSceneAsync(scene);foreach(var clone in scenarioClones)if(clone!=null)UnityEngine.Object.Destroy(clone);scenarioClones.Clear();savedScenario=null;Time.captureDeltaTime=oldDelta;Time.timeScale=1;yield return null;}

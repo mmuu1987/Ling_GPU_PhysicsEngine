@@ -35,7 +35,7 @@ namespace MassEngine.Tests
    if(scenarioId==9){w[8*16+8]=0;w[256+9*16+9]=0;}
    var assignment=P9Read<int>(buffers.combatBuffers.engagementSlotAssignmentBuffer);
    for(int i=0;i<initialAgents.Length;i++){
-    int b=initialAgents.Length+i*12;
+    int b=initialAgents.Length+i*CombatBufferSet.CongestionWordsPerAgent;
     assignment[b+6]=BitConverter.SingleToInt32Bits(-1f);
     if(scenarioId==7){assignment[b+5]=BitConverter.SingleToInt32Bits(1f);assignment[b+4]=BitConverter.SingleToInt32Bits(.6f);}
    }
@@ -57,7 +57,7 @@ namespace MassEngine.Tests
    CollectionAssert.AreEqual(expected.hp,actual.hp,"hp");CollectionAssert.AreEqual(expected.damage,actual.damage,"pending damage");CollectionAssert.AreEqual(expected.targets,actual.targets,"targets");CollectionAssert.AreEqual(expected.launch,actual.launch,"launches");
    for(int i=0;i<expected.agents.Length;i++){
     var a=expected.agents[i];var b=actual.agents[i];Assert.LessOrEqual(Vector3.Distance(a.position,b.position),.0001f,"position "+i);Assert.LessOrEqual(Vector3.Distance(a.velocity,b.velocity),.0001f,"velocity "+i);Assert.LessOrEqual(Vector3.Distance(a.rotation,b.rotation),.0001f,"rotation "+i);Assert.AreEqual(a.scale,b.scale);Assert.AreEqual(a.currentState,b.currentState);Assert.AreEqual(a.presentationState,b.presentationState);Assert.AreEqual(a.currentAnimationTime,b.currentAnimationTime,.0001f);Assert.AreEqual(a.locomotionSpeed,b.locomotionSpeed,.0001f);Assert.AreEqual(expected.cooldown[i],actual.cooldown[i],.0001f);Assert.AreEqual(expected.assignment[i],actual.assignment[i]);
-    int start=expected.agents.Length+i*12;for(int j=0;j<12;j++){if(j==11)Assert.AreEqual(expected.assignment[start+j],actual.assignment[start+j]);else Assert.AreEqual(BitConverter.Int32BitsToSingle(expected.assignment[start+j]),BitConverter.Int32BitsToSingle(actual.assignment[start+j]),.0001f,"congestion "+i+"/"+j);}
+    int start=expected.agents.Length+i*CombatBufferSet.CongestionWordsPerAgent;for(int j=0;j<CombatBufferSet.CongestionWordsPerAgent;j++){if(j==11)Assert.AreEqual(expected.assignment[start+j],actual.assignment[start+j]);else Assert.AreEqual(BitConverter.Int32BitsToSingle(expected.assignment[start+j]),BitConverter.Int32BitsToSingle(actual.assignment[start+j]),.0001f,"congestion "+i+"/"+j);}
    }
   }
   [TestCase(1),TestCase(2),TestCase(3),TestCase(4)]
@@ -68,3 +68,4 @@ namespace MassEngine.Tests
  }
 }
 #endif
+

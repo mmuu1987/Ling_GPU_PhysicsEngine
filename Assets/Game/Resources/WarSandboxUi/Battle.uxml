@@ -1,0 +1,272 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.Game.Ui" editor-extension-mode="False">
+    <Style src="WarSandboxUi.Toy.uss" />
+    <Style src="Battle.uss" />
+    <ui:VisualElement name="bh" class="bh fill" picking-mode="Ignore">
+
+        <!-- Title: battlefield and phase -->
+        <tac:TacFrame name="bh-title" class="b-title bh-title">
+            <ui:Label text="当前战场" class="code code--accent" />
+            <ui:Label name="bh-name" text="" class="b-title__name" />
+            <ui:VisualElement class="row">
+                <ui:VisualElement name="bh-phase-dot" class="status-dot status-dot--ok" />
+                <ui:Label name="bh-phase" text="" class="b-title__phase" />
+                <ui:Label name="bh-mode" text="" class="b-title__mode" />
+            </ui:VisualElement>
+        </tac:TacFrame>
+
+        <!-- Centre: clock, force bar, control point, member selection -->
+        <ui:VisualElement name="bh-center" class="bh-center" picking-mode="Ignore">
+            <tac:TacFrame name="bh-timer" class="bh-timer tac-frame--hi">
+                <ui:VisualElement class="row">
+                    <ui:Label text="战斗时间" class="code" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Label name="bh-speed-tag" text="×1" class="code code--accent" />
+                </ui:VisualElement>
+                <ui:Label name="bh-clock" text="00:00" class="b-timer__clock bh-clock" />
+                <ui:VisualElement name="bh-bar" class="sbar bh-bar" />
+                <ui:VisualElement name="bh-bar-labels" class="bh-bar-labels" />
+            </tac:TacFrame>
+            <tac:TacFrame name="bh-objective" class="bh-objective tac-frame--bar">
+                <tac:TacIcon icon="flag" class="btn__icon" />
+                <ui:Label name="bh-objective-text" text="" class="bh-objective__t" />
+            </tac:TacFrame>
+            <tac:TacFrame name="bh-p7" class="bh-p7">
+                <ui:VisualElement class="row">
+                    <ui:Label name="bh-p7-title" text="" class="code code--accent bh-grow" />
+                    <ui:Button name="bh-whole-army" text="整军团范围" class="btn btn--sm" />
+                </ui:VisualElement>
+                <ui:Label name="bh-p7-state" text="" class="bh-p7__t" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Right: playback and tools (the system strip above belongs to the front end) -->
+        <ui:VisualElement name="bh-right" class="bh-right">
+            <tac:TacFrame class="b-speed tac-frame--bar bh-speed">
+                <ui:Label text="速度" class="code" />
+                <tac:TacSeg name="bh-speed" options="0.5×|1×|2×|4×" index="1" class="tseg--sm" />
+            </tac:TacFrame>
+            <ui:VisualElement class="row bh-ops">
+                <ui:Button name="bh-redeploy" class="btn btn--sm">
+                    <tac:TacIcon icon="chev-l" class="btn__icon" />
+                    <ui:Label text="返回布阵" />
+                </ui:Button>
+                <ui:Button name="bh-reset" class="btn btn--sm">
+                    <tac:TacIcon icon="rotate" class="btn__icon" />
+                    <ui:Label name="bh-reset-text" text="重置本局" />
+                </ui:Button>
+                <ui:Button name="bh-end" class="btn btn--sm btn--danger">
+                    <tac:TacIcon icon="flag" class="btn__icon" />
+                    <ui:Label text="结束本局" />
+                </ui:Button>
+            </ui:VisualElement>
+            <ui:VisualElement class="row bh-ops">
+                <ui:Button name="bh-follow-s" class="btn btn--sm">
+                    <tac:TacIcon icon="follow" class="btn__icon" />
+                    <ui:Label text="跟随 F" />
+                </ui:Button>
+                <ui:Button name="bh-overview-s" class="btn btn--sm">
+                    <tac:TacIcon icon="overview" class="btn__icon" />
+                    <ui:Label text="全景 F3" />
+                </ui:Button>
+                <ui:Button name="bh-help" class="btn btn--sm">
+                    <tac:TacIcon icon="help" class="btn__icon" />
+                    <ui:Label text="操作帮助" />
+                </ui:Button>
+                <ui:Button name="bh-tech" class="btn btn--sm">
+                    <tac:TacIcon icon="info" class="btn__icon" />
+                    <ui:Label text="技术信息" />
+                </ui:Button>
+                <ui:Button name="bh-mini-toggle" class="btn btn--sm">
+                    <tac:TacIcon icon="map" class="btn__icon" />
+                    <ui:Label name="bh-mini-toggle-text" text="小地图" />
+                </ui:Button>
+            </ui:VisualElement>
+            <tac:TacFrame name="bh-details" class="bh-details">
+                <ui:Label name="bh-details-text" text="" class="bh-details__t" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Left: selected army, all armies, feedback -->
+        <ui:VisualElement name="bh-left" class="bh-left" picking-mode="Ignore">
+            <tac:TacFrame name="bh-sel" class="b-sel tac-frame--hi">
+                <ui:VisualElement class="row">
+                    <ui:Label text="当前选中" class="code code--accent" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Label name="bh-sel-order" text="" class="chip chip--order" />
+                </ui:VisualElement>
+                <ui:VisualElement class="row b-sel__namerow">
+                    <ui:VisualElement name="bh-sel-stripe" class="b-sel__stripe" />
+                    <ui:Label name="bh-sel-name" text="" class="b-sel__name" />
+                </ui:VisualElement>
+                <ui:VisualElement name="bh-sel-numbers">
+                    <ui:VisualElement class="row row--baseline">
+                        <ui:Label name="bh-sel-count" text="" class="b-sel__count" />
+                        <ui:Label name="bh-sel-start" text="" class="b-sel__start" />
+                        <ui:VisualElement class="spacer" />
+                        <ui:Label name="bh-sel-pct" text="" class="b-sel__pct" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="hp hp--lg">
+                        <ui:VisualElement name="bh-sel-hp" class="hp__fill" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="mini-stats">
+                        <ui:VisualElement class="mini-stat">
+                            <ui:Label text="损失" class="mini-stat__k" />
+                            <ui:Label name="bh-sel-loss" text="0" class="mini-stat__v" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:Label name="bh-sel-detail" text="" class="bh-sel__detail" />
+            </tac:TacFrame>
+            <tac:TacFrame name="bh-forces" class="b-forces">
+                <ui:VisualElement class="panel-head panel-head--sm">
+                    <ui:Label text="军团" class="code code--accent" />
+                    <ui:Label text="按 1–9 选择 · 双击聚焦 · Tab 轮换" class="code" />
+                </ui:VisualElement>
+                <ui:ScrollView name="bh-armies" class="bh-grow" />
+            </tac:TacFrame>
+            <tac:TacFrame name="bh-feedback" class="bh-feedback">
+                <ui:VisualElement class="panel-head panel-head--sm">
+                    <ui:Label text="操作反馈" class="code code--accent" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Button name="bh-move-cancel" text="取消 Esc" class="btn btn--sm" />
+                </ui:VisualElement>
+                <ui:Label name="bh-feedback-text" text="" class="bh-feedback__t" />
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Bottom: command bar (battle) -->
+        <tac:TacFrame name="bh-cmd" class="b-cmd tac-frame--hi bh-cmd">
+            <ui:Button name="bh-start" class="cmd cmd--primary">
+                <tac:TacIcon name="bh-start-icon" icon="pause" class="cmd__icon" />
+                <ui:Label name="bh-start-text" text="" class="cmd__label" />
+                <ui:Label name="bh-start-key" text="" class="cmd__key" />
+            </ui:Button>
+            <ui:VisualElement class="vsep vsep--tall" />
+            <ui:Button name="bh-attack" class="cmd">
+                <tac:TacIcon icon="attack" class="cmd__icon" />
+                <ui:Label text="进攻" class="cmd__label" />
+                <ui:Label text="A" class="cmd__key" />
+            </ui:Button>
+            <ui:Button name="bh-move" class="cmd">
+                <tac:TacIcon icon="move" class="cmd__icon" />
+                <ui:Label name="bh-move-text" text="移动" class="cmd__label" />
+                <ui:Label text="M" class="cmd__key" />
+            </ui:Button>
+            <ui:Button name="bh-hold" class="cmd">
+                <tac:TacIcon icon="hold" class="cmd__icon" />
+                <ui:Label text="防守" class="cmd__label" />
+                <ui:Label text="H" class="cmd__key" />
+            </ui:Button>
+            <ui:Button name="bh-retreat" class="cmd">
+                <tac:TacIcon icon="retreat" class="cmd__icon" />
+                <ui:Label text="撤退" class="cmd__label" />
+                <ui:Label text="R" class="cmd__key" />
+            </ui:Button>
+            <ui:VisualElement class="vsep vsep--tall" />
+            <ui:Button name="bh-follow" class="cmd">
+                <tac:TacIcon icon="follow" class="cmd__icon" />
+                <ui:Label text="跟随" class="cmd__label" />
+                <ui:Label text="F" class="cmd__key" />
+            </ui:Button>
+            <ui:Button name="bh-overview" class="cmd">
+                <tac:TacIcon icon="overview" class="cmd__icon" />
+                <ui:Label text="全景" class="cmd__label" />
+                <ui:Label text="F3" class="cmd__key" />
+            </ui:Button>
+        </tac:TacFrame>
+
+        <!-- Bottom: preparation (setup phase) -->
+        <tac:TacFrame name="bh-setup" class="bh-setup tac-frame--hi">
+            <ui:Label name="bh-setup-note" text="" class="bh-setup__note" />
+            <ui:VisualElement class="row">
+                <ui:Button name="bh-edit" class="btn btn--lg bh-setup__edit">
+                    <tac:TacIcon icon="grid" class="btn__icon" />
+                    <ui:Label text="配兵与布阵" />
+                </ui:Button>
+                <ui:Button name="bh-setup-start" class="btn btn--primary btn--lg bh-grow">
+                    <tac:TacIcon icon="play" class="btn__icon" />
+                    <ui:Label text="开始战斗" />
+                    <ui:Label text="ENTER" class="key key--on-primary" />
+                </ui:Button>
+            </ui:VisualElement>
+        </tac:TacFrame>
+
+        <ui:Label name="bh-rule-error" text="" class="bh-rule-error" />
+
+        <!-- Minimap -->
+        <tac:TacFrame name="bh-mini" class="b-mini bh-mini">
+            <ui:VisualElement class="panel-head panel-head--sm">
+                <ui:Label text="小地图" class="code code--accent" />
+                <ui:VisualElement class="spacer" />
+                <ui:Label text="左键定位 · 右键下令" class="code" />
+            </ui:VisualElement>
+            <ui:VisualElement name="bh-mini-host" class="bh-mini__host" />
+        </tac:TacFrame>
+
+        <!-- After-action report -->
+        <ui:VisualElement name="bh-result" class="fill dimmer modal-root">
+            <tac:TacFrame class="result tac-frame--hi bh-result">
+                <ui:VisualElement class="row">
+                    <ui:Label text="战后报告" class="code code--accent" />
+                    <ui:VisualElement class="spacer" />
+                    <ui:Label name="res-op" text="" class="code" />
+                </ui:VisualElement>
+                <ui:Label name="res-title" text="" class="result__title" />
+                <ui:Label name="res-sub" text="" class="result__sub" />
+                <ui:VisualElement class="result__kpis">
+                    <ui:VisualElement class="kpi">
+                        <ui:Label text="总参战" class="kpi__k" />
+                        <ui:Label name="res-k-total" text="" class="kpi__v" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="kpi">
+                        <ui:Label text="总损失" class="kpi__k" />
+                        <ui:Label name="res-k-dead" text="" class="kpi__v kpi__v--danger" />
+                    </ui:VisualElement>
+                    <ui:VisualElement class="kpi kpi--last">
+                        <ui:Label text="用时" class="kpi__k" />
+                        <ui:Label name="res-k-time" text="" class="kpi__v" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="side bh-res-table">
+                    <ui:VisualElement class="side__cols">
+                        <ui:Label text="军团" class="scol scol--k" />
+                        <ui:Label text="初始" class="scol" />
+                        <ui:Label text="存活" class="scol" />
+                        <ui:Label text="损失" class="scol" />
+                    </ui:VisualElement>
+                    <ui:ScrollView name="res-rows" class="bh-res-rows" />
+                </ui:VisualElement>
+                <ui:Label name="res-note" text="再来一局：沿用本局已应用编成和布阵，立即重新开战。&#10;返回布阵：保留配置继续修改；战斗进度和路线不保留。" class="hint hint--wrap" />
+                <ui:VisualElement class="result__actions">
+                    <ui:Button name="res-catalog" class="btn--first btn btn--ghost">
+                        <tac:TacIcon icon="map" class="btn__icon" />
+                        <ui:Label text="选择其他战场" />
+                    </ui:Button>
+                    <ui:VisualElement class="spacer" />
+                    <ui:Button name="res-edit" class="btn btn--lg">
+                        <tac:TacIcon icon="chev-l" class="btn__icon" />
+                        <ui:Label name="res-edit-text" text="返回布阵" />
+                    </ui:Button>
+                    <ui:Button name="res-again" class="btn btn--primary btn--lg">
+                        <tac:TacIcon icon="rotate" class="btn__icon" />
+                        <ui:Label name="res-again-text" text="再来一局" />
+                        <ui:Label text="ENTER" class="key key--on-primary" />
+                    </ui:Button>
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+
+        <!-- Reset / end confirmation -->
+        <ui:VisualElement name="bh-decision" class="fill dimmer modal-root">
+            <tac:TacFrame class="fe-modal bh-modal">
+                <ui:Label name="dec-title" text="" class="h-page" />
+                <ui:Label name="dec-body" text="" class="para bh-modal__body" />
+                <ui:Label name="dec-state" text="" class="hint bh-modal__state" />
+                <ui:VisualElement class="row">
+                    <ui:Button name="dec-cancel" text="取消 · 保持现状  Esc" class="btn btn--primary btn--lg bh-grow bh-modal__btn" />
+                    <ui:Button name="dec-confirm" text="" class="btn btn--danger btn--lg bh-grow" />
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

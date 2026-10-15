@@ -1,0 +1,103 @@
+/* =====================================================================
+   战斗 HUD + 战后报告（Q 版，基于 WarSandboxUi.Toy.uss 的原型战斗页）
+   - 面板单位参照 1440 × 810；右上角系统栏属于前台（FrontEnd.uxml），这里从 top 62 开始。
+   - 只显示游戏已有的数据：没有击杀/士气/战况日志。
+   ===================================================================== */
+
+.bh { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.bh-grow { flex-grow: 1; flex-shrink: 1; }
+
+/* ---------- 标题 ---------- */
+.bh-title { left: 20px; top: 14px; width: 330px; padding: 12px 16px 16px 16px; }
+.bh-title .b-title__name { font-size: 22px; white-space: normal; }
+
+/* ---------- 中央：时间 / 兵力条 / 据点 / 选区 ---------- */
+.bh-center { position: absolute; top: 12px; left: 50%; translate: -50% 0; width: 500px; align-items: stretch; }
+.bh-timer { padding: 10px 20px 14px 20px; }
+.bh-clock { width: auto; font-size: 44px; margin: -4px 0 2px 0; }
+.bh-bar { height: 12px; margin-top: 2px; }
+.bh-bar__seg { height: 100%; flex-basis: 0; }
+.bh-bar-labels { flex-direction: row; margin-top: 6px; }
+.bh-bar-label { flex-grow: 1; flex-basis: 0; font-size: 13px; -unity-font-style: bold; -unity-text-align: middle-center; overflow: hidden; }
+.bh-objective { margin-top: 8px; justify-content: center; color: #E07F00; }
+.bh-objective__t { font-size: 16px; -unity-font-style: bold; color: var(--c-ink); }
+.bh-p7 { margin-top: 8px; padding: 10px 14px 14px 14px; }
+.bh-p7__t { font-size: 13px; color: var(--c-ink2); white-space: normal; margin-top: 6px; }
+
+/* ---------- 右侧：速度 / 本局操作 / 工具 ---------- */
+.bh-right { position: absolute; right: 20px; top: 62px; width: 340px; align-items: flex-end; }
+.bh-speed { margin-top: 0; }
+.bh-speed > .code { margin-right: 10px; }
+.bh-ops { margin-top: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.bh-ops > .btn { margin: 0 0 6px 6px; }
+.bh-ops .btn--on { background-color: #E3F2FD; border-color: #8CC6F2; color: #1F5F96; }
+.bh-details { width: 340px; margin-top: 4px; padding: 12px 16px 16px 16px; }
+.bh-details__t { font-size: 14px; color: var(--c-ink2); white-space: normal; }
+
+/* ---------- 左侧：选中 / 军团 / 反馈 ---------- */
+.bh-left { position: absolute; left: 20px; top: 128px; bottom: 20px; width: 330px; }
+.bh-left .b-sel { padding: 12px 16px 16px 16px; }
+.bh-left .b-sel__name { font-size: 20px; white-space: normal; flex-shrink: 1; }
+.bh-left .b-sel__count { font-size: 34px; }
+.bh-sel__detail { font-size: 13px; color: var(--c-ink2); white-space: normal; margin-top: 8px; }
+.bh-left .b-forces { flex-grow: 1; flex-shrink: 1; min-height: 120px; margin-top: 10px; padding: 12px 12px 16px 12px; }
+.bh-left .army-card { height: 50px; flex-shrink: 0; }
+.army-card__stripe { height: 100%; }
+.army-card__body { flex-grow: 1; padding-right: 10px; }
+.army-card__key { width: 26px; font-size: 14px; -unity-text-align: middle-center; }
+.army-card__name { font-size: 14px; flex-shrink: 1; overflow: hidden; }
+.army-card .row { margin-bottom: 4px; }
+.army-card__count { font-size: 12px; width: 64px; -unity-text-align: middle-right; }
+.army-card--dead { opacity: 0.45; }
+.bh-feedback { margin-top: 10px; padding: 10px 14px 16px 14px; flex-shrink: 0; }
+.bh-feedback .btn--sm { margin-left: 8px; height: 28px; }
+.bh-feedback__t { font-size: 14px; color: var(--c-ink); white-space: normal; }
+.bh-feedback__t--bad { color: var(--c-danger); -unity-font-style: bold; }
+
+/* ---------- 底部：命令栏 / 战前准备 ---------- */
+.bh-cmd { bottom: 20px; padding: 10px 14px 15px 14px; }
+.bh-cmd .cmd { width: 84px; height: 74px; margin: 0 3px; }
+.bh-cmd .cmd--primary { width: 132px; }
+.bh-cmd .cmd__label { font-size: 14px; }
+.bh-cmd .cmd:disabled { opacity: 0.4; }
+.bh-setup { position: absolute; bottom: 24px; left: 50%; translate: -50% 0; width: 560px; padding: 14px 18px 20px 18px; }
+.bh-setup__note { font-size: 15px; color: var(--c-ink2); white-space: normal; margin-bottom: 12px; }
+.bh-setup__edit { margin-left: 0; margin-right: 12px; }
+.bh-rule-error {
+    position: absolute; bottom: 136px; left: 50%; translate: -50% 0; max-width: 760px;
+    padding: 10px 16px; border-radius: 14px; background-color: #FFF1EE; border-width: 2px; border-color: #F3A79E;
+    font-size: 15px; color: #B4362D; white-space: normal; -unity-font-style: bold;
+}
+
+/* ---------- 小地图 ---------- */
+.bh-mini { right: 20px; bottom: 20px; width: 270px; padding: 10px 12px 16px 12px; }
+.bh-mini__host { width: 246px; height: 246px; border-radius: 12px; overflow: hidden; }
+.bh-minimap { flex-grow: 1; }
+/* Minimap army shapes texture, numbered army badges (number = army hotkey) */
+.bh-minimap__armies { background-size: 100% 100%; }
+.bh-mm-badge { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; padding: 0; border-radius: 9px; border-width: 2px; font-size: 11px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.bh-mm-badge--sel { width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 11px; font-size: 12px; }
+
+/* ---------- 战后报告 ---------- */
+.bh-result { width: 820px; max-height: 92%; }
+.bh-result .result__title { font-size: 56px; }
+.bh-result .kpi__v { font-size: 28px; }
+.bh-res-table { flex-shrink: 1; min-height: 90px; }
+.bh-res-rows { flex-shrink: 1; max-height: 260px; }
+.bh-res-row { flex-direction: row; height: 36px; align-items: center; border-bottom-width: 1px; border-color: rgba(230, 217, 194, 0.8); }
+.bh-res-row__sw { width: 10px; height: 10px; border-radius: 5px; margin-right: 8px; }
+.bh-res-row__k { flex-grow: 2.2; flex-basis: 0; flex-direction: row; align-items: center; }
+.bh-res-row__name { font-size: 15px; color: var(--c-ink); flex-shrink: 1; }
+.bh-res-row--win .bh-res-row__name { -unity-font-style: bold; color: #C46F00; }
+.bh-res-row .chip--win { margin-left: 8px; }
+.bh-res-row .scell { font-size: 15px; color: var(--c-ink2); }
+.bh-res-row .scell--alive { color: var(--c-ink); -unity-font-style: bold; }
+.bh-res-row .scell--loss { color: var(--c-danger); }
+
+/* ---------- 重置/结束确认 ---------- */
+.bh-modal { width: 520px; padding: 26px 30px 30px 30px; --frame-fill: #FFFCF4; --frame-radius: 26; --frame-shadow: 0.22; }
+.bh-modal .h-page { margin: 0 0 10px 0; }
+.bh-modal__body { font-size: 16px; white-space: normal; }
+.bh-modal__state { margin: 12px 0 16px 0; white-space: normal; }
+.bh-modal .btn { margin-left: 0; }
+.bh-modal__btn { margin-right: 12px; }

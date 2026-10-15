@@ -103,7 +103,7 @@ namespace MassEngine.Game
                 (c, m) => c.chargeDamageMultiplier, (c, m, v) => c.chargeDamageMultiplier = v),
             new WarSandboxStatDefinition(WarSandboxUnitStat.ChargeMinSpeedFraction, "chargeMinSpeedFraction", "冲锋起速", "×移速", GroupCharge, 0.1f, 1.5f, false, WarSandboxStatRole.MeleeOnly, false,
                 (c, m) => c.chargeMinSpeedFraction, (c, m, v) => c.chargeMinSpeedFraction = v),
-            new WarSandboxStatDefinition(WarSandboxUnitStat.ProjectileRange, "projectileRange", "弹道射程", "米", GroupProjectile, 1, 80, false, WarSandboxStatRole.RangedOnly, false,
+            new WarSandboxStatDefinition(WarSandboxUnitStat.ProjectileRange, "projectileRange", "弹道射程", "米", GroupProjectile, 1, 600, false, WarSandboxStatRole.RangedOnly, false,
                 (c, m) => c.projectileRange, (c, m, v) => c.projectileRange = v),
             new WarSandboxStatDefinition(WarSandboxUnitStat.ProjectileSpeed, "projectileSpeed", "弹道速度", "米/秒", GroupProjectile, 1, 100, false, WarSandboxStatRole.RangedOnly, false,
                 (c, m) => c.projectileSpeed, (c, m, v) => c.projectileSpeed = v),
@@ -367,6 +367,8 @@ namespace MassEngine.Game
 
         public WarSandboxStatResolver(WarSandboxBattlefieldCatalog catalog, WarSandboxGlobalStats global, WarSandboxStatOverrides local)
         { this.catalog = catalog; Global = global; Local = local; }
+
+        public WarSandboxBattlefieldCatalog Catalog => catalog;
 
         public string TemplateId(UnitTypeConfig template) =>
             catalog != null && catalog.TryGetTemplateId(template, out string id, out _) ? id : null;

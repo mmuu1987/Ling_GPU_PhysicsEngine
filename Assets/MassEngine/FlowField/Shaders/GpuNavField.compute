@@ -1,0 +1,192 @@
+// GPU nav field (N series, Docs/GPU-NAVFIELD-N0-20261013.md).
+// Value iteration on the fine (2 m) graph, one Jacobi pass per NavFieldRelax dispatch (ping-pong buffers):
+//   goal cell      d' = 0
+//   blocked cell   d' = UNREACHABLE
+//   other cell     d' = min over the 8 neighbours of d[n] + w(c,n)        (own old value NOT included)
+// Values can fall (wavefront, one cell per pass) and rise (a stale low value climbs by at least one edge
+// cost per pass), so the fixed point is the exact shortest distance with no ageing term. Order-independent
+// min -> deterministic; GpuNavFieldReference.Relax performs the same operations in the same order.
+// N3 (_NavMetric = 1, eikonal): additionally the 8-neighbour triangle (Fast Marching) update. For the triangle of
+// a cardinal neighbour A (edge cost wa) and an adjacent diagonal neighbour B, with dd = d[A] - d[B]:
+//   0 <= dd and 2 dd^2 <= wa^2   ->   candidate d[A] + sqrt(wa^2 - dd^2)
+// (planar wavefront through A and B; wa/h is the local slowness). Round wavefronts instead of the octagons of the
+// graph metric, so -grad d is no longer limited to ~8 directions. Every candidate exceeds its inputs, so the
+// fixed point is unique and a Dijkstra-ordered Fast Marching seed reaches it. GPU sqrt may differ from the CPU by an
+// ulp: eikonal results are compared with a tolerance, graph results bit for bit.
+#pragma kernel NavFieldRelax
+#pragma kernel NavFieldFill
+#pragma kernel NavCrowdClear
+#pragma kernel NavCrowdCount
+#pragma kernel NavCrowdSmooth
+
+#define UNREACHABLE 1e30
+#define INFINITE_COST asfloat(0x7F800000u)
+#define FINITE_COST 1e20
+#define NAV_GOAL_NONE 0
+#define NAV_GOAL_DENSITY 1
+#define NAV_GOAL_POINT 2
+#define NAV_GOAL_AREA 3
+#define NAV_GOAL_LINE 4
+
+StructuredBuffer<uint> _NavWalk;           // fine cells: 1 = walkable (fine AND coarse parent)
+StructuredBuffer<uint> _NavEdge;           // 2 uints per cell: half costs of directions (+x,+z),(+x+z,-x+z); 0x7C00 = none
+StructuredBuffer<uint> _NavTargetDensity;  // runtimeFlowTargetDensity (coarse, team slices)
+StructuredBuffer<uint> _NavGoalBits;       // N5b line goals: 1 bit per fine cell, team slices of _NavGoalBitsOffset words
+int _NavGoalBitsOffset;
+StructuredBuffer<float> _NavDistIn;
+RWStructuredBuffer<float> _NavDistOut;
+
+int _NavRes;
+int _NavLayerOffset;       // layer * cells, applied to both In and Out
+int _NavGoalMode;
+int _NavGoalCell;
+int _NavCoarseRes;
+int _NavCoarseOffset;      // team * coarse cells in _NavTargetDensity
+float4 _NavGoalRect;       // centre xz, half size xz
+float4 _NavGrid;           // origin xz, cell size, unused
+float _NavFill;
+int _NavFillCount;
+// N4 crowd cost: own-team agents per fine cell, smoothed (EMA). Relax multiplies every edge cost of cell c by
+// m(c) = 1 + gain * min(ema(c) * invFull, cap); gain 0 = exactly the N3 field (multiplication skipped).
+StructuredBuffer<float> _NavCrowdEma;      // team * cells (read by NavFieldRelax at _NavCrowdOffset)
+int _NavCrowdOffset;       // team * cells of the layer's own team (local slot layers use their team's crowd)
+RWStructuredBuffer<uint> _NavCrowdCountRW; // team * cells, blocked agents in 1/256 units
+RWStructuredBuffer<float> _NavCrowdEmaRW;
+// Layout mirror of AgentData (AgentDataCommon.hlsl, 64 bytes): only position and currentState are read here.
+struct NavAgent { float3 position; float3 rotation; float3 scale; float3 velocity; int currentState; float animationTime; int presentationState; float locomotionSpeed; };
+StructuredBuffer<NavAgent> _NavAgents;
+StructuredBuffer<int> _NavAgentTeams;
+int _NavAgentCount;
+int _NavTeamCount;
+float _NavCrowdGain;
+float _NavCrowdInvFull;    // 1 / (agents per fine cell counted as fully packed)
+float _NavCrowdCap;
+float _NavCrowdAlpha;      // EMA blend this frame, 1 - exp(-dt / tau)
+float _NavCrowdInvFreeSpeed; // congestion weight = saturate(1 - locomotionSpeed / freeSpeed); 0 = every agent counts 1
+#define NAV_CROWD_UNIT 256.0
+#define NAV_AGENT_ENGAGE 2   // STATE_ENGAGE / STATE_ATTACK / STATE_DEAD (AgentDataCommon.hlsl)
+#define NAV_AGENT_ATTACK 3
+#define NAV_AGENT_DEAD 4
+int _NavMetric;            // 0 = graph (8-neighbour shortest path), 1 = eikonal (8-neighbour triangles)
+
+float EdgeCost(uint cell, uint direction)
+{
+    uint word = _NavEdge[2u * cell + (direction >> 1)];
+    return f16tof32((direction & 1u) == 0u ? (word & 0xFFFFu) : (word >> 16));
+}
+
+bool IsGoal(int x, int z, uint c)
+{
+    if (_NavGoalMode == NAV_GOAL_DENSITY)
+        return _NavTargetDensity[_NavCoarseOffset + (z >> 1) * _NavCoarseRes + (x >> 1)] > 0u;
+    if (_NavGoalMode == NAV_GOAL_POINT)
+        return (int)c == _NavGoalCell;
+    if (_NavGoalMode == NAV_GOAL_LINE)
+        return ((_NavGoalBits[(uint)_NavGoalBitsOffset + (c >> 5)] >> (c & 31u)) & 1u) != 0u;
+    if (_NavGoalMode == NAV_GOAL_AREA)
+    {
+        float cx = _NavGrid.x + (x + .5) * _NavGrid.z, cz = _NavGrid.y + (z + .5) * _NavGrid.z;
+        return abs(cx - _NavGoalRect.x) <= _NavGoalRect.z && abs(cz - _NavGoalRect.y) <= _NavGoalRect.w;
+    }
+    return false;
+}
+
+[numthreads(8, 8, 1)]
+void NavFieldRelax(uint3 id : SV_DispatchThreadID)
+{
+    int x = (int)id.x, z = (int)id.y, r = _NavRes;
+    if (x >= r || z >= r) return;
+    uint c = (uint)(z * r + x);
+    uint o = (uint)_NavLayerOffset;
+    float d;
+    if (_NavWalk[c] == 0u) d = UNREACHABLE;
+    else if (IsGoal(x, z, c)) d = 0.0;
+    else
+    {
+        // Neighbour k in direction order +x, +z, +x+z, -x+z, -x, -z, -x-z, +x-z (as the CPU solvers).
+        float v[8], w[8];
+        [unroll] for (int k = 0; k < 8; k++) { v[k] = UNREACHABLE; w[k] = INFINITE_COST; }
+        if (x + 1 < r) { v[0] = _NavDistIn[o + c + 1u]; w[0] = EdgeCost(c, 0u); }
+        if (z + 1 < r) { v[1] = _NavDistIn[o + c + (uint)r]; w[1] = EdgeCost(c, 1u); }
+        if (x + 1 < r && z + 1 < r) { v[2] = _NavDistIn[o + c + (uint)r + 1u]; w[2] = EdgeCost(c, 2u); }
+        if (x > 0 && z + 1 < r) { v[3] = _NavDistIn[o + c + (uint)r - 1u]; w[3] = EdgeCost(c, 3u); }
+        if (x > 0) { v[4] = _NavDistIn[o + c - 1u]; w[4] = EdgeCost(c - 1u, 0u); }
+        if (z > 0) { v[5] = _NavDistIn[o + c - (uint)r]; w[5] = EdgeCost(c - (uint)r, 1u); }
+        if (x > 0 && z > 0) { v[6] = _NavDistIn[o + c - (uint)r - 1u]; w[6] = EdgeCost(c - (uint)r - 1u, 2u); }
+        if (x + 1 < r && z > 0) { v[7] = _NavDistIn[o + c - (uint)r + 1u]; w[7] = EdgeCost(c - (uint)r + 1u, 3u); }
+        if (_NavCrowdGain > 0.0)
+        {
+            // Local slowness of the crowded cell: every edge leaving c scales alike, so the triangle update stays valid.
+            precise float crowd = min(_NavCrowdEma[(uint)_NavCrowdOffset + c] * _NavCrowdInvFull, _NavCrowdCap);
+            precise float m = 1.0 + _NavCrowdGain * crowd;
+            [unroll] for (int k2 = 0; k2 < 8; k2++) w[k2] = w[k2] * m;
+        }
+        d = UNREACHABLE;
+        [unroll] for (int e = 0; e < 8; e++) d = min(d, v[e] + w[e]);
+        if (_NavMetric == 1)
+        {
+            // Triangles: cardinal A with each adjacent diagonal B.
+            static const int TA[8] = { 0, 0, 1, 1, 4, 4, 5, 5 };
+            static const int TB[8] = { 2, 7, 2, 3, 3, 6, 6, 7 };
+            [unroll] for (int t = 0; t < 8; t++)
+            {
+                float a = v[TA[t]], b = v[TB[t]], wa = w[TA[t]], wb = w[TB[t]];
+                if (wa < FINITE_COST && wb < FINITE_COST && a < UNREACHABLE && b < UNREACHABLE)
+                {
+                    precise float dd = a - b;
+                    precise float dd2 = dd * dd;
+                    precise float wa2 = wa * wa;
+                    if (dd >= 0.0 && dd2 * 2.0 <= wa2)
+                    {
+                        precise float candidate = a + sqrt(wa2 - dd2);
+                        d = min(d, candidate);
+                    }
+                }
+            }
+        }
+        d = min(d, UNREACHABLE);
+    }
+    _NavDistOut[o + c] = d;
+}
+
+[numthreads(64, 1, 1)]
+void NavFieldFill(uint3 id : SV_DispatchThreadID)
+{
+    if ((int)id.x >= _NavFillCount) return;
+    _NavDistOut[(uint)_NavLayerOffset + id.x] = _NavFill;
+}
+
+[numthreads(64, 1, 1)]
+void NavCrowdClear(uint3 id : SV_DispatchThreadID)
+{
+    if ((int)id.x >= _NavFillCount) return;
+    _NavCrowdCountRW[id.x] = 0u;
+}
+
+[numthreads(64, 1, 1)]
+void NavCrowdCount(uint3 id : SV_DispatchThreadID)
+{
+    if ((int)id.x >= _NavAgentCount) return;
+    NavAgent a = _NavAgents[id.x];
+    // Fighting is not congestion: engaging / attacking / dead agents never price the way for others.
+    if (a.currentState == NAV_AGENT_DEAD || a.currentState == NAV_AGENT_ENGAGE || a.currentState == NAV_AGENT_ATTACK) return;
+    int team = _NavAgentTeams[id.x];
+    if (team < 0 || team >= _NavTeamCount) return;
+    float2 local = (a.position.xz - _NavGrid.xy) / _NavGrid.z;
+    if (!(local.x >= 0.0 && local.y >= 0.0 && local.x < (float)_NavRes && local.y < (float)_NavRes)) return;
+    // Price congestion, not formation density: a dense column moving freely costs nothing, a jammed one costs fully.
+    float weight = saturate(1.0 - a.locomotionSpeed * _NavCrowdInvFreeSpeed);
+    uint units = (uint)(weight * NAV_CROWD_UNIT + 0.5);
+    if (units == 0u) return;
+    int2 cell = (int2)floor(local);
+    uint index = (uint)team * (uint)(_NavRes * _NavRes) + (uint)(cell.y * _NavRes + cell.x);
+    InterlockedAdd(_NavCrowdCountRW[index], units);
+}
+
+[numthreads(64, 1, 1)]
+void NavCrowdSmooth(uint3 id : SV_DispatchThreadID)
+{
+    if ((int)id.x >= _NavFillCount) return;
+    float ema = _NavCrowdEmaRW[id.x];
+    _NavCrowdEmaRW[id.x] = ema + _NavCrowdAlpha * ((float)_NavCrowdCountRW[id.x] * (1.0 / NAV_CROWD_UNIT) - ema);
+}

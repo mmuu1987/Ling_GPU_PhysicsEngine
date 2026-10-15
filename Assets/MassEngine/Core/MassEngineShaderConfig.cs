@@ -10,5 +10,6 @@ namespace MassEngine
         public ComputeShader combatSimulationShader;
         public ComputeShader lodClassificationShader;
         public ComputeShader projectileShader;
+        public ComputeShader gpuNavFieldShader;
     }
 }

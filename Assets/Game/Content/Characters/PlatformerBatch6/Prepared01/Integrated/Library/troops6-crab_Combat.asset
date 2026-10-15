@@ -18,8 +18,8 @@ MonoBehaviour:
   targetAcquireRadius: 12
   attackRange: 2.05
   attackDamage: 12
-  attackInterval: 0.6666667
-  maxHp: 90
+  attackInterval: 0.8
+  maxHp: 220
   projectileRange: 0
   projectileSpeed: 12
   projectileGravity: -9.8

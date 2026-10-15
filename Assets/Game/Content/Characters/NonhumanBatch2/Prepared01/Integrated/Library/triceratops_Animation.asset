@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010005, type: 3}
   m_Name: triceratops_Animation
   m_EditorClassIdentifier: 
-  moveReferenceSpeed: 2.5
+  moveReferenceSpeed: 4
   moveStopSpeed: 0.05
   moveStartSpeed: 0.12
   moveAnimationSpeedMin: 0.2
-  moveAnimationSpeedMax: 1.15
+  moveAnimationSpeedMax: 2

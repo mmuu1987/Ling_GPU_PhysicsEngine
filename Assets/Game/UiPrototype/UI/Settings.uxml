@@ -1,0 +1,122 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:tac="MassEngine.UiPrototype" editor-extension-mode="False">
+    <ui:VisualElement class="modal-root">
+        <ui:VisualElement name="set-dim" class="fill dimmer" />
+        <tac:TacFrame class="settings tac-frame--hi">
+            <ui:VisualElement class="row">
+                <ui:Label text="SYSTEM // CONFIG" class="code code--accent" />
+                <ui:VisualElement class="spacer" />
+                <ui:Button name="set-close" class="ibtn" tooltip="关闭 Esc">
+                    <tac:TacIcon icon="close" class="ibtn__icon" />
+                </ui:Button>
+            </ui:VisualElement>
+            <ui:Label text="设置" class="h-page" />
+            <ui:VisualElement class="settings__body">
+                <ui:VisualElement class="vtabs">
+                    <ui:Button name="st-video" class="vtab">
+                        <tac:TacIcon icon="grid" class="vtab__icon" />
+                        <ui:Label text="画面" />
+                    </ui:Button>
+                    <ui:Button name="st-audio" class="vtab">
+                        <tac:TacIcon icon="audio" class="vtab__icon" />
+                        <ui:Label text="声音" />
+                    </ui:Button>
+                    <ui:Button name="st-control" class="vtab">
+                        <tac:TacIcon icon="target" class="vtab__icon" />
+                        <ui:Label text="操作" />
+                    </ui:Button>
+                    <ui:Button name="st-camera" class="vtab">
+                        <tac:TacIcon icon="overview" class="vtab__icon" />
+                        <ui:Label text="镜头" />
+                    </ui:Button>
+                </ui:VisualElement>
+                <ui:VisualElement class="settings__panes">
+                    <ui:VisualElement name="sp-video" class="spane">
+                        <ui:Label text="画面 · VIDEO" class="h-sub" />
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="渲染距离" class="srow__k" />
+                            <tac:TacSlider name="s-dist" low="400" high="2400" value="1800" class="grow" />
+                            <ui:Label name="s-dist-v" text="1800 m" class="srow__v mono" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="单位细节" class="srow__k" />
+                            <tac:TacSeg options="低|中|高|极高" index="2" class="grow" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="阴影" class="srow__k" />
+                            <tac:TacCycler options="关闭|硬阴影|软阴影" index="2" class="grow" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="垂直同步" class="srow__k grow" />
+                            <tac:TacToggle value="true" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="显示帧率" class="srow__k grow" />
+                            <tac:TacToggle value="false" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="sp-audio" class="spane">
+                        <ui:Label text="声音 · AUDIO" class="h-sub" />
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="主音量" class="srow__k" />
+                            <tac:TacSlider name="s-master" low="0" high="100" value="80" class="grow" />
+                            <ui:Label name="s-master-v" text="80%" class="srow__v mono" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="音效" class="srow__k" />
+                            <tac:TacSlider name="s-sfx" low="0" high="100" value="65" class="grow" />
+                            <ui:Label name="s-sfx-v" text="65%" class="srow__v mono" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="战场环境声" class="srow__k" />
+                            <tac:TacSlider name="s-amb" low="0" high="100" value="40" class="grow" />
+                            <ui:Label name="s-amb-v" text="40%" class="srow__v mono" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="后台静音" class="srow__k grow" />
+                            <tac:TacToggle value="true" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement name="sp-control" class="spane">
+                        <ui:Label text="操作 · CONTROLS" class="h-sub" />
+                        <ui:VisualElement name="s-keys" class="keymap" />
+                    </ui:VisualElement>
+                    <ui:VisualElement name="sp-camera" class="spane">
+                        <ui:Label text="镜头 · CAMERA" class="h-sub" />
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="平移速度" class="srow__k" />
+                            <tac:TacSlider name="s-pan" low="0.2" high="3" value="1" class="grow" />
+                            <ui:Label name="s-pan-v" text="1.0×" class="srow__v mono" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="自适应速度" class="srow__k grow" />
+                            <tac:TacToggle value="true" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="跟随自动缩放" class="srow__k grow" />
+                            <tac:TacToggle value="true" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="srow">
+                            <ui:Label text="军团聚焦" class="srow__k" />
+                            <tac:TacSeg options="双击|Tab|双击 + Tab" index="2" class="grow" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="result__actions">
+                <ui:Button name="set-defaults" class="btn--first btn btn--ghost">
+                    <tac:TacIcon icon="undo" class="btn__icon" />
+                    <ui:Label text="恢复默认" />
+                </ui:Button>
+                <ui:VisualElement class="spacer" />
+                <ui:Button name="set-cancel" class="btn btn--lg">
+                    <ui:Label text="取消" />
+                </ui:Button>
+                <ui:Button name="set-save" class="btn btn--primary btn--lg">
+                    <ui:VisualElement class="glow" picking-mode="Ignore" />
+                    <tac:TacIcon icon="check" class="btn__icon" />
+                    <ui:Label text="保存并返回" />
+                </ui:Button>
+            </ui:VisualElement>
+        </tac:TacFrame>
+    </ui:VisualElement>
+</ui:UXML>

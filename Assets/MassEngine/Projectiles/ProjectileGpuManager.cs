@@ -57,6 +57,11 @@ namespace MassEngine.Projectiles
 
         // 日志降频
         private int _logFrameCounter = 0;
+        /// <summary>Periodic launch-count log (off by default: ~1 line/s during ranged battles).</summary>
+        public bool LogLaunchStats;
+        // Simulation clock (same base as the GPU currentTime) captured by ProcessLaunchRequests;
+        // LaunchProjectile's default launch time uses it instead of Time.time (audit 2026-10-12, D).
+        private float _simulationClock;
         private const int LogInterval = 60;
 
         /// <summary>
@@ -198,7 +203,7 @@ namespace MassEngine.Projectiles
             if (timeToTarget <= 0) return;
 
             // Reuse only slots confirmed empty by a generation/watermark guarded GPU snapshot.
-            float resolvedLaunchTime = launchTime >= 0f ? launchTime : Time.time;
+            float resolvedLaunchTime = launchTime >= 0f ? launchTime : _simulationClock;
             if (_freeSlots.Count == 0)
             {
                 _overflowCount++; // Direct API rejection; production request draining defers instead.
@@ -271,6 +276,7 @@ namespace MassEngine.Projectiles
                 unitTypeIndices.Length < agentCount || unitTypeSettings == null || agentCount <= 0)
                 return;
 
+            _simulationClock = simulationTime;
             RequestPoolSnapshot();
 
             // 重新分配缓冲（如果 agent 数量变化）
@@ -340,6 +346,11 @@ namespace MassEngine.Projectiles
                     Vector3 sourcePos = new Vector3(sourcePos2D.x, 0f, sourcePos2D.y);
                     // 读取目标位置
                     Vector2 targetPos2D = _positionsCache[targetIdx];
+                    // Area fire: aim around the sampled block member, wider with distance.
+                    int scatterType = unitTypeIndices[agentIdx];
+                    if (AreaFireScatterEnabled && scatterType >= 0 && scatterType < unitTypeSettings.Length &&
+                        unitTypeSettings[scatterType].projectileRange >= AreaFireMinRange)
+                        targetPos2D += AreaFireScatter(Vector2.Distance(sourcePos2D, targetPos2D));
                     Vector3 targetPos = new Vector3(targetPos2D.x, 0f, targetPos2D.y);
                     if (Surface != null)
                     {
@@ -423,7 +434,7 @@ namespace MassEngine.Projectiles
                 FlushPendingProjectiles();
 
                 // 降频日志（每60帧打一次，或无发射时不打）
-                if (processedCount > 0)
+                if (LogLaunchStats && processedCount > 0)
                 {
                     _logFrameCounter++;
                     if (_logFrameCounter >= LogInterval)
@@ -435,6 +446,23 @@ namespace MassEngine.Projectiles
                 }
 
             }
+        }
+
+        /// <summary>Area fire scatter: uniform disc, 2 m radius at the muzzle growing to 8 m at 500 m.</summary>
+        public static bool AreaFireScatterEnabled = true;
+        /// <summary>Matches RANGED_AREA_MIN_RANGE in RangedAreaFire.hlsl.</summary>
+        public const float AreaFireMinRange = 100f;
+        private uint _scatterState = 0x9E3779B9u;
+        private Vector2 AreaFireScatter(float distance)
+        {
+            float radius = Mathf.Min(8f, 2f + 0.012f * Mathf.Max(0f, distance));
+            float r = radius * Mathf.Sqrt(NextScatter01()), angle = NextScatter01() * 6.2831853f;
+            return new Vector2(Mathf.Cos(angle) * r, Mathf.Sin(angle) * r);
+        }
+        private float NextScatter01()
+        {
+            _scatterState ^= _scatterState << 13; _scatterState ^= _scatterState >> 17; _scatterState ^= _scatterState << 5;
+            return (_scatterState & 0xFFFFFFu) / 16777216f;
         }
 
         private void CaptureReadback(AsyncGPUReadbackRequest request, int generation, int part)
@@ -473,16 +501,6 @@ namespace MassEngine.Projectiles
             _combatSimulationShader.SetBuffer(_kernelClearLaunchRequests, MassGpuShaderPropertyIds.LaunchRequestBufferId, launchRequestBuffer);
             int threadGroups = Mathf.Max(1, Mathf.CeilToInt(agentCount / 64f));
             _combatSimulationShader.Dispatch(_kernelClearLaunchRequests, threadGroups, 1, 1);
-        }
-
-        /// <summary>
-        /// 清理过期弹道（基于时间戳）
-        /// </summary>
-        public void ClearExpiredProjectiles(float currentTime)
-        {
-            // GPU 端已在 SimulateProjectiles kernel 中检查过期（age > maxLifetime）
-            // CPU 端不需要额外清理
-            // 保留此方法以保持 API 兼容性
         }
 
         /// <summary>CPU leases, including pending uploads and asynchronous recycling delay; not draw count.</summary>

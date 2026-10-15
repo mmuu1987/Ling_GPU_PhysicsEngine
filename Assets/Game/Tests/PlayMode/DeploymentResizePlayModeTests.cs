@@ -29,7 +29,7 @@ namespace MassEngine.Game.Tests
             output=Path.Combine(arg.Substring("--interaction-p5-output=".Length),"p5-evidence");Directory.CreateDirectory(output);
             oldDelta=Time.captureDeltaTime;oldScreen=WarSandboxUGUI.ScreenSizeOverride;prepared=true;Time.captureDeltaTime=1f/60;WarSandboxUGUI.ScreenSizeOverride=new Vector2(1280,720);
             Assert.IsNull(WarSandboxSceneSession.Instance);
-            yield return SceneManager.LoadSceneAsync("Assets/Game/Scenes/Green.unity",LoadSceneMode.Additive);scene=SceneManager.GetSceneByPath("Assets/Game/Scenes/Green.unity");yield return Frames(2);
+            yield return SceneManager.LoadSceneAsync("Assets/Game/Content/Battlefields/Map1024/Green1024.unity",LoadSceneMode.Additive);scene=SceneManager.GetSceneByPath("Assets/Game/Content/Battlefields/Map1024/Green1024.unity");yield return Frames(2);
             m=WarSandboxSceneSession.FindManager(scene,out _);Assert.IsNotNull(m);var c=WarSandboxRuntimeBootstrap.EnsureControls(m);c.RebuildArmyStates();m.PauseBattle();
             d=m.GetComponent<WarSandboxRuntimeDeployment>();d.battlefieldCatalog=AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>("Assets/Game/Scenes/Catalog.asset");d.StatStore=new WarSandboxUnitStatStore(Path.Combine(output,"globals.json"));d.PlanStore=new WarSandboxLocalPlanStore(Path.Combine(output,"plans"));hud=m.GetComponent<WarSandboxDeploymentHUD>();
             Assert.IsTrue(d.TryBeginEdit(false,out var error),error);yield return Frames();Canvas.ForceUpdateCanvases();Assert.IsNotNull(Pointer());
