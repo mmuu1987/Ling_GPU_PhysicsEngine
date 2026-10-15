@@ -47,11 +47,12 @@ namespace MassEngine.Game.Tests
         {Object.DestroyImmediate(root);foreach(var u in new[]{a,b}){Object.DestroyImmediate(u.spawnConfig);Object.DestroyImmediate(u);}Object.DestroyImmediate(source);Object.DestroyImmediate(system.simulationConfig);Object.DestroyImmediate(system.runtimeFlowConfig);Object.DestroyImmediate(system);Time.timeScale=1;}
         [Test] public void ResizeCommitsOnceAndKeepsOtherEntryAndGpu()
         {var draft=d.Draft;var e=draft[0];var other=draft[1];var gpu=m.Buffers;Assert.IsTrue(WarSandboxDeploymentResize.TryResize(e,DeploymentResizeHandle.MaxX,new Vector2(5,0),false,.45f,.08f,out var n,out var error),error);Assert.IsTrue(d.TryResizeDraft(draft,draft.Revision,0,e,n,out error),error);Assert.AreEqual(1,draft.Revision);Assert.AreEqual(other,draft[1]);Assert.AreSame(gpu,m.Buffers);Assert.IsTrue(draft.Undo());Assert.AreEqual(e,draft[0]);Assert.IsFalse(draft.CanUndo);Assert.IsTrue(draft.Redo());Assert.AreEqual(n,draft[0]);}
-        [Test] public void RadiusPackingRejectedEvenWithoutCustomizedRadius()
-        {var draft=d.Draft;var e=draft[0];var n=e;n.density=1.5f;Assert.IsFalse(d.TryResizeDraft(draft,0,0,e,n,out var error));StringAssert.Contains("间距",error);Assert.IsFalse(draft.CanUndo);}
+        // Count-lock B (2026-10-13): spacing, bounds and overlap problems are written to the draft (shown red); Apply/Start validation rejects them.
+        [Test] public void RadiusPackingIsWrittenButBlocksApply()
+        {var draft=d.Draft;var e=draft[0];var n=e;n.density=1.5f;Assert.IsTrue(d.TryResizeDraft(draft,0,0,e,n,out var error),error);Assert.IsTrue(draft.CanUndo);Assert.IsFalse(d.TryValidate(out error));StringAssert.Contains("间距",error);}
         [Test] public void StaleNoOpAndChangedCountCannotBypassToken()
         {var draft=d.Draft;var e=draft[0];var n=e;n.count++;Assert.IsFalse(d.TryResizeDraft(draft,0,0,e,n,out _));Assert.IsTrue(d.TryResizeDraft(draft,0,0,e,e,out _));Assert.IsFalse(draft.CanUndo);n=e;n.center.x--;draft.Set(0,n);draft.Undo();Assert.IsFalse(d.TryResizeDraft(draft,0,0,e,e,out _));}
-        [Test] public void FullFootprintAndOverlapStillRejected()
-        {var draft=d.Draft;var e=draft[0];var n=e;n.center.x=99;Assert.IsFalse(d.TryResizeDraft(draft,0,0,e,n,out _));n.center=draft[1].center;Assert.IsFalse(d.TryResizeDraft(draft,0,0,e,n,out _));Assert.IsFalse(draft.CanUndo);}
+        [Test] public void FullFootprintAndOverlapAreWrittenButBlockApply()
+        {var draft=d.Draft;var e=draft[0];var n=e;n.center.x=99;Assert.IsTrue(d.TryResizeDraft(draft,0,0,e,n,out var error),error);Assert.IsFalse(d.TryValidate(out error));Assert.IsNotEmpty(error);Assert.IsTrue(draft.Undo());Assert.IsTrue(d.TryValidate(out error),error);n=e;n.center=draft[1].center;Assert.IsTrue(d.TryResizeDraft(draft,draft.Revision,0,e,n,out error),error);Assert.IsFalse(d.TryValidate(out error));Assert.IsNotEmpty(error);}
     }
 }

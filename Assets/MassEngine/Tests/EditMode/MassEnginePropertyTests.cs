@@ -98,7 +98,7 @@ namespace MassEngine.Tests
             Type[] offenders = typeof(MassEngineManager).Assembly.GetTypes()
                 .Where(type => type.Namespace == "MassEngine")
                 .Where(type => !type.IsEnum && !type.IsInterface)
-                .Where(type => CountDataFields(type) > (type == typeof(UnitTypeGpuSettings) ? 36 : budget))
+                .Where(type => CountDataFields(type) > Allowance(type, budget))
                 .ToArray();
 
             Assert.IsEmpty(offenders,
@@ -111,6 +111,11 @@ namespace MassEngine.Tests
         /// its six formerly reserved slots for presentation and projectile geometry.
         /// It alone has a 36-field allowance; other types retain the 30-field budget.
         /// </summary>
+        // RuntimeFlowConfig is a flat inspector asset: the GPU nav field (N0-N5, 2026-10-13) added its opt-in switches and
+        // tunables as serialized fields. Nesting them would orphan the values in existing Flow assets, so the rule grants 40.
+        private static int Allowance(Type type, int budget) =>
+            type == typeof(UnitTypeGpuSettings) ? 36 : type == typeof(RuntimeFlowConfig) ? 40 : budget;
+
         private static int CountDataFields(Type type)
         {
             return type.GetFields(BindingFlags.Instance | BindingFlags.Public)

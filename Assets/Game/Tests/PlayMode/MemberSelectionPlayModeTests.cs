@@ -19,7 +19,7 @@ namespace MassEngine.Game.Tests
         {
             var a=Environment.GetCommandLineArgs().FirstOrDefault(x=>(x.StartsWith("--interaction-p7-output=")||x.StartsWith("--interaction-p8-output=")));if(a==null)Assert.Ignore("P7 owned opt-in required");output=a.Substring("--interaction-p7-output=".Length);
             oldDelta=Time.captureDeltaTime;started=true;Time.captureDeltaTime=1f/60;
-            Assert.IsNull(WarSandboxSceneSession.Instance);yield return SceneManager.LoadSceneAsync("Assets/Game/Scenes/Green.unity",LoadSceneMode.Additive);scene=SceneManager.GetSceneByPath("Assets/Game/Scenes/Green.unity");yield return Frames(3);
+            Assert.IsNull(WarSandboxSceneSession.Instance);yield return SceneManager.LoadSceneAsync("Assets/Game/Content/Battlefields/Map1024/Green1024.unity",LoadSceneMode.Additive);scene=SceneManager.GetSceneByPath("Assets/Game/Content/Battlefields/Map1024/Green1024.unity");yield return Frames(3);
             m=WarSandboxSceneSession.FindManager(scene,out _);c=WarSandboxRuntimeBootstrap.EnsureControls(m);hud=c.GetComponent<WarSandboxCommandHUD>();c.RebuildArmyStates();Assert.True(c.IssueOrder(ArmyOrder.Hold(0)));Assert.True(c.IssueOrder(ArmyOrder.Hold(1)));yield return Frames(20);
             var go=new GameObject("P7 Test camera");SceneManager.MoveGameObjectToScene(go,scene);cam=go.AddComponent<Camera>();cam.enabled=false;cam.orthographic=true;cam.orthographicSize=10;cam.nearClipPlane=.1f;cam.farClipPlane=100;cam.pixelRect=new Rect(0,0,256,256);cam.transform.position=new Vector3(0,20,0);cam.transform.rotation=Quaternion.LookRotation(Vector3.down,Vector3.forward);
         }

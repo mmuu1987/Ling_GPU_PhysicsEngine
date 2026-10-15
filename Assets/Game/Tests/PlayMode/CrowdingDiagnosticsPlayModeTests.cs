@@ -108,8 +108,8 @@ namespace MassEngine.Game.Tests
             Assert.That(WarSandboxSceneSession.Instance, Is.Null);
             previousCaptureDelta = Time.captureDeltaTime; previousTimeScale = Time.timeScale;
             Time.captureDeltaTime = 1f / 60f; Time.timeScale = 1;
-            yield return SceneManager.LoadSceneAsync("Assets/Game/Scenes/Green.unity", LoadSceneMode.Additive);
-            scene = SceneManager.GetSceneByPath("Assets/Game/Scenes/Green.unity"); yield return null; yield return null;
+            yield return SceneManager.LoadSceneAsync("Assets/Game/Content/Battlefields/Map1024/Green1024.unity", LoadSceneMode.Additive);
+            scene = SceneManager.GetSceneByPath("Assets/Game/Content/Battlefields/Map1024/Green1024.unity"); yield return null; yield return null;
             manager = WarSandboxSceneSession.FindManager(scene, out _); Assert.That(manager, Is.Not.Null);
             controller = WarSandboxRuntimeBootstrap.EnsureControls(manager); controller.RebuildArmyStates(); manager.PauseBattle();
             Assert.That(manager.Buffers.AgentCount, Is.EqualTo(2048)); Assert.That(new WarSandboxUnitStatStore().Current.IsEmpty, Is.True);
