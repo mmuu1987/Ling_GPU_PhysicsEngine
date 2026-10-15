@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: dragon-souleater
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u566C\u9B42\u8005\xB7\u9ED1\u9F99\uFF08\u98DE\u884C\u5DE8\u517D\uFF09"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 9cd7f551dcca9344b8a64bc30e51be89, type: 2}
+  movementConfig: {fileID: 11400000, guid: e81d24553c458da45bb807c8e9447814, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 3d7cee475ec6c13439aa336737baab27, type: 2}
+  animationConfig: {fileID: 11400000, guid: 98a5f2253e4495e43a7db4f5f9e2f979, type: 2}
+  combatConfig: {fileID: 11400000, guid: d191e73ce7f813744b2de45b6a4c8df1, type: 2}
+  renderConfig: {fileID: 11400000, guid: 97270cdbc96f3984d8b7f78fb11771a3, type: 2}

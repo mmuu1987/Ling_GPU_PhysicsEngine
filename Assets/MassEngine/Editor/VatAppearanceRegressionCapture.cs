@@ -133,6 +133,7 @@ namespace MassEngine.Editor
             block.SetBuffer("agentBuffer", agents);
             block.SetBuffer("visibleAgentIndices", visible);
             block.SetVector("_MassCorpseSink", Vector4.zero);
+            block.SetVector("_MassFlight", Vector4.zero);
             commands.Clear();
             commands.SetRenderTarget(target);
             commands.ClearRenderTarget(true, true, new Color(.04f, .055f, .08f, 0f));

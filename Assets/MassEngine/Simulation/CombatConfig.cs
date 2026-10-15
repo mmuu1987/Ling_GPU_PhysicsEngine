@@ -51,5 +51,10 @@ namespace MassEngine
         [Tooltip("Melee area damage (stomp) around the struck target. 0 = single target (default; behaviour unchanged). " +
                  "Every other living enemy whose body circle overlaps this radius also takes the same melee hit once. No friendly fire. Ranged units ignore it.")]
         [Min(0f)] public float meleeSplashRadius = 0f;
+
+        [Tooltip("Flight (2026-10-15): altitude in metres for a flying unit. 0 = ground unit (default; behaviour unchanged). " +
+                 "A flying unit still moves on the ground grid but is drawn this high; ground melee units can neither target nor touch it, " +
+                 "only ranged units and other flyers hit it. Splash stays in its own layer (ground or air).")]
+        [Min(0f)] public float flightAltitude = 0f;
     }
 }

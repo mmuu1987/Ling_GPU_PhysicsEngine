@@ -7,6 +7,8 @@
 #pragma multi_compile __ MASS_PROJECTILE_UNITS
 // Opt-in splash impact effect ring (ProjectileImpactFx). Off = legacy kernel, no extra buffers.
 #pragma multi_compile_local __ MASS_PROJECTILE_IMPACT_FX
+// Flight (2026-10-15): flight-aware capsules and splash layers (MeleeChargeParams.BindProjectile). Off = legacy kernel.
+#pragma multi_compile_local __ MASS_PROJECTILE_FLIGHT
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
 #ifdef MASS_TERRAIN_ENABLED

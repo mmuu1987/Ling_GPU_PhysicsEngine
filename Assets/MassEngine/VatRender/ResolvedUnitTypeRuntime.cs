@@ -144,10 +144,19 @@ namespace MassEngine
             resolved.midMesh = ApplyVertexAo(resolved.midMesh, resolved.midBlock);
             resolved.farMesh = ApplyVertexAo(resolved.farMesh, resolved.farBlock);
 
+            // Flight (2026-10-15): flyers are drawn at their altitude and fall to the ground during the death clip.
+            float altitude = config != null && config.combatConfig != null ? Mathf.Max(0f, config.combatConfig.flightAltitude) : 0f;
+            var flight = new Vector4(altitude, resolved.deathClipDuration, 0f, 0f);
+            resolved.nearBlock?.SetVector(FlightId, flight);
+            resolved.midBlock?.SetVector(FlightId, flight);
+            resolved.farBlock?.SetVector(FlightId, flight);
+
             return resolved;
         }
 
         private static readonly int VertexAOId = Shader.PropertyToID("_VertexAO");
+        /// <summary>Flight render lift (MPB): x = altitude metres (0 = ground), y = death clip seconds (fall time).</summary>
+        public static readonly int FlightId = Shader.PropertyToID("_MassFlight");
         private static readonly int VertexAODirectId = Shader.PropertyToID("_VertexAODirect");
 
         private static Mesh ApplyVertexAo(Mesh mesh, MaterialPropertyBlock block)

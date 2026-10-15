@@ -30,7 +30,7 @@ namespace MassEngine.Game.EditorTools
         const float PriceScale = 4.5f; // 2026-10-15: 5.0 tested weak (6 units at 61500); back to 4.5 (7 units)
         static readonly string[] Parts = { "", "_Spawn", "_Movement", "_Flocking", "_Animation", "_Combat", "_Render" };
         static readonly string[] Refs = { null, "spawnConfig", "movementConfig", "flockingConfig", "animationConfig", "combatConfig", "renderConfig" };
-        static readonly StringBuilder Log = new StringBuilder();
+        internal static readonly StringBuilder Log = new StringBuilder();
 
         [MenuItem("Tools/巨兽/生成巨兽暴龙（配置与放大模型）")]
         public static void BuildDino()
@@ -262,7 +262,7 @@ namespace MassEngine.Game.EditorTools
         /// Re-synced from the 1024 policy on every build. Battlefield2048Setup assigns it to the template scene;
         /// the template and already generated 2048 scenes are re-pointed here (only that one field).
         /// </summary>
-        static void BuildPolicy2048(ScriptableObject kaiju)
+        internal static void BuildPolicy2048(ScriptableObject kaiju)
         {
             var src = AssetDatabase.LoadAssetAtPath<WarSandboxRosterPolicy>(Policy1024) ?? throw new InvalidOperationException("1024 policy missing");
             var dst = AssetDatabase.LoadAssetAtPath<WarSandboxRosterPolicy>(Policy2048);
@@ -274,12 +274,19 @@ namespace MassEngine.Game.EditorTools
             }
             var unit = (UnitTypeConfig)kaiju;
             var list = new System.Collections.Generic.List<UnitTypeConfig>(src.templates);
+            // Keep every 2048-only template already registered (巨兽暴龙, the four dragons, ...), then this one.
+            if (dst.templates != null)
+                foreach (var extra in dst.templates)
+                    if (extra != null && !list.Contains(extra)) list.Add(extra);
             if (!list.Contains(unit)) list.Add(unit);
             dst.templates = list.ToArray();
             dst.maximumUnits = src.maximumUnits; dst.maximumLargeUnits = src.maximumLargeUnits;
             dst.useTemplateSpawnDefaults = src.useTemplateSpawnDefaults; dst.restrictLargeToTeamZero = src.restrictLargeToTeamZero;
-            dst.maximumRadius = Mathf.Max(src.maximumRadius, unit.flockingConfig.agentRadius + .1f);
-            dst.explanation = "2048×2048 战场：1024 角色库 + 巨兽级（巨兽暴龙）。人数上限不是性能保证。";
+            float radius = src.maximumRadius;
+            foreach (var t in dst.templates)
+                if (t != null && t.flockingConfig != null) radius = Mathf.Max(radius, t.flockingConfig.agentRadius + .1f);
+            dst.maximumRadius = radius;
+            dst.explanation = "2048×2048 战场：1024 角色库 + 巨兽级（巨兽暴龙、四龙）。人数上限不是性能保证。";
             dst.name = "RosterPolicy2048";
             EditorUtility.SetDirty(dst);
             AssetDatabase.SaveAssets();
@@ -316,8 +323,19 @@ namespace MassEngine.Game.EditorTools
             AssetDatabase.Refresh();
         }
 
-        static void RegisterInCatalog(ScriptableObject config, string catalogPath, string featuredEntryId)
+        static void RegisterInCatalog(ScriptableObject config, string catalogPath, string featuredEntryId) =>
+            RegisterTemplate(config, catalogPath, featuredEntryId, TemplateId, SrcTemplateId, PriceScale, true, Log);
+
+        /// <summary>
+        /// Adds (or refreshes) one catalog template entry by duplicating an existing source entry.
+        /// copyPreview: reuse the source entry's unitPreview (same model) or clear it (new model).
+        /// </summary>
+        internal static void RegisterTemplate(ScriptableObject config, string catalogPath, string featuredEntryId,
+            string templateId, string sourceTemplateId, float priceScale, bool copyPreview, StringBuilder log)
         {
+            string TemplateId = templateId, SrcTemplateId = sourceTemplateId;
+            float PriceScale = priceScale;
+            var Log = log;
             var catalog = AssetDatabase.LoadAssetAtPath<ScriptableObject>(catalogPath) ?? throw new InvalidOperationException("catalog missing " + catalogPath);
             var so = new SerializedObject(catalog);
             var templates = so.FindProperty("templates");
@@ -342,7 +360,7 @@ namespace MassEngine.Game.EditorTools
             e.FindPropertyRelative("config").objectReferenceValue = config;
             e.FindPropertyRelative("hiddenFromSelection").boolValue = false;
             e.FindPropertyRelative("selectionNote").stringValue = "";
-            e.FindPropertyRelative("unitPreview").objectReferenceValue = s.FindPropertyRelative("unitPreview").objectReferenceValue;
+            e.FindPropertyRelative("unitPreview").objectReferenceValue = copyPreview ? s.FindPropertyRelative("unitPreview").objectReferenceValue : null;
             e.FindPropertyRelative("priceScale").floatValue = PriceScale;
 
             var entries = so.FindProperty("entries");
@@ -365,3 +383,4 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+

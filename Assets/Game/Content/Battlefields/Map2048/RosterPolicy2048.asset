@@ -51,9 +51,13 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ba3d8aa5e62d8504ba85005f88eab1e9, type: 2}
   - {fileID: 11400000, guid: bb9ede6e3c3011546b07e7fa4fa424fc, type: 2}
   - {fileID: 11400000, guid: a068cd65907c00a4a9b4764e5f9b99ed, type: 2}
+  - {fileID: 11400000, guid: 470156c71c2228743ba4258a4e36c8ae, type: 2}
+  - {fileID: 11400000, guid: 0d3f088026ae5344f87ea01bbf1dab99, type: 2}
+  - {fileID: 11400000, guid: 8d2ace7cd72195b4a8119f67af73f3ec, type: 2}
+  - {fileID: 11400000, guid: 63194a1a095f0754aa734e88254ced7a, type: 2}
   maximumUnits: 200000
   maximumRadius: 11.800001
   useTemplateSpawnDefaults: 0
   restrictLargeToTeamZero: 0
   maximumLargeUnits: 2000
-  explanation: "2048\xD72048 \u6218\u573A\uFF1A1024 \u89D2\u8272\u5E93 + \u5DE8\u517D\u7EA7\uFF08\u5DE8\u517D\u66B4\u9F99\uFF09\u3002\u4EBA\u6570\u4E0A\u9650\u4E0D\u662F\u6027\u80FD\u4FDD\u8BC1\u3002"
+  explanation: "2048\xD72048 \u6218\u573A\uFF1A1024 \u89D2\u8272\u5E93 + \u5DE8\u517D\u7EA7\uFF08\u5DE8\u517D\u66B4\u9F99\u3001\u56DB\u9F99\uFF09\u3002\u4EBA\u6570\u4E0A\u9650\u4E0D\u662F\u6027\u80FD\u4FDD\u8BC1\u3002"

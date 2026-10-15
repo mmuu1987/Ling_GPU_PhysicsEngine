@@ -68,8 +68,9 @@ namespace MassEngine.Game
         {
             var c = template != null ? template.combatConfig : null;
             if (c == null) return "无战斗配置";
-            if (!WarSandboxUnitStats.IsRanged(template)) return "近战单位 · 碰撞与模型尺寸由兵种资源决定";
-            return "出手时机 " + c.attackReleasePhase.ToString("0.##", CultureInfo.InvariantCulture) +
+            string flight = c.flightAltitude > 0f ? "飞行单位 · 高度 " + c.flightAltitude.ToString("0.#", CultureInfo.InvariantCulture) + " 米 · 只有远程和飞行单位能打到\n" : "";
+            if (!WarSandboxUnitStats.IsRanged(template)) return flight + "近战单位 · 碰撞与模型尺寸由兵种资源决定";
+            return flight + "出手时机 " + c.attackReleasePhase.ToString("0.##", CultureInfo.InvariantCulture) +
                 "\n弹道高度 " + c.projectileOriginHeight.ToString("0.##", CultureInfo.InvariantCulture) + " 米" +
                 "\n命中半径 " + c.projectileHitRadius.ToString("0.##", CultureInfo.InvariantCulture) + " 米" +
                 "\n拖尾长度 " + c.projectileTrailLength.ToString("0.##", CultureInfo.InvariantCulture);

@@ -86,6 +86,7 @@ namespace MassEngine
         // Opt-in melee charge (null unless a unit type has chargeDamageMultiplier > 1).
         private Vector2[] meleeChargeCache;
         private float[] meleeSplashCache;
+        private float[] flightCache;
         private MeleeChargeParams meleeCharge;
         private int[] agentUnitTypeIndices;
         private Vector3[] agentSpawnScales;
@@ -633,6 +634,7 @@ namespace MassEngine
             meleeCharge = null;
             meleeChargeCache = null;
             meleeSplashCache = null;
+            flightCache = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
             gpuSettingsCache = null;
@@ -688,12 +690,18 @@ namespace MassEngine
                 meleeSplashCache = new float[gpuSettingsCache.Length];
             // Kaiju B (2026-10-15): melee splash rides on the same opt-in variant as the charge.
             bool splash = unitTypeRegistry.FillMeleeSplash(meleeSplashCache);
-            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash;
+            if (flightCache == null || flightCache.Length != gpuSettingsCache.Length)
+                flightCache = new float[gpuSettingsCache.Length];
+            // Flight (2026-10-15): flying types ride on the same opt-in combat variant.
+            bool flight = unitTypeRegistry.FillFlightAltitudes(flightCache);
+            if (projectileManager != null)
+                projectileManager.UnitTypeFlightAltitudes = flight ? flightCache : null;
+            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash | flight;
             if (wanted)
             {
                 if (meleeCharge == null)
                     meleeCharge = new MeleeChargeParams();
-                meleeCharge.Upload(meleeChargeCache, meleeSplashCache);
+                meleeCharge.Upload(meleeChargeCache, meleeSplashCache, flightCache);
             }
             else if (meleeCharge != null)
             {

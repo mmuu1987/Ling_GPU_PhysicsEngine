@@ -38,6 +38,8 @@ namespace MassEngine.Projectiles
         /// Null or 0 keeps the single-target shot. Not uploaded in UnitTypeGpuSettings (its 144-byte layout is unchanged).
         /// </summary>
         public float[] UnitTypeSplashRadii { get; set; }
+        /// <summary>Flight (2026-10-15): altitude per unit type in metres (null = nobody flies). Shots leave from and aim at it.</summary>
+        public float[] UnitTypeFlightAltitudes { get; set; }
         // Spawn scale metadata is supplied by the manager; never read a full AgentData
         // array back each frame just to resolve a fixed-size launch offset.
 
@@ -381,6 +383,12 @@ namespace MassEngine.Projectiles
                     }
                     sourcePos.y += Mathf.Max(0.05f, settings.projectileOriginHeight) * Mathf.Max(0.01f, Mathf.Abs(sourceScale.y));
                     targetPos.y += Mathf.Max(0.05f, targetSettings.projectileTargetHeight) * Mathf.Max(0.01f, Mathf.Abs(targetScale.y));
+                    float[] flight = UnitTypeFlightAltitudes;
+                    if (flight != null)
+                    {
+                        if (unitTypeIdx < flight.Length) sourcePos.y += flight[unitTypeIdx];
+                        if (targetType < flight.Length) targetPos.y += flight[targetType];
+                    }
                     // Approximate facing by shot direction; no per-frame bone/rotation readback.
                     Vector3 forward = new Vector3(targetPos.x - sourcePos.x, 0f, targetPos.z - sourcePos.z);
                     float offset = Mathf.Max(0.05f, settings.agentRadius) * Mathf.Max(Mathf.Abs(sourceScale.x), Mathf.Abs(sourceScale.z));

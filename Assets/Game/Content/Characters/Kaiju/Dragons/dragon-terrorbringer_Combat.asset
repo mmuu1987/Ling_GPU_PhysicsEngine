@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010006, type: 3}
+  m_Name: dragon-terrorbringer_Combat
+  m_EditorClassIdentifier: 
+  attackReleasePhase: 0.5
+  projectileOriginHeight: 5.263335
+  projectileTargetHeight: 4.78485
+  targetAcquireRadius: 120
+  attackRange: 10.5
+  attackDamage: 260
+  attackInterval: 3.3
+  maxHp: 6000
+  projectileRange: 110
+  projectileSpeed: 45
+  projectileGravity: -6
+  projectileHitRadius: 1
+  projectileMaxLifetime: 6
+  projectileTrailLength: 6
+  projectileSplashRadius: 7
+  chargeDamageMultiplier: 1
+  chargeMinSpeedFraction: 0.6
+  meleeSplashRadius: 0
+  flightAltitude: 20

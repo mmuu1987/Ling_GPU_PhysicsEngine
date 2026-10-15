@@ -208,6 +208,11 @@ namespace MassEngine
                     ImpactFx.Bind(shaders.ProjectileShader, shaders.SimulateProjectiles);
                 else
                     MassEngine.Projectiles.ProjectileImpactFx.Unbind(shaders.ProjectileShader);
+                // Flight (2026-10-15): flight-aware capsules/splash only while a type flies.
+                if (MeleeCharge != null && MeleeCharge.IsValid)
+                    MeleeCharge.BindProjectile(shaders.ProjectileShader, shaders.SimulateProjectiles);
+                else
+                    MeleeChargeParams.UnbindProjectile(shaders.ProjectileShader);
             }
 
             Dispatch(
@@ -215,6 +220,8 @@ namespace MassEngine
                 shaders.SimulateProjectiles,
                 Mathf.Max(1, context.projectileThreadGroupsX),
                 "SimulateProjectiles");
+            // The compute asset is shared with kernel tests: never leave the flight keyword on.
+            MeleeChargeParams.UnbindProjectile(shaders.ProjectileShader);
         }
 
         /// <summary>
