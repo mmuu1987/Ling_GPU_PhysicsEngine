@@ -17,18 +17,34 @@ namespace MassEngine.Game
             var x = a.renderConfig; var y = b.renderConfig;
             // A weapon/accessory is baked into the near mesh. Do not merge different materials or missing bindings.
             // Audited MaleFar128 is an LOD budget variant of the same near character, not a new character.
-            return x.nearMesh != null && x.nearMaterial != null && x.nearMesh == y.nearMesh && x.nearMaterial == y.nearMaterial;
+            return Same(NearMesh(x), x.nearMaterial, NearMesh(y), y.nearMaterial);
         }
+
+        // Most render configs leave nearMesh empty and draw the VAT profile's clean mesh, so compare the mesh that is
+        // actually drawn; comparing only the explicit field merged nothing (library showed 44 instead of 33, 2026-10-15).
+        private static Mesh NearMesh(RenderConfig r)
+        {
+            if (r == null) return null;
+            if (r.nearMesh != null) return r.nearMesh;
+            return r.vatProfile != null && VatProfileReader.TryRead(r.vatProfile, out var data, out _) ? data.cleanMesh : null;
+        }
+
+        private static bool Same(Mesh a, Material am, Mesh b, Material bm) => a != null && am != null && a == b && am == bm;
 
         public static List<WarSandboxUnitTemplateEntry> Library(WarSandboxBattlefieldCatalog catalog)
         {
             var result = new List<WarSandboxUnitTemplateEntry>();
             if (catalog == null || catalog.templates == null) return result;
+            var meshes = new List<Mesh>(); var materials = new List<Material>(); // read each profile once
             foreach (var entry in catalog.templates)
             {
                 if (entry == null || entry.hiddenFromSelection || entry.config == null || string.IsNullOrWhiteSpace(entry.templateId)) continue;
-                int duplicate = result.FindIndex(x => SameAppearance(x.config, entry.config));
-                if (duplicate < 0) result.Add(entry);
+                var render = entry.config.renderConfig;
+                Mesh mesh = NearMesh(render); Material material = render != null ? render.nearMaterial : null;
+                int duplicate = -1;
+                for (int i = 0; i < result.Count && duplicate < 0; i++)
+                    if (result[i].config == entry.config || Same(meshes[i], materials[i], mesh, material)) duplicate = i;
+                if (duplicate < 0) { result.Add(entry); meshes.Add(mesh); materials.Add(material); }
                 else if (Preferred(entry.templateId) && !Preferred(result[duplicate].templateId)) result[duplicate] = entry;
             }
             return result;

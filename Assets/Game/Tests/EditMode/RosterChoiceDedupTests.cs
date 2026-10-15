@@ -12,11 +12,13 @@ namespace MassEngine.Game.Tests
     public sealed class RosterChoiceDedupTests
     {
         private static WarSandboxBattlefieldCatalog Catalog => AssetDatabase.LoadAssetAtPath<WarSandboxBattlefieldCatalog>("Assets/Game/Content/Characters/OfficialRoster/Version08/Catalog.asset");
-        [Test] public void LibraryShows33RepresentativesButKeepsAll68Identities()
+        // 2026-10-15: 33 -> 35: roster-kaiju-dino (own scaled mesh) and the swordless launch-open male, which no longer
+        // matches roster-male since that one switched to the sword VAT. Identities 68 -> 69 (kaiju).
+        [Test] public void LibraryShows35RepresentativesButKeepsAll69Identities()
         {
             var catalog = Catalog; string before = EditorJsonUtility.ToJson(catalog);
             var list = WarSandboxRosterChoices.Library(catalog);
-            Assert.That(list.Count, Is.EqualTo(33)); Assert.That(catalog.templates.Length, Is.EqualTo(68));
+            Assert.That(list.Count, Is.EqualTo(35)); Assert.That(catalog.templates.Length, Is.EqualTo(69));
             foreach (string id in new[] { "roster-male", "roster-female", "roster-knight", "roster-skeleton-warrior", "roster-ranger", "roster-robot-expressive" })
                 Assert.That(list.Any(x => x.templateId == id), Is.True, id);
             Assert.That(list.Any(x => x.hiddenFromSelection), Is.False);
