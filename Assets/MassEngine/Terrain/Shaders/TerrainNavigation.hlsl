@@ -151,14 +151,18 @@ float2 LargeBodySlide(float2 move, float2 directionBefore, float2 directionAfter
     return move - wall * max(0.0, dot(move, wall));
 }
 
+// normalize() for vectors that are never zero here (unit horizontal part). The max() is then a no-op, so the result
+// matches normalize(); it only stops FXC constant-folding a divide-by-zero in flattened, never-taken branches.
+float3 TerrainNormalizeNonZero(float3 v) { return v * rsqrt(max(dot(v, v), 1e-30)); }
+
 void TerrainIntegrate(inout AgentData agent, float dt, float largeBodyRadius)
 {
     float3 before = agent.position;
     float horizontal = length(agent.velocity.xz), speed = length(agent.velocity);
     float4 sample = SampleTerrainSurface(before.xz);
     if (sample.w < .5 || horizontal <= 1e-6 || dt <= 0) { agent.velocity = 0; TerrainAnchor(agent); return; }
-    float2 direction = agent.velocity.xz / horizontal;
-    float3 tangent = normalize(float3(direction.x, dot(direction, sample.yz), direction.y)) * speed;
+    float2 direction = agent.velocity.xz / max(horizontal, 1e-6); // horizontal > 1e-6 here; max() only silences FXC's constant-fold divide-by-zero
+    float3 tangent = TerrainNormalizeNonZero(float3(direction.x, dot(direction, sample.yz), direction.y)) * speed;
     if (largeBodyRadius > 0.0)
     {
         // Mask reads only (no texture sampling) inside this branch; the surface step below stays
@@ -171,9 +175,9 @@ void TerrainIntegrate(inout AgentData agent, float dt, float largeBodyRadius)
             float2 slid = LargeBodySlide(direction, directionBefore, directionAfter);
             float slidLength = length(slid);
             if (slidLength < 0.05) { agent.velocity = 0; return; } // head-on into the edge
-            float2 slidDirection = slid / slidLength;
+            float2 slidDirection = slid / max(slidLength, 0.05); // >= 0.05 here (returned above)
             speed *= slidLength;
-            tangent = normalize(float3(slidDirection.x, dot(slidDirection, sample.yz), slidDirection.y)) * speed;
+            tangent = TerrainNormalizeNonZero(float3(slidDirection.x, dot(slidDirection, sample.yz), slidDirection.y)) * speed;
             blockedAfter = LargeBodyTerrainProbe(before.xz + tangent.xz * dt, largeBodyRadius, directionAfter);
             if (!LargeBodyMoveAllowed(blockedBefore, directionBefore, blockedAfter, tangent.xz))
             { agent.velocity = 0; return; }

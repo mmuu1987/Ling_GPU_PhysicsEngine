@@ -329,9 +329,10 @@ uint SampleEnemyDensityCell(uint selfIndex, int2 cell)
     cell.x = clamp(cell.x, 0, flowFieldResolution.x - 1);
     cell.y = clamp(cell.y, 0, flowFieldResolution.y - 1);
     int team = teamIdReadBuffer[selfIndex];
-    if (team == attackerTeamId) return defenderDensityMap[cell];
-    if (team == defenderTeamId) return attackerDensityMap[cell];
-    return 0u;
+    uint density = 0u; // single exit (FXC flags early returns from inlined helpers as uninitialized)
+    if (team == attackerTeamId) density = defenderDensityMap[cell];
+    else if (team == defenderTeamId) density = attackerDensityMap[cell];
+    return density;
 }
 
 bool FrontZoneAhead(uint selfIndex, float3 position, float2 direction)

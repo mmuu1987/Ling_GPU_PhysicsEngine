@@ -134,6 +134,12 @@ bool ResolveRangedClearance(uint index, AgentData agent, int target, UnitTypeSet
         // all original admission conditions, and the maximum of three probes.
         bool clear = false, leftClear = false, rightClear = false;
         float2 side = 0.0;
+#if LP_STANCE == 3 || LP_STANCE == 4
+        // Move-only / hold-here local kernels: every admitted agent has a FLOW_TARGET_POINT order, so allowReposition
+        // is always false and the loop below would stop after the centre probe anyway. Doing just that probe here is
+        // identical and avoids FXC's 0-iteration [loop] warning.
+        clear = RangedPathClear(index, agent, target, settings);
+#else
         [loop] for (int probe = 0; probe < 3; ++probe)
         {
             AgentData candidate = agent;
@@ -158,6 +164,7 @@ bool ResolveRangedClearance(uint index, AgentData agent, int target, UnitTypeSet
             else if (probe == 1) leftClear = candidateClear;
             else rightClear = candidateClear;
         }
+#endif
         if (clear) state.rangedStatus = 1.0;
         else if (state.rangedStatus >= 0.0)
         {
