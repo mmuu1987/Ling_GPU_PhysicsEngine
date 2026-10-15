@@ -181,7 +181,7 @@ namespace MassEngine.Game.Editor
         }
 
         // ------------------------------------------------------------ helpers
-        static float[] Ao(FlatMesh m, float radius)
+        internal static float[] Ao(FlatMesh m, float radius)
         {
             int faces = m.Triangles;
             if (radius <= 0) return Enumerable.Repeat(1f, faces).ToArray();
@@ -189,7 +189,7 @@ namespace MassEngine.Game.Editor
             return VertexAoBaker.ComputeFaceAo(m.V.ToArray(), m.T.ToArray(), s);
         }
 
-        static Mesh ToMesh(FlatMesh m, float[] faceAo, bool linear, string name)
+        internal static Mesh ToMesh(FlatMesh m, float[] faceAo, bool linear, string name)
         {
             // Memory option 甲 (2026-10-13): 8-bit vertex colour (Color32, 4 B instead of 16 B per vertex).
             var cols = new List<Color32>(m.C.Count);
@@ -205,7 +205,7 @@ namespace MassEngine.Game.Editor
             return mesh;
         }
 
-        static Mesh SaveMesh(string path, Mesh mesh)
+        internal static Mesh SaveMesh(string path, Mesh mesh)
         {
             var existing = AssetDatabase.LoadAssetAtPath<Mesh>(path);
             if (existing == null) { AssetDatabase.CreateAsset(mesh, path); return mesh; }
@@ -227,7 +227,7 @@ namespace MassEngine.Game.Editor
             return existing;
         }
 
-        static void SavePrefab(string path, string name, Mesh near, Mesh far, Material mat, Scene preview)
+        internal static void SavePrefab(string path, string name, Mesh near, Mesh far, Material mat, Scene preview)
         {
             var root = new GameObject(name);
             SceneManager.MoveGameObjectToScene(root, preview);

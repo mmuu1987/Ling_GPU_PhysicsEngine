@@ -164,6 +164,65 @@ namespace MassEngine.Game.Editor
             return go;
         }
 
+        /// <summary>2026-10-15 procedural buildings: native scale, fixed yaw, prefab origin placed at (x, floorY, z); near LOD.
+        /// Same material conversion, shadow rule, culling and triangle budget as <see cref="Place"/>; no RNG use.</summary>
+        public GameObject PlaceAt(string path, float x, float z, float yawDegrees, float floorY, Transform parent, bool shadows)
+        {
+            if (path == null || rejected.Contains(Key(path, false))) return null;
+            if (triangles > Battlefield1024Generator.DecorationTriangleBudget) { budgetSkips++; return null; }
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab == null) { Reject(path, false, "缺少预制体"); return null; }
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            if (PrefabUtility.IsPartOfPrefabInstance(go)) PrefabUtility.UnpackPrefabInstance(go, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+            go.name = prefab.name;
+            // Detailed buildings (2026-10-15): LOD_HD close up, LOD_Near (old mesh) beyond ~100 m; LOD_Far dropped.
+            Renderer[] hd = null;
+            var hdT = go.transform.Find("LOD_HD");
+            if (hdT != null && hdT.GetComponent<MeshRenderer>() != null)
+            {
+                foreach (var lg in go.GetComponentsInChildren<LODGroup>(true)) Object.DestroyImmediate(lg);
+                var farT = go.transform.Find("LOD_Far"); if (farT != null) Object.DestroyImmediate(farT.gameObject);
+                hd = new Renderer[] { hdT.GetComponent<MeshRenderer>() };
+            }
+            else KeepOneLod(go, false);
+            var renderers = go.GetComponentsInChildren<MeshRenderer>(true);
+            var mid = renderers.Where(r => hd == null || !hd.Contains(r)).ToArray();
+            if (mid.Length == 0) { Object.DestroyImmediate(go); Reject(path, false, "没有 MeshRenderer"); return null; }
+            long tri = mid.Select(r => r.GetComponent<MeshFilter>()).Where(f => f != null).Sum(f => Scene18AssetAudit.Triangles(f.sharedMesh));
+            if (tri > 1600) { Object.DestroyImmediate(go); Reject(path, false, "三角形 " + tri + " > 1600"); return null; }
+            go.transform.SetPositionAndRotation(new Vector3(x, floorY, z), Quaternion.Euler(0f, yawDegrees, 0f));
+            foreach (var r in renderers) { r.enabled = true; r.gameObject.SetActive(true); }
+            var bb = BoundsOf(mid);
+            float height = bb.max.y - floorY;
+            bool castShadow = shadows && height > 5f;
+            foreach (var r in renderers)
+            {
+                r.sharedMaterials = r.sharedMaterials.Select(Convert).ToArray();
+                r.shadowCastingMode = castShadow ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                r.receiveShadows = true; r.lightProbeUsage = LightProbeUsage.Off; r.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                GameObjectUtility.SetStaticEditorFlags(r.gameObject, StaticEditorFlags.BatchingStatic);
+            }
+            var cull = go.AddComponent<LODGroup>();
+            float cullSize = height < 2.5f ? .012f : height < 8f ? .006f : .0035f;
+            if (hd != null)
+            {
+                float size = Mathf.Max(bb.size.x, Mathf.Max(bb.size.y, bb.size.z));
+                float hdSize = Mathf.Max(cullSize * 3f, size / (2f * HdSwitchDistance * Mathf.Tan(30f * Mathf.Deg2Rad)));
+                cull.SetLODs(new[] { new LOD(hdSize, hd), new LOD(cullSize, mid) });
+                hdTriangles += hd.Select(r => r.GetComponent<MeshFilter>()).Where(f => f != null).Sum(f => Scene18AssetAudit.Triangles(f.sharedMesh));
+            }
+            else cull.SetLODs(new[] { new LOD(cullSize, mid) });
+            cull.RecalculateBounds();
+            triangles += tri; actualTriangles += tri; props++; if (castShadow) shadowCasters++;
+            used.TryGetValue(path, out int count); used[path] = count + 1;
+            return go;
+        }
+
+        /// <summary>Distance (m, 60° vertical FOV) where detailed buildings switch to their mid mesh.</summary>
+        public const float HdSwitchDistance = 110f;
+        /// <summary>Triangles of the detailed building meshes (only drawn close up; not part of the decoration budget).</summary>
+        public long hdTriangles;
+
         /// <summary>Keep one authored LOD (1 near, 2 far), never several LOD levels at once.</summary>
         static void KeepOneLod(GameObject go, bool far)
         {
