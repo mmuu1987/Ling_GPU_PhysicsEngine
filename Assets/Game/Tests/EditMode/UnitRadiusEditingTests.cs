@@ -54,7 +54,7 @@ namespace MassEngine.Game.Tests
             Assert.That((int)Radius, Is.EqualTo(11)); Assert.That(WarSandboxUnitStats.Get(Radius).Key, Is.EqualTo("agentRadius"));
             Assert.That(WarSandboxUnitOverrideFile.CurrentSchema, Is.EqualTo(1));
         }
-        [TestCase(float.NaN)] [TestCase(float.PositiveInfinity)] [TestCase(float.NegativeInfinity)] [TestCase(-1)] [TestCase(0)] [TestCase(.049f)] [TestCase(4.801f)]
+        [TestCase(float.NaN)] [TestCase(float.PositiveInfinity)] [TestCase(float.NegativeInfinity)] [TestCase(-1)] [TestCase(0)] [TestCase(.049f)] [TestCase(13.401f)]
         public void InvalidRadiusIsRejectedWithoutDirtyingData(float value)
         {
             var set = new WarSandboxStatSet(); Assert.That(set.Set(Radius, value), Is.False); Assert.That(set.Count, Is.Zero);
@@ -132,8 +132,9 @@ namespace MassEngine.Game.Tests
         }
         [Test] public void GridDensityAndFootprintGateWithoutAutomaticCorrections()
         {
-            // C4 (2026-10-12): radii above half a cell use the large-body path (up to 2 cells - 0.01 m); the grid gate guards that limit.
-            var draft = Draft(); system.simulationConfig.cellSize = 2; var r = new WarSandboxStatResolver(catalog, Global(4.5f), draft.Stats);
+            // C4 (2026-10-12): radii above half a cell use the large-body path; the grid gate guards its limit
+            // (Kaiju B 2026-10-15: 4.5 cells - 0.01 m, so 9.5 m exceeds it at 2 m cells while staying under the 13.4 m radius cap).
+            var draft = Draft(); system.simulationConfig.cellSize = 2; var r = new WarSandboxStatResolver(catalog, Global(9.5f), draft.Stats);
             Assert.That(WarSandboxRadiusPolicy.TryValidate(manager, draft, r, out _, out string error), Is.False); StringAssert.Contains("网格", error); system.simulationConfig.cellSize = 3;
             r = new WarSandboxStatResolver(catalog, Global(.8f), draft.Stats); var entry = draft[0]; entry.manualSize = new Vector3(1, 0, 1); draft.Set(0, entry);
             Assert.That(WarSandboxRadiusPolicy.TryValidate(manager, draft, r, out _, out error), Is.False); StringAssert.Contains("间距", error);
