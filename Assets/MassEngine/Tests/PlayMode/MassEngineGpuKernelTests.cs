@@ -1150,7 +1150,10 @@ namespace MassEngine.Tests
             bool redirected = false;
             for (int i = 0; i < AttackerCount; i++)
             {
-                Assert.AreEqual(targetIndex, assignments[i] / MassGpuBufferManager.EngagementSlotsPerTarget);
+                int claimed = assignments[i] / MassGpuBufferManager.EngagementSlotsPerTarget;
+                // Round 6 contact retarget (approved 2026-10-12; margin 2.0 since 前线密度 乙): an attacker whose
+                // claimed target is out of reach takes the enemy at arm's length - its own lane's defender here.
+                if (claimed != targetIndex) { Assert.AreEqual(AttackerCount + i, claimed, "contact retarget must pick the lane defender " + i); continue; }
                 redirected |= assignments[i] % MassGpuBufferManager.EngagementSlotsPerTarget != 0;
             }
             Assert.IsTrue(redirected, "an overloaded slot must redirect at least one attacker");

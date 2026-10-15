@@ -180,7 +180,9 @@ namespace MassEngine.Tests
         {
             ConfigureTerrain(.5f);
             DisableLocalCombat();
-            UploadTerrainAgents(i => new Vector2(i < AttackerCount ? -5 : 5, 0));
+            // Lanes 1.5 m apart: with the approved crowd rules (R2 front-zone follow, round 6 packing) friends
+            // stacked on ONE point hold for spacing first, which is not what this test is about.
+            UploadTerrainAgents(i => new Vector2(i < AttackerCount ? -5 : 5, (i % AttackerCount) * 1.5f));
             fixtureTeamFlows = new[] {
                 new TeamFlowFrameSettings { enabled = true, rebuildThisFrame = true, dynamicFlowEnabled = true, minAgentsPerTarget = 1 },
                 new TeamFlowFrameSettings { enabled = true, rebuildThisFrame = true, dynamicFlowEnabled = true, minAgentsPerTarget = 1 }
