@@ -188,7 +188,7 @@ namespace MassEngine.Game
                 template = template, teamId = teamId, count = count, center = center.ToRuntime(),
                 density = density, aspect = aspect, manualSize = manualSize.ToRuntime(), facing = facing
             };
-            if (brushBits != null || brushWidth != 0 || brushHeight != 0 || brushCell != 0)
+            if (!string.IsNullOrEmpty(brushBits) || brushWidth != 0 || brushHeight != 0 || brushCell != 0)   // JsonUtility writes "" for null
             {
                 if (!WarSandboxBrushMask.TryFromBase64(brushCell, brushWidth, brushHeight, brushBits, out var mask, out error)) return false;
                 result.brush = mask;
