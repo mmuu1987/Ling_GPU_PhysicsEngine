@@ -180,14 +180,15 @@ namespace MassEngine.Game.Editor
                 foreach (var st in srcStreets) plan.streets.Add(new TownStreet { a = -st.a, b = -st.b, half = st.half });
                 foreach (var pz in srcPlazas) plan.plazas.Add((-pz.c, pz.r));
                 foreach (var y in srcYards) plan.yards.Add((-y.c, -y.u, y.half));
-                int dropped = 0;
+                int dropped = 0; var droppedWhat = new StringBuilder();
                 foreach (var l in srcLots)
                 {
                     var m = new TownLot { kind = l.kind, v = l.v, pos = -l.pos, yaw = l.yaw + 180f, size = l.size, prop = l.prop, group = l.group < 0 ? -1 : l.group + 1000, structure = l.structure, site = l.site, scale = l.scale, tall = l.tall };
-                    if (LotFits(plan, m, !l.structure && !(l.site == SiteKind.Ruins), l.prop && l.site == SiteKind.Town && l.kind == BK.Stall)) plan.lots.Add(m); else dropped++;
+                    if (LotFits(plan, m, !l.structure && !(l.site == SiteKind.Ruins), l.prop && l.site == SiteKind.Town && l.kind == BK.Stall)) plan.lots.Add(m);
+                    else { dropped++; droppedWhat.Append(l.site + "/" + l.kind + (l.prop ? "(prop)" : "") + " "); }
                 }
                 foreach (var t in srcTrees) if (FreeSpot(plan, -t.p, 2.5f)) plan.trees.Add(new TownTree { p = -t.p, cat = t.cat, site = t.site });
-                log.AppendLine("mirror: dropped " + dropped + " of " + srcLots.Count);
+                log.AppendLine("mirror: dropped " + dropped + " of " + srcLots.Count + (dropped > 0 ? " - " + droppedWhat : ""));
             }
             RasterizeTowns(plan);
             log.AppendLine("total lots " + plan.lots.Count + " (buildings " + plan.lots.Count(l => !l.prop) + "), trees " + plan.trees.Count + ", streets " + plan.streets.Count);
@@ -575,14 +576,21 @@ namespace MassEngine.Game.Editor
                 (-39f, 38.5f, 1f));
             for (int i = 0; i < 5; i++) Try(plan, Lot(BK.Crates, RandV(BK.Crates), P(TR(-46f, -14f), TR(31f, 33f)), TR(0, 360), s.kind, true));
             // left wall: great hall + barracks
-            TL(plan, "大厅", Lot(BK.Inn, 1, P(6f, -lean + 1f), YawFacing(v), s.kind));
-            TL(plan, "长屋", Lot(BK.Longhouse, 0, P(24f, -lean), YawFacing(v), s.kind, false, -1, false, 1.3f));
-            TL(plan, "长屋", Lot(BK.Longhouse, 1, P(41f, -lean), YawFacing(v), s.kind, false, -1, false, 1.1f));
+            // 2026-10-16 「要塞建筑补位」: every wall building tries nearby spots / slightly smaller sizes before it is dropped
+            Any("大厅", (a, b, sc) => Lot(BK.Inn, 1, P(a, b), YawFacing(v), s.kind, false, -1, false, sc),
+                (6f, -lean + 1f, 1f), (3f, -lean + 1f, 1f), (9f, -lean + 1f, 1f), (6f, -lean + 2.5f, .9f), (3f, -lean + 2.5f, .85f), (9f, -lean + 2.5f, .85f));
+            Any("长屋(左中)", (a, b, sc) => Lot(BK.Longhouse, 0, P(a, b), YawFacing(v), s.kind, false, -1, false, sc),
+                (24f, -lean, 1.3f), (24f, -lean, 1.15f), (22f, -lean, 1.2f), (26f, -lean, 1.2f), (24f, -lean + 1.5f, 1.05f), (24f, -lean + 2.5f, .95f));
+            Any("长屋(左后)", (a, b, sc) => Lot(BK.Longhouse, 1, P(a, b), YawFacing(v), s.kind, false, -1, false, sc),
+                (41f, -lean, 1.1f), (41f, -lean, 1f), (39f, -lean, 1f), (42.5f, -lean, .95f), (40f, -lean + 1.5f, .95f), (40f, -lean + 2.5f, .85f));
             // right wall: smithy + workshops, stables with hay
-            TL(plan, "铁匠/作坊", Lot(BK.Cottage, 1, P(4f, lean), YawFacing(-v), s.kind));
-            TL(plan, "铁匠/作坊", Lot(BK.Cottage, 2, P(13f, lean), YawFacing(-v), s.kind));
+            Any("铁匠/作坊", (a, b, sc) => Lot(BK.Cottage, 1, P(a, b), YawFacing(-v), s.kind, false, -1, false, sc),
+                (4f, lean, 1f), (2f, lean, 1f), (4f, lean - 1.5f, .9f));
+            Any("铁匠/作坊", (a, b, sc) => Lot(BK.Cottage, 2, P(a, b), YawFacing(-v), s.kind, false, -1, false, sc),
+                (13f, lean, 1f), (15f, lean, 1f), (13f, lean - 1.5f, .9f));
             Try(plan, Lot(BK.Woodpile, 0, P(8.5f, lean - 6f), YawFacing(-v), s.kind, true));
-            TL(plan, "马厩", Lot(BK.Barn, 1, P(31f, lean - 1f), YawFacing(-v), s.kind, false, -1, false, 1.15f));
+            Any("马厩", (a, b, sc) => Lot(BK.Barn, 1, P(a, b), YawFacing(-v), s.kind, false, -1, false, sc),
+                (31f, lean - 1f, 1.15f), (31f, lean - 1f, 1f), (29f, lean - 1f, 1.05f), (33f, lean - 1f, 1.05f), (31f, lean - 2.5f, .95f));
             Try(plan, Lot(BK.Haystack, 0, P(41f, lean - 2f), TR(0, 360), s.kind, true));
             Try(plan, Lot(BK.Haystack, 1, P(44f, lean + 2f), TR(0, 360), s.kind, true));
             Try(plan, Lot(BK.Cart, 0, P(24f, lean - 9f), YawFacing(u), s.kind, true));
