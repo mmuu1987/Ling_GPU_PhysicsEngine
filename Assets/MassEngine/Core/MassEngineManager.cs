@@ -69,6 +69,11 @@ namespace MassEngine
         /// <summary>Set by the battle controller during Setup: Idle clips play while the battle is not started (pose only).</summary>
         [System.NonSerialized] public bool animateIdleWhileStopped;
         private static readonly int MassProjectileTimeId = Shader.PropertyToID("_MassProjectileTime");
+        // Takeoff (2026-10-16): flyers are drawn on the ground until the battle starts, then rise over TakeoffSeconds.
+        // Global 0 = fully airborne (also the default for previews that never set it), 1 = on the ground. Render only.
+        private static readonly int MassFlightGroundedId = Shader.PropertyToID("_MassFlightGrounded");
+        public const float TakeoffSeconds = 3f;
+        private float takeoffClock;
 
         private UnitTypeRegistry unitTypeRegistry;
         private ComputePipelineOrchestrator pipelineOrchestrator;
@@ -205,6 +210,11 @@ namespace MassEngine
 
             if (battleStarted)
                 projectileSimulationTime += Mathf.Max(0f, Time.deltaTime);
+            takeoffClock = battleStarted ? takeoffClock + Mathf.Max(0f, Time.deltaTime) : 0f;
+            float takeoff = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(takeoffClock / TakeoffSeconds));
+            Shader.SetGlobalFloat(MassFlightGroundedId, 1f - takeoff);
+            if (pipelineOrchestrator != null)
+                pipelineOrchestrator.FlightLiftScale = takeoff;
 
             PipelineFrameContext context = CreateFrameContext();
             if (telemetry != null && context.teamFlows != null)
