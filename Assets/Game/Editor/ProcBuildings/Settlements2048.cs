@@ -23,10 +23,12 @@ namespace MassEngine.Game.Editor
     {
         public enum SiteKind { Town, Village, Fort, Ruins }
 
-        public sealed class TownSite { public SiteKind kind; public Vector2 c; public float r; public bool mirror; }
+        public sealed class TownSite { public SiteKind kind; public Vector2 c; public float r; public bool mirror; public float scale = 1f; }
         public sealed class TownLot
         {
             public BK kind; public int v; public Vector2 pos; public float yaw; public Vector2 size; public bool prop; public int group = -1; public bool structure;
+            /// <summary>2026-10-16 castle A: mesh scale (size already scaled); tall = extra vertical stretch.</summary>
+            public float scale = 1f, tall = 1f;
             public SiteKind site;
             public Vector2 Right => new Vector2(Mathf.Cos(yaw * Mathf.Deg2Rad), -Mathf.Sin(yaw * Mathf.Deg2Rad));
             public Vector2 Fwd => new Vector2(Mathf.Sin(yaw * Mathf.Deg2Rad), Mathf.Cos(yaw * Mathf.Deg2Rad));
@@ -112,10 +114,10 @@ namespace MassEngine.Game.Editor
 
             var specs = new (SiteKind kind, float r, float minFrac)[]
             {
-                (SiteKind.Town, 100f, .74f), (SiteKind.Fort, 46f, .82f), (SiteKind.Village, 72f, .68f), (SiteKind.Village, 66f, .66f),
+                (SiteKind.Town, 100f, .74f), (SiteKind.Fort, 46f * FortScale, .82f), (SiteKind.Village, 72f, .68f), (SiteKind.Village, 66f, .66f),
                 (SiteKind.Ruins, 40f, .55f), (SiteKind.Ruins, 34f, .55f),
             };
-            foreach (var s in specs)
+            bool PlaceSite((SiteKind kind, float r, float minFrac) s, float scale)
             {
                 Vector2 best = default; float bestScore = float.MinValue, bestFrac = 0f;
                 for (float z = -940f; z <= 940f; z += 24f)
@@ -147,10 +149,14 @@ namespace MassEngine.Game.Editor
                         }
                         if (score > bestScore) { bestScore = score; best = c; bestFrac = frac; }
                     }
-                if (bestScore == float.MinValue) { log.AppendLine("site " + s.kind + " r" + s.r + ": no ground"); continue; }
-                plan.sites.Add(new TownSite { kind = s.kind, c = best, r = s.r });
+                if (bestScore == float.MinValue) { log.AppendLine("site " + s.kind + " r" + s.r + ": no ground"); return false; }
+                plan.sites.Add(new TownSite { kind = s.kind, c = best, r = s.r, scale = scale });
                 log.AppendLine("site " + s.kind + " r" + s.r + " at " + best + " frac " + bestFrac.ToString("F2"));
+                return true;
             }
+            // the ×2 fort falls back to the original size when no ground fits it
+            foreach (var s in specs)
+                if (!PlaceSite(s, s.kind == SiteKind.Fort ? FortScale : 1f) && s.kind == SiteKind.Fort) PlaceSite((SiteKind.Fort, 46f, .82f), 1f);
 
             int half = plan.sites.Count;
             for (int i = 0; i < half; i++)
@@ -169,14 +175,14 @@ namespace MassEngine.Game.Editor
             if (Symmetric)
             {
                 var srcLots = plan.lots.ToList(); var srcStreets = plan.streets.ToList(); var srcPlazas = plan.plazas.ToList(); var srcTrees = plan.trees.ToList(); var srcYards = plan.yards.ToList();
-                for (int i = 0; i < half; i++) plan.sites.Add(new TownSite { kind = plan.sites[i].kind, c = -plan.sites[i].c, r = plan.sites[i].r, mirror = true });
+                for (int i = 0; i < half; i++) plan.sites.Add(new TownSite { kind = plan.sites[i].kind, c = -plan.sites[i].c, r = plan.sites[i].r, mirror = true, scale = plan.sites[i].scale });
                 foreach (var st in srcStreets) plan.streets.Add(new TownStreet { a = -st.a, b = -st.b, half = st.half });
                 foreach (var pz in srcPlazas) plan.plazas.Add((-pz.c, pz.r));
                 foreach (var y in srcYards) plan.yards.Add((-y.c, -y.u, y.half));
                 int dropped = 0;
                 foreach (var l in srcLots)
                 {
-                    var m = new TownLot { kind = l.kind, v = l.v, pos = -l.pos, yaw = l.yaw + 180f, size = l.size, prop = l.prop, group = l.group < 0 ? -1 : l.group + 1000, structure = l.structure, site = l.site };
+                    var m = new TownLot { kind = l.kind, v = l.v, pos = -l.pos, yaw = l.yaw + 180f, size = l.size, prop = l.prop, group = l.group < 0 ? -1 : l.group + 1000, structure = l.structure, site = l.site, scale = l.scale, tall = l.tall };
                     if (LotFits(plan, m, !l.structure && !(l.site == SiteKind.Ruins), l.prop && l.site == SiteKind.Town && l.kind == BK.Stall)) plan.lots.Add(m); else dropped++;
                 }
                 foreach (var t in srcTrees) if (FreeSpot(plan, -t.p, 2.5f)) plan.trees.Add(new TownTree { p = -t.p, cat = t.cat, site = t.site });
@@ -236,7 +242,7 @@ namespace MassEngine.Game.Editor
                     if (!onPlaza) foreach (var pz in plan.plazas) if ((p - pz.c).magnitude < pz.r + .5f) return false;
                 }
             }
-            float allowed = ProcBuildingMeshes.HasPlinth(l.kind) ? ProcBuildingMeshes.Foundation - .45f : .7f;
+            float allowed = ProcBuildingMeshes.HasPlinth(l.kind) ? ProcBuildingMeshes.Foundation * l.scale - .45f : .7f;   // scaled plinths reach deeper
             if (hMax - hMin > allowed) return false;
             float gap = l.prop ? .4f : 1.2f;
             foreach (var o in plan.lots)
@@ -267,8 +273,8 @@ namespace MassEngine.Game.Editor
 
         static float YawFacing(Vector2 frontDir) => Mathf.Atan2(-frontDir.x, -frontDir.y) * Mathf.Rad2Deg;   // local −Z → frontDir
 
-        TownLot Lot(BK k, int v, Vector2 pos, float yaw, SiteKind site, bool prop = false, int group = -1, bool structure = false) =>
-            new TownLot { kind = k, v = v, pos = pos, yaw = yaw, size = ProcBuildingMeshes.Footprint(k, v), prop = prop, group = group, structure = structure, site = site };
+        TownLot Lot(BK k, int v, Vector2 pos, float yaw, SiteKind site, bool prop = false, int group = -1, bool structure = false, float scale = 1f, float tall = 1f) =>
+            new TownLot { kind = k, v = v, pos = pos, yaw = yaw, size = ProcBuildingMeshes.Footprint(k, v) * scale, prop = prop, group = group, structure = structure, site = site, scale = scale, tall = tall };
 
         bool Try(TownPlan plan, TownLot l, bool checkStreets = true, bool onPlaza = false)
         {
@@ -467,42 +473,58 @@ namespace MassEngine.Game.Editor
         }
 
         // ------------------------------------------------------------------ fort
+        /// <summary>2026-10-16 「城堡做大点，壮观点」 option A: the fort (walls, towers, gatehouse, keep) is built at ×2.</summary>
+        const float FortScale = 2f;
+
         void LayoutFort(TownPlan plan, TownSite s, int index)
         {
+            float S = s.scale;   // FortScale, or 1 when only the original size fitted
             Vector2 u = (-s.c).normalized;   // face the map centre (the enemy side)
             float ang = Mathf.Round(Mathf.Atan2(u.y, u.x) / (Mathf.PI / 2f)) * (Mathf.PI / 2f) + TR(-.2f, .2f);
             u = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang)); Vector2 v = new Vector2(-u.y, u.x);
-            float H = 28f; int g = index;
+            float H = 28f * S - (S > 1f ? 1f : 0f), seg = 10f * S; int g = index;
             // streets: gate road out and to the keep
-            plan.streets.Add(new TownStreet { a = s.c + u * (H + 32f), b = s.c + u * (H - 4f), half = 3f });
-            plan.streets.Add(new TownStreet { a = s.c + u * (H - 8f), b = s.c - u * 3f, half = 2.6f });
+            plan.streets.Add(new TownStreet { a = s.c + u * (H + 32f * S), b = s.c + u * (H - 4f * S), half = 3f * Mathf.Sqrt(S) });
+            plan.streets.Add(new TownStreet { a = s.c + u * (H - 8f * S), b = s.c - u * 3f * S, half = 2.6f * Mathf.Sqrt(S) });
             var sides = new[] { u, v, -u, -v };
             foreach (var o in sides)
             {
                 Vector2 along = new Vector2(-o.y, o.x);
                 for (int i = -2; i <= 2; i++)
                 {
-                    var pos = s.c + o * H + along * (i * 10f);
-                    if (o == u && i == 0) { Try(plan, Lot(BK.Gatehouse, 0, pos, YawFacing(o), s.kind, false, g, true), false); continue; }
-                    Try(plan, Lot(BK.WallSeg, 0, pos, YawFacing(o), s.kind, false, g, true), false);
+                    var pos = s.c + o * H + along * (i * seg);
+                    if (o == u && i == 0) { Try(plan, Lot(BK.Gatehouse, 0, pos, YawFacing(o), s.kind, false, g, true, S), false); continue; }
+                    Try(plan, Lot(BK.WallSeg, 0, pos, YawFacing(o), s.kind, false, g, true, S), false);
                 }
+                // two towers along every wall (between the segments)
+                if (S > 1f)
+                    for (int m = -1; m <= 1; m += 2)
+                        Try(plan, Lot(BK.Tower, 0, s.c + o * H + along * (m * seg * 1.5f), TR(0, 360), s.kind, false, g, true, S * .8f), false);
             }
             for (int sx = -1; sx <= 1; sx += 2) for (int sz = -1; sz <= 1; sz += 2)
-                Try(plan, Lot(BK.Tower, RandV(BK.Tower), s.c + u * (sx * H) + v * (sz * H), TR(0, 360), s.kind, false, g, true), false);
-            if (!Try(plan, Lot(BK.Keep, RandV(BK.Keep), s.c - u * 14.5f, YawFacing(u), s.kind))) Try(plan, Lot(BK.Keep, 0, s.c - u * 14.5f + v * 6f, YawFacing(u), s.kind));
-            Try(plan, Lot(BK.Watchtower, RandV(BK.Watchtower), s.c - u * 21f + v * 20f, TR(0, 360), s.kind));
-            for (int i = 0; i < 10; i++)
+                Try(plan, Lot(BK.Tower, RandV(BK.Tower), s.c + u * (sx * H) + v * (sz * H), TR(0, 360), s.kind, false, g, true, S), false);
+            var keepPos = s.c - u * 14.5f * S;
+            if (S > 1f)
             {
-                float x = TR(-2f, 20f), y = TR(8f, 22f) * (TChance(.5f) ? 1 : -1);
+                // flat keep (merlons) with a tall spired tower rising from its middle
+                if (Try(plan, Lot(BK.Keep, 0, keepPos, YawFacing(u), s.kind, false, g, true, S), false))
+                    Try(plan, Lot(BK.Tower, 1, keepPos, TR(0, 360), s.kind, false, g, true, S * 1.1f, 1.6f), false);
+            }
+            else if (!Try(plan, Lot(BK.Keep, RandV(BK.Keep), keepPos, YawFacing(u), s.kind))) Try(plan, Lot(BK.Keep, 0, keepPos + v * 6f, YawFacing(u), s.kind));
+            Try(plan, Lot(BK.Watchtower, RandV(BK.Watchtower), s.c - u * 21f * S + v * 20f * S, TR(0, 360), s.kind, false, -1, false, Mathf.Max(1f, S * .75f)));
+            int tents = Mathf.RoundToInt(10 * S);
+            for (int i = 0; i < tents; i++)
+            {
+                float x = TR(-2f, 20f) * S, y = TR(8f, 22f) * S * (TChance(.5f) ? 1 : -1);
                 var k = BK.Tent; int tv = townRng.Next(3);
                 Try(plan, Lot(k, tv, s.c + u * x + v * y, YawFacing(-v * Mathf.Sign(y)) + TR(-8f, 8f), s.kind, true));
             }
-            for (int i = 0; i < 4; i++) Try(plan, Lot(BK.Crates, RandV(BK.Crates), s.c + u * TR(-18f, 18f) + v * TR(-22f, 22f), TR(0, 360), s.kind, true));
-            Try(plan, Lot(BK.Cart, 0, s.c + u * (H + 8f) + v * 6f, YawFacing(v), s.kind, true));
+            for (int i = 0; i < 4 * S; i++) Try(plan, Lot(BK.Crates, RandV(BK.Crates), s.c + u * TR(-18f, 18f) * S + v * TR(-22f, 22f) * S, TR(0, 360), s.kind, true));
+            Try(plan, Lot(BK.Cart, 0, s.c + u * (H + 8f * S) + v * 6f * S, YawFacing(v), s.kind, true));
             // palisade-free ground outside: a few tents of a field camp in front of the gate
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 6 * S; i++)
             {
-                var p = s.c + u * TR(H + 10f, H + 26f) + v * TR(-24f, 24f);
+                var p = s.c + u * TR(H + 10f, H + 26f * S) + v * TR(-24f, 24f) * S;
                 Try(plan, Lot(BK.Tent, townRng.Next(3), p, YawFacing(-u) + TR(-20f, 20f), s.kind, true));
             }
         }
@@ -557,7 +579,7 @@ namespace MassEngine.Game.Editor
                 Paint(l.pos - Vector2.one * reach, l.pos + Vector2.one * reach, p => k * (1f - Field2048.Smooth(.5f, 2.6f, SegDistToLot(p, l))));
             }
             foreach (var s in plan.sites.Where(x => x.kind == SiteKind.Fort))
-                Paint(s.c - Vector2.one * 36f, s.c + Vector2.one * 36f, p => .4f * (1f - Field2048.Smooth(24f, 32f, (p - s.c).magnitude)));
+                Paint(s.c - Vector2.one * 36f * s.scale, s.c + Vector2.one * 36f * s.scale, p => .4f * (1f - Field2048.Smooth(24f * s.scale, 32f * s.scale, (p - s.c).magnitude)));
             // occupancy (4 m) for the meadow / pebble scatter: footprints + 3 m, streets, plazas
             for (int z = 0; z < Field2048.N; z++)
                 for (int x = 0; x < Field2048.N; x++)
@@ -609,7 +631,7 @@ namespace MassEngine.Game.Editor
                 var hs = LotSamples(l).Select(p => d.Height(p.x, p.y)).ToArray();
                 float floorY = ProcBuildingMeshes.HasPlinth(l.kind) ? hs.Max() - .05f : hs.Average() - .06f;
                 var g = d.Group(SiteGroups[(int)l.site]);
-                if (d.PlaceAt(ProcBuildingLibrary.PrefabPath(l.kind, l.v, pal), l.pos.x, l.pos.y, l.yaw, floorY, g, !l.prop) != null) placed++; else failed++;
+                if (d.PlaceAt(ProcBuildingLibrary.PrefabPath(l.kind, l.v, pal), l.pos.x, l.pos.y, l.yaw, floorY, g, !l.prop, l.scale, l.tall) != null) placed++; else failed++;
             }
             var tg = d.Group("建筑·树木");
             foreach (var t in plan.trees)

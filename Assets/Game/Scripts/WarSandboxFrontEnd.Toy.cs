@@ -111,7 +111,19 @@ namespace MassEngine.Game
             ui.Label("detail-briefing", new Rect(8, 168, right - 68, 142), sel.briefing ?? "在下一步布置军团。", 16, WarSandboxUGUI.Muted);
             ui.EndScroll();
             ui.Panel("catalog-footer", new Rect(12, h - 82, w - 24, 70), WarSandboxUGUI.Bar);
-            ui.Label("catalog-step", new Rect(30, h - 70, w - 370, 42), "选择战场  →  战前布阵  →  开战", 17, WarSandboxUGUI.Ink);
+            ui.Label("catalog-step", new Rect(30, h - 70, 420, 42), "选择战场  →  战前布阵  →  开战", 17, WarSandboxUGUI.Ink);
+            // Seasons (2026-10-16): fixed-size row, only for maps with a season switcher.
+            string seasonId = SeasonMapId();
+            if (BattlefieldSeasons.Supports(seasonId, out _))
+            {
+                int shown = BattlefieldSeasons.Effective(seasonId);
+                ui.Label("catalog-season-k", new Rect(460, h - 70, 52, 42), "季节", 17, WarSandboxUGUI.Ink, true);
+                for (int si = 0; si < BattlefieldSeasons.Count; si++)
+                {
+                    int season = si;
+                    ui.Button("catalog-season-" + si, new Rect(512 + si * 70, h - 66, 64, 38), BattlefieldSeasons.Names[si], () => BattlefieldSeasons.Requested = season, false, true, si == shown);
+                }
+            }
             ui.Button("card-" + catalogSelected + "-enter", new Rect(w - 286, h - 68, 252, 44), "进入布阵  →", EnterSelectedBattlefield, true);
             if (!string.IsNullOrEmpty(session.Error)) ui.Label("catalog-error", new Rect(cx, h - 111, cw, 26), session.Error, 13, WarSandboxUGUI.Danger);
         }
