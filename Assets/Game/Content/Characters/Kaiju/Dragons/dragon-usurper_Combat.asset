@@ -22,7 +22,7 @@ MonoBehaviour:
   maxHp: 7000
   projectileRange: 110
   projectileSpeed: 45
-  projectileGravity: -6
+  projectileGravity: 0
   projectileHitRadius: 1
   projectileMaxLifetime: 6
   projectileTrailLength: 6
@@ -31,3 +31,4 @@ MonoBehaviour:
   chargeMinSpeedFraction: 0.6
   meleeSplashRadius: 0
   flightAltitude: 20
+  projectileFxColor: {r: 1, g: 0.35, b: 0.05, a: 1}

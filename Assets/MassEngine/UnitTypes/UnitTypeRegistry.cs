@@ -185,6 +185,29 @@ namespace MassEngine
         /// Flight altitude per unit type in metres (0 = ground). Returns true only when at least one type flies,
         /// so callers can keep the legacy kernels otherwise.
         /// </summary>
+        public bool FillProjectileFx(Vector4[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            bool any = false;
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                Color color = config != null ? config.projectileFxColor : Color.clear;
+                bool on = color.a > 0f && !(float.IsNaN(color.r) || float.IsNaN(color.g) || float.IsNaN(color.b));
+                Color rgb = linear ? new Color(color.r, color.g, color.b, 1f).linear : color;
+                target[i] = on ? new Vector4(rgb.r, rgb.g, rgb.b, 1f) : Vector4.zero;
+                any |= on;
+            }
+
+            return any;
+        }
+
+        /// <summary>
+        /// Flight altitude per unit type (see FillFlightAltitudes).
+        /// </summary>
         public bool FillFlightAltitudes(float[] target)
         {
             if (target == null || target.Length != registeredTypes.Count)

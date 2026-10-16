@@ -40,6 +40,7 @@ namespace MassEngine.Game.EditorTools
             public float length, radius, speed, priceScale;
             public int hp, damage, count;
             public float interval, splash, range;
+            public Color fx; // fireball tint (CombatConfig.projectileFxColor), alpha 0 = legacy tracer
         }
 
         // First functional values, not a balance claim (flyers are immune to melee, priced above the 4.5 kaiju).
@@ -47,13 +48,13 @@ namespace MassEngine.Game.EditorTools
         {
             new Def { key = "usurper", title = "篡位者·红龙（飞行巨兽）", mesh = "DragonUsurperMesh", prefab = "DragonUsurper/Red", animDir = "DragonUsurper",
                 idle = "FlyIdle", move = "FlyForward", attack = "FlyFlame", death = "Die", flying = true,
-                length = 18f, radius = 8f, speed = 10f, hp = 7000, damage = 300, interval = 3f, splash = 7f, range = 110f, count = 6, priceScale = 6f },
+                length = 18f, radius = 8f, speed = 10f, hp = 7000, damage = 300, interval = 3f, splash = 7f, range = 110f, count = 6, priceScale = 6f, fx = new Color(1f, .35f, .05f, 1f) },
             new Def { key = "terrorbringer", title = "恐惧使者·绿龙（飞行巨兽）", mesh = "DragonTerrorBringerMesh", prefab = "DragonTerrorBringer/Green", animDir = "DragonTerrorBringer",
                 idle = "FlyIdle", move = "FlyForward", attack = "FlyAttack", death = "die", flying = true,
-                length = 17f, radius = 7.5f, speed = 11f, hp = 6000, damage = 260, interval = 3.3f, splash = 7f, range = 110f, count = 6, priceScale = 6f },
+                length = 17f, radius = 7.5f, speed = 11f, hp = 6000, damage = 260, interval = 3.3f, splash = 7f, range = 110f, count = 6, priceScale = 6f, fx = new Color(.45f, 1f, .15f, 1f) },
             new Def { key = "souleater", title = "噬魂者·黑龙（飞行巨兽）", mesh = "DragonSoulEaterMesh", prefab = "DragonSoulEater/Grey", animDir = "DragonSoulEater",
                 idle = "Fly Float", move = "Fly Forward", attack = "Fly Fireball Shoot", death = "Die", flying = true,
-                length = 15f, radius = 6.5f, speed = 12f, hp = 4500, damage = 120, interval = 1.2f, splash = 5f, range = 110f, count = 6, priceScale = 6f },
+                length = 15f, radius = 6.5f, speed = 12f, hp = 4500, damage = 120, interval = 1.2f, splash = 5f, range = 110f, count = 6, priceScale = 6f, fx = new Color(.6f, .2f, 1f, 1f) },
             new Def { key = "nightmare", title = "梦魇·蓝龙（地面巨兽）", mesh = "DragonTheNightmareMesh", prefab = "DragonNightmare/Blue", animDir = "DragonNightMare",
                 idle = "idle01", move = "walk", attack = "Basic Attack", death = "die", flying = false,
                 length = 15f, radius = 6.5f, speed = 8f, hp = 8000, damage = 140, interval = 1.2f, splash = 4.5f, range = 0f, count = 6, priceScale = 4.5f },
@@ -66,6 +67,63 @@ namespace MassEngine.Game.EditorTools
 
         [MenuItem("Tools/巨兽/重新烘焙四龙（全部重建）")]
         public static void RebuildAll() => BuildAll(true);
+
+        [MenuItem("Tools/巨兽/四龙：只刷新数值（不重新烘焙）")]
+        public static void RefreshValues()
+        {
+            Log.Clear();
+            try
+            {
+                foreach (var d in Defs)
+                {
+                    var unit = AssetDatabase.LoadAssetAtPath<UnitTypeConfig>(Dir + "/dragon-" + d.key + ".asset");
+                    if (unit == null || unit.combatConfig == null) { Log.AppendLine(d.key + ": not built, skipped"); continue; }
+                    var clip = AssetDatabase.IsValidFolder(Pack) ? LoadClip(Pack + "/Animations/" + d.animDir + "/" + d.attack + ".fbx") : null;
+                    ApplyValues(d, unit, unit.combatConfig.projectileTargetHeight * 2f, clip != null ? clip.length : 0f);
+                    foreach (var o in new UnityEngine.Object[] { unit, unit.spawnConfig, unit.movementConfig, unit.flockingConfig, unit.animationConfig, unit.combatConfig, unit.renderConfig })
+                        EditorUtility.SetDirty(o);
+                }
+                EnsureImpactFx();
+                AssetDatabase.SaveAssets();
+                Log.AppendLine("DONE");
+            }
+            catch (Exception e)
+            {
+                Log.AppendLine("FAILED: " + e);
+                Debug.LogException(e);
+            }
+            Directory.CreateDirectory("Logs/FourDragons");
+            File.WriteAllText("Logs/FourDragons/refresh.txt", Log.ToString(), new UTF8Encoding(false));
+            Debug.Log("[FourDragons] " + Log);
+        }
+
+        const string ImpactMaterialPath = Dir + "/FireballImpact.mat";
+        const string SharedProjectileRender = "Assets/Game/Settings/ProjectileRenderConfig.asset";
+
+        /// <summary>
+        /// Fireball look (2026-10-16): the shared projectile render config (all 2048 maps) gets an impact material so
+        /// splash shots burst on impact. Types without projectileFxColor keep the legacy ring + flash.
+        /// </summary>
+        static void EnsureImpactFx()
+        {
+            var mat = AssetDatabase.LoadAssetAtPath<Material>(ImpactMaterialPath);
+            if (mat == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/MassEngine/ProjectileImpact") ?? throw new InvalidOperationException("ProjectileImpact shader missing");
+                mat = new Material(shader) { name = "FireballImpact" };
+                AssetDatabase.CreateAsset(mat, ImpactMaterialPath);
+                Log.AppendLine("impact material created " + ImpactMaterialPath);
+            }
+            var render = AssetDatabase.LoadAssetAtPath<MassEngine.Projectiles.ProjectileRenderConfig>(SharedProjectileRender);
+            if (render == null) { Log.AppendLine("WARN: " + SharedProjectileRender + " missing"); return; }
+            if (render.impactMaterial == null)
+            {
+                render.impactMaterial = mat;
+                EditorUtility.SetDirty(render);
+                Log.AppendLine("impact material assigned to " + SharedProjectileRender);
+            }
+            else Log.AppendLine("shared impact material kept: " + AssetDatabase.GetAssetPath(render.impactMaterial));
+        }
 
         static void BuildAll(bool force)
         {
@@ -85,6 +143,7 @@ namespace MassEngine.Game.EditorTools
                     try { BuildOne(d); }
                     catch (Exception e) { Log.AppendLine("FAILED " + d.key + ": " + e); Debug.LogException(e); }
                 }
+                EnsureImpactFx();
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
                 Log.AppendLine("DONE");
@@ -215,14 +274,15 @@ namespace MassEngine.Game.EditorTools
             c.attackInterval = Mathf.Max(d.interval, attackClip * .9f);
             c.projectileTargetHeight = height * .5f;
             c.flightAltitude = d.flying ? FlightAltitude : 0f;
+            c.projectileFxColor = d.flying ? d.fx : new Color(0f, 0f, 0f, 0f);
             if (d.flying)
             {
-                // Fireballs from the air: area fire (range >= 100 m), splash on impact, short lob.
+                // Fireballs from the air: area fire (range >= 100 m), splash on impact, straight line.
                 c.projectileRange = d.range;
                 c.targetAcquireRadius = d.range + 10f;
                 c.attackRange = d.radius + 3f;
                 c.projectileSpeed = 45f;
-                c.projectileGravity = -6f;
+                c.projectileGravity = 0f; // straight fire bolts from the air, no lob (2026-10-16)
                 c.projectileHitRadius = 1f;
                 c.projectileMaxLifetime = 6f;
                 c.projectileTrailLength = 6f;

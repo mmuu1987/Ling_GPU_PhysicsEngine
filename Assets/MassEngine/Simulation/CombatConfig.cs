@@ -56,5 +56,9 @@ namespace MassEngine
                  "A flying unit still moves on the ground grid but is drawn this high; ground melee units can neither target nor touch it, " +
                  "only ranged units and other flyers hit it. Splash stays in its own layer (ground or air).")]
         [Min(0f)] public float flightAltitude = 0f;
+
+        [Tooltip("Fireball look (2026-10-16), render only: alpha 0 = legacy look (default). Otherwise splash shots draw as a glowing " +
+                 "fireball with a flickering flame tail and burst on impact (fire ball, shock ring, smoke), tinted with this colour.")]
+        public Color projectileFxColor = new Color(0f, 0f, 0f, 0f);
     }
 }

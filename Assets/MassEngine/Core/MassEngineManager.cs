@@ -87,6 +87,7 @@ namespace MassEngine
         private Vector2[] meleeChargeCache;
         private float[] meleeSplashCache;
         private float[] flightCache;
+        private Vector4[] projectileFxCache;
         private MeleeChargeParams meleeCharge;
         private int[] agentUnitTypeIndices;
         private Vector3[] agentSpawnScales;
@@ -246,7 +247,7 @@ namespace MassEngine
             Shader.SetGlobalFloat(MassProjectileTimeId, projectileSimulationTime); // ProjectileTrail volley loft (render only)
             projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds);
             if (projectileImpactFx != null)
-                projectileRenderDispatcher.DrawImpacts(ProjectileRender, projectileImpactFx, renderBounds, projectileSimulationTime);
+                projectileRenderDispatcher.DrawImpacts(ProjectileRender, projectileImpactFx, renderBounds, projectileSimulationTime, bufferManager);
 
             if (telemetry != null)
             {
@@ -635,6 +636,7 @@ namespace MassEngine
             meleeChargeCache = null;
             meleeSplashCache = null;
             flightCache = null;
+            projectileFxCache = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
             gpuSettingsCache = null;
@@ -668,7 +670,8 @@ namespace MassEngine
                     wanted = splash[i] > 0f;
 
             if (wanted && projectileImpactFx == null)
-                projectileImpactFx = new ProjectileImpactFx();
+                // 512 slots (16 KB): styled impacts leave a 12 s scorch, ~10 impacts/s must not wrap it early.
+                projectileImpactFx = new ProjectileImpactFx(512);
             else if (!wanted && projectileImpactFx != null)
             {
                 projectileImpactFx.Dispose();
@@ -728,6 +731,11 @@ namespace MassEngine
                 }
                 SyncProjectileImpactFx();
                 SyncMeleeCharge();
+                // Fireball look (2026-10-16): per-type tint table for the tracer/impact shaders, render only.
+                if (projectileFxCache == null || projectileFxCache.Length != gpuSettingsCache.Length)
+                    projectileFxCache = new Vector4[gpuSettingsCache.Length];
+                if (projectileRenderDispatcher != null)
+                    projectileRenderDispatcher.SetProjectileFx(unitTypeRegistry.FillProjectileFx(projectileFxCache) ? projectileFxCache : null);
             }
             else if (!loggedSettingsCacheMismatch)
             {
