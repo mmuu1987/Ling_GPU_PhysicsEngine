@@ -95,6 +95,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
         // xyz = (停留秒数, 下沉秒数, 下沉深度)；x <= 0 表示不下沉（尸体永久保留）。
         // 由 MPB 提供，所以必须放在 UnityPerMaterial 之外。
         float4 _MassCorpseSink;
+        float4 _MassFlight; // MPB, see ResolveFlightLift
 
 
             // LOD crossfade (2026-10-13, 中景闪动修复 B). _MassLodTierPlusOne = tier of this draw + 1
@@ -143,6 +144,17 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
 
             float t = saturate((age - _MassCorpseSink.x) / max(_MassCorpseSink.y, 0.0001));
             return t * _MassCorpseSink.z;
+        }
+
+        // Flight (2026-10-15): flyers hang _MassFlight.x metres up and fall (ease-in) over the death clip (_MassFlight.y s).
+        float ResolveFlightLift(int state, float age)
+        {
+            if (_MassFlight.x <= 0.0)
+                return 0.0;
+            if (state != 4)
+                return _MassFlight.x;
+            float t = saturate(age / max(_MassFlight.y, 0.0001));
+            return _MassFlight.x * (1.0 - t * t);
         }
 
         struct AgentData
@@ -240,6 +252,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 // 尸体下沉只改渲染位置，agentBuffer 里仍是它倒下的坐标。
                 float3 renderPosition = data.position;
                 renderPosition.y -= ResolveCorpseSink(data.currentState, data.currentAnimationTime);
+                renderPosition.y += ResolveFlightLift(data.currentState, data.currentAnimationTime);
 
                 float4x4 scaleMatrix = float4x4(
                     data.scale.x, 0, 0, 0,

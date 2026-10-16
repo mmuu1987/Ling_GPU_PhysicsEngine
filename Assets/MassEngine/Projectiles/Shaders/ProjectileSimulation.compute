@@ -7,6 +7,8 @@
 #pragma multi_compile __ MASS_PROJECTILE_UNITS
 // Opt-in splash impact effect ring (ProjectileImpactFx). Off = legacy kernel, no extra buffers.
 #pragma multi_compile_local __ MASS_PROJECTILE_IMPACT_FX
+// Flight (2026-10-15): flight-aware capsules and splash layers (MeleeChargeParams.BindProjectile). Off = legacy kernel.
+#pragma multi_compile_local __ MASS_PROJECTILE_FLIGHT
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
 #ifdef MASS_TERRAIN_ENABLED
@@ -34,7 +36,7 @@ RWStructuredBuffer<ProjectileImpactData> projectileImpactRing;
 RWStructuredBuffer<uint> projectileImpactCounter;
 uint projectileImpactCapacity;
 
-void RecordProjectileImpact(float3 impact, float radius)
+void RecordProjectileImpact(float3 impact, float radius, int sourceAgentIndexPlusOne)
 {
     uint ticket;
     InterlockedAdd(projectileImpactCounter[0], 1u, ticket);
@@ -48,7 +50,7 @@ void RecordProjectileImpact(float3 impact, float radius)
 #else
     fx.groundY = 0.0;
 #endif
-    fx.padding = float2(0.0, 0.0);
+    fx.padding = float2(asfloat(sourceAgentIndexPlusOne), 0.0); // x: shooter (+1) for the styled burst, render only
     projectileImpactRing[ticket % max(1u, projectileImpactCapacity)] = fx;
 }
 #endif
@@ -166,7 +168,7 @@ void SimulateProjectiles(uint3 id : SV_DispatchThreadID)
         ApplyProjectileSplash(proj, proj.position, hitIndex, agentCount);
 #ifdef MASS_PROJECTILE_IMPACT_FX
         if (proj.splashRadius > 0.0)
-            RecordProjectileImpact(proj.position, proj.splashRadius);
+            RecordProjectileImpact(proj.position, proj.splashRadius, proj.sourceAgentIndexPlusOne);
 #endif
         // Allies are solid but never receive friendly-fire damage.
         proj.targetAgentIndex = -1;

@@ -41,6 +41,8 @@ bool RangedPathClear(uint index, AgentData source, int target, UnitTypeSettings 
 #endif
     origin.y += max(0.05, settings.projectileOriginHeight) * max(0.01, abs(source.scale.y));
     aim.y += max(0.05, targetSettings.projectileTargetHeight) * max(0.01, abs(victim.scale.y));
+    origin.y += FlightAltitudeOf(index); // Flight: shots leave from / aim at the altitude
+    aim.y += FlightAltitudeOf((uint)target);
     float2 direction = aim.xz - origin.xz;
     float distance = length(direction);
     if (distance < 0.001) return false;

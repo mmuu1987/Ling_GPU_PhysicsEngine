@@ -34,6 +34,7 @@ StructuredBuffer<float> unitTypeMeleeSplash;
 void ConsiderMeleeSplashVictim(uint index, int selfTeam, int directHit, float2 centre, float radius, int damage, float bodyRadius)
 {
     if ((int)index == directHit || hpReadBuffer[index] <= 0 || teamIdReadBuffer[index] == selfTeam) return;
+    if (IsFlyingIndex(index)) return; // Flight: a ground stomp never reaches a flyer
     float2 offset = agentPositionReadBuffer[index] - centre;
     float reach = radius + bodyRadius;
     if (dot(offset, offset) <= reach * reach)

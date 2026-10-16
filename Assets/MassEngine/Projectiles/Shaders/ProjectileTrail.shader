@@ -83,6 +83,30 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 StructuredBuffer<LoftAgentData> agentBuffer;
                 static half4 _TracerColor;
                 static half _TracerFire;
+                // Fireball look (2026-10-16): tint per shooter unit type (ProjectileGpuRenderDispatcher.BindFx).
+                StructuredBuffer<int> projectileAgentUnitType;
+                StructuredBuffer<float4> projectileFxByType;
+                static half4 _FxTint;
+                static float2 _FxSize;
+            #endif
+            float _ProjectileFxEnabled;
+
+            #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
+            half4 ResolveShooterTint(int sourceAgentIndexPlusOne)
+            {
+                if (_ProjectileFxEnabled < 0.5 || sourceAgentIndexPlusOne <= 0)
+                    return 0;
+                uint agentCount, stride, typeCount;
+                projectileAgentUnitType.GetDimensions(agentCount, stride);
+                projectileFxByType.GetDimensions(typeCount, stride);
+                uint agent = (uint)(sourceAgentIndexPlusOne - 1);
+                if (agent >= agentCount)
+                    return 0;
+                int type = projectileAgentUnitType[agent];
+                if (type < 0 || (uint)type >= typeCount)
+                    return 0;
+                return (half4)projectileFxByType[type];
+            }
             #endif
 
             void setup()
@@ -128,6 +152,17 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                     _TracerFire = data.splashRadius > 0.0 ? 1.0h : 0.0h;
                     if (data.splashRadius > 0.0)
                         width = max(width, _SplashTrailWidth);
+                    // Styled fireball: a ball ~0.2 x splash radius across with a halo, and a flame tail >= 5 balls long.
+                    // The quad reaches half a width past the projectile so the ball sits whole at the true position.
+                    _FxTint = data.splashRadius > 0.0 ? ResolveShooterTint(data.sourceAgentIndexPlusOne) : 0;
+                    float headPad = 0.0;
+                    if (_FxTint.a > 0.0)
+                    {
+                        width = max(1.6, data.splashRadius * 0.55);
+                        len = max(len, width * 3.2);
+                        headPad = width * 0.5;
+                    }
+                    _FxSize = float2(len, width);
 
                     // Billboard around the flight axis: the quad keeps its length along the
                     // velocity and rolls to face the camera, so a tracer never degenerates
@@ -150,7 +185,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
 
                     // The tracer trails BEHIND the projectile: local +x is the head, so the
                     // quad centre sits half a length back along the flight direction.
-                    float3 centre = data.position - dir * (len * 0.5);
+                    float3 centre = data.position + dir * headPad - dir * (len * 0.5);
                     float3 xAxis = dir * len;
                     float3 yAxis = side * width;
                     float3 zAxis = up * width;
@@ -195,6 +230,8 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 half4 color : TEXCOORD1;
                 half fogFactor : TEXCOORD2;
                 half fire : TEXCOORD3;
+                half4 fxTint : TEXCOORD4;
+                float2 fxSize : TEXCOORD5;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -209,6 +246,8 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 #ifdef UNITY_PROCEDURAL_INSTANCING_ENABLED
                     output.color = _TracerColor;
                     output.fire = _TracerFire;
+                    output.fxTint = _FxTint;
+                    output.fxSize = _FxSize;
                 #else
                     // No procedural instancing means no projectile data to read a team from.
                     output.color = (half4)_ProjectileTeamColors[0];
@@ -224,6 +263,40 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 // uv.x runs 0 at the tail to 1 at the head; uv.y softens the long edges.
                 half head = (half)input.uv.x;
                 half across = 1.0h - abs((half)input.uv.y * 2.0h - 1.0h);
+                if (input.fxTint.a > 0.5h)
+                {
+                    // Styled fireball, in metres along the quad: ball (radius r) at the front, halo to the quad edge,
+                    // then a flickering flame tail that tapers and cools from white-hot through the tint into smoke.
+                    float L = max(input.fxSize.x, 1e-3), W = max(input.fxSize.y, 1e-3);
+                    float r = W * 0.32;
+                    float fromHead = (1.0 - input.uv.x) * L;
+                    float side = (input.uv.y - 0.5) * W;
+                    float time = _MassProjectileTime;
+                    float dBall = length(float2(fromHead - W * 0.5, side)) / r;
+                    float k = saturate((fromHead - W * 0.5) / max(L - W * 0.5, 1e-3));
+                    float flick = 0.55 * sin(fromHead * 2.1 - time * 29.0) + 0.45 * sin(fromHead * 0.9 + side * 2.7 - time * 17.0);
+                    float tailR = r * lerp(0.95, 0.12, k) * (1.0 + 0.22 * flick);
+                    float tail = fromHead > W * 0.5 ? saturate(1.0 - abs(side) / max(tailR, 1e-3)) : 0.0;
+                    float ball = saturate((1.0 - dBall) * 3.0);
+                    float halo = saturate(1.0 - dBall / 1.55);
+                    halo *= halo;
+                    float core = saturate(1.0 - dBall / 0.45);
+                    float3 tint = input.fxTint.rgb;
+                    float3 deep = tint * tint * 0.8;
+                    float3 bright = saturate(tint * 1.6 + 0.04);
+                    float3 hot = float3(1.0, 0.95, 0.8);
+                    // ball: small white-hot core -> bright tint -> deep rim
+                    float3 ballRgb = lerp(lerp(deep, bright, saturate(1.6 - dBall * 1.6)), hot, core * core);
+                    // tail: bright tint behind the ball -> deep -> smoke, with a flickering brighter inner flame
+                    float3 tailRgb = lerp(bright, deep, saturate(k * 2.0));
+                    tailRgb = lerp(tailRgb, float3(0.16, 0.13, 0.12), saturate((k - 0.55) * 2.2));
+                    float inner = saturate(1.0 - abs(side) / max(tailR * 0.4, 1e-3)) * (1.0 - k);
+                    tailRgb = lerp(tailRgb, lerp(bright, hot, 0.35), inner * (0.5 + 0.2 * flick));
+                    float3 rgb = lerp(tailRgb, ballRgb, ball);
+                    rgb = lerp(rgb, bright, halo * (1.0 - ball) * (1.0 - tail));
+                    float a = max(ball, max(tail * lerp(0.95, 0.3, k), halo * 0.35));
+                    return half4(MixFog((half3)rgb, input.fogFactor), (half)saturate(a));
+                }
                 if (input.fire > 0.5h)
                 {
                     // Fire streak: saturated orange-red body (LDR, so it stays orange without bloom) with a short

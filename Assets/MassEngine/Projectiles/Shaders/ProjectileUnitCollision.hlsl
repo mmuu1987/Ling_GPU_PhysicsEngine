@@ -24,6 +24,7 @@ void ConsiderProjectileUnit(uint index, ProjectileData proj, float3 start, float
     if (surface.w < 0.0) return;
     ground = surface.x;
 #endif
+    ground += FlightAltitudeOf(index); // Flight: the capsule hangs at the flyer's altitude
     float height = 2.0 * max(0.05, settings.projectileTargetHeight) * max(0.01, abs(agent.scale.y));
     float bodyRadius = max(0.05, settings.agentRadius) * max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
     float cap = min(bodyRadius, height * 0.5);
@@ -95,6 +96,9 @@ void ConsiderSplashVictimBody(uint index, ProjectileData proj, float3 impact, in
 {
     if ((int)index == directHit || (int)index + 1 == proj.sourceAgentIndexPlusOne) return;
     if (hpReadBuffer[index] <= 0 || teamIdReadBuffer[index] == proj.sourceTeamId) return;
+    // Flight: splash stays in its layer - a hit on a flyer bursts in the air, anything else on the ground.
+    bool airBurst = directHit >= 0 && IsFlyingIndex((uint)directHit);
+    if (IsFlyingIndex(index) != airBurst) return;
     float2 offset = agentPositionReadBuffer[index] - impact.xz;
     float reach = proj.splashRadius + bodyRadius;
     if (dot(offset, offset) <= reach * reach)

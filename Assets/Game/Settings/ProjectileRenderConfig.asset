@@ -18,6 +18,8 @@ MonoBehaviour:
   trailWidth: 0.15
   trailLengthScale: 2
   trailMinLength: 0.8
+  impactMaterial: {fileID: 2100000, guid: 092340c5ca26b2f449e1c6908c177df6, type: 2}
+  impactDuration: 0.6
   teamColors:
   - {r: 1, g: 0.82, b: 0.35, a: 0.9}
   - {r: 0.4, g: 1, b: 1.85, a: 1}

@@ -30,7 +30,7 @@ namespace MassEngine.Projectiles
             public float radius;
             public float time;
             public float groundY;
-            public Vector2 padding;
+            public Vector2 padding; // x: asfloat(shooter agent index + 1), render-only tint lookup
         }
 
         public static int Stride => Marshal.SizeOf<ImpactData>();

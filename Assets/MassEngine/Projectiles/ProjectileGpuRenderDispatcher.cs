@@ -26,6 +26,51 @@ namespace MassEngine.Projectiles
         // Reused so the per-frame path allocates nothing; SetVectorArray copies the contents.
         private readonly Vector4[] teamColorUpload = new Vector4[ProjectileRenderConfig.MaxTeamColors];
 
+        // Fireball look (2026-10-16): per-unit-type tint (rgb, a = styled) looked up through the source agent's unit type.
+        // Dummies keep the shader buffers bound when nobody is styled (legacy look, _ProjectileFxEnabled = 0).
+        public static readonly int FxByTypeId = Shader.PropertyToID("projectileFxByType");
+        public static readonly int FxAgentTypeId = Shader.PropertyToID("projectileAgentUnitType");
+        public static readonly int FxEnabledId = Shader.PropertyToID("_ProjectileFxEnabled");
+        private ComputeBuffer fxByType, fxDummyTint, fxDummyType;
+        private Vector4[] fxUploaded;
+
+        /// <summary>Per-type styled fireball tints (null = nobody styled). Uploads only on change.</summary>
+        public void SetProjectileFx(Vector4[] values)
+        {
+            if (values == null)
+            {
+                fxByType?.Release();
+                fxByType = null;
+                fxUploaded = null;
+                return;
+            }
+            if (fxByType == null || fxByType.count != values.Length)
+            {
+                fxByType?.Release();
+                fxByType = new ComputeBuffer(Mathf.Max(1, values.Length), 16);
+                fxUploaded = null;
+            }
+            if (fxUploaded != null && fxUploaded.Length == values.Length)
+            {
+                bool same = true;
+                for (int i = 0; i < values.Length && same; i++) same = fxUploaded[i] == values[i];
+                if (same) return;
+            }
+            fxByType.SetData(values);
+            fxUploaded = (Vector4[])values.Clone();
+        }
+
+        private void BindFx(MaterialPropertyBlock target, MassGpuBufferManager buffers)
+        {
+            if (fxDummyTint == null) { fxDummyTint = new ComputeBuffer(1, 16); fxDummyTint.SetData(new Vector4[1]); }
+            if (fxDummyType == null) { fxDummyType = new ComputeBuffer(1, sizeof(int)); fxDummyType.SetData(new int[] { -1 }); }
+            ComputeBuffer types = buffers != null ? buffers.unitTypeIndexBuffer : null;
+            bool on = fxByType != null && types != null;
+            target.SetBuffer(FxByTypeId, on ? fxByType : fxDummyTint);
+            target.SetBuffer(FxAgentTypeId, on ? types : fxDummyType);
+            target.SetFloat(FxEnabledId, on ? 1f : 0f);
+        }
+
         public void Draw(ProjectileRenderConfig config, MassGpuBufferManager buffers, Bounds bounds)
         {
             if (config == null || !config.renderProjectiles)
@@ -74,6 +119,7 @@ namespace MassEngine.Projectiles
             block.SetBuffer(ProjectileBufferId, projectiles);
             block.SetBuffer(ActiveProjectileIndicesId, activeIndices);
             if (buffers.agentBuffer != null) block.SetBuffer(AgentBufferId, buffers.agentBuffer); // volley loft: target height
+            BindFx(block, buffers);
 
             Graphics.DrawMeshInstancedIndirect(
                 mesh,
@@ -91,7 +137,7 @@ namespace MassEngine.Projectiles
         /// Opt-in splash impact rings/flashes (ProjectileImpactFx). One procedural instance per ring slot;
         /// the shader collapses empty and expired slots, so no readback or CPU count is needed.
         /// </summary>
-        public void DrawImpacts(ProjectileRenderConfig config, ProjectileImpactFx fx, Bounds bounds, float simulationTime)
+        public void DrawImpacts(ProjectileRenderConfig config, ProjectileImpactFx fx, Bounds bounds, float simulationTime, MassGpuBufferManager buffers = null)
         {
             if (config == null || !config.renderProjectiles || config.impactMaterial == null || fx == null || !fx.IsValid)
                 return;
@@ -101,6 +147,7 @@ namespace MassEngine.Projectiles
             impactBlock.SetBuffer(ProjectileImpactFx.RingId, fx.Ring);
             impactBlock.SetFloat(ProjectileImpactFx.NowId, simulationTime);
             impactBlock.SetFloat(ProjectileImpactFx.DurationId, Mathf.Max(0.05f, config.impactDuration));
+            BindFx(impactBlock, buffers);
             Graphics.DrawMeshInstancedProcedural(mesh, 0, config.impactMaterial, bounds, fx.Capacity, impactBlock,
                 UnityEngine.Rendering.ShadowCastingMode.Off, false);
         }
@@ -136,6 +183,9 @@ namespace MassEngine.Projectiles
             block.Clear();
             impactBlock.Clear();
             reportedSkips.Clear();
+            fxByType?.Release(); fxByType = null; fxUploaded = null;
+            fxDummyTint?.Release(); fxDummyTint = null;
+            fxDummyType?.Release(); fxDummyType = null;
         }
 
         private void FillBlock(ProjectileRenderConfig config)

@@ -1199,6 +1199,34 @@ MonoBehaviour:
     selectionNote: 
     unitPreview: {fileID: 2800000, guid: 3009e1a44660d3c44b623c1bc7b8d62a, type: 3}
     priceScale: 4.5
+  - templateId: roster-dragon-souleater
+    revision: 1
+    config: {fileID: 11400000, guid: 63194a1a095f0754aa734e88254ced7a, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 0}
+    priceScale: 6
+  - templateId: roster-dragon-terrorbringer
+    revision: 1
+    config: {fileID: 11400000, guid: 8d2ace7cd72195b4a8119f67af73f3ec, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 0}
+    priceScale: 6
+  - templateId: roster-dragon-usurper
+    revision: 1
+    config: {fileID: 11400000, guid: 0d3f088026ae5344f87ea01bbf1dab99, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 0}
+    priceScale: 6
+  - templateId: roster-dragon-nightmare
+    revision: 1
+    config: {fileID: 11400000, guid: 470156c71c2228743ba4258a4e36c8ae, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 0}
+    priceScale: 4.5
   - templateId: roster-giant-yeti
     revision: 1
     config: {fileID: 11400000, guid: 0f956bc584647d94ca324fd1f84d434a, type: 2}

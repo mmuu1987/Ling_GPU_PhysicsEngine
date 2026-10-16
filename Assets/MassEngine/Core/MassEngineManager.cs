@@ -86,6 +86,8 @@ namespace MassEngine
         // Opt-in melee charge (null unless a unit type has chargeDamageMultiplier > 1).
         private Vector2[] meleeChargeCache;
         private float[] meleeSplashCache;
+        private float[] flightCache;
+        private Vector4[] projectileFxCache;
         private MeleeChargeParams meleeCharge;
         private int[] agentUnitTypeIndices;
         private Vector3[] agentSpawnScales;
@@ -245,7 +247,7 @@ namespace MassEngine
             Shader.SetGlobalFloat(MassProjectileTimeId, projectileSimulationTime); // ProjectileTrail volley loft (render only)
             projectileRenderDispatcher.Draw(ProjectileRender, bufferManager, renderBounds);
             if (projectileImpactFx != null)
-                projectileRenderDispatcher.DrawImpacts(ProjectileRender, projectileImpactFx, renderBounds, projectileSimulationTime);
+                projectileRenderDispatcher.DrawImpacts(ProjectileRender, projectileImpactFx, renderBounds, projectileSimulationTime, bufferManager);
 
             if (telemetry != null)
             {
@@ -633,6 +635,8 @@ namespace MassEngine
             meleeCharge = null;
             meleeChargeCache = null;
             meleeSplashCache = null;
+            flightCache = null;
+            projectileFxCache = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
             gpuSettingsCache = null;
@@ -666,7 +670,8 @@ namespace MassEngine
                     wanted = splash[i] > 0f;
 
             if (wanted && projectileImpactFx == null)
-                projectileImpactFx = new ProjectileImpactFx();
+                // 512 slots (16 KB): styled impacts leave a 12 s scorch, ~10 impacts/s must not wrap it early.
+                projectileImpactFx = new ProjectileImpactFx(512);
             else if (!wanted && projectileImpactFx != null)
             {
                 projectileImpactFx.Dispose();
@@ -688,12 +693,18 @@ namespace MassEngine
                 meleeSplashCache = new float[gpuSettingsCache.Length];
             // Kaiju B (2026-10-15): melee splash rides on the same opt-in variant as the charge.
             bool splash = unitTypeRegistry.FillMeleeSplash(meleeSplashCache);
-            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash;
+            if (flightCache == null || flightCache.Length != gpuSettingsCache.Length)
+                flightCache = new float[gpuSettingsCache.Length];
+            // Flight (2026-10-15): flying types ride on the same opt-in combat variant.
+            bool flight = unitTypeRegistry.FillFlightAltitudes(flightCache);
+            if (projectileManager != null)
+                projectileManager.UnitTypeFlightAltitudes = flight ? flightCache : null;
+            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash | flight;
             if (wanted)
             {
                 if (meleeCharge == null)
                     meleeCharge = new MeleeChargeParams();
-                meleeCharge.Upload(meleeChargeCache, meleeSplashCache);
+                meleeCharge.Upload(meleeChargeCache, meleeSplashCache, flightCache);
             }
             else if (meleeCharge != null)
             {
@@ -720,6 +731,11 @@ namespace MassEngine
                 }
                 SyncProjectileImpactFx();
                 SyncMeleeCharge();
+                // Fireball look (2026-10-16): per-type tint table for the tracer/impact shaders, render only.
+                if (projectileFxCache == null || projectileFxCache.Length != gpuSettingsCache.Length)
+                    projectileFxCache = new Vector4[gpuSettingsCache.Length];
+                if (projectileRenderDispatcher != null)
+                    projectileRenderDispatcher.SetProjectileFx(unitTypeRegistry.FillProjectileFx(projectileFxCache) ? projectileFxCache : null);
             }
             else if (!loggedSettingsCacheMismatch)
             {

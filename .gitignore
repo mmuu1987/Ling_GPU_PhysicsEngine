@@ -179,3 +179,9 @@ sysinfo.txt
 # 巨兽：生成的放大网格/VAT 留在本地（菜单 Tools/巨兽/生成巨兽暴龙 重建）
 /Assets/Game/Content/Characters/Kaiju/Dino/Generated/
 /Assets/Game/Content/Characters/Kaiju/Dino/Generated.meta
+
+# 四龙：Asset Store 资源包（EULA，仓库公开）和由它派生的模型/动画/材质/VAT 都只留在本地
+# （导入 Four Evil Dragons HP 到 Assets/FourEvilDragonsHP 后，菜单 Tools/巨兽/生成四龙 重建；材质在已忽略的 ThirdParty/_Derived）
+/Assets/FourEvilDragonsHP/
+/Assets/FourEvilDragonsHP.meta
+/Assets/Game/Authoring/CharacterPipeline/Generated/FED_*

@@ -79,6 +79,7 @@ namespace MassEngine.Game
                 arguments.SetData(new[] { mesh.GetIndexCount(0), 1u, mesh.GetIndexStart(0), (uint)mesh.GetBaseVertex(0), 0u });
                 runtime.nearBlock.SetBuffer("agentBuffer", agents); runtime.nearBlock.SetBuffer("visibleAgentIndices", visible);
                 runtime.nearBlock.SetVector("_MassCorpseSink", Vector4.zero);
+                runtime.nearBlock.SetVector("_MassFlight", Vector4.zero); // isolated preview: flyers stay framed
                 commands = new CommandBuffer { name = "Isolated unit UI preview" };
                 CreateGroundShadow();
                 PhysicalRadius = UnitPreviewRadius.Read(config);

@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
+  m_Name: dragon-souleater_Render
+  m_EditorClassIdentifier: 
+  vatProfile: {fileID: 11400000, guid: 92c394f9b27ff6043b347ebd691eb2ee, type: 2}
+  nearMesh: {fileID: 1606213983961203368, guid: cf18bb01f482b5d4db691adbfd790d1d, type: 2}
+  midMesh: {fileID: 7850062992524474101, guid: 92c394f9b27ff6043b347ebd691eb2ee, type: 2}
+  farMesh: {fileID: 7850062992524474101, guid: 92c394f9b27ff6043b347ebd691eb2ee, type: 2}
+  nearMaterial: {fileID: 2100000, guid: 8827cdbed2c5e624a8f8c09443ae40c8, type: 2}
+  midMaterial: {fileID: 2100000, guid: 01ad65f5461530f42a90effd57ec1589, type: 2}
+  farMaterial: {fileID: 2100000, guid: 01ad65f5461530f42a90effd57ec1589, type: 2}
+  nearShadowCasting: 1
+  nearReceiveShadows: 1
+  midShadowCasting: 0
+  midReceiveShadows: 0
+  farShadowCasting: 0
+  farReceiveShadows: 0

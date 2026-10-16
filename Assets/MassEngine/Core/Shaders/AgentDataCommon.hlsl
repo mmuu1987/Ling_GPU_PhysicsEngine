@@ -328,6 +328,26 @@ UnitTypeSettings GetUnitSettings(uint agentIndex)
     return unitTypeSettings[unitTypeIndexReadBuffer[agentIndex]];
 }
 
+// Flight (2026-10-15): altitude per unit type in metres (CombatConfig.flightAltitude, 0 = ground unit).
+// Only the opt-in variants bind it (combat: MASS_MELEE_CHARGE, projectiles: MASS_PROJECTILE_FLIGHT); everyone else is ground.
+#if defined(MASS_MELEE_CHARGE) || defined(MASS_PROJECTILE_FLIGHT)
+StructuredBuffer<float> unitTypeFlight;
+float FlightAltitudeOf(uint agentIndex)
+{
+    return max(0.0, unitTypeFlight[unitTypeIndexReadBuffer[agentIndex]]);
+}
+#else
+float FlightAltitudeOf(uint agentIndex)
+{
+    return 0.0;
+}
+#endif
+
+bool IsFlyingIndex(uint agentIndex)
+{
+    return FlightAltitudeOf(agentIndex) > 0.0;
+}
+
 bool IsInsideFrustumRadius(float3 position, float radius)
 {
     if (enableFrustumCulling == 0)
@@ -1498,6 +1518,10 @@ bool TargetIsUsable(uint selfIndex, uint otherIndex, float distSqr, float3 selfP
     if (selfIndex == otherIndex || !IsAliveIndex(otherIndex) || !IsEnemy(selfIndex, otherIndex))
         return false;
 
+    // Flight: a ground melee unit can never target a flying unit; ranged units and other flyers can.
+    if (IsFlyingIndex(otherIndex) && !IsFlyingIndex(selfIndex) && !(GetUnitSettings(selfIndex).projectileRange > 0.01))
+        return false;
+
     // C2: ranges reach a large target's surface, not its centre (0 for normal targets).
     float reachBonus = TargetReachBonus(otherIndex);
     if (IsHoldStance(selfIndex))
@@ -1629,6 +1653,10 @@ void AccumulateBodyNeighbor(uint selfIndex, uint otherIndex, float2 selfPosition
     float otherBodyRadius, int selfTeamId, float2 travelForward, float2 probeLeft, float2 probeRight,
     inout NeighborhoodQueryResult result)
 {
+    // Flight: ground and air bodies never touch (no push, no queueing, no melee contact).
+    if (IsFlyingIndex(selfIndex) != IsFlyingIndex(otherIndex))
+        return;
+
     float2 otherPosition = agentPositionReadBuffer[otherIndex];
     float2 toOther = otherPosition - selfPosition;
     float distSqr = dot(toOther, toOther);
