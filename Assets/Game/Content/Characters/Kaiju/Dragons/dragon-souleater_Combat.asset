@@ -15,16 +15,16 @@ MonoBehaviour:
   attackReleasePhase: 0.5
   projectileOriginHeight: 3.411499
   projectileTargetHeight: 3.1013627
-  targetAcquireRadius: 120
+  targetAcquireRadius: 260
   attackRange: 9.5
   attackDamage: 120
   attackInterval: 1.2
-  maxHp: 4500
-  projectileRange: 110
+  maxHp: 13500
+  projectileRange: 250
   projectileSpeed: 45
   projectileGravity: 0
   projectileHitRadius: 1
-  projectileMaxLifetime: 6
+  projectileMaxLifetime: 8
   projectileTrailLength: 6
   projectileSplashRadius: 5
   chargeDamageMultiplier: 1
