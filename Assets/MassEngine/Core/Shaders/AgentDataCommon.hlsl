@@ -845,30 +845,43 @@ StructuredBuffer<float> _GpuNavDist;      // team layers (latest in A), team * (
 uint _GpuNavValidMask;
 StructuredBuffer<float> _GpuNavLocalDist; // local slot layers (latest in A), slot * (2R)^2
 uint _GpuNavLocalMask;
+// Far-field smoothing (2026-10-16, Docs/CavalryTrample-20261016.md): per-cell EMA of the team layer (GpuNavField
+// NavFieldSmooth), density goals only. An auto-advance goal is every coarse cell holding an enemy; as the enemy front
+// crosses cells at each dynamic rebuild the nearest goal cell hops sideways and the change sweeps out at the relaxation
+// speed, so whole patches of an approaching army swayed 1-2 degrees in step. Far from the enemy the direction is taken
+// from the time-smoothed layer (blend 60 -> 100 m); near the enemy the live layer decides unchanged.
+StructuredBuffer<float> _GpuNavDistSmooth; // team layers, team * (2R)^2
+uint _GpuNavSmoothMask;                   // teams whose smoothed layer is primed (density goal)
+#define GPU_NAV_SRC_TEAM 0u
+#define GPU_NAV_SRC_LOCAL 1u
+#define GPU_NAV_SRC_SMOOTH 2u
+#define GPU_NAV_SMOOTH_NEAR 60.0
+#define GPU_NAV_SMOOTH_FULL 100.0
 uint _GpuNavLineMask;                     // N5b: teams whose GPU goal is a formation line (no point-terminal hand-off)
 float4 _GpuNavArrivalZone[8];            // N5c: arrival-zone depth (m) per team, team t = [t >> 2][t & 3]; 0 = off
 static float gGpuNavTeamDist = 1e30;     // N5c: goal distance at the agent's cell from its last GpuNavSteer (team layer) call
 #define GPU_NAV_UNREACHABLE 1e29
 static const int2 GpuNavOffsets[8] = { int2(1, 0), int2(0, 1), int2(1, 1), int2(-1, 1), int2(-1, 0), int2(0, -1), int2(-1, -1), int2(1, -1) };
 
-float GpuNavAt(bool local, uint layer, int2 c, int res)
+float GpuNavAt(uint source, uint layer, int2 c, int res)
 {
     if (c.x < 0 || c.y < 0 || c.x >= res || c.y >= res) return 1e30;
     uint i = layer + (uint)(c.y * res + c.x);
-    if (local) return _GpuNavLocalDist[i];
+    if (source == GPU_NAV_SRC_LOCAL) return _GpuNavLocalDist[i];
+    if (source == GPU_NAV_SRC_SMOOTH) return _GpuNavDistSmooth[i];
     return _GpuNavDist[i];
 }
 
 // stopRadius < 0: no stop rule (local slots stop through their own arrival rules).
 // pointTerminal: hand the last two coarse cells back to the CPU (exact point approach).
-bool GpuNavSteerCore(bool local, uint layer, float2 p, float stopRadius, bool pointTerminal, out float2 dir)
+bool GpuNavSteerCore(uint source, uint layer, float2 p, float stopRadius, bool pointTerminal, out float2 dir)
 {
     dir = 0;
     int res = flowFieldResolution.x * 2;
     float h = flowFieldCellSize * 0.5;
     float2 lp = (p - flowFieldOrigin) / h;
     int2 c = clamp((int2)floor(lp), 0, res - 1);
-    float dc = GpuNavAt(local, layer, c, res);
+    float dc = GpuNavAt(source, layer, c, res);
     if (dc >= GPU_NAV_UNREACHABLE) return false;
     if (pointTerminal && dc <= 2.0 * flowFieldCellSize) return false;
     if (stopRadius >= 0.0 && dc <= stopRadius) return true; // inside the stop radius: no flow
@@ -876,8 +889,8 @@ bool GpuNavSteerCore(bool local, uint layer, float2 p, float stopRadius, bool po
     float2 q = lp - 0.5;
     int2 b = (int2)floor(q);
     float2 t = q - (float2)b;
-    float d00 = GpuNavAt(local, layer, b, res), d10 = GpuNavAt(local, layer, b + int2(1, 0), res);
-    float d01 = GpuNavAt(local, layer, b + int2(0, 1), res), d11 = GpuNavAt(local, layer, b + int2(1, 1), res);
+    float d00 = GpuNavAt(source, layer, b, res), d10 = GpuNavAt(source, layer, b + int2(1, 0), res);
+    float d01 = GpuNavAt(source, layer, b + int2(0, 1), res), d11 = GpuNavAt(source, layer, b + int2(1, 1), res);
     if (max(max(d00, d10), max(d01, d11)) < GPU_NAV_UNREACHABLE)
     {
         float2 g = float2(lerp(d10 - d00, d11 - d01, t.y), lerp(d01 - d00, d11 - d10, t.x));
@@ -893,7 +906,7 @@ bool GpuNavSteerCore(bool local, uint layer, float2 p, float stopRadius, bool po
     [unroll] for (int k = 0; k < 8; k++)
     {
         int2 n = c + GpuNavOffsets[k];
-        float dn = GpuNavAt(local, layer, n, res);
+        float dn = GpuNavAt(source, layer, n, res);
         if (dn < best) { best = dn; next = n; }
     }
     if (next.x == c.x && next.y == c.y) return false;
@@ -910,9 +923,22 @@ bool GpuNavSteer(int teamId, float2 p, out float2 dir)
     if (teamId < 0 || teamId >= 32 || ((_GpuNavValidMask >> (uint)teamId) & 1u) == 0u) return false;
     TeamFlowParams flow = GetTeamFlowParams(teamId);
     int res = flowFieldResolution.x * 2;
-    gGpuNavTeamDist = GpuNavAt(false, (uint)teamId * (uint)(res * res), clamp((int2)floor((p - flowFieldOrigin) / (flowFieldCellSize * 0.5)), 0, res - 1), res);
+    uint layer = (uint)teamId * (uint)(res * res);
+    gGpuNavTeamDist = GpuNavAt(GPU_NAV_SRC_TEAM, layer, clamp((int2)floor((p - flowFieldOrigin) / (flowFieldCellSize * 0.5)), 0, res - 1), res);
     bool lineGoal = ((_GpuNavLineMask >> (uint)teamId) & 1u) != 0u;
-    return GpuNavSteerCore(false, (uint)teamId * (uint)(res * res), p, flow.target.z, flow.modes.x == FLOW_TARGET_POINT && !lineGoal, dir);
+    if (!GpuNavSteerCore(GPU_NAV_SRC_TEAM, layer, p, flow.target.z, flow.modes.x == FLOW_TARGET_POINT && !lineGoal, dir)) return false;
+    if (flow.modes.x == FLOW_TARGET_NONE && ((_GpuNavSmoothMask >> (uint)teamId) & 1u) != 0u && dot(dir, dir) > 0.0
+        && gGpuNavTeamDist > GPU_NAV_SMOOTH_NEAR && gGpuNavTeamDist < GPU_NAV_UNREACHABLE)
+    {
+        float2 smoothDir;
+        if (GpuNavSteerCore(GPU_NAV_SRC_SMOOTH, layer, p, -1.0, false, smoothDir) && dot(smoothDir, smoothDir) > 0.0)
+        {
+            float2 blended = lerp(dir, smoothDir, saturate((gGpuNavTeamDist - GPU_NAV_SMOOTH_NEAR) / (GPU_NAV_SMOOTH_FULL - GPU_NAV_SMOOTH_NEAR)));
+            float lengthSqr = dot(blended, blended);
+            if (lengthSqr > 1e-6) dir = blended * rsqrt(lengthSqr);
+        }
+    }
+    return true;
 }
 
 // N5c: inside the team's arrival zone (goal distance <= depth of the block that forms there): plain marchers follow,
@@ -929,7 +955,7 @@ bool GpuNavSteerLocal(int slot, float2 p, out float2 dir)
     dir = 0;
     if (slot < 0 || slot >= 32 || ((_GpuNavLocalMask >> (uint)slot) & 1u) == 0u) return false;
     int res = flowFieldResolution.x * 2;
-    return GpuNavSteerCore(true, (uint)slot * (uint)(res * res), p, -1.0, false, dir);
+    return GpuNavSteerCore(GPU_NAV_SRC_LOCAL, (uint)slot * (uint)(res * res), p, -1.0, false, dir);
 }
 #endif
 

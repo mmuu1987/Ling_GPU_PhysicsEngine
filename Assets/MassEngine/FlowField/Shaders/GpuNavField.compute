@@ -18,6 +18,7 @@
 #pragma kernel NavCrowdClear
 #pragma kernel NavCrowdCount
 #pragma kernel NavCrowdSmooth
+#pragma kernel NavFieldSmooth
 
 #define UNREACHABLE 1e30
 #define INFINITE_COST asfloat(0x7F800000u)
@@ -62,6 +63,10 @@ float _NavCrowdGain;
 float _NavCrowdInvFull;    // 1 / (agents per fine cell counted as fully packed)
 float _NavCrowdCap;
 float _NavCrowdAlpha;      // EMA blend this frame, 1 - exp(-dt / tau)
+// Far-field smoothing: per-cell EMA of a team layer (sampled by GpuNavSteer far from a density goal).
+RWStructuredBuffer<float> _NavDistSmoothRW;
+float _NavSmoothAlpha;     // 1 - exp(-dt / tau); 1 = prime
+float _NavSmoothSnap;      // |live - smoothed| above this (m) snaps (seed upload, retarget)
 float _NavCrowdInvFreeSpeed; // congestion weight = saturate(1 - locomotionSpeed / freeSpeed); 0 = every agent counts 1
 #define NAV_CROWD_UNIT 256.0
 #define NAV_AGENT_ENGAGE 2   // STATE_ENGAGE / STATE_ATTACK / STATE_DEAD (AgentDataCommon.hlsl)
@@ -189,4 +194,14 @@ void NavCrowdSmooth(uint3 id : SV_DispatchThreadID)
     if ((int)id.x >= _NavFillCount) return;
     float ema = _NavCrowdEmaRW[id.x];
     _NavCrowdEmaRW[id.x] = ema + _NavCrowdAlpha * ((float)_NavCrowdCountRW[id.x] * (1.0 / NAV_CROWD_UNIT) - ema);
+}
+
+[numthreads(64, 1, 1)]
+void NavFieldSmooth(uint3 id : SV_DispatchThreadID)
+{
+    if ((int)id.x >= _NavFillCount) return;
+    uint i = (uint)_NavLayerOffset + id.x;
+    float d = _NavDistIn[i];
+    float s = _NavDistSmoothRW[i];
+    _NavDistSmoothRW[i] = (d >= 1e29 || s >= 1e29 || abs(d - s) > _NavSmoothSnap) ? d : s + _NavSmoothAlpha * (d - s);
 }

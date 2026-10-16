@@ -80,7 +80,7 @@ namespace MassEngine
 
         private readonly ComputeShader shader;
         private readonly int relaxKernel, fillKernel, crowdClearKernel, crowdCountKernel, crowdSmoothKernel;
-        private ComputeBuffer walk, edges, distA, distB, crowdCount, crowdEma;
+        private ComputeBuffer walk, edges, distA, distB, crowdCount, crowdEma, distSmooth;
         private bool crowdWasActive;
         private readonly int[] current;          // 0: A holds the latest values, 1: B
         private readonly GpuNavGoal[] goals;
@@ -108,7 +108,31 @@ namespace MassEngine
             CrowdOffsetId = Shader.PropertyToID("_NavCrowdOffset"),
             GoalBitsId = Shader.PropertyToID("_NavGoalBits"), GoalBitsOffsetId = Shader.PropertyToID("_NavGoalBitsOffset"),
             SampleLineMaskId = Shader.PropertyToID("_GpuNavLineMask"), SampleArrivalZoneId = Shader.PropertyToID("_GpuNavArrivalZone"),
-            SampleLocalDistId = Shader.PropertyToID("_GpuNavLocalDist"), SampleLocalMaskId = Shader.PropertyToID("_GpuNavLocalMask");
+            SampleLocalDistId = Shader.PropertyToID("_GpuNavLocalDist"), SampleLocalMaskId = Shader.PropertyToID("_GpuNavLocalMask"),
+            SampleSmoothDistId = Shader.PropertyToID("_GpuNavDistSmooth"), SampleSmoothMaskId = Shader.PropertyToID("_GpuNavSmoothMask"),
+            SmoothRwId = Shader.PropertyToID("_NavDistSmoothRW"), SmoothAlphaId = Shader.PropertyToID("_NavSmoothAlpha"),
+            SmoothSnapId = Shader.PropertyToID("_NavSmoothSnap");
+
+        /// <summary>
+        /// Far-field smoothing (2026-10-16): time constant (s) of the per-cell EMA of density-goal team layers that
+        /// GpuNavSteer samples beyond 60 m of the goal. 0 = off (the live layer everywhere).
+        /// </summary>
+        public float FarSmoothTime = 0.75f;
+        /// <summary>A cell whose live distance differs from the smoothed one by more than this (m) snaps.</summary>
+        public float FarSmoothSnap = 40f;
+        private int smoothKernel;
+        private bool[] smoothPrimed;
+        /// <summary>Teams whose smoothed layer is primed and current.</summary>
+        public uint SmoothMask
+        {
+            get
+            {
+                uint mask = 0u;
+                if (smoothPrimed != null)
+                    for (int t = 0; t < TeamCount && t < 32; t++) if (smoothPrimed[t] && valid[t]) mask |= 1u << t;
+                return mask;
+            }
+        }
 
         /// <param name="coarse">The coarse grid this field shadows; Tick runs only while the terrain runtime uses it. Null (tests) = no Tick.</param>
         public GpuNavField(ComputeShader shader, GpuNavFieldGraph graph, int teamCount, TerrainNavigationGrid coarse = null)
@@ -126,7 +150,9 @@ namespace MassEngine
             crowdClearKernel = shader.FindKernel("NavCrowdClear");
             crowdCountKernel = shader.FindKernel("NavCrowdCount");
             crowdSmoothKernel = shader.FindKernel("NavCrowdSmooth");
+            smoothKernel = shader.FindKernel("NavFieldSmooth");
             TeamCount = teamCount;
+            smoothPrimed = new bool[teamCount];
             current = new int[teamCount];
             goals = new GpuNavGoal[teamCount];
             valid = new bool[teamCount];
@@ -138,6 +164,7 @@ namespace MassEngine
                 var fill = GpuNavFieldReference.Filled(n * teamCount, GpuNavFieldGraph.Unreachable);
                 distA = new ComputeBuffer(n * teamCount, 4); distA.SetData(fill);
                 distB = new ComputeBuffer(n * teamCount, 4); distB.SetData(fill);
+                distSmooth = new ComputeBuffer(n * teamCount, 4); distSmooth.SetData(fill);
                 dummyDensity = new ComputeBuffer(1, 4); dummyDensity.SetData(EmptyDensity);
                 crowdCount = new ComputeBuffer(n * teamCount, 4); crowdCount.SetData(new uint[n * teamCount]);
                 crowdEma = new ComputeBuffer(n * teamCount, 4); crowdEma.SetData(new float[n * teamCount]);
@@ -146,7 +173,7 @@ namespace MassEngine
                 readbacks = new AsyncGPUReadbackRequest[teamCount]; readbackPending = new bool[teamCount]; readbackFrame = new int[teamCount];
             }
             catch { Dispose(); throw; }
-            GpuBytes = (long)n * 4 * 3 + (long)n * teamCount * 16 + (long)GoalBitWords * teamCount * 4;
+            GpuBytes = (long)n * 4 * 3 + (long)n * teamCount * 20 + (long)GoalBitWords * teamCount * 4;
         }
 
         /// <summary>Resolves a team's goal with the same rules as TerrainNavigationRuntime.Rebuild.</summary>
@@ -217,7 +244,7 @@ namespace MassEngine
                 var goal = ResolveGoal(context, team);
                 bool changed = !goal.Equals(goals[team]);
                 goals[team] = goal;
-                if (changed) { valid[team] = false; BeginSeed(buffers, team, goal); }
+                if (changed) { valid[team] = false; smoothPrimed[team] = false; BeginSeed(buffers, team, goal); }
                 PollSeed(team);
                 if (goal.mode == GpuNavGoal.None)
                 {
@@ -227,6 +254,8 @@ namespace MassEngine
                 for (int p = 0; p < PassesPerFrame; p++) Relax(buffers, team);
                 // Agents sample buffer A: leave every team's latest values there (one extra pass when odd).
                 if (current[team] != 0) Relax(buffers, team);
+                if (goal.mode == GpuNavGoal.Density && FarSmoothTime > 0f) SmoothLayer(team, context.deltaTime);
+                else smoothPrimed[team] = false;
             }
             TickLocal(buffers);
         }
@@ -297,6 +326,8 @@ namespace MassEngine
             shader.SetInt(SampleMaskId, unchecked((int)ValidMask));
             shader.SetBuffer(kernel, SampleLocalDistId, localA != null ? localA : dummyDensity);
             shader.SetInt(SampleLocalMaskId, unchecked((int)LocalValidMask));
+            shader.SetBuffer(kernel, SampleSmoothDistId, distSmooth);
+            shader.SetInt(SampleSmoothMaskId, unchecked((int)SmoothMask));
             shader.SetInt(SampleLineMaskId, unchecked((int)LineMask));
             BindArrivalZones(shader);
         }
@@ -444,6 +475,21 @@ namespace MassEngine
             shader.Dispatch(relaxKernel, groups, groups, 1);
         }
 
+        /// <summary>Far-field smoothing: blends the team's latest layer (A) into its smoothed layer; the first call primes it.</summary>
+        private void SmoothLayer(int team, float deltaTime)
+        {
+            int n = Graph.CellCount;
+            float alpha = smoothPrimed[team] ? 1f - Mathf.Exp(-Mathf.Max(0f, deltaTime) / Mathf.Max(1e-3f, FarSmoothTime)) : 1f;
+            shader.SetInt(LayerId, team * n);
+            shader.SetInt(FillCountId, n);
+            shader.SetFloat(SmoothAlphaId, alpha);
+            shader.SetFloat(SmoothSnapId, FarSmoothSnap);
+            shader.SetBuffer(smoothKernel, InId, distA);
+            shader.SetBuffer(smoothKernel, SmoothRwId, distSmooth);
+            shader.Dispatch(smoothKernel, (n + 63) / 64, 1, 1);
+            smoothPrimed[team] = true;
+        }
+
         private void Fill(int team, float value)
         {
             int n = Graph.CellCount;
@@ -486,6 +532,7 @@ namespace MassEngine
             edges?.Release(); edges = null;
             distA?.Release(); distA = null;
             distB?.Release(); distB = null;
+            distSmooth?.Release(); distSmooth = null;
             dummyDensity?.Release(); dummyDensity = null;
             crowdCount?.Release(); crowdCount = null;
             crowdEma?.Release(); crowdEma = null;
