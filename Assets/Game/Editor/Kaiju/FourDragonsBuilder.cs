@@ -44,17 +44,18 @@ namespace MassEngine.Game.EditorTools
         }
 
         // First functional values, not a balance claim (flyers are immune to melee, priced above the 4.5 kaiju).
+        // 2026-10-16: flyer HP x3 and range 110 -> 250 (equal-budget test: they died to 500 m archers without a kill).
         static readonly Def[] Defs =
         {
             new Def { key = "usurper", title = "篡位者·红龙（飞行巨兽）", mesh = "DragonUsurperMesh", prefab = "DragonUsurper/Red", animDir = "DragonUsurper",
                 idle = "FlyIdle", move = "FlyForward", attack = "FlyFlame", death = "Die", flying = true,
-                length = 18f, radius = 8f, speed = 10f, hp = 7000, damage = 300, interval = 3f, splash = 7f, range = 110f, count = 6, priceScale = 6f, fx = new Color(1f, .35f, .05f, 1f) },
+                length = 18f, radius = 8f, speed = 10f, hp = 21000, damage = 300, interval = 3f, splash = 7f, range = 250f, count = 6, priceScale = 6f, fx = new Color(1f, .35f, .05f, 1f) },
             new Def { key = "terrorbringer", title = "恐惧使者·绿龙（飞行巨兽）", mesh = "DragonTerrorBringerMesh", prefab = "DragonTerrorBringer/Green", animDir = "DragonTerrorBringer",
                 idle = "FlyIdle", move = "FlyForward", attack = "FlyAttack", death = "die", flying = true,
-                length = 17f, radius = 7.5f, speed = 11f, hp = 6000, damage = 260, interval = 3.3f, splash = 7f, range = 110f, count = 6, priceScale = 6f, fx = new Color(.45f, 1f, .15f, 1f) },
+                length = 17f, radius = 7.5f, speed = 11f, hp = 18000, damage = 260, interval = 3.3f, splash = 7f, range = 250f, count = 6, priceScale = 6f, fx = new Color(.45f, 1f, .15f, 1f) },
             new Def { key = "souleater", title = "噬魂者·黑龙（飞行巨兽）", mesh = "DragonSoulEaterMesh", prefab = "DragonSoulEater/Grey", animDir = "DragonSoulEater",
                 idle = "Fly Float", move = "Fly Forward", attack = "Fly Fireball Shoot", death = "Die", flying = true,
-                length = 15f, radius = 6.5f, speed = 12f, hp = 4500, damage = 120, interval = 1.2f, splash = 5f, range = 110f, count = 6, priceScale = 6f, fx = new Color(.6f, .2f, 1f, 1f) },
+                length = 15f, radius = 6.5f, speed = 12f, hp = 13500, damage = 120, interval = 1.2f, splash = 5f, range = 250f, count = 6, priceScale = 6f, fx = new Color(.6f, .2f, 1f, 1f) },
             new Def { key = "nightmare", title = "梦魇·蓝龙（地面巨兽）", mesh = "DragonTheNightmareMesh", prefab = "DragonNightmare/Blue", animDir = "DragonNightMare",
                 idle = "idle01", move = "walk", attack = "Basic Attack", death = "die", flying = false,
                 length = 15f, radius = 6.5f, speed = 8f, hp = 8000, damage = 140, interval = 1.2f, splash = 4.5f, range = 0f, count = 6, priceScale = 4.5f },
@@ -284,7 +285,7 @@ namespace MassEngine.Game.EditorTools
                 c.projectileSpeed = 45f;
                 c.projectileGravity = 0f; // straight fire bolts from the air, no lob (2026-10-16)
                 c.projectileHitRadius = 1f;
-                c.projectileMaxLifetime = 6f;
+                c.projectileMaxLifetime = 8f; // 250 m straight shot at 45 m/s needs ~5.6 s
                 c.projectileTrailLength = 6f;
                 c.projectileOriginHeight = height * .55f;
                 c.projectileSplashRadius = d.splash;

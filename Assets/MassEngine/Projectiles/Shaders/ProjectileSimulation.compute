@@ -44,13 +44,23 @@ void RecordProjectileImpact(float3 impact, float radius, int sourceAgentIndexPlu
     fx.position = impact;
     fx.radius = radius;
     fx.time = currentTime;
+    float2 slope = 0.0;
 #ifdef MASS_TERRAIN_ENABLED
     float4 ground = SampleTerrainSurface(impact.xz);
     fx.groundY = ground.w >= 0.0 ? ground.x : impact.y;
+    // Mean slope over the splash area (render only): the scorch quad is laid on this plane instead of flat.
+    float reach = max(1.0, radius * 0.6);
+    float4 east = SampleTerrainSurface(impact.xz + float2(reach, 0.0)), west = SampleTerrainSurface(impact.xz - float2(reach, 0.0));
+    float4 north = SampleTerrainSurface(impact.xz + float2(0.0, reach)), south = SampleTerrainSurface(impact.xz - float2(0.0, reach));
+    slope = ground.w >= 0.0 ? ground.yz : 0.0;
+    if (east.w >= 0.0 && west.w >= 0.0) slope.x = (east.x - west.x) / (2.0 * reach);
+    if (north.w >= 0.0 && south.w >= 0.0) slope.y = (north.x - south.x) / (2.0 * reach);
+    slope = clamp(slope, -2.0, 2.0);
 #else
     fx.groundY = 0.0;
 #endif
-    fx.padding = float2(asfloat(sourceAgentIndexPlusOne), 0.0); // x: shooter (+1) for the styled burst, render only
+    // x: shooter (+1) for the styled burst; y: ground slope dh/dx, dh/dz as two halves. Render only.
+    fx.padding = float2(asfloat(sourceAgentIndexPlusOne), asfloat(f32tof16(slope.x) | (f32tof16(slope.y) << 16)));
     projectileImpactRing[ticket % max(1u, projectileImpactCapacity)] = fx;
 }
 #endif
