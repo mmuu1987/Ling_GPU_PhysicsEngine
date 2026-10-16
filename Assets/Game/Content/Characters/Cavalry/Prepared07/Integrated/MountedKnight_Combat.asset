@@ -29,3 +29,7 @@ MonoBehaviour:
   projectileSplashRadius: 0
   chargeDamageMultiplier: 3
   chargeMinSpeedFraction: 0.6
+  trampleDamageMultiplier: 2
+  trampleSpeedLoss: 0.0025
+  trampleMinSpeedFraction: 0.45
+  trampleDamageTaken: 0.15

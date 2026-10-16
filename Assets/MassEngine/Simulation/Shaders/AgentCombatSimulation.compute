@@ -86,6 +86,102 @@ void ApplyMeleeSplash(uint selfIndex, int directHit, float radius, int damage)
         }
     }
 }
+
+// Trample (2026-10-16, cavalry 乙). A charging trampler (speed >= p.z x maxSpeed, not swinging) rides through
+// small enemies: each one whose body it ENTERS during this decision's travel (step = speed x dtSim) takes
+// attackDamage x p.x once per entry, and every such hit costs the rider p.y of its speed. An enemy large body
+// in contact is a wall (the charge breaks). Returns true while a living enemy body lies on the path ahead
+// (centre ahead, within body contact + TRAMPLE_LOOKAHEAD); otherwise the rider is not trampling.
+#define TRAMPLE_LOOKAHEAD 2.5
+#define TRAMPLE_WALL_MARGIN 0.3
+bool ApplyTrample(uint selfIndex, float2 position, float2 heading, float step, float4 p, UnitTypeSettings settings,
+    out int hits, out bool wall)
+{
+    hits = 0; wall = false;
+    bool ahead = false;
+    uint agentCount, agentStride;
+    agentBuffer.GetDimensions(agentCount, agentStride);
+    int selfTeam = teamIdReadBuffer[selfIndex];
+    float selfBody = AgentBodyRadius(selfIndex);
+    int damage = (int)round(max(1, settings.attackDamage) * p.x);
+    float halfCell = 0.5 * max(cellSize, 0.0001);
+    float reach = selfBody + halfCell + TRAMPLE_LOOKAHEAD + max(0.0, step);
+    int2 first = PositionXzToCell(position - reach);
+    int2 last = PositionXzToCell(position + reach);
+    [loop] for (int z = first.y; z <= last.y; z++)
+    [loop] for (int x = first.x; x <= last.x; x++)
+    {
+        uint cell = CellToIndex(int2(x, z));
+        uint count = min(gridCountsReadBuffer[cell], maxAgentsPerCell);
+        [loop] for (uint slot = 0; slot < count; slot++)
+        {
+            uint index = gridAgentIndicesReadBuffer[cell * maxAgentsPerCell + slot];
+            if (index >= agentCount || index == selfIndex) continue;
+            if (hpReadBuffer[index] <= 0 || teamIdReadBuffer[index] == selfTeam || IsFlyingIndex(index)) continue;
+            float otherBody = AgentBodyRadius(index);
+            if (IsLargeBodyRadius(otherBody)) continue; // large bodies come from the large slots below
+            float2 offset = agentPositionReadBuffer[index] - position;
+            float contact = selfBody + otherBody;
+            float along = dot(offset, heading);
+            float side = abs(offset.x * heading.y - offset.y * heading.x);
+            if (along > 0.0 && along < contact + TRAMPLE_LOOKAHEAD && side < contact)
+                ahead = true;
+            float distSqr = dot(offset, offset);
+            if (distSqr <= contact * contact && damage > 0 && step > 0.0)
+            {
+                float2 before = offset + heading * step; // where it sat relative to the rider one step ago
+                if (dot(before, before) > contact * contact)
+                {
+                    int ignoredTrample;
+                    InterlockedAdd(pendingDamageBuffer[index], damage, ignoredTrample);
+                    hits++;
+                }
+            }
+        }
+        uint record = cell * LARGE_CELL_STRIDE;
+        uint largeCount = min(largeCellsReadBuffer[record], LARGE_SLOTS_PER_CELL);
+        [loop] for (uint largeSlot = 0; largeSlot < largeCount; largeSlot++)
+        {
+            uint index = largeCellsReadBuffer[record + 1u + largeSlot];
+            if (index >= agentCount || index == selfIndex) continue;
+            if (hpReadBuffer[index] <= 0 || teamIdReadBuffer[index] == selfTeam || IsFlyingIndex(index)) continue;
+            float2 offset = agentPositionReadBuffer[index] - position;
+            float wallReach = selfBody + AgentBodyRadius(index) + TRAMPLE_WALL_MARGIN;
+            if (dot(offset, offset) <= wallReach * wallReach && dot(offset, heading) > 0.0)
+            {
+                wall = true;
+                ahead = true;
+            }
+        }
+    }
+    return ahead;
+}
+
+// Trample shove for a small body overlapped by an enemy trampler: the share of the overlap that decays over
+// dtSim (TRAMPLE_SHOVE_SECONDS), capped at TRAMPLE_SHOVE_MAX_SPEED, as a one-frame settle velocity.
+#define TRAMPLE_SHOVE_SECONDS 0.08
+#define TRAMPLE_SHOVE_MAX_SPEED 8.0
+float2 TrampleShoveVelocity(float2 shove, float dtSim, float dt)
+{
+    if (dtSim <= 0.0 || dt <= 0.0 || dot(shove, shove) <= 0.0) return 0.0;
+    float2 stepShove = shove * (1.0 - exp(-dtSim / TRAMPLE_SHOVE_SECONDS));
+    float cap = TRAMPLE_SHOVE_MAX_SPEED * dtSim;
+    float stepLength = length(stepShove);
+    if (stepLength > cap) stepShove *= cap / stepLength;
+    return stepShove / dt;
+}
+
+// Charge guard: a trampler still at trample speed (its OWN velocity from the last decision, not swinging, not
+// holding) takes only p.w of the damage accumulated for it. Off for every type without trample (p = 0).
+int TrampleGuardDamage(uint selfIndex, AgentData agent, int damage)
+{
+    float4 p = TrampleParamsOf(selfIndex);
+    if (damage <= 0 || p.x <= 0.0 || p.w >= 1.0 || agent.currentState == STATE_ATTACK || IsHoldStance(selfIndex))
+        return damage;
+    if (length(agent.velocity.xz) < max(0.01, p.z * GetUnitSettings(selfIndex).maxSpeed))
+        return damage;
+    return max(1, (int)round((float)damage * saturate(p.w)));
+}
 #endif
 
 void AdvanceRangedCycle(uint index, inout AgentData agent, UnitTypeSettings settings, int previousState)
@@ -676,6 +772,9 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
     }
 
     int damage = pendingDamageReadBuffer[id.x];
+#if defined(MASS_MELEE_CHARGE)
+    damage = TrampleGuardDamage(id.x, agent, damage);
+#endif
     if (damage > 0 && hpSelf > 0)
         hpSelf = max(0, hpSelf - damage);
     hpBuffer[id.x] = hpSelf;
@@ -750,7 +849,18 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
     bool rangedAreaUnit = RangedAreaFireUnit(id.x, settings);
     bool rangedAreaPick = rangedAreaUnit && (searchCadence || !targetIsValid);
     if (rangedAreaUnit) searchForEnemy = false;
-    NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy, congestion.forward);
+    bool trampleArmed = false;
+    float trampleSpeed = 0.0;
+    float2 trampleHeading = 0.0;
+#if defined(MASS_MELEE_CHARGE)
+    // Trample (cavalry 乙): armed while a melee trampler moves at charge speed and is not swinging.
+    float4 trampleParams = TrampleParamsOf(id.x);
+    trampleSpeed = length(agent.velocity.xz);
+    trampleArmed = trampleParams.x > 0.0 && settings.projectileRange <= 0.01 && agent.currentState != STATE_ATTACK &&
+        !IsHoldStance(id.x) && dtSim > 0.0 && trampleSpeed >= max(0.01, trampleParams.z * settings.maxSpeed);
+    if (trampleArmed) trampleHeading = agent.velocity.xz / trampleSpeed;
+#endif
+    NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy, congestion.forward, trampleArmed);
 
     if (!targetIsValid)
     {
@@ -822,6 +932,26 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
     }
 #endif
 
+    bool trampling = false;
+    bool trampleRiding = trampleArmed; // still at trample speed after this decision's hits
+#if defined(MASS_MELEE_CHARGE)
+    if (trampleArmed)
+    {
+        int trampleHits; bool trampleWall;
+        trampling = ApplyTrample(id.x, agent.position.xz, trampleHeading, trampleSpeed * dtSim, trampleParams, settings,
+            trampleHits, trampleWall);
+        if (trampling)
+        {
+            // Every rider hit costs speed; a large enemy body breaks the charge outright.
+            float keep = trampleHits > 0 ? pow(saturate(1.0 - trampleParams.y), (float)trampleHits) : 1.0;
+            float chargeSpeed = max(0.01, trampleParams.z * settings.maxSpeed);
+            if (trampleWall) keep = min(keep, 0.5 * chargeSpeed / max(trampleSpeed, 0.0001));
+            agent.velocity.xz *= keep;
+            trampleSpeed *= keep;
+            if (trampleSpeed < chargeSpeed) { trampling = false; trampleRiding = false; } // spent: ordinary melee from here on
+        }
+    }
+#endif
     float2 desiredDirection = 0.0;
     // Every team now reads its own flow field and its own flow configuration, so the
     // attacker-or-defender split that used to live here is gone. Stance stays a separate
@@ -874,6 +1004,7 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
         // (chase-leash enforcement lives in TargetIsUsable / CurrentTargetIsValid)
         {
             inAttackHold = distSqr <= attackRangeSqr || (wasAttacking && distSqr <= attackExitRangeSqr);
+            if (trampleRiding) inAttackHold = false; // a charging trampler rides on instead of stopping to swing
 #if defined(MASS_TERRAIN_ENABLED)
             if (!isRanged && !TerrainSegmentClear(agent.position.xz, targetPosition)) inAttackHold = false;
 #endif
@@ -970,6 +1101,13 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
             }
 #endif
         }
+    }
+
+    if (trampling)
+    {
+        // Hold the line of the charge through the enemy body; the target is not chased around.
+        desiredDirection = trampleHeading;
+        hasEngageTarget = true;
     }
 
 #if !defined(MASS_TERRAIN_ENABLED)
@@ -1182,6 +1320,12 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
     }
 
     agent.velocity = ClampVelocity(id.x, agent.velocity);
+    if (trampling)
+    {
+        // No acceleration while riding through: the charge only spends speed.
+        float rideSpeed = length(agent.velocity.xz);
+        if (rideSpeed > trampleSpeed && rideSpeed > 0.0001) agent.velocity.xz *= trampleSpeed / rideSpeed;
+    }
     if (agent.currentState == STATE_MOVE || agent.currentState == STATE_ENGAGE)
     {
         float queueSlowdown = followMode ? 0.35 : 0.75; // R3: gap-led braking in the front zone
@@ -1192,6 +1336,9 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
         if (locomotionSpeedSqr > maxLocomotionSpeed * maxLocomotionSpeed)
             agent.velocity.xz *= maxLocomotionSpeed * rsqrt(locomotionSpeedSqr);
     }
+#if defined(MASS_MELEE_CHARGE)
+    settleVelocity += TrampleShoveVelocity(neighborhood.trampleShove, dtSim, dt);
+#endif
     if (rangedBlocked && selfFlow.modes.x == FLOW_TARGET_NONE)
     {
         if (congestion.rangedStatus <= -3.0)
@@ -1349,6 +1496,9 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     }
 
     int damage = pendingDamageReadBuffer[id.x];
+#if defined(MASS_MELEE_CHARGE)
+    damage = TrampleGuardDamage(id.x, agent, damage);
+#endif
     if (damage > 0 && hpSelf > 0)
         hpSelf = max(0, hpSelf - damage);
     hpBuffer[id.x] = hpSelf;
@@ -1432,7 +1582,18 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     bool rangedAreaUnit = RangedAreaFireUnit(id.x, settings);
     bool rangedAreaPick = rangedAreaUnit && (searchCadence || !targetIsValid);
     if (rangedAreaUnit) searchForEnemy = false;
-    NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy, congestion.forward);
+    bool trampleArmed = false;
+    float trampleSpeed = 0.0;
+    float2 trampleHeading = 0.0;
+#if defined(MASS_MELEE_CHARGE)
+    // Trample (cavalry 乙): armed while a melee trampler moves at charge speed and is not swinging.
+    float4 trampleParams = TrampleParamsOf(id.x);
+    trampleSpeed = length(agent.velocity.xz);
+    trampleArmed = trampleParams.x > 0.0 && settings.projectileRange <= 0.01 && agent.currentState != STATE_ATTACK &&
+        !IsHoldStance(id.x) && dtSim > 0.0 && trampleSpeed >= max(0.01, trampleParams.z * settings.maxSpeed);
+    if (trampleArmed) trampleHeading = agent.velocity.xz / trampleSpeed;
+#endif
+    NeighborhoodQueryResult neighborhood = QueryCombatNeighborhood(id.x, agent, searchRadius, searchForEnemy, congestion.forward, trampleArmed);
 
     if (!targetIsValid)
     {
@@ -1504,6 +1665,26 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     }
 #endif
 
+    bool trampling = false;
+    bool trampleRiding = trampleArmed; // still at trample speed after this decision's hits
+#if defined(MASS_MELEE_CHARGE)
+    if (trampleArmed)
+    {
+        int trampleHits; bool trampleWall;
+        trampling = ApplyTrample(id.x, agent.position.xz, trampleHeading, trampleSpeed * dtSim, trampleParams, settings,
+            trampleHits, trampleWall);
+        if (trampling)
+        {
+            // Every rider hit costs speed; a large enemy body breaks the charge outright.
+            float keep = trampleHits > 0 ? pow(saturate(1.0 - trampleParams.y), (float)trampleHits) : 1.0;
+            float chargeSpeed = max(0.01, trampleParams.z * settings.maxSpeed);
+            if (trampleWall) keep = min(keep, 0.5 * chargeSpeed / max(trampleSpeed, 0.0001));
+            agent.velocity.xz *= keep;
+            trampleSpeed *= keep;
+            if (trampleSpeed < chargeSpeed) { trampling = false; trampleRiding = false; } // spent: ordinary melee from here on
+        }
+    }
+#endif
     float2 desiredDirection = 0.0;
     // Every team now reads its own flow field and its own flow configuration, so the
     // attacker-or-defender split that used to live here is gone. Stance stays a separate
@@ -1556,6 +1737,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         // (chase-leash enforcement lives in TargetIsUsable / CurrentTargetIsValid)
         {
             inAttackHold = distSqr <= attackRangeSqr || (wasAttacking && distSqr <= attackExitRangeSqr);
+            if (trampleRiding) inAttackHold = false; // a charging trampler rides on instead of stopping to swing
 #if defined(MASS_TERRAIN_ENABLED)
             if (!isRanged && !TerrainSegmentClear(agent.position.xz, targetPosition)) inAttackHold = false;
 #endif
@@ -1652,6 +1834,13 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
             }
 #endif
         }
+    }
+
+    if (trampling)
+    {
+        // Hold the line of the charge through the enemy body; the target is not chased around.
+        desiredDirection = trampleHeading;
+        hasEngageTarget = true;
     }
 
 #if !defined(MASS_TERRAIN_ENABLED)
@@ -1893,6 +2082,12 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
     }
 
     agent.velocity = ClampVelocity(id.x, agent.velocity);
+    if (trampling)
+    {
+        // No acceleration while riding through: the charge only spends speed.
+        float rideSpeed = length(agent.velocity.xz);
+        if (rideSpeed > trampleSpeed && rideSpeed > 0.0001) agent.velocity.xz *= trampleSpeed / rideSpeed;
+    }
     if (agent.currentState == STATE_MOVE || agent.currentState == STATE_ENGAGE)
     {
         float queueSlowdown = followMode ? 0.35 : 0.75; // R3: gap-led braking in the front zone
@@ -1903,6 +2098,9 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
         if (locomotionSpeedSqr > maxLocomotionSpeed * maxLocomotionSpeed)
             agent.velocity.xz *= maxLocomotionSpeed * rsqrt(locomotionSpeedSqr);
     }
+#if defined(MASS_MELEE_CHARGE)
+    settleVelocity += TrampleShoveVelocity(neighborhood.trampleShove, dtSim, dt);
+#endif
     if (rangedBlocked && selfFlow.modes.x == FLOW_TARGET_NONE)
     {
         if (congestion.rangedStatus <= -3.0)

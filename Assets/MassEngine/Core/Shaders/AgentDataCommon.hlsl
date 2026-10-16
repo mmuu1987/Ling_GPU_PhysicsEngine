@@ -351,6 +351,27 @@ bool IsFlyingIndex(uint agentIndex)
     return FlightAltitudeOf(agentIndex) > 0.0;
 }
 
+// Trample (2026-10-16, cavalry 乙): per unit type x = trample damage multiplier (0 = off), y = speed lost per
+// trampled enemy (fraction), z = minimum charge speed (fraction of maxSpeed), w = unused. Bound with the opt-in
+// combat variant only (MASS_MELEE_CHARGE); every other kernel sees "no trample".
+#if defined(MASS_MELEE_CHARGE)
+StructuredBuffer<float4> unitTypeTrample;
+float4 TrampleParamsOf(uint agentIndex)
+{
+    return unitTypeTrample[unitTypeIndexReadBuffer[agentIndex]];
+}
+#else
+float4 TrampleParamsOf(uint agentIndex)
+{
+    return 0.0;
+}
+#endif
+
+bool IsTrampleTypeIndex(uint agentIndex)
+{
+    return TrampleParamsOf(agentIndex).x > 0.0;
+}
+
 bool IsInsideFrustumRadius(float3 position, float radius)
 {
     if (enableFrustumCulling == 0)
@@ -1590,6 +1611,7 @@ struct NeighborhoodQueryResult
     float rightGap; // same along travelForward rotated -45 deg
     int nearestEnemyIndex;     // nearest living enemy in the 3x3 contact cells (round 6 contact retarget), -1 = none
     float nearestEnemyDistSqr; // its planar reach distance squared (centre distance; a large enemy from its surface, C2)
+    float2 trampleShove;       // trample: summed overlap (direction x depth) with enemy tramplers, small bodies only
 };
 
 // Round 6 (2026-10-12) crowd packing, ONE knob 0..1 (0 = round 5 spacing). Friends treat each other
@@ -1654,7 +1676,7 @@ float TargetSelectionScore(uint selfIndex, uint targetIndex, float distSqr)
 // pushShare is exactly 1 and every friend rule applies.
 void AccumulateBodyNeighbor(uint selfIndex, uint otherIndex, float2 selfPosition, float selfRadius, float bodyRadius,
     float otherBodyRadius, int selfTeamId, float2 travelForward, float2 probeLeft, float2 probeRight,
-    inout NeighborhoodQueryResult result)
+    bool trampleSelf, inout NeighborhoodQueryResult result)
 {
     // Flight: ground and air bodies never touch (no push, no queueing, no melee contact).
     if (IsFlyingIndex(selfIndex) != IsFlyingIndex(otherIndex))
@@ -1696,7 +1718,22 @@ void AccumulateBodyNeighbor(uint selfIndex, uint otherIndex, float2 selfPosition
             result.nearestEnemyDistSqr = reachDistSqr;
             result.nearestEnemyIndex = (int)otherIndex;
         }
+        // A small body overlapped by an enemy trampler is shoved out of its way (applied positionally by the
+        // combat kernel). Reads only the immutable type and the position snapshot.
+        if (!IsLargeBodyRadius(bodyRadius) && IsTrampleTypeIndex(otherIndex))
+        {
+            float shoveReach = bodyRadius + otherBodyRadius;
+            if (distSqr < shoveReach * shoveReach)
+            {
+                float shoveDist = sqrt(max(distSqr, 0.000001));
+                float2 shoveAway = distSqr > 0.000001 ? -toOther / shoveDist : FallbackDirection(selfIndex);
+                result.trampleShove += shoveAway * (shoveReach - shoveDist);
+            }
+        }
     }
+    // Trample: a charging trampler does not collide with small enemies (it is still told where they are);
+    // enemies never take the friend rules, so only the two overlap terms below are skipped.
+    bool trampleIgnore = trampleSelf && !isFriend && !IsLargeBodyRadius(otherBodyRadius);
     float forwardDistance = dot(toOther, travelForward);
     float sideDistance = abs(toOther.x * travelForward.y - toOther.y * travelForward.x);
     if (friendRules && forwardDistance > 0.001 &&
@@ -1746,7 +1783,7 @@ void AccumulateBodyNeighbor(uint selfIndex, uint otherIndex, float2 selfPosition
         if (rightAlong > 0.001 && rightSide < bodyDistance * 0.9)
             result.rightGap = min(result.rightGap, rightAlong - sqrt(max(0.0, bodyDistance * bodyDistance - rightSide * rightSide)));
     }
-    if (distSqr < bodyDistance * bodyDistance * 0.81)
+    if (!trampleIgnore && distSqr < bodyDistance * bodyDistance * 0.81)
     {
         float2 away = distSqr > 0.000001 ? -toOther * rsqrt(distSqr) : FallbackDirection(selfIndex);
         result.contactSeparation += away * (bodyDistance * 0.9 - sqrt(max(0.0, distSqr))) * pushShare;
@@ -1755,7 +1792,7 @@ void AccumulateBodyNeighbor(uint selfIndex, uint otherIndex, float2 selfPosition
     // type radii they always used.
     float minDistance = (largePair ? (bodyRadius + otherBodyRadius) : (selfRadius + GetAgentRadius(otherIndex))) * spacing;
     float minDistanceSqr = minDistance * minDistance;
-    if (distSqr >= minDistanceSqr)
+    if (trampleIgnore || distSqr >= minDistanceSqr)
         return;
 
     float2 separationDelta = selfPosition - otherPosition;
@@ -1769,7 +1806,10 @@ void AccumulateBodyNeighbor(uint selfIndex, uint otherIndex, float2 selfPosition
     result.separation += (separationDelta / dist) * (minDistance - dist) * pushShare;
 }
 
-NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent, float maxTargetRadius, bool searchForEnemy, float2 travelForward)
+// trampleSelf (cavalry trample, 2026-10-16): the deciding agent is a charging trampler and ignores the bodies of
+// small enemies for this decision (it rides through them; they are shoved aside on their side).
+NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent, float maxTargetRadius, bool searchForEnemy, float2 travelForward,
+    bool trampleSelf)
 {
     float2 selfPosition = agent.position.xz;
     int2 homeCell = PositionXzToCell(selfPosition);
@@ -1789,6 +1829,7 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
     result.rightGap = 1e6;
     result.nearestEnemyIndex = -1;
     result.nearestEnemyDistSqr = 1e20;
+    result.trampleShove = 0.0;
     float2 probeLeft = float2(travelForward.x - travelForward.y, travelForward.x + travelForward.y) * 0.70710678;
     float2 probeRight = float2(travelForward.x + travelForward.y, travelForward.y - travelForward.x) * 0.70710678;
     float bodyRadius = selfRadius * max(0.01, max(abs(agent.scale.x), abs(agent.scale.z)));
@@ -1870,16 +1911,14 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                     continue;
 
                 AccumulateBodyNeighbor(selfIndex, otherIndex, selfPosition, selfRadius, bodyRadius, otherBodyRadius,
-                    selfTeamId, travelForward, probeLeft, probeRight, result);
+                    selfTeamId, travelForward, probeLeft, probeRight, trampleSelf, result);
             }
         }
     }
 
     // C1 large bodies. Nothing to do on maps without any (one stats read).
-    if (spatialHashStatsReadBuffer[SPATIAL_STATS_LARGE_COUNT] <= 0)
-        return result;
-
-    if (!selfLarge)
+    bool anyLarge = spatialHashStatsReadBuffer[SPATIAL_STATS_LARGE_COUNT] > 0;
+    if (anyLarge && !selfLarge)
     {
         // Every large body this agent can touch stamped this agent's own cell.
         uint homeRecord = CellToIndex(homeCell) * LARGE_CELL_STRIDE;
@@ -1891,11 +1930,11 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                 continue;
 
             AccumulateBodyNeighbor(selfIndex, otherIndex, selfPosition, selfRadius, bodyRadius, AgentBodyRadius(otherIndex),
-                selfTeamId, travelForward, probeLeft, probeRight, result);
+                selfTeamId, travelForward, probeLeft, probeRight, trampleSelf, result);
         }
-        return result;
     }
-
+    else if (anyLarge)
+    {
     // A large agent meets other large agents through their HOME cell only (each is stamped there
     // exactly once), scanning far enough for the largest body on the field.
     float largestRadius = asfloat(spatialHashStatsReadBuffer[SPATIAL_STATS_LARGE_MAX_RADIUS_BITS]);
@@ -1922,9 +1961,10 @@ NeighborhoodQueryResult QueryCombatNeighborhood(uint selfIndex, AgentData agent,
                     continue;
 
                 AccumulateBodyNeighbor(selfIndex, otherIndex, selfPosition, selfRadius, bodyRadius, AgentBodyRadius(otherIndex),
-                    selfTeamId, travelForward, probeLeft, probeRight, result);
+                    selfTeamId, travelForward, probeLeft, probeRight, trampleSelf, result);
             }
         }
+    }
     }
 
     return result;
