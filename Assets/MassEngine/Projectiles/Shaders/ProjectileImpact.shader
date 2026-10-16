@@ -111,7 +111,11 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
             // Styled: the quad covers 1.2 x the splash radius so the shock ring can overshoot the damage edge a little.
             float size = alive ? d.radius * 2.0 * (styled ? 1.2 : 1.0) : 0.0;
             _ImpactAge01 = alive ? age / duration : 1.0;
-            BuildMatrices(float3(d.position.x, d.groundY + (styled ? 0.1 : 0.06), d.position.z), float3(size, 0, 0), float3(0, 0, size));
+            // Styled: lay the quad on the ground slope (padding.y, two halves) so the scorch does not sink into hillsides.
+            uint packedSlope = asuint(d.padding.y);
+            float2 slope = styled ? clamp(float2(f16tof32(packedSlope & 0xffffu), f16tof32(packedSlope >> 16)), -2.0, 2.0) : 0.0;
+            float lift = styled ? 0.12 + 0.02 * d.radius : 0.06;
+            BuildMatrices(float3(d.position.x, d.groundY + lift, d.position.z), float3(size, slope.x * size, 0), float3(0, slope.y * size, size));
         #endif
     }
 

@@ -212,6 +212,9 @@ RWStructuredBuffer<int> launchRequestBuffer;
 // LOD classification runs once per unit type; only the buffers of the unit type
 // currently being classified are bound.
 int classifyUnitTypeIndex;
+// Flight (2026-10-16): render lift of the classified type (0 = ground). Flyers are drawn this high, so the frustum test
+// must look there too, or they pop in/out at the screen edges.
+float classifyFlightAltitude;
 AppendStructuredBuffer<uint> nearVisibleAgentIndices;
 AppendStructuredBuffer<uint> midVisibleAgentIndices;
 AppendStructuredBuffer<uint> farVisibleAgentIndices;
@@ -2033,7 +2036,7 @@ void AppendVisibleAgentForUnitType(uint index, inout AgentData agent)
     if (!culled && (!isNear || lodFading))
     {
         float visibleRadius = largeBody ? max(cullingRadius, bodyRadius * LARGE_CULL_RADIUS_FACTOR) : cullingRadius;
-        culled = !IsInsideFrustumRadius(agent.position, visibleRadius);
+        culled = !IsInsideFrustumRadius(agent.position + float3(0.0, max(0.0, classifyFlightAltitude), 0.0), visibleRadius);
     }
 
     AppendLodTier(index, lodTier, culled, includeFar);

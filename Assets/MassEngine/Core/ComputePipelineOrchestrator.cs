@@ -43,6 +43,9 @@ namespace MassEngine
         public MassEngine.Projectiles.ProjectileImpactFx ImpactFx { get; set; }
         // Opt-in melee charge table; null keeps SimulateCombatAndAccumulateDamage on its legacy variant.
         public MeleeChargeParams MeleeCharge { get; set; }
+        /// <summary>Flight altitude per unit type (null = all ground); LOD classification culls flyers at render height.</summary>
+        public float[] UnitTypeFlightAltitudes { get; set; }
+        private static readonly int ClassifyFlightAltitudeId = Shader.PropertyToID("classifyFlightAltitude");
         public LocalOrderChannel LocalCommands { get; set; }
         /// <summary>N1 shadow GPU nav field (Docs/GPU-NAVFIELD-N0-20261013.md); null = off. Relaxed after the runtime flow pass.</summary>
         public GpuNavField FineNavigation { get; set; }
@@ -268,6 +271,8 @@ namespace MassEngine
                 if (shader != null)
                 {
                     shader.SetInt(ClassifyUnitTypeIndexId, unitTypeIndex);
+                    float[] flight = UnitTypeFlightAltitudes;
+                    shader.SetFloat(ClassifyFlightAltitudeId, flight != null && unitTypeIndex < flight.Length ? Mathf.Max(0f, flight[unitTypeIndex]) : 0f);
                     shader.SetInt(LodCrossfadeEnabledId, buffers.IsLodCrossfade(unitTypeIndex) ? 1 : 0);
                 }
                 SetBuffer(shader, kernel, NearVisibleAgentIndicesId, buffers.GetVisibleIndexBuffer(unitTypeIndex, 0));

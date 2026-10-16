@@ -712,7 +712,10 @@ namespace MassEngine
                 meleeCharge = null;
             }
             if (pipelineOrchestrator != null)
+            {
                 pipelineOrchestrator.MeleeCharge = meleeCharge;
+                pipelineOrchestrator.UnitTypeFlightAltitudes = flight ? flightCache : null;
+            }
         }
 
         private void RefreshAndUploadUnitTypeSettings()
