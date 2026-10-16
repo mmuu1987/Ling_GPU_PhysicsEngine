@@ -171,6 +171,7 @@ namespace MassEngine.Game.Editor
                     case SiteKind.Ruins: LayoutRuins(plan, s, i); break;
                 }
                 log.AppendLine("  " + s.kind + " lots " + (plan.lots.Count - before) + " (buildings " + plan.lots.Skip(before).Count(l => !l.prop) + ")");
+                if (fortMisses.Length > 0) { log.AppendLine("    放不下：" + fortMisses); fortMisses.Clear(); }
             }
             if (Symmetric)
             {
@@ -504,13 +505,8 @@ namespace MassEngine.Game.Editor
             for (int sx = -1; sx <= 1; sx += 2) for (int sz = -1; sz <= 1; sz += 2)
                 Try(plan, Lot(BK.Tower, RandV(BK.Tower), s.c + u * (sx * H) + v * (sz * H), TR(0, 360), s.kind, false, g, true, S), false);
             var keepPos = s.c - u * 14.5f * S;
-            if (S > 1f)
-            {
-                // flat keep (merlons) with a tall spired tower rising from its middle
-                if (Try(plan, Lot(BK.Keep, 0, keepPos, YawFacing(u), s.kind, false, g, true, S), false))
-                    Try(plan, Lot(BK.Tower, 1, keepPos, TR(0, 360), s.kind, false, g, true, S * 1.1f, 1.6f), false);
-            }
-            else if (!Try(plan, Lot(BK.Keep, RandV(BK.Keep), keepPos, YawFacing(u), s.kind))) Try(plan, Lot(BK.Keep, 0, keepPos + v * 6f, YawFacing(u), s.kind));
+            if (S > 1f) { LayoutFortInterior(plan, s, u, v, H, g); return; }
+            if (!Try(plan, Lot(BK.Keep, RandV(BK.Keep), keepPos, YawFacing(u), s.kind))) Try(plan, Lot(BK.Keep, 0, keepPos + v * 6f, YawFacing(u), s.kind));
             Try(plan, Lot(BK.Watchtower, RandV(BK.Watchtower), s.c - u * 21f * S + v * 20f * S, TR(0, 360), s.kind, false, -1, false, Mathf.Max(1f, S * .75f)));
             int tents = Mathf.RoundToInt(10 * S);
             for (int i = 0; i < tents; i++)
@@ -528,6 +524,97 @@ namespace MassEngine.Game.Editor
                 Try(plan, Lot(BK.Tent, townRng.Next(3), p, YawFacing(-u) + TR(-20f, 20f), s.kind, true));
             }
         }
+
+        /// <summary>
+        /// 2026-10-16 「城堡里面太单调」: interior of the x2 fort after real concentric castles. Inner ward at the back (own
+        /// curtain wall, corner towers, inner gatehouse) around the keep + spire and a small orchard; outer bailey with
+        /// buildings leaning on the curtain walls - chapel, storehouses (granary), barracks, great hall, stables with hay,
+        /// smithy with woodpiles - and an open court along the gate road with a well, market stalls and a fenced training yard.
+        /// Existing building kinds only (decoration, same palettes / season swaps).
+        /// </summary>
+        void LayoutFortInterior(TownPlan plan, TownSite s, Vector2 u, Vector2 v, float H, int g)
+        {
+            Vector2 P(float a, float b) => s.c + u * a + v * b;   // a: towards the gate (+H), b: sideways
+            const float IW = 1.4f;                                // inner curtain scale
+            float front = -6f, side = 27f, back = -H + 3f;        // inner ward box (back = outer back wall)
+            // street: gate road to the inner gate
+            plan.streets.Add(new TownStreet { a = P(H - 10f, 0f), b = P(front + 4f, 0f), half = 4.2f });
+
+            // --- inner ward: curtain wall, corner towers, inner gatehouse
+            TL(plan, "内城门", Lot(BK.Gatehouse, 0, P(front, 0f), YawFacing(u), s.kind, false, g, true, IW), false);
+            foreach (float b in new[] { -18.5f, 18.5f })
+                Try(plan, Lot(BK.WallSeg, 0, P(front, b), YawFacing(u), s.kind, false, g, true, IW), false);
+            foreach (int sg in new[] { -1, 1 })
+            {
+                for (float a = front - 7.5f; a > back + 4f; a -= 14f)
+                    Try(plan, Lot(BK.WallSeg, 0, P(a, sg * side), YawFacing(v * sg), s.kind, false, g, true, IW), false);
+                Try(plan, Lot(BK.Tower, 0, P(front, sg * side), TR(0, 360), s.kind, false, g, true, 1.4f), false);
+            }
+            // keep + spire (flat keep with merlons, tall spired tower from its middle)
+            var keepPos = P(-31f, 0f);
+            if (TL(plan, "主堡", Lot(BK.Keep, 0, keepPos, YawFacing(u), s.kind, false, g, true, 2f), false))
+                Try(plan, Lot(BK.Tower, 1, keepPos, TR(0, 360), s.kind, false, g, true, 2.2f, 1.6f), false);
+            Try(plan, Lot(BK.Well, 0, P(-12.5f, 15f), 0f, s.kind, true));
+            foreach (var t in new[] { P(-47f, -19f), P(-47f, 19f), P(-40f, -20f), P(-40f, 20f) })
+                if (FreeSpot(plan, t, 2.5f)) plan.trees.Add(new TownTree { p = t, cat = TreeCats[townRng.Next(TreeCats.Length)], site = s.kind });
+
+            // --- outer bailey, buildings leaning on the curtain walls (front faces the court)
+            float lean = H - 15f;                                  // 40 m: clear of the (rotated) mid-wall towers
+            // behind, left: chapel; behind, right: granary + storehouse
+            // the fort usually sits on a rise: a larger scale gives a deeper plinth (more slope allowed), then nearby spots
+            bool Any(string what, Func<float, float, float, TownLot> make, params (float a, float b, float sc)[] spots)
+            {
+                foreach (var t in spots) if (Try(plan, make(t.a, t.b, t.sc))) return true;
+                fortMisses.Append(what + " "); return false;
+            }
+            if (!Any("小教堂", (a, b, sc) => Lot(BK.Church, 0, P(a, b), YawFacing(u), s.kind, false, -1, false, sc),
+                    (-30f, -38.5f, 1.25f), (-30f, -38.5f, 1f), (-27f, -38.5f, 1.15f), (-33f, -38.5f, 1.15f), (-30f, -37f, 1.35f)))
+                Any("小教堂(小)", (a, b, sc) => Lot(BK.Cottage, 0, P(a, b), YawFacing(v), s.kind, false, -1, false, sc), (-30f, -38.5f, 1.2f), (-24f, -38.5f, 1.2f));
+            Any("粮仓", (a, b, sc) => Lot(BK.Longhouse, 1, P(a, b), YawFacing(-v), s.kind, false, -1, false, sc), (-21f, 38.5f, 1.35f), (-21f, 38.5f, 1.2f), (-18f, 37.5f, 1.3f), (-24f, 37.5f, 1.3f));
+            Any("仓库", (a, b, sc) => Lot(BK.Longhouse, 0, P(a, b), YawFacing(-v), s.kind, false, -1, false, sc), (-39f, 38.5f, 1.35f), (-39f, 38.5f, 1.2f), (-42f, 37.5f, 1.3f), (-36f, 37.5f, 1.3f),
+                (-39f, 38.5f, 1f));
+            for (int i = 0; i < 5; i++) Try(plan, Lot(BK.Crates, RandV(BK.Crates), P(TR(-46f, -14f), TR(31f, 33f)), TR(0, 360), s.kind, true));
+            // left wall: great hall + barracks
+            TL(plan, "大厅", Lot(BK.Inn, 1, P(6f, -lean + 1f), YawFacing(v), s.kind));
+            TL(plan, "长屋", Lot(BK.Longhouse, 0, P(24f, -lean), YawFacing(v), s.kind, false, -1, false, 1.3f));
+            TL(plan, "长屋", Lot(BK.Longhouse, 1, P(41f, -lean), YawFacing(v), s.kind, false, -1, false, 1.1f));
+            // right wall: smithy + workshops, stables with hay
+            TL(plan, "铁匠/作坊", Lot(BK.Cottage, 1, P(4f, lean), YawFacing(-v), s.kind));
+            TL(plan, "铁匠/作坊", Lot(BK.Cottage, 2, P(13f, lean), YawFacing(-v), s.kind));
+            Try(plan, Lot(BK.Woodpile, 0, P(8.5f, lean - 6f), YawFacing(-v), s.kind, true));
+            TL(plan, "马厩", Lot(BK.Barn, 1, P(31f, lean - 1f), YawFacing(-v), s.kind, false, -1, false, 1.15f));
+            Try(plan, Lot(BK.Haystack, 0, P(41f, lean - 2f), TR(0, 360), s.kind, true));
+            Try(plan, Lot(BK.Haystack, 1, P(44f, lean + 2f), TR(0, 360), s.kind, true));
+            Try(plan, Lot(BK.Cart, 0, P(24f, lean - 9f), YawFacing(u), s.kind, true));
+
+            // --- open court along the gate road: well, market stalls, fenced training yard
+            Try(plan, Lot(BK.Well, 0, P(30f, 9f), 0f, s.kind, true));
+            foreach (var (a, b) in new[] { (12f, 8f), (12f, -8f), (32f, -8.5f), (40f, 8.5f) })
+                Try(plan, Lot(BK.Stall, RandV(BK.Stall), P(a, b), YawFacing(b > 0 ? -v : v), s.kind, true), true, true);
+            Vector2 yard = P(10f, -21f); float yh = 6f;
+            for (int k = -1; k <= 1; k += 2)
+            {
+                Try(plan, Lot(BK.Fence, 0, yard + u * (k * yh) + v * -2f, YawFacing(u), s.kind, true));
+                Try(plan, Lot(BK.Fence, 0, yard + u * (k * yh) + v * 2f, YawFacing(u), s.kind, true));
+                Try(plan, Lot(BK.Fence, 0, yard + v * (k * yh) + u * -2f, YawFacing(v), s.kind, true));
+                Try(plan, Lot(BK.Fence, 0, yard + v * (k * yh) + u * 2f, YawFacing(v), s.kind, true));
+            }
+            for (int i = 0; i < 3; i++) Try(plan, Lot(BK.Tent, 1 + townRng.Next(2), P(TR(28f, 46f), TR(-22f, -14f)), YawFacing(v) + TR(-15f, 15f), s.kind, true));
+            for (int i = 0; i < 4; i++) Try(plan, Lot(BK.Crates, RandV(BK.Crates), P(TR(14f, 46f), TR(-30f, 30f)), TR(0, 360), s.kind, true));
+
+            // --- outside: field camp in front of the gate
+            Try(plan, Lot(BK.Cart, 0, P(H + 14f, 9f), YawFacing(v), s.kind, true));
+            for (int i = 0; i < 12; i++)
+                Try(plan, Lot(BK.Tent, townRng.Next(3), P(TR(H + 12f, H + 48f), TR(-46f, 46f)), YawFacing(-u) + TR(-20f, 20f), s.kind, true));
+        }
+
+        bool TL(TownPlan plan, string what, TownLot l, bool checkStreets = true, bool onPlaza = false)
+        {
+            if (Try(plan, l, checkStreets, onPlaza)) return true;
+            fortMisses.Append(what + " ");
+            return false;
+        }
+        readonly StringBuilder fortMisses = new StringBuilder();
 
         // ------------------------------------------------------------------ ruins
         void LayoutRuins(TownPlan plan, TownSite s, int index)
