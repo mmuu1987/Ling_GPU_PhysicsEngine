@@ -123,6 +123,13 @@
                     </ui:VisualElement>
                     <ui:VisualElement class="ops-actions">
                         <ui:Label text="选择战场  →  战前布阵  →  开战" class="hint" />
+                        <ui:VisualElement name="cat-season" class="fe-season">
+                            <ui:Label text="季节" class="h-sub fe-season__k" />
+                            <ui:Button name="season-0" text="绿地" class="btn btn--sm fe-season__btn" />
+                            <ui:Button name="season-1" text="秋天" class="btn btn--sm fe-season__btn" />
+                            <ui:Button name="season-2" text="雪地" class="btn btn--sm fe-season__btn" />
+                            <ui:Button name="season-3" text="荒漠" class="btn btn--sm fe-season__btn" />
+                        </ui:VisualElement>
                         <ui:VisualElement class="spacer" />
                         <ui:Label name="cat-error" text="" class="fe-error-inline" />
                         <ui:Button name="cat-enter" class="btn btn--primary btn--xl">

@@ -26,6 +26,9 @@ namespace MassEngine.Game
         private readonly List<int> tkRowEntry = new List<int>();
         private WarSandboxBattlefieldEntry[] tkBuiltEntries;
         private int tkShownSelected = -2, tkShownPortrait = -1;
+        private VisualElement tkSeason;
+        private readonly Button[] tkSeasonButtons = new Button[BattlefieldSeasons.Count];
+        private string seasonMapId;
         private string tkShownPortraitEntry;
         private Rect tkNavRect;
         private List<WarSandboxUnitTemplateEntry> tkChoices = new List<WarSandboxUnitTemplateEntry>();
@@ -73,6 +76,13 @@ namespace MassEngine.Game
             On("top-settings", session.OpenSettings);
             On("top-quit", RequestQuit);
             On("cat-enter", EnterSelectedBattlefield);
+            tkSeason = r.Q("cat-season");
+            for (int si = 0; si < BattlefieldSeasons.Count; si++)
+            {
+                int season = si;
+                tkSeasonButtons[si] = r.Q<Button>("season-" + si);
+                On("season-" + si, () => { BattlefieldSeasons.Requested = season; ShowToolkitSeason(); });
+            }
             On("cat-unit-prev", () => SwitchPortrait(-1, tkChoices.Count));
             On("cat-unit-next", () => SwitchPortrait(1, tkChoices.Count));
             On("cat-unit-zoom", () => { if (tkChoices.Count > 0) OpenUnitPreview(tkChoices[Mathf.Clamp(portraitSelected, 0, tkChoices.Count - 1)]); });
@@ -242,6 +252,27 @@ namespace MassEngine.Game
             tkPreview.style.backgroundImage = preview != null ? new StyleBackground(preview) : new StyleBackground(StyleKeyword.None);
             Tk.Show(tkPreviewMissing, preview == null);
             tkBrief.scrollOffset = Vector2.zero;
+            ShowToolkitSeason();
+        }
+
+        /// <summary>Seasons (2026-10-16): another map resets to its own season; the row keeps its size (hidden, not removed).</summary>
+        private string SeasonMapId()
+        {
+            var entries = session.catalog != null ? session.catalog.entries : null;
+            string id = entries != null && catalogSelected >= 0 && catalogSelected < entries.Length && entries[catalogSelected] != null ? entries[catalogSelected].id : null;
+            if (id != seasonMapId) { seasonMapId = id; BattlefieldSeasons.Requested = BattlefieldSeasons.Native; }
+            return id;
+        }
+
+        private void ShowToolkitSeason()
+        {
+            if (tkSeason == null) return;
+            string id = SeasonMapId();
+            bool supported = BattlefieldSeasons.Supports(id, out _);
+            tkSeason.style.visibility = supported ? Visibility.Visible : Visibility.Hidden;
+            int shown = BattlefieldSeasons.Effective(id);
+            for (int s = 0; s < tkSeasonButtons.Length; s++)
+                if (tkSeasonButtons[s] != null) tkSeasonButtons[s].EnableInClassList("fe-chip--on", s == shown);
         }
 
         private void ShowToolkitPortrait(WarSandboxBattlefieldEntry[] entries)

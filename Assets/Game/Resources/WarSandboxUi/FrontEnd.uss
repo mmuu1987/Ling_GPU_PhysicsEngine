@@ -85,3 +85,8 @@
 .fe-modal { width: 520px; padding: 26px 30px 30px 30px; --frame-fill: #FFFCF4; --frame-radius: 26; --frame-shadow: 0.22; }
 .fe-modal .h-page { margin: 4px 0 10px 0; }
 .fe-modal__body { font-size: 16px; white-space: normal; margin-bottom: 10px; }
+
+/* ---------- 季节（2026-10-16，同一张地图换季节；尺寸固定） ---------- */
+.fe-season { flex-direction: row; align-items: center; margin-left: 28px; flex-shrink: 0; }
+.fe-season__k { margin: 0 8px 0 0; }
+.fe-season__btn { width: 64px; min-width: 64px; max-width: 64px; margin: 0 0 0 4px; flex-shrink: 0; }

@@ -709,6 +709,12 @@ namespace MassEngine.Game.Editor
                         var report = Battlefield1024Generator.Generate(m);
                         lines.Add("OK " + m.Id + " " + (DateTime.Now - t0).TotalSeconds.ToString("F0") + " s\n" + report.Summary() + "\n  prefabs: " + string.Join(", ", report.prefabs.Take(12)) + "\n  notes: " + string.Join("；", report.notes));
                         Debug.Log("[Battlefield2048] 生成完成：" + report.Summary());
+                        // Seasons (2026-10-16): re-install the season switcher into the freshly generated scene
+                        if (BattlefieldSeasonsSetup.Native.ContainsKey(m.Folder))
+                        {
+                            try { lines.Add("  季节：" + BattlefieldSeasonsSetup.Install(m.Folder)); }
+                            catch (Exception se) { lines.Add("  季节 FAIL：" + se.Message); Debug.LogException(se); }
+                        }
                     }
                     catch (Exception e) { lines.Add("FAIL " + m.Id + "：" + e.Message); Debug.LogError("[Battlefield2048] 生成失败：" + m.DisplayName + " — " + e.Message); Debug.LogException(e); }
                     EditorUtility.UnloadUnusedAssetsImmediate(); GC.Collect();

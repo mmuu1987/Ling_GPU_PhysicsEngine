@@ -166,7 +166,7 @@ namespace MassEngine.Game.Editor
 
         /// <summary>2026-10-15 procedural buildings: native scale, fixed yaw, prefab origin placed at (x, floorY, z); near LOD.
         /// Same material conversion, shadow rule, culling and triangle budget as <see cref="Place"/>; no RNG use.</summary>
-        public GameObject PlaceAt(string path, float x, float z, float yawDegrees, float floorY, Transform parent, bool shadows)
+        public GameObject PlaceAt(string path, float x, float z, float yawDegrees, float floorY, Transform parent, bool shadows, float scale = 1f, float tall = 1f)
         {
             if (path == null || rejected.Contains(Key(path, false))) return null;
             if (triangles > Battlefield1024Generator.DecorationTriangleBudget) { budgetSkips++; return null; }
@@ -190,6 +190,8 @@ namespace MassEngine.Game.Editor
             if (mid.Length == 0) { Object.DestroyImmediate(go); Reject(path, false, "没有 MeshRenderer"); return null; }
             long tri = mid.Select(r => r.GetComponent<MeshFilter>()).Where(f => f != null).Sum(f => Scene18AssetAudit.Triangles(f.sharedMesh));
             if (tri > 1600) { Object.DestroyImmediate(go); Reject(path, false, "三角形 " + tri + " > 1600"); return null; }
+            // 2026-10-16 castle A: optional uniform scale (tall = extra vertical stretch), e.g. the ×2 fort
+            if (scale != 1f || tall != 1f) go.transform.localScale = Vector3.Scale(go.transform.localScale, new Vector3(scale, scale * tall, scale));
             go.transform.SetPositionAndRotation(new Vector3(x, floorY, z), Quaternion.Euler(0f, yawDegrees, 0f));
             foreach (var r in renderers) { r.enabled = true; r.gameObject.SetActive(true); }
             var bb = BoundsOf(mid);
