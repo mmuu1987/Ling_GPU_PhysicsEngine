@@ -1226,7 +1226,7 @@ MonoBehaviour:
     hiddenFromSelection: 0
     selectionNote: 
     unitPreview: {fileID: 0}
-    priceScale: 4.5
+    priceScale: 5.5
   - templateId: roster-giant-yeti
     revision: 1
     config: {fileID: 11400000, guid: 0f956bc584647d94ca324fd1f84d434a, type: 2}

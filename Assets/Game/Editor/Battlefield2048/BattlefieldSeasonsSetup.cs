@@ -55,11 +55,11 @@ namespace MassEngine.Game.Editor
             },
             new Dictionary<string, string> // 荒漠
             {
-                { "Broadleaf", "Cypress|Dead" }, { "Birch", "Dead" }, { "Autumn", "Dead" }, { "PineSnow", "Pine" },
+                { "Broadleaf", "Cypress|Dead" }, { "Birch", "Dead" }, { "Autumn", "Dead" }, { "Pine", "Dead" }, { "PineSnow", "Dead" },
                 { "Bush", "BushDry" }, { "BushSnow", "BushDry" }, { "Fern", "BushDry" },
                 { "Grass", "GrassDry" }, { "Flower", "GrassDry" }, { "FlowerPatch", "GrassDry" }, { "Mushroom", Hide },
                 { "RockSnow", "Rock" }, { "MountainSnow", "Mountain" },
-                { "ClumpGreen", "ClumpDry" }, { "ClumpAutumn", "ClumpDry" }, { "ClumpPineSnow", "ClumpPine" },
+                { "ClumpGreen", "ClumpDry" }, { "ClumpAutumn", "ClumpDry" }, { "ClumpPine", "ClumpDry" }, { "ClumpPineSnow", "ClumpDry" },
             },
         };
 

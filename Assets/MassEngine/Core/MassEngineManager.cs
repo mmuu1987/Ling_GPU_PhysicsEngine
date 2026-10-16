@@ -216,6 +216,8 @@ namespace MassEngine
             Shader.SetGlobalFloat(MassFlightGroundedId, 1f - takeoff);
             if (pipelineOrchestrator != null)
                 pipelineOrchestrator.FlightLiftScale = takeoff;
+            if (projectileManager != null)
+                projectileManager.FlightLiftScale = takeoff;
 
             PipelineFrameContext context = CreateFrameContext();
             if (telemetry != null && context.teamFlows != null)
