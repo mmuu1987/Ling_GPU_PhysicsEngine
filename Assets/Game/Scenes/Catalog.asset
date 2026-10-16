@@ -432,7 +432,7 @@ MonoBehaviour:
     hiddenFromSelection: 0
     selectionNote: 
     unitPreview: {fileID: 2800000, guid: 974908093e46b25408d4862a5c3b2dea, type: 3}
-    priceScale: 2.296
+    priceScale: 3.444
   - templateId: roster-skeleton-warrior
     revision: 1
     config: {fileID: 11400000, guid: 04dcb367ac4b2644982d42e389947de7, type: 2}
