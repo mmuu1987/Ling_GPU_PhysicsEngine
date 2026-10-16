@@ -123,14 +123,17 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
             }
 
             // Flight (2026-10-15): flyers hang _MassFlight.x metres up and fall (ease-in) over the death clip (_MassFlight.y s).
+            // Takeoff (2026-10-16): _MassFlightGrounded (global) 1 = on the ground before the battle, 0 = airborne.
+            float _MassFlightGrounded;
             float ResolveFlightLift(int state, float age)
             {
                 if (_MassFlight.x <= 0.0)
                     return 0.0;
+                float lift = _MassFlight.x * (1.0 - saturate(_MassFlightGrounded));
                 if (state != 4)
-                    return _MassFlight.x;
+                    return lift;
                 float t = saturate(age / max(_MassFlight.y, 0.0001));
-                return _MassFlight.x * (1.0 - t * t);
+                return lift * (1.0 - t * t);
             }
 
             struct AgentData
