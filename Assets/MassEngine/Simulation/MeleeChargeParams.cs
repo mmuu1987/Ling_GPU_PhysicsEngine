@@ -18,6 +18,9 @@ namespace MassEngine
         // projectile kernel under ProjectileFlightKeyword while any type flies.
         public static readonly int FlightBufferId = Shader.PropertyToID("unitTypeFlight");
         public const string ProjectileFlightKeyword = "MASS_PROJECTILE_FLIGHT";
+        // Trample (2026-10-16, cavalry): one float4 per unit type: x = damage multiplier (0 = off), y = speed lost per
+        // trampled enemy, z = minimum charge speed fraction, w = unused.
+        public static readonly int TrampleBufferId = Shader.PropertyToID("unitTypeTrample");
 
         private ComputeBuffer buffer;
         private Vector2[] uploaded;
@@ -25,19 +28,23 @@ namespace MassEngine
         private float[] uploadedSplash;
         private ComputeBuffer flightBuffer;
         private float[] uploadedFlight;
+        private ComputeBuffer trampleBuffer;
+        private Vector4[] uploadedTrample;
 
         public ComputeBuffer FlightBuffer => flightBuffer;
         public bool AnyFlight { get; private set; }
 
         public ComputeBuffer Buffer => buffer;
         public bool IsValid => buffer != null && buffer.IsValid() && splashBuffer != null && splashBuffer.IsValid() &&
-            flightBuffer != null && flightBuffer.IsValid();
+            flightBuffer != null && flightBuffer.IsValid() && trampleBuffer != null && trampleBuffer.IsValid();
 
         public void Upload(Vector2[] values) => Upload(values, null);
 
         public void Upload(Vector2[] values, float[] splash) => Upload(values, splash, null);
 
-        public void Upload(Vector2[] values, float[] splash, float[] flight)
+        public void Upload(Vector2[] values, float[] splash, float[] flight) => Upload(values, splash, flight, null);
+
+        public void Upload(Vector2[] values, float[] splash, float[] flight, Vector4[] trample)
         {
             if (values == null || values.Length == 0)
                 throw new ArgumentException("Melee charge table needs one entry per unit type.", nameof(values));
@@ -55,12 +62,14 @@ namespace MassEngine
                 if (same)
                 {
                     UploadSplash(splash, values.Length);
-            UploadFlight(flight, values.Length);
+                    UploadFlight(flight, values.Length);
+                    UploadTrample(trample, values.Length);
                     return;
                 }
             }
             UploadSplash(splash, values.Length);
             UploadFlight(flight, values.Length);
+            UploadTrample(trample, values.Length);
             buffer.SetData(values);
             uploaded = (Vector2[])values.Clone();
         }
@@ -110,6 +119,27 @@ namespace MassEngine
             uploadedFlight = (float[])flight.Clone();
         }
 
+        private void UploadTrample(Vector4[] trample, int count)
+        {
+            if (trample == null || trample.Length != count) trample = new Vector4[count];
+            if (trampleBuffer == null || trampleBuffer.count != count)
+            {
+                trampleBuffer?.Release();
+                trampleBuffer = new ComputeBuffer(count, sizeof(float) * 4);
+                uploadedTrample = null;
+            }
+            if (uploadedTrample != null && uploadedTrample.Length == count)
+            {
+                bool same = true;
+                for (int i = 0; i < count && same; i++)
+                    same = uploadedTrample[i] == trample[i];
+                if (same)
+                    return;
+            }
+            trampleBuffer.SetData(trample);
+            uploadedTrample = (Vector4[])trample.Clone();
+        }
+
         /// <summary>Projectile kernel: flight-aware unit capsules and splash layers while any type flies.</summary>
         public void BindProjectile(ComputeShader shader, int kernel)
         {
@@ -134,6 +164,7 @@ namespace MassEngine
             shader.SetBuffer(kernel, BufferId, buffer);
             shader.SetBuffer(kernel, SplashBufferId, splashBuffer);
             shader.SetBuffer(kernel, FlightBufferId, flightBuffer);
+            shader.SetBuffer(kernel, TrampleBufferId, trampleBuffer);
         }
 
         public static void Unbind(ComputeShader shader)
@@ -152,6 +183,9 @@ namespace MassEngine
             flightBuffer?.Release();
             flightBuffer = null;
             uploadedFlight = null;
+            trampleBuffer?.Release();
+            trampleBuffer = null;
+            uploadedTrample = null;
             AnyFlight = false;
         }
     }

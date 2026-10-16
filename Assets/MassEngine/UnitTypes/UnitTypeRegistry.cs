@@ -249,6 +249,35 @@ namespace MassEngine
             return any;
         }
 
+        /// <summary>
+        /// Trample per unit type: x = damage multiplier (0 = off), y = speed loss per trampled enemy, z = minimum trample
+        /// speed fraction, w = share of incoming damage taken while at trample speed. Returns true only when at least one melee unit type tramples.
+        /// </summary>
+        public bool FillTrample(Vector4[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            bool any = false;
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                float multiplier = config != null ? config.trampleDamageMultiplier : 0f;
+                if (float.IsNaN(multiplier) || float.IsInfinity(multiplier) || multiplier < 0f) multiplier = 0f;
+                if (config != null && config.projectileRange > 0.01f) multiplier = 0f;
+                float loss = config != null ? Mathf.Clamp01(config.trampleSpeedLoss) : 0f;
+                float fraction = config != null ? Mathf.Clamp(config.trampleMinSpeedFraction, 0.05f, 2f) : 0.45f;
+                if (float.IsNaN(loss)) loss = 0f;
+                if (float.IsNaN(fraction)) fraction = 0.45f;
+                float taken = config != null ? config.trampleDamageTaken : 1f;
+                taken = float.IsNaN(taken) ? 1f : Mathf.Clamp01(taken);
+                target[i] = multiplier > 0f ? new Vector4(multiplier, loss, fraction, taken) : Vector4.zero;
+                any |= multiplier > 0f;
+            }
+
+            return any;
+        }
+
         public int CountAgentsForTeam(int teamId)
         {
             int count = 0;

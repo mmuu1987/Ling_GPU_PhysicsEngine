@@ -92,6 +92,7 @@ namespace MassEngine
         private Vector2[] meleeChargeCache;
         private float[] meleeSplashCache;
         private float[] flightCache;
+        private Vector4[] trampleCache;
         private Vector4[] projectileFxCache;
         private MeleeChargeParams meleeCharge;
         private int[] agentUnitTypeIndices;
@@ -646,6 +647,7 @@ namespace MassEngine
             meleeChargeCache = null;
             meleeSplashCache = null;
             flightCache = null;
+            trampleCache = null;
             projectileFxCache = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
@@ -709,12 +711,16 @@ namespace MassEngine
             bool flight = unitTypeRegistry.FillFlightAltitudes(flightCache);
             if (projectileManager != null)
                 projectileManager.UnitTypeFlightAltitudes = flight ? flightCache : null;
-            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash | flight;
+            if (trampleCache == null || trampleCache.Length != gpuSettingsCache.Length)
+                trampleCache = new Vector4[gpuSettingsCache.Length];
+            // Trample (2026-10-16, cavalry): rides on the same opt-in combat variant.
+            bool trample = unitTypeRegistry.FillTrample(trampleCache);
+            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash | flight | trample;
             if (wanted)
             {
                 if (meleeCharge == null)
                     meleeCharge = new MeleeChargeParams();
-                meleeCharge.Upload(meleeChargeCache, meleeSplashCache, flightCache);
+                meleeCharge.Upload(meleeChargeCache, meleeSplashCache, flightCache, trampleCache);
             }
             else if (meleeCharge != null)
             {

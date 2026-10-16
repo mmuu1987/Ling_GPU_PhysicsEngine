@@ -51,6 +51,11 @@ namespace MassEngine.Game
                 // Kaiju B (2026-10-15): melee splash (stomp) uses the same area rule as projectile splash.
                 float meleeSplash = template.combatConfig != null ? Mathf.Max(0f, template.combatConfig.meleeSplashRadius) : 0f;
                 factor *= 1f + 0.35f * meleeSplash * meleeSplash;
+                // Trample (2026-10-16, cavalry): +20% per damage-multiplier step (first draft, to be tuned).
+                float trample = template.combatConfig != null ? Mathf.Max(0f, template.combatConfig.trampleDamageMultiplier) : 0f;
+                factor *= 1f + 0.2f * trample;
+                // Charge guard: +50% at no damage taken while charging, scaled by the share it removes (first draft).
+                if (trample > 0f) factor *= 1f + 0.5f * (1f - Mathf.Clamp01(template.combatConfig.trampleDamageTaken));
             }
             factor *= Mathf.Clamp(0.8f + 0.2f * speed / 12f, 0.6f, 1.6f);
             return Mathf.Sqrt(hp * damage / interval) * factor;

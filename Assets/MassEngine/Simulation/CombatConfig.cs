@@ -52,6 +52,21 @@ namespace MassEngine
                  "Every other living enemy whose body circle overlaps this radius also takes the same melee hit once. No friendly fire. Ranged units ignore it.")]
         [Min(0f)] public float meleeSplashRadius = 0f;
 
+        [Tooltip("Trample (2026-10-16, cavalry): 0 = off (default; behaviour unchanged). While a melee unit moves at trample speed " +
+                 "(trampleMinSpeedFraction x maxSpeed) and is not swinging, it rides through small enemies instead of stopping: each enemy " +
+                 "body it runs into takes attackDamage x this once and is shoved aside; large enemy bodies stop the charge.")]
+        [Min(0f)] public float trampleDamageMultiplier = 0f;
+
+        [Tooltip("Trample: fraction of the rider's speed lost per trampled enemy. The charge ends once speed drops below the trample speed.")]
+        [Range(0f, 1f)] public float trampleSpeedLoss = 0.0025f;
+
+        [Tooltip("Trample: minimum speed as a fraction of maxSpeed. Open-ground cruise is about 0.55 x maxSpeed (velocity damping), " +
+                 "so this sits below it; separate from chargeMinSpeedFraction on purpose.")]
+        [Range(0.05f, 2f)] public float trampleMinSpeedFraction = 0.45f;
+
+        [Tooltip("Trample: share of incoming damage taken while still at trample speed (charge momentum). 1 = unchanged.")]
+        [Range(0f, 1f)] public float trampleDamageTaken = 1f;
+
         [Tooltip("Flight (2026-10-15): altitude in metres for a flying unit. 0 = ground unit (default; behaviour unchanged). " +
                  "A flying unit still moves on the ground grid but is drawn this high; ground melee units can neither target nor touch it, " +
                  "only ranged units and other flyers hit it. Splash stays in its own layer (ground or air).")]
