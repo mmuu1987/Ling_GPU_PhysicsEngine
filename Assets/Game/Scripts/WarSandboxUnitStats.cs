@@ -12,7 +12,8 @@ namespace MassEngine.Game
     {
         MaxHp, AttackDamage, AttackInterval, AttackRange, TargetAcquireRadius, MaxSpeed,
         ChargeDamageMultiplier, ChargeMinSpeedFraction, ProjectileRange, ProjectileSpeed, ProjectileSplashRadius,
-        AgentRadius // Persisted append-only: indices 0..10 and their keys must not change.
+        AgentRadius, // Persisted append-only: indices 0..10 and their keys must not change.
+        TrampleDamageMultiplier, TrampleSpeedLoss, TrampleMinSpeedFraction, TrampleDamageTaken // cavalry trample (2026-10-16)
     }
 
     public enum WarSandboxStatRole { All, MeleeOnly, RangedOnly }
@@ -84,6 +85,7 @@ namespace MassEngine.Game
         public const string GroupMove = "机动";
         public const string GroupCharge = "冲锋 · 近战";
         public const string GroupProjectile = "弹道 · 远程";
+        public const string GroupTrample = "冲阵 · 践踏";
 
         public static readonly WarSandboxStatDefinition[] Definitions =
         {
@@ -111,6 +113,15 @@ namespace MassEngine.Game
                 (c, m) => c.projectileSplashRadius, (c, m, v) => c.projectileSplashRadius = v),
             new WarSandboxStatDefinition(WarSandboxUnitStat.AgentRadius, "agentRadius", "物理基准半径", "物理体积",
                 WarSandboxRadiusPolicy.Min, WarSandboxRadiusPolicy.Max, f => f.agentRadius, (f, v) => f.agentRadius = v),
+            // Cavalry trample (2026-10-16). 践踏倍率 0 = off (every unit except the mounted knight).
+            new WarSandboxStatDefinition(WarSandboxUnitStat.TrampleDamageMultiplier, "trampleDamageMultiplier", "践踏倍率", "×攻击", GroupTrample, 0, 5, false, WarSandboxStatRole.MeleeOnly, false,
+                (c, m) => c.trampleDamageMultiplier, (c, m, v) => c.trampleDamageMultiplier = v),
+            new WarSandboxStatDefinition(WarSandboxUnitStat.TrampleSpeedLoss, "trampleSpeedLoss", "每撞一人减速", "%", GroupTrample, 0, 5, false, WarSandboxStatRole.MeleeOnly, false,
+                (c, m) => c.trampleSpeedLoss * 100f, (c, m, v) => c.trampleSpeedLoss = v / 100f),
+            new WarSandboxStatDefinition(WarSandboxUnitStat.TrampleMinSpeedFraction, "trampleMinSpeedFraction", "践踏起速", "×移速", GroupTrample, 0.1f, 1.5f, false, WarSandboxStatRole.MeleeOnly, false,
+                (c, m) => c.trampleMinSpeedFraction, (c, m, v) => c.trampleMinSpeedFraction = v),
+            new WarSandboxStatDefinition(WarSandboxUnitStat.TrampleDamageTaken, "trampleDamageTaken", "冲阵承伤", "×", GroupTrample, 0, 1, false, WarSandboxStatRole.MeleeOnly, false,
+                (c, m) => c.trampleDamageTaken, (c, m, v) => c.trampleDamageTaken = v),
         };
 
         public static WarSandboxStatDefinition Get(WarSandboxUnitStat stat) => Definitions[(int)stat];

@@ -40,6 +40,9 @@ namespace MassEngine.Projectiles
         public float[] UnitTypeSplashRadii { get; set; }
         /// <summary>Flight (2026-10-15): altitude per unit type in metres (null = nobody flies). Shots leave from and aim at it.</summary>
         public float[] UnitTypeFlightAltitudes { get; set; }
+        /// <summary>Takeoff progress 0..1 (MassEngineManager.TakeoffSeconds): a flyer's muzzle rises with its drawn height.
+        /// Aim points (and every hit test) stay at the full altitude.</summary>
+        public float FlightLiftScale { get; set; } = 1f;
         // Spawn scale metadata is supplied by the manager; never read a full AgentData
         // array back each frame just to resolve a fixed-size launch offset.
 
@@ -386,7 +389,7 @@ namespace MassEngine.Projectiles
                     float[] flight = UnitTypeFlightAltitudes;
                     if (flight != null)
                     {
-                        if (unitTypeIdx < flight.Length) sourcePos.y += flight[unitTypeIdx];
+                        if (unitTypeIdx < flight.Length) sourcePos.y += flight[unitTypeIdx] * Mathf.Clamp01(FlightLiftScale);
                         if (targetType < flight.Length) targetPos.y += flight[targetType];
                     }
                     // Approximate facing by shot direction; no per-frame bone/rotation readback.

@@ -16,6 +16,8 @@ namespace MassEngine.Game
         public const int MaxBudget = 100000000;
         public const float ReferencePrice = 10f;
         public static readonly float ReferencePower = Mathf.Sqrt(140f * 14f / 0.9f);
+        /// <summary>Trample price terms (2026-10-16): x(1 + step x multiplier) x(1 + guard x (1 - damage taken)).</summary>
+        public const float TrampleStepFactor = 1.0f, TrampleGuardFactor = 2.8f;
         /// <summary>Header button cycle: off -> these -> off.</summary>
         public static readonly int[] CycleSteps = { 50000, 100000, 200000, 500000, 1000000, 2000000 };
         /// <summary>Per-army -/+ steps.</summary>
@@ -51,11 +53,11 @@ namespace MassEngine.Game
                 // Kaiju B (2026-10-15): melee splash (stomp) uses the same area rule as projectile splash.
                 float meleeSplash = template.combatConfig != null ? Mathf.Max(0f, template.combatConfig.meleeSplashRadius) : 0f;
                 factor *= 1f + 0.35f * meleeSplash * meleeSplash;
-                // Trample (2026-10-16, cavalry): +20% per damage-multiplier step (first draft, to be tuned).
-                float trample = template.combatConfig != null ? Mathf.Max(0f, template.combatConfig.trampleDamageMultiplier) : 0f;
-                factor *= 1f + 0.2f * trample;
-                // Charge guard: +50% at no damage taken while charging, scaled by the share it removes (first draft).
-                if (trample > 0f) factor *= 1f + 0.5f * (1f - Mathf.Clamp01(template.combatConfig.trampleDamageTaken));
+                // Trample (2026-10-16, cavalry): per damage-multiplier step, plus the charge guard scaled by the share of damage
+                // it removes. Read through the resolver so player overrides are priced. Coefficients: equal-budget duels vs 男战士 (plains-1024, 8000; ~51 knights = even).
+                float trample = Mathf.Max(0f, Value(resolver, template, WarSandboxUnitStat.TrampleDamageMultiplier, 0f));
+                factor *= 1f + TrampleStepFactor * trample;
+                if (trample > 0f) factor *= 1f + TrampleGuardFactor * (1f - Mathf.Clamp01(Value(resolver, template, WarSandboxUnitStat.TrampleDamageTaken, 1f)));
             }
             factor *= Mathf.Clamp(0.8f + 0.2f * speed / 12f, 0.6f, 1.6f);
             return Mathf.Sqrt(hp * damage / interval) * factor;
