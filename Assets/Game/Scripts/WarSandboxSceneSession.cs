@@ -21,6 +21,8 @@ namespace MassEngine.Game
         public string CurrentDisplayName { get; private set; }
         public string Error { get; private set; }
         public float LoadingProgress { get; private set; }
+        /// <summary>What the loading screen says is happening (2026-10-17: staged progress).</summary>
+        public string LoadingStage { get; private set; } = "准备规则与军团";
         /// <summary>Non-fatal note from the global unit stat layer for the current battlefield (null = none).</summary>
         public string StatsWarning { get; private set; }
         public bool ConfirmationOpen { get; private set; }
@@ -181,6 +183,7 @@ namespace MassEngine.Game
             State = WarSandboxEntryState.Loading;
             Error = null;
             LoadingProgress = 0;
+            LoadingStage = "读取战场资源";
             ConfirmationOpen = false;
             resumeAfterConfirmation = false;
             receivedScene = false;
@@ -202,11 +205,22 @@ namespace MassEngine.Game
                 Fail("Scene loading failed: " + (loadError ?? path));
                 yield break;
             }
-            while (!operation.isDone)
+            // 2026-10-17 staged progress. Reading (background in a player) moves the bar to 60 %; scene activation and
+            // battlefield setup then run on the main thread in one long frame, so the stage text is shown (and rendered
+            // for two frames) before activation instead of a bar that looks stuck at 0 %.
+            operation.allowSceneActivation = false;
+            while (operation.progress < 0.9f && !operation.isDone)
             {
-                LoadingProgress = Mathf.Clamp01(operation.progress / 0.9f);
+                LoadingProgress = 0.6f * Mathf.Clamp01(operation.progress / 0.9f);
                 yield return null;
             }
+            LoadingProgress = 0.6f;
+            LoadingStage = "构建地形与军团（画面会停顿几秒）";
+            yield return null;
+            yield return null;
+            operation.allowSceneActivation = true;
+            while (!operation.isDone) yield return null;
+            LoadingStage = "完成";
             if (!receivedScene) Fail("The loaded scene did not complete battlefield setup: " + path);
             transitionInFlight = false;
             LoadingProgress = 1;
@@ -413,3 +427,4 @@ namespace MassEngine.Game
         }
     }
 }
+

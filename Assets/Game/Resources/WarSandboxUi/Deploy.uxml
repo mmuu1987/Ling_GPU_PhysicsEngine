@@ -16,6 +16,11 @@
                     <tac:TacIcon icon="save" class="btn__icon" />
                     <ui:Label text="方案库" />
                 </ui:Button>
+                <ui:VisualElement class="dp-head__sep" />
+                <ui:Button name="dp-sys-help" text="帮助" class="btn dp-head__btn dp-sys" />
+                <ui:Button name="dp-sys-settings" text="设置" class="btn dp-head__btn dp-sys" />
+                <ui:Button name="dp-sys-menu" text="战场目录" class="btn dp-head__btn dp-sys" />
+                <ui:Button name="dp-sys-quit" text="退出" class="btn btn--danger dp-head__btn dp-sys" />
             </tac:TacFrame>
             <ui:VisualElement class="row dp-cols">
                 <tac:TacFrame name="dp-tree" class="dp-tree">
@@ -378,3 +383,4 @@
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
+

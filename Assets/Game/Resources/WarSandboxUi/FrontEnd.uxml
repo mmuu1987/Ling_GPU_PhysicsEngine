@@ -181,6 +181,10 @@
                 <ui:Label text="·" class="crumb-sep" />
                 <ui:Label name="top-crumb" text="选择战场" class="crumb" />
                 <ui:VisualElement class="spacer" />
+                <ui:Button name="top-plans" class="sysbtn">
+                    <tac:TacIcon icon="save" class="sysbtn__icon" />
+                    <ui:Label text="方案库" />
+                </ui:Button>
                 <ui:Button name="top-help" class="sysbtn">
                     <tac:TacIcon icon="info" class="sysbtn__icon" />
                     <ui:Label text="帮助" />
@@ -211,6 +215,21 @@
             <ui:Label name="fe-nav-error-text" text="" class="fe-error-text" />
         </tac:TacFrame>
 
+        <!-- 方案库（战场目录页）：选方案 → 进入方案所属战场并载入 -->
+        <ui:VisualElement name="fe-plans" class="fill dimmer modal-root">
+            <tac:TacFrame class="fe-modal fe-plans">
+                <ui:Label text="方案库" class="code code--accent" />
+                <ui:Label text="选择方案" class="h-page" />
+                <ui:Label text="载入时会自动进入方案所属的战场。" class="para fe-modal__body" />
+                <ui:ScrollView name="plans-list" class="fe-plans__list" />
+                <ui:Label name="plans-msg" text="" class="para fe-plans__msg" />
+                <ui:VisualElement class="row fe-plans__actions">
+                    <ui:Button name="plans-load" text="进入战场并载入" class="btn btn--primary btn--lg fe-plans__go" />
+                    <ui:Button name="plans-close" text="关闭" class="btn btn--lg fe-plans__close" />
+                </ui:VisualElement>
+            </tac:TacFrame>
+        </ui:VisualElement>
+
         <!-- Confirmation (end battle / leave / quit) -->
         <ui:VisualElement name="fe-confirm" class="fill dimmer modal-root">
             <tac:TacFrame class="fe-modal">
@@ -223,3 +242,4 @@
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
+

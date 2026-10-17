@@ -95,6 +95,7 @@ namespace MassEngine.Game
             On("nav-quit", RequestQuit);
             On("confirm-ok", () => { if (confirmingQuit) Application.Quit(); else session.TryReturnToMenu(true, out _); });
             On("confirm-cancel", session.CancelConfirmation);
+            BuildMenuPlans(r);
             Tk.HideScrollers(r);
             // Enter/Space belong to the catalog/battle shortcuts (as uGUI: sendNavigationEvents = false), never to a previously clicked button.
             r.Query<Button>().ForEach(b => b.focusable = false);
@@ -123,9 +124,10 @@ namespace MassEngine.Game
             Tk.Show(tkHome, state == WarSandboxEntryState.Menu && homeOpen && !library);
             Tk.Show(tkCatalog, state == WarSandboxEntryState.Menu && !homeOpen && !library);
             Tk.Show(tkTopbar, state == WarSandboxEntryState.Menu && !homeOpen && !library);
+            UpdateMenuPlans(state == WarSandboxEntryState.Menu && !homeOpen && !library);
             Tk.Show(tkLoading, state == WarSandboxEntryState.Loading);
             Tk.Show(tkFailure, state == WarSandboxEntryState.Failed);
-            Tk.Show(tkNav, battle && !confirm && !session.SettingsOpen && !session.HelpOpen && !BattleHudOwnsSystemMenu); // compact battle HUD carries the strip in its menu
+            Tk.Show(tkNav, battle && !confirm && !session.SettingsOpen && !session.HelpOpen && !BattleHudOwnsSystemMenu && !DeployHudOwnsSystemMenu); // compact battle HUD carries the strip in its menu
             Tk.Show(tkConfirm, confirm);
             Tk.Show(tkHomeHelp, guide); Tk.Show(tkTopHelp, guide); Tk.Show(tkNavHelp, guide);
 
@@ -135,7 +137,7 @@ namespace MassEngine.Game
             {
                 float p = Mathf.Clamp01(session.LoadingProgress);
                 tkLoadFill.style.width = Length.Percent(p * 100f);
-                Tk.SetText(tkLoadValue, (p * 100).ToString("0") + "%  ·  准备规则与军团");
+                Tk.SetText(tkLoadValue, (p * 100).ToString("0") + "%  ·  " + session.LoadingStage);
             }
             if (state == WarSandboxEntryState.Failed) Tk.SetText(tkFailText, session.Error ?? "");
             if (battle && !confirm) UpdateToolkitNavigation();
@@ -343,3 +345,4 @@ namespace MassEngine.Game
         }
     }
 }
+

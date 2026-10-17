@@ -18,6 +18,7 @@ namespace MassEngine.Game
     {
         private const int DeployDocumentOrder = 5;
         private UIDocument dpDoc;
+        private Button dpSysHelp;
         private VisualElement dpRoot, dpOv, dpLg, dpPk, dpSt, dpPl, dpCf, dpAm, dpRa, dpTd;
         private TkUnitPreview dpUnitPv, dpLgPv, dpStPv;
 
@@ -39,11 +40,13 @@ namespace MassEngine.Game
             if (tkMapPointer != -1 && dpMap != null) { if (dpMap.HasPointerCapture(tkMapPointer)) dpMap.ReleasePointer(tkMapPointer); tkMapPointer = -1; }
             BlurToolkitFocus(); CancelBrushStroke();
             Tk.Show(dpRoot, false);
+            WarSandboxFrontEnd.DeployHudOwnsSystemMenu = false;
             dpUnitPv?.Deactivate(); dpLgPv?.Deactivate(); dpStPv?.Deactivate();
         }
 
         private void DestroyDeployToolkit()
         {
+            WarSandboxFrontEnd.DeployHudOwnsSystemMenu = false;
             if (dpDoc == null) return;
             dpUnitPv?.Deactivate(); dpLgPv?.Deactivate(); dpStPv?.Deactivate();
             Tk.DestroyDocument(dpDoc); dpDoc = null; dpRoot = null; dpMap = null; dpGhost = null;
@@ -125,6 +128,7 @@ namespace MassEngine.Game
             Tk.Show(dpPk, page == 4);
             Tk.Show(dpLg, page == 5);
             Tk.Show(dpOv, page == 6);
+            WarSandboxFrontEnd.DeployHudOwnsSystemMenu = page == 6;
             if (page == 2) UpdatePlansPage();
             if (page == 4) UpdatePickerPage();
             if (page == 5) UpdateLegionPage();
@@ -217,6 +221,10 @@ namespace MassEngine.Game
             dpChallenge = DpOn("dp-challenge", CycleChallenge);
             BuildBudgetControls(r);
             DpOn("dp-plans", OpenPlanLibrary);
+            dpSysHelp = DpOn("dp-sys-help", () => WarSandboxSceneSession.Instance?.OpenHelp30());
+            DpOn("dp-sys-settings", WarSandboxFrontEnd.BattleOpenSettings);
+            DpOn("dp-sys-menu", WarSandboxFrontEnd.BattleReturnToCatalog);
+            DpOn("dp-sys-quit", WarSandboxFrontEnd.BattleQuit);
             dpUndo = DpOn("dp-undo", () => { deployment.Draft.Undo(); ClampSelection(); RefreshAfterUiChange(); });
             dpRedo = DpOn("dp-redo", () => { deployment.Draft.Redo(); ClampSelection(); RefreshAfterUiChange(); });
             dpFix = DpOn("dp-fix", () => Locate32(tkFixRaw, tkFixIndex, tkFixProblem));
@@ -291,6 +299,7 @@ namespace MassEngine.Game
             Tk.SetText(dpTitle, flow ? "编成 → 布阵 → 开战" : "战前布阵");
             dpTitle.EnableInClassList("dp-head__title--flow", flow);
             Tk.Show(dpTight, TightEnabled);
+            Tk.Show(dpSysHelp, WarSandboxSceneSession.Instance != null && Guide30.For(WarSandboxSceneSession.Instance) != null);
             UpdateChallengeButton();
             UpdateBudgetButton();
             UpdateTree();
@@ -727,4 +736,5 @@ namespace MassEngine.Game
         }
     }
 }
+
 

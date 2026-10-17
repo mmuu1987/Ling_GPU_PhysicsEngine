@@ -125,7 +125,7 @@ namespace MassEngine.Game.EditorTools
             combat.ApplyModifiedPropertiesWithoutUndo();
 
             var move = new SerializedObject(c[2]);
-            Set(move, "maxSpeed", 7f);
+            Set(move, "maxSpeed", 14f); // 2026-10-17: 7 looked far too slow for a 17 m body (playtest)
             move.ApplyModifiedPropertiesWithoutUndo();
 
             // Bigger strides: the move clip's reference speed scales with the body so feet do not slide.
