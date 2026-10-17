@@ -176,16 +176,29 @@ namespace MassEngine.Game
 
         private bool TrySwitchForPlan(string slot, WarSandboxPlanFile plan, out string error)
         {
+            if (!TryEnterPlanBattlefield(slot, deployment.PlanStore, true, out error)) return false;
+            plansOpen = false;
+            return true;
+        }
+
+        /// <summary>Map display name for plan lists (catalog name, else the id).</summary>
+        public static string PlanMapName(string battlefieldId) => MapName(battlefieldId);
+
+        /// <summary>
+        /// Enters the plan's battlefield and loads the plan there once the scene is ready (also used by the menu's 方案库).
+        /// A missing or changed battlefield is reported and nothing is switched.
+        /// </summary>
+        public static bool TryEnterPlanBattlefield(string slot, WarSandboxLocalPlanStore store, bool confirmEndBattle, out string error)
+        {
             error = null;
             var session = WarSandboxSceneSession.Instance;
-            var map = FindMap(plan.battlefieldId);
-            if (session == null) { error = "当前无法切换地图。"; return false; }
+            if (session == null || store == null) { error = "当前无法切换地图。"; return false; }
+            if (!store.TryLoad(slot, out var plan, out error) || plan == null) { error = error ?? "方案读取失败。"; return false; }
             if ((error = SwitchProblem(plan)) != null) return false;
-            resumePlanSlot = slot; resumePlanDirectory = deployment.PlanStore.DirectoryPath;
+            resumePlanSlot = slot; resumePlanDirectory = store.DirectoryPath;
             resumePlanDeadline = Time.realtimeSinceStartup + 180f;
-            if (!session.TryEnterBattlefield(plan.battlefieldId, true, out error))
-            { resumePlanSlot = null; error = "切换到地图「" + MapName(map.id) + "」失败：" + error; return false; }
-            plansOpen = false;
+            if (!session.TryEnterBattlefield(plan.battlefieldId, confirmEndBattle, out error))
+            { resumePlanSlot = null; error = "切换到地图「" + MapName(plan.battlefieldId) + "」失败：" + error; return false; }
             return true;
         }
 

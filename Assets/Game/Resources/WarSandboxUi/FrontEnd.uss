@@ -82,6 +82,15 @@
 .fe-error-text { font-size: 14px; color: #B4362D; white-space: normal; }
 
 /* ---------- 确认弹窗 ---------- */
+/* 方案库 (fixed size) */
+.fe-plans { width: 680px; }
+.fe-plans__list { height: 380px; margin: 6px 0 8px 0; }
+.fe-plans__item { height: 58px; margin: 0 0 8px 0; white-space: normal; -unity-text-align: middle-left; padding: 4px 16px; }
+.fe-plans__empty { margin: 16px 4px; white-space: normal; }
+.fe-plans__msg { height: 44px; color: #D9372C; white-space: normal; font-size: 14px; }
+.fe-plans__actions { justify-content: flex-end; }
+.fe-plans__go { width: 220px; }
+.fe-plans__close { width: 120px; margin-left: 12px; }
 .fe-modal { width: 520px; padding: 26px 30px 30px 30px; --frame-fill: #FFFCF4; --frame-radius: 26; --frame-shadow: 0.22; }
 .fe-modal .h-page { margin: 4px 0 10px 0; }
 .fe-modal__body { font-size: 16px; white-space: normal; margin-bottom: 10px; }
@@ -90,3 +99,4 @@
 .fe-season { flex-direction: row; align-items: center; margin-left: 28px; flex-shrink: 0; }
 .fe-season__k { margin: 0 8px 0 0; }
 .fe-season__btn { width: 64px; min-width: 64px; max-width: 64px; margin: 0 0 0 4px; flex-shrink: 0; }
+

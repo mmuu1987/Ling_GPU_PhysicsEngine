@@ -2,7 +2,7 @@ using UnityEngine;
 namespace MassEngine.Game {
  public sealed partial class WarSandboxDeploymentHUD {
   private int tightDialog; // 1 replace draft, 2 start high-load battle.
-  private bool TightEnabled => deployment!=null&&deployment.GetComponent<TightFormationTrial>()!=null;
+  private bool TightEnabled => Debug.isDebugBuild&&deployment!=null&&deployment.GetComponent<TightFormationTrial>()!=null; // 2026-10-17: not in release builds
   private int TightPopulation(){int n=0;if(deployment?.Draft!=null)for(int i=0;i<deployment.Draft.Count;i++)n+=deployment.Draft[i].count;return n;}
   private string TightDraftNotice()=>TightEnabled&&TightPopulation()>50000?"高负载试验 · 可能明显卡顿；建议先保存方案，开战前还需确认":null;
   private void DrawTightHeader(WarSandboxUGUI ui){if(TightEnabled)ui.Button("tight-trial-open",new Rect(ui.Width-398,62,184,38),"十万人压力试验",()=>{if(CommitFields()){tightDialog=1;clearFocusRequested=true;}});}
@@ -46,3 +46,4 @@ namespace MassEngine.Game {
   }
  }
 }
+

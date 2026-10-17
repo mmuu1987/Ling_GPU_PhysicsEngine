@@ -11,6 +11,8 @@ namespace MassEngine.Game
     {
         /// <summary>Set every frame by the compact battle HUD while its menu carries the system strip; cleared when it hides.</summary>
         public static bool BattleHudOwnsSystemMenu { get; set; }
+        /// <summary>Set by the deployment HUD while its overview header carries 帮助 / 设置 / 战场目录 / 退出 (2026-10-17).</summary>
+        public static bool DeployHudOwnsSystemMenu { get; set; }
 
         private static WarSandboxFrontEnd battleMenuFront;
         private static WarSandboxFrontEnd BattleMenuFront()
@@ -40,3 +42,4 @@ namespace MassEngine.Game
         }
     }
 }
+

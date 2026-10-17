@@ -26,6 +26,7 @@ namespace MassEngine.Game
             if (Input.GetKeyDown(KeyCode.Escape) && session.SettingsOpen) SettingsEscape();
             if (Input.GetKeyDown(KeyCode.Escape) && session.ConfirmationOpen) session.CancelConfirmation();
             if (!session.HelpInputBlocked30 && CatalogInteractive()) CatalogKeys();
+            MenuPlansEscape();
             if (openDeploymentOnEnter && session.State == WarSandboxEntryState.Battle && !session.InputBlocked)
             {
                 var editor = session.Controller != null ? session.Controller.GetComponent<WarSandboxDeploymentHUD>() : null;
@@ -124,7 +125,7 @@ namespace MassEngine.Game
             flavour = newline >= 0 ? description.Substring(newline + 1).Trim() : "";
             return armies.Length > 0 && troops.Length > 0;
         }
-        private bool CatalogInteractive() => !homeOpen && session.State == WarSandboxEntryState.Menu && !unitPreviewOpen && !libraryOpen && !session.SettingsOpen && !session.ConfirmationOpen &&
+        private bool CatalogInteractive() => !homeOpen && !menuPlansOpen && session.State == WarSandboxEntryState.Menu && !unitPreviewOpen && !libraryOpen && !session.SettingsOpen && !session.ConfirmationOpen &&
             !session.IsLoading && session.catalog != null && session.catalog.entries != null && session.catalog.entries.Length > 0 && !WarSandboxUGUI.IsTyping;
         private void CatalogKeys()
         {
@@ -274,7 +275,7 @@ namespace MassEngine.Game
             ui.LabelAligned("loading-title", new Rect(x - 10, y, w + 10, 46), "正在部署战场", 28, WarSandboxUGUI.Ink, true, TextAnchor.MiddleLeft);
             ui.Panel("loading-track", new Rect(x, y + 66, w, 4), WarSandboxUGUI.Line);
             ui.Panel("loading-progress", new Rect(x, y + 66, w * session.LoadingProgress, 4), WarSandboxUGUI.Accent);
-            ui.Code("loading-value", new Rect(x, y + 82, w, 28), (session.LoadingProgress * 100).ToString("0") + "%  ·  准备规则与军团", 13, WarSandboxUGUI.Muted);
+            ui.Code("loading-value", new Rect(x, y + 82, w, 28), (session.LoadingProgress * 100).ToString("0") + "%  ·  " + session.LoadingStage, 13, WarSandboxUGUI.Muted);
         }
         private void DrawFailure()
         {
@@ -316,4 +317,5 @@ namespace MassEngine.Game
         private void OnDestroy() { ui?.Dispose(); DestroyToolkit(); }
     }
 }
+
 

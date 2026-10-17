@@ -137,7 +137,7 @@ namespace MassEngine.Game
             if (tkRoot == null) return;
             Tk.Show(tkRoot, true);
             // Minimap every frame (camera dot, badges); the rest of the HUD at the throttled rate.
-            bool mini = showMinimap && TryResolveSimulationWorldSize(out _);
+            bool mini = showMinimap && !controller.BattleResult.valid && TryResolveSimulationWorldSize(out _); // the result screen hides it (was shown here every frame and hidden again at the throttled refresh: flicker)
             Tk.Show(tkMini, mini);
             if (mini) tkMinimap.Refresh(Time.unscaledTime >= nextUiRefresh);
             TkCompactFrame();
@@ -647,3 +647,4 @@ namespace MassEngine.Game
         }
     }
 }
+
