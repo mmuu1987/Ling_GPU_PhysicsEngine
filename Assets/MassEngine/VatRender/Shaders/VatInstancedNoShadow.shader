@@ -156,6 +156,8 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                 static int _GlobalCurrentState;
             #endif
 
+            #include "MassAgentKnock.hlsl" // 炸飞 (2026-10-17, render only)
+
             float4x4 CreateEulerRotationMatrix(float3 euler)
             {
                 float cx = cos(euler.x);
@@ -221,6 +223,9 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                     float3 renderPosition = data.position;
                     renderPosition.y -= ResolveCorpseSink(data.currentState, data.currentAnimationTime);
                 renderPosition.y += ResolveFlightLift(data.currentState, data.currentAnimationTime);
+                    float knockAngle;
+                    float4 knock = MassKnockFetch(agentIndex, data.currentState);
+                    renderPosition += MassKnockOffset(knock, data.currentAnimationTime, knockAngle);
                     float4x4 transMatrix = float4x4(
                         1, 0, 0, renderPosition.x,
                         0, 1, 0, renderPosition.y,
@@ -243,6 +248,7 @@ Shader "Universal Render Pipeline/MassEngine/VatInstancedNoShadow"
                         0, 0, 0, 1
                     );
                     unity_WorldToObject = mul(invScaleMatrix, mul(invRotMatrix, invTransMatrix));
+                    MassKnockTumble(knock, knockAngle, renderPosition + float3(0.0, 0.9 * data.scale.y, 0.0));
 
                     _GlobalAnimationTime = data.currentAnimationTime;
                     _GlobalCurrentState = data.currentState >= 3 ? data.currentState : data.presentationState;
@@ -486,3 +492,4 @@ MassLodDitherClip(input.lodVis, input.positionCS);
         }
     }
 }
+

@@ -88,6 +88,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 StructuredBuffer<float4> projectileFxByType;
                 static half4 _FxTint;
                 static float2 _FxSize;
+                static float _FxScale; // 2026-10-17: CombatConfig.projectileFxScale of the shooter type
             #endif
             float _ProjectileFxEnabled;
 
@@ -99,13 +100,15 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                 uint agentCount, stride, typeCount;
                 projectileAgentUnitType.GetDimensions(agentCount, stride);
                 projectileFxByType.GetDimensions(typeCount, stride);
+                typeCount /= 2; // [2t] = tint, [2t + 1] = (size scale, ...)
                 uint agent = (uint)(sourceAgentIndexPlusOne - 1);
                 if (agent >= agentCount)
                     return 0;
                 int type = projectileAgentUnitType[agent];
                 if (type < 0 || (uint)type >= typeCount)
                     return 0;
-                return (half4)projectileFxByType[type];
+                _FxScale = projectileFxByType[type * 2 + 1].x;
+                return (half4)projectileFxByType[type * 2];
             }
             #endif
 
@@ -154,11 +157,12 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                         width = max(width, _SplashTrailWidth);
                     // Styled fireball: a ball ~0.2 x splash radius across with a halo, and a flame tail >= 5 balls long.
                     // The quad reaches half a width past the projectile so the ball sits whole at the true position.
+                    _FxScale = 1.0;
                     _FxTint = data.splashRadius > 0.0 ? ResolveShooterTint(data.sourceAgentIndexPlusOne) : 0;
                     float headPad = 0.0;
                     if (_FxTint.a > 0.0)
                     {
-                        width = max(1.6, data.splashRadius * 0.55);
+                        width = max(1.6, data.splashRadius * 0.55) * clamp(_FxScale, 0.1, 3.0);
                         len = max(len, width * 3.2);
                         headPad = width * 0.5;
                     }
@@ -295,6 +299,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
                     float3 rgb = lerp(tailRgb, ballRgb, ball);
                     rgb = lerp(rgb, bright, halo * (1.0 - ball) * (1.0 - tail));
                     float a = max(ball, max(tail * lerp(0.95, 0.3, k), halo * 0.35));
+                    a *= saturate((input.fxTint.a - 0.5) * 2.0); // density (2026-10-17): tint.a = 0.5 + 0.5 x density
                     return half4(MixFog((half3)rgb, input.fogFactor), (half)saturate(a));
                 }
                 if (input.fire > 0.5h)
@@ -316,3 +321,4 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileTrail"
 
     Fallback Off
 }
+

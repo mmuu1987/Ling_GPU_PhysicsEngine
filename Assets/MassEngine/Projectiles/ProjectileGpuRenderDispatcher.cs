@@ -26,7 +26,7 @@ namespace MassEngine.Projectiles
         // Reused so the per-frame path allocates nothing; SetVectorArray copies the contents.
         private readonly Vector4[] teamColorUpload = new Vector4[ProjectileRenderConfig.MaxTeamColors];
 
-        // Fireball look (2026-10-16): per-unit-type tint (rgb, a = styled) looked up through the source agent's unit type.
+        // Fireball look (2026-10-16): per-unit-type tint (rgb, a = styled; 2026-10-17: two entries per type, tint + size) looked up through the source agent's unit type.
         // Dummies keep the shader buffers bound when nobody is styled (legacy look, _ProjectileFxEnabled = 0).
         public static readonly int FxByTypeId = Shader.PropertyToID("projectileFxByType");
         public static readonly int FxAgentTypeId = Shader.PropertyToID("projectileAgentUnitType");
@@ -62,7 +62,7 @@ namespace MassEngine.Projectiles
 
         private void BindFx(MaterialPropertyBlock target, MassGpuBufferManager buffers)
         {
-            if (fxDummyTint == null) { fxDummyTint = new ComputeBuffer(1, 16); fxDummyTint.SetData(new Vector4[1]); }
+            if (fxDummyTint == null) { fxDummyTint = new ComputeBuffer(2, 16); fxDummyTint.SetData(new Vector4[2]); }
             if (fxDummyType == null) { fxDummyType = new ComputeBuffer(1, sizeof(int)); fxDummyType.SetData(new int[] { -1 }); }
             ComputeBuffer types = buffers != null ? buffers.unitTypeIndexBuffer : null;
             bool on = fxByType != null && types != null;
@@ -253,3 +253,4 @@ namespace MassEngine.Projectiles
         }
     }
 }
+

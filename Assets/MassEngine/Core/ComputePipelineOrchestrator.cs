@@ -41,6 +41,8 @@ namespace MassEngine
         /// Re-applied before every projectile dispatch because the compute shader asset is shared.
         /// </summary>
         public MassEngine.Projectiles.ProjectileImpactFx ImpactFx { get; set; }
+        /// <summary>炸飞 (2026-10-17, render only): per-agent knock latch; null keeps the legacy classify variant.</summary>
+        public AgentKnockFx AgentKnock { get; set; }
         // Opt-in melee charge table; null keeps SimulateCombatAndAccumulateDamage on its legacy variant.
         public MeleeChargeParams MeleeCharge { get; set; }
         /// <summary>Flight altitude per unit type (null = all ground); LOD classification culls flyers at render height.</summary>
@@ -264,6 +266,11 @@ namespace MassEngine
         /// </summary>
         private void DispatchLodClassification(PipelineFrameContext context)
         {
+            // 炸飞: the compute asset is shared with kernel tests, so the variant is switched on only around this loop.
+            if (AgentKnock != null && AgentKnock.IsValid && ImpactFx != null && ImpactFx.IsValid)
+                AgentKnock.Bind(shaders.LodClassificationShader, shaders.ClassifyVisibleAgentsForUnitType, ImpactFx);
+            else
+                AgentKnockFx.Unbind(shaders.LodClassificationShader);
             for (int unitTypeIndex = 0; unitTypeIndex < context.unitTypeCount; unitTypeIndex++)
             {
                 buffers.ResetAppendCounters(unitTypeIndex);
@@ -284,6 +291,7 @@ namespace MassEngine
                 Dispatch(shader, kernel, Mathf.Max(1, context.agentThreadGroupsX), "ClassifyVisibleAgentsForUnitType[" + unitTypeIndex + "]");
                 buffers.CopyVisibleCountsToArgs(unitTypeIndex);
             }
+            AgentKnockFx.Unbind(shaders.LodClassificationShader);
         }
 
         private void UploadFrameConstants(PipelineFrameContext context)
@@ -628,6 +636,7 @@ namespace MassEngine
         }
     }
 }
+
 
 
 

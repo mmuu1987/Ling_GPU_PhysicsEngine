@@ -643,6 +643,7 @@ namespace MassEngine
             if (projectileImpactFx != null)
                 projectileImpactFx.Dispose();
             projectileImpactFx = null;
+            ReleaseAgentKnock();
             if (meleeCharge != null)
                 meleeCharge.Dispose();
             meleeCharge = null;
@@ -751,10 +752,11 @@ namespace MassEngine
                     projectileManager.UnitTypeSplashRadii = unitTypeRegistry.FillProjectileSplashRadii(projectileSplashCache) ? projectileSplashCache : null;
                 }
                 SyncProjectileImpactFx();
+                SyncAgentKnock();
                 SyncMeleeCharge();
                 // Fireball look (2026-10-16): per-type tint table for the tracer/impact shaders, render only.
-                if (projectileFxCache == null || projectileFxCache.Length != gpuSettingsCache.Length)
-                    projectileFxCache = new Vector4[gpuSettingsCache.Length];
+                if (projectileFxCache == null || projectileFxCache.Length != gpuSettingsCache.Length * 2)
+                    projectileFxCache = new Vector4[gpuSettingsCache.Length * 2]; // tint + size per type
                 if (projectileRenderDispatcher != null)
                     projectileRenderDispatcher.SetProjectileFx(unitTypeRegistry.FillProjectileFx(projectileFxCache) ? projectileFxCache : null);
             }
@@ -1323,5 +1325,6 @@ namespace MassEngine
         }
     }
 }
+
 
 

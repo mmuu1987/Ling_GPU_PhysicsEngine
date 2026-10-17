@@ -41,6 +41,15 @@ namespace MassEngine
                  "Every other living enemy whose body circle overlaps this radius also takes the full projectile damage once. No friendly fire.")]
         [Min(0f)] public float projectileSplashRadius = 0f;
 
+        [Tooltip("炸飞 knock-fly (2026-10-17, render only): apex height in metres of bodies killed inside this unit's projectile splash. "+
+                 "0 = off (default; behaviour unchanged). Needs projectileSplashRadius > 0 and the impact effect ring. Bodies fly up to ~0.8 x this "+
+                 "away from the blast with one tumble and lie where they land; combat, positions and despawn timing are unchanged. Large bodies never fly.")]
+        [Min(0f)] public float knockFlyHeight = 0f;
+
+        [Tooltip("炸飞 range (2026-10-17, render only): only bodies killed within this many metres of the blast fly. " +
+                 "0 = the whole projectileSplashRadius (default). Larger than the splash radius has no effect.")]
+        [Min(0f)] public float knockFlyRadius = 0f;
+
         [Tooltip("Melee charge: the first melee hit after closing in at speed deals attackDamage x this. 1 = off (default; behaviour unchanged). " +
                  "Applies only when the attacker was not already attacking on its previous decision and its speed is at least chargeMinSpeedFraction x maxSpeed. Ranged units ignore it.")]
         [Min(1f)] public float chargeDamageMultiplier = 1f;
@@ -75,5 +84,13 @@ namespace MassEngine
         [Tooltip("Fireball look (2026-10-16), render only: alpha 0 = legacy look (default). Otherwise splash shots draw as a glowing " +
                  "fireball with a flickering flame tail and burst on impact (fire ball, shock ring, smoke), tinted with this colour.")]
         public Color projectileFxColor = new Color(0f, 0f, 0f, 0f);
+
+        [Tooltip("Fireball look size (2026-10-17), render only: scales the flying ball and the impact fire ball / smoke, which otherwise " +
+                 "follow the splash radius. 1 = unchanged (default). The ground shock ring and scorch keep showing the real damage area.")]
+        [Range(0.1f, 3f)] public float projectileFxScale = 1f;
+
+        [Tooltip("Fireball look density (2026-10-17), render only: opacity of the fireball, tail, impact fire, smoke and scorch. 1 = unchanged (default).")]
+        [Range(0.1f, 1f)] public float projectileFxDensity = 1f;
     }
 }
+

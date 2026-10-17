@@ -156,6 +156,29 @@ namespace MassEngine
         }
 
         /// <summary>
+        /// 炸飞 (2026-10-17, render only): per unit type x = knock-fly apex height, y = knock range (0 = whole splash);
+        /// only splash shooters count. Returns true only when at least one unit type knocks bodies flying.
+        /// </summary>
+        public bool FillKnockFlyHeights(Vector2[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            bool any = false;
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                float height = config != null && config.projectileSplashRadius > 0f ? config.knockFlyHeight : 0f;
+                height = float.IsNaN(height) || float.IsInfinity(height) ? 0f : Mathf.Clamp(height, 0f, 50f);
+                float range = config != null && !float.IsNaN(config.knockFlyRadius) ? Mathf.Clamp(config.knockFlyRadius, 0f, 1000f) : 0f;
+                target[i] = new Vector2(height, height > 0f ? range : 0f);
+                any |= height > 0f;
+            }
+
+            return any;
+        }
+
+        /// <summary>
         /// Melee charge parameters per unit type: x = damage multiplier (1 = off), y = minimum speed fraction.
         /// Returns true only when at least one unit type charges, so callers can keep the legacy kernel otherwise.
         /// </summary>
@@ -187,7 +210,9 @@ namespace MassEngine
         /// </summary>
         public bool FillProjectileFx(Vector4[] target)
         {
-            if (target == null || target.Length != registeredTypes.Count)
+            // Two entries per unit type (2026-10-17): [2i] = tint (rgb, a = 0.5 + 0.5 x density; 0 = legacy look),
+            // [2i + 1] = (size scale, 0, 0, 0).
+            if (target == null || target.Length != registeredTypes.Count * 2)
                 return false;
 
             bool any = false;
@@ -198,7 +223,10 @@ namespace MassEngine
                 Color color = config != null ? config.projectileFxColor : Color.clear;
                 bool on = color.a > 0f && !(float.IsNaN(color.r) || float.IsNaN(color.g) || float.IsNaN(color.b));
                 Color rgb = linear ? new Color(color.r, color.g, color.b, 1f).linear : color;
-                target[i] = on ? new Vector4(rgb.r, rgb.g, rgb.b, 1f) : Vector4.zero;
+                float density = config != null && !float.IsNaN(config.projectileFxDensity) ? Mathf.Clamp(config.projectileFxDensity, 0.1f, 1f) : 1f;
+                float scale = config != null && !float.IsNaN(config.projectileFxScale) ? Mathf.Clamp(config.projectileFxScale, 0.1f, 3f) : 1f;
+                target[i * 2] = on ? new Vector4(rgb.r, rgb.g, rgb.b, 0.5f + 0.5f * density) : Vector4.zero;
+                target[i * 2 + 1] = on ? new Vector4(scale, 0f, 0f, 0f) : Vector4.zero;
                 any |= on;
             }
 
@@ -368,3 +396,4 @@ namespace MassEngine
         }
     }
 }
+

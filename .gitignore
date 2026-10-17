@@ -185,3 +185,5 @@ sysinfo.txt
 /Assets/FourEvilDragonsHP/
 /Assets/FourEvilDragonsHP.meta
 /Assets/Game/Authoring/CharacterPipeline/Generated/FED_*
+# CC0 gunner/artillery bakes (2026-10-17): regenerate with Tools/机枪手炮车
+/Assets/Game/Authoring/CharacterPipeline/Generated/CC0_*

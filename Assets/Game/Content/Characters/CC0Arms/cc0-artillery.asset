@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: cc0-artillery
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u70AE\u8F66"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 0
+  spawnConfig: {fileID: 11400000, guid: 0f22da7ab580ccd4187c18351b865092, type: 2}
+  movementConfig: {fileID: 11400000, guid: c87d9377d4444b744b6d181994940022, type: 2}
+  flockingConfig: {fileID: 11400000, guid: c2d1290fab035394ab913f68f9d3b254, type: 2}
+  animationConfig: {fileID: 11400000, guid: 13de36115cbfd9542b2518d5e9532128, type: 2}
+  combatConfig: {fileID: 11400000, guid: cff5a0251a42e5141b0308035fef6b72, type: 2}
+  renderConfig: {fileID: 11400000, guid: 3f3c78454ac7fa34f9f8a2a3ed534ef7, type: 2}
