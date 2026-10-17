@@ -390,6 +390,7 @@ namespace MassEngine.Game
             if (plan == null || !PlanStore.TrySave(plan, overwrite, out error)) return Reject(error, out error);
             var state28 = PlanState28.For(controller);
             if (state28 != null && !state28.RecordStored(slot, out error)) return Reject("方案已写入，但读取核验失败：" + error, out error);
+            state28?.NoteLoaded(slot, displayName);
             Error = null; return true;
         }
 
@@ -403,7 +404,12 @@ namespace MassEngine.Game
             if (!WarSandboxLocalPlanStore.TryResolve(plan, entry, battlefieldCatalog, WorldSize, padding, out var candidate, out error))
                 return Reject(error, out error);
             bool loaded = TryReplaceDraft(candidate, out error);
-            if (loaded) PlanState28.For(controller)?.RecordStored(slot, out _);
+            if (loaded)
+            {
+                var state28 = PlanState28.For(controller);
+                state28?.RecordStored(slot, out _);
+                state28?.NoteLoaded(slot, plan.displayName); // 2026-10-17: deployment map shows which plan this is
+            }
             return loaded;
         }
 
@@ -522,6 +528,7 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
 

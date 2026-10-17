@@ -191,7 +191,7 @@ namespace MassEngine.Game
         // =====================================================================================================
         // Overview: header, tree, map, inspector, footer
         // =====================================================================================================
-        private Label dpTitle, dpStatus, dpMapNote, dpInspScope, dpInspName, dpInspCount, dpArmyText, dpFacingLabel, dpResizeValues;
+        private Label dpTitle, dpStatus, dpMapNote, dpMapPlan, dpInspScope, dpInspName, dpInspCount, dpArmyText, dpFacingLabel, dpResizeValues;
         private Button dpChallenge, dpArmyAdd, dpTight, dpPlace, dpUndo, dpRedo, dpFix, dpStart, dpTabUnit, dpTabPlace, dpFacingAuto, dpManual;
         private VisualElement dpInspEmpty, dpInspHead, dpInspArmy, dpInspForm, dpUnit, dpPlaceScroll, dpTightPresets, dpManualOn, dpManualOff, dpUnitPreviewHost;
         private ScrollView dpTreeList;
@@ -205,7 +205,7 @@ namespace MassEngine.Game
 
         private void BuildOverview(VisualElement r)
         {
-            dpTitle = r.Q<Label>("dp-title"); dpStatus = r.Q<Label>("dp-status"); dpMapNote = r.Q<Label>("dp-map-note");
+            dpTitle = r.Q<Label>("dp-title"); dpStatus = r.Q<Label>("dp-status"); dpMapNote = r.Q<Label>("dp-map-note"); dpMapPlan = r.Q<Label>("dp-map-plan");
             dpInspScope = r.Q<Label>("dp-insp-scope"); dpInspName = r.Q<Label>("dp-insp-name"); dpInspCount = r.Q<Label>("dp-insp-count");
             dpArmyText = r.Q<Label>("dp-army-text"); dpFacingLabel = r.Q<Label>("dp-facing-label"); dpResizeValues = r.Q<Label>("dp-resize-values");
             dpInspEmpty = r.Q("dp-insp-empty"); dpInspHead = r.Q("dp-insp-head"); dpInspArmy = r.Q("dp-insp-army"); dpInspForm = r.Q("dp-insp-form");
@@ -308,6 +308,8 @@ namespace MassEngine.Game
             UpdateMap();
             UpdateInspector();
             ShowStatus(dpStatus, dpFix);
+            var plan28 = PlanState28.For(deployment.controller); // 2026-10-17: which plan the draft came from
+            if (dpMapPlan != null) Tk.SetText(dpMapPlan, plan28 != null ? plan28.PlanCaption : "战前位置与阵型");
             dpUndo.SetEnabled(draft.CanUndo); dpRedo.SetEnabled(draft.CanRedo);
             dpStart.text = Check32 ? StartLabel32() : flow ? (HasPendingInputs() ? "更新并开战  →" : "开战  →") : "应用并开战  →";
         }
@@ -736,5 +738,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 

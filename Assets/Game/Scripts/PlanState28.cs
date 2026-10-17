@@ -9,6 +9,14 @@ namespace MassEngine.Game {
   void Awake(){if(deployment==null)deployment=GetComponent<WarSandboxRuntimeDeployment>();}
   public void Initialize(string value){if(initialized||string.IsNullOrEmpty(value))return;baseline=value;initialized=true;}
   public void MarkApplied(){Applied=true;}
+  // 2026-10-17: which local plan the draft came from (loaded or last saved), shown above the deployment map.
+  string loadedSlot,loadedName;
+  public void NoteLoaded(string slot,string name){loadedSlot=slot;loadedName=string.IsNullOrWhiteSpace(name)?slot:name.Trim();}
+  public string PlanCaption{get{
+    if(string.IsNullOrEmpty(loadedSlot))return "战前位置与阵型 · 未载入方案"+(CurrentStored?"":"（当前布阵未保存）");
+    string name=loadedName==loadedSlot?loadedName:loadedName+"（"+loadedSlot+"）";
+    bool same=saved.TryGetValue(loadedSlot,out var s)&&deployment!=null&&s.directory==deployment.PlanStore.DirectoryPath&&s.fingerprint==Current;
+    return "当前方案："+name+(same?"":" · 已修改，未另存");}}
   public static string Canonical(WarSandboxPlanFile plan){if(plan==null)return null;plan.planId="state28";plan.displayName="state28";return JsonUtility.ToJson(plan);}
   public string Current=>deployment!=null?deployment.PlanSignature28(true):null;
   public bool DraftChanged=>deployment!=null&&deployment.IsEditing&&Current!=deployment.PlanSignature28(false);
@@ -23,3 +31,4 @@ namespace MassEngine.Game {
   public static void RequestCatalog(WarSandboxSceneSession session){if(session==null)return;if(For(session.Controller)==null){session.TryReturnToMenu(false,out _);return;}var front=UnityEngine.Object.FindFirstObjectByType<WarSandboxFrontEnd>();if(front!=null)front.RequestReturn28();}
  }
 }
+
