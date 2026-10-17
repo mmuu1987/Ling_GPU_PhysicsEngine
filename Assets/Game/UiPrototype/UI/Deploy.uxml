@@ -45,7 +45,7 @@
                     <ui:VisualElement class="row">
                         <ui:Label text="总兵力" class="totals__k" />
                         <ui:VisualElement class="spacer" />
-                        <ui:Label name="dp-total" text="0 / 200,000" class="totals__v mono" />
+                        <ui:Label name="dp-total" text="0" class="totals__v mono" />
                     </ui:VisualElement>
                     <ui:VisualElement class="meter">
                         <ui:VisualElement name="dp-total-atk" class="meter__fill meter__fill--atk" />
@@ -205,3 +205,4 @@
         </tac:TacFrame>
     </ui:VisualElement>
 </ui:UXML>
+

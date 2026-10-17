@@ -151,7 +151,6 @@ namespace MassEngine.UiPrototype
     // =====================================================================================
     sealed class DeployScreen
     {
-        const int MaxTotal = 200000;
         readonly UiProtoBApp app;
         readonly TacDeployMap map;
         readonly ScrollView compList;
@@ -401,9 +400,11 @@ namespace MassEngine.UiPrototype
         {
             int a = 0, d = 0;
             foreach (var c in map.comps) if (c.side == 0) a += c.count; else d += c.count;
-            total.text = ProtoData.N(a + d) + " / " + ProtoData.N(MaxTotal);
-            totalAtk.style.width = Length.Percent(100f * a / MaxTotal);
-            totalDef.style.width = Length.Percent(100f * d / MaxTotal);
+            // 2026-10-17: no unit cap; the bar shows the attack / defence split of the current total.
+            total.text = ProtoData.N(a + d);
+            float sum = Mathf.Max(1f, (float)a + d);
+            totalAtk.style.width = Length.Percent(100f * a / sum);
+            totalDef.style.width = Length.Percent(100f * d / sum);
             totalAtkT.text = "攻方 " + ProtoData.N(a);
             totalDefT.text = "守方 " + ProtoData.N(d);
         }
@@ -524,8 +525,6 @@ namespace MassEngine.UiPrototype
             s = (s ?? "").Replace(",", "").Replace("，", "").Trim();
             if (!int.TryParse(s, out int n)) { CountError("请输入整数"); return; }
             if (n < 1) { CountError("至少 1 人"); return; }
-            int others = Total - c.count;
-            if (others + n > MaxTotal) { CountError($"总兵力上限 200,000（其余编成已用 {ProtoData.N(others)}）"); return; }
             fCount.RemoveFromClassList("tfield--error");
             countHint.RemoveFromClassList("field__hint--error");
             countHint.text = "回车确认";
@@ -1029,3 +1028,4 @@ namespace MassEngine.UiPrototype
         }
     }
 }
+

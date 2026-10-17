@@ -361,6 +361,8 @@ namespace MassEngine.Game
             if (!awaitingMoveTarget && string.IsNullOrEmpty(controller.CommandError) && controller.SelectedArmy != null && !controller.CanCommandTeam(controller.selectedTeam))
                 feedback = "挑战模式 · 这是电脑指挥的军团，只能查看\n点军团卡切回你指挥的" + WarSandboxBattleController.DefaultArmyName(controller.ChallengeTeam);
             feedback = FeedbackText26(FeedbackText25(feedback));
+            string lag = LagHint(); // lowest priority: only when nothing else is shown
+            if (string.IsNullOrEmpty(feedback)) feedback = lag;
             bool show = !string.IsNullOrEmpty(feedback);
             Tk.Show(tkFeedback, show);
             if (!show) return;
@@ -689,5 +691,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
