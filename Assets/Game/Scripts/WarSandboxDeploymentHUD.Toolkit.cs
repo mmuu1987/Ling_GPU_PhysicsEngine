@@ -27,6 +27,9 @@ namespace MassEngine.Game
 
         // ----- shared with Translation.cs / Resize.cs -----
         private bool TkMapActive => Tk.Enabled && dpMap != null;
+        /// <summary>2026-10-17: the deployment page is open and has been laid out (so it was drawn at least once).</summary>
+        internal bool DeployPageDrawn => deployment != null && deployment.IsEditing &&
+            (!Tk.Enabled || (dpRoot != null && dpRoot.panel != null && dpRoot.resolvedStyle.display == DisplayStyle.Flex && dpRoot.layout.width > 1f));
         private bool MapLayoutAvailable => Tk.Enabled ? dpRoot != null && dpRoot.panel != null : runtimeUi != null;
         private Vector2 MapLayoutSize => Tk.Enabled ? (dpRoot != null ? dpRoot.layout.size : Vector2.zero) : runtimeUi != null ? new Vector2(runtimeUi.Width, runtimeUi.Height) : Vector2.zero;
         private float MapUiScale => Tk.Enabled ? Tk.Scale : runtimeUi != null ? runtimeUi.Scale : 1f;
@@ -738,6 +741,7 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
 

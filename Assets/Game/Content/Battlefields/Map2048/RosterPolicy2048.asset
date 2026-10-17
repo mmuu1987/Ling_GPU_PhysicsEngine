@@ -61,5 +61,5 @@ MonoBehaviour:
   maximumRadius: 11.800001
   useTemplateSpawnDefaults: 0
   restrictLargeToTeamZero: 0
-  maximumLargeUnits: 2000
+  maximumLargeUnits: 5000
   explanation: "2048\xD72048 \u6218\u573A\uFF1A1024 \u89D2\u8272\u5E93 + \u5DE8\u517D\u7EA7\uFF08\u5DE8\u517D\u66B4\u9F99\u3001\u56DB\u9F99\uFF09\u3002\u4EBA\u6570\u4E0A\u9650\u4E0D\u662F\u6027\u80FD\u4FDD\u8BC1\u3002"
