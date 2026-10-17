@@ -439,7 +439,7 @@ MonoBehaviour:
     hiddenFromSelection: 0
     selectionNote: 
     unitPreview: {fileID: 2800000, guid: d3f8afa369704ef48a55e3d32bbf9239, type: 3}
-    priceScale: 3.25
+    priceScale: 6.5
   - templateId: roster-skeleton-warrior
     revision: 1
     config: {fileID: 11400000, guid: 04dcb367ac4b2644982d42e389947de7, type: 2}
@@ -537,7 +537,7 @@ MonoBehaviour:
     hiddenFromSelection: 0
     selectionNote: 
     unitPreview: {fileID: 2800000, guid: e92d1c4d71762c34c8a731d9dc6e79d1, type: 3}
-    priceScale: 0.594
+    priceScale: 0.4192
   - templateId: roster-stegosaurus
     revision: 1
     config: {fileID: 11400000, guid: 1b5fb98e6fdb92c4493ce5ef27497dce, type: 2}
