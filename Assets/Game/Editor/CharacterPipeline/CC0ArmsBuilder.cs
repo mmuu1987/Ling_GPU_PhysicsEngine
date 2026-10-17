@@ -119,6 +119,7 @@ namespace MassEngine.Game.EditorTools
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            Log.AppendLine(UnitPortraitBackfill.Run(null, false)); // 2026-10-17: picker portraits for new builds
         });
 
         [MenuItem("Tools/机枪手炮车/只刷新数值（不重新烘焙）")]
@@ -811,3 +812,4 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+

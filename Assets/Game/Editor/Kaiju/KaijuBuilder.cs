@@ -347,6 +347,7 @@ namespace MassEngine.Game.EditorTools
                 if (id == SrcTemplateId) source = i;
             }
             if (source < 0) throw new InvalidOperationException("source template missing in catalog");
+            bool added = existing < 0;
             if (existing < 0)
             {
                 templates.InsertArrayElementAtIndex(source); // duplicates the source entry at source+1
@@ -360,7 +361,9 @@ namespace MassEngine.Game.EditorTools
             e.FindPropertyRelative("config").objectReferenceValue = config;
             e.FindPropertyRelative("hiddenFromSelection").boolValue = false;
             e.FindPropertyRelative("selectionNote").stringValue = "";
-            e.FindPropertyRelative("unitPreview").objectReferenceValue = copyPreview ? s.FindPropertyRelative("unitPreview").objectReferenceValue : null;
+            // 2026-10-17: a refresh / rebake of an existing entry keeps its portrait (same model); only a new entry is set here.
+            if (copyPreview) e.FindPropertyRelative("unitPreview").objectReferenceValue = s.FindPropertyRelative("unitPreview").objectReferenceValue;
+            else if (added) e.FindPropertyRelative("unitPreview").objectReferenceValue = null;
             e.FindPropertyRelative("priceScale").floatValue = PriceScale;
 
             var entries = so.FindProperty("entries");
@@ -383,4 +386,5 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+
 

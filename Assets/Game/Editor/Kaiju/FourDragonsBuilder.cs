@@ -86,6 +86,7 @@ namespace MassEngine.Game.EditorTools
                 }
                 EnsureImpactFx();
                 AssetDatabase.SaveAssets();
+                Log.AppendLine(UnitPortraitBackfill.Run(null, false)); // RegisterTemplate clears unitPreview: restore / capture the picker portraits
                 Log.AppendLine("DONE");
             }
             catch (Exception e)
@@ -146,6 +147,7 @@ namespace MassEngine.Game.EditorTools
                 }
                 EnsureImpactFx();
                 AssetDatabase.SaveAssets();
+                Log.AppendLine(UnitPortraitBackfill.Run(null, false)); // RegisterTemplate clears unitPreview: restore / capture the picker portraits
                 AssetDatabase.Refresh();
                 Log.AppendLine("DONE");
             }
@@ -230,7 +232,9 @@ namespace MassEngine.Game.EditorTools
             recipe.groundBindFeet = true;
             recipe.agentRadius = d.radius;
             recipe.lowPolicy = CharacterLowLodPolicy.StandardClustering;
-            recipe.lowVertexBudget = 500;
+            // 2026-10-17: 500 crumpled the 25-35 m wings at mid distance (playtest). 2000 = the first dragon's budget
+            // (DragonBuilder); still 10x below the full mesh, and these are 5-20 units per side.
+            recipe.lowVertexBudget = 2000;
             recipe.fullVertexBudget = 20000;
             recipe.maxTextureMiB = 64;
             // Half VAT rounding grows with coordinate size: these 15-18 m bodies flap 25-35 m wingspans, measured 2.5-3.4 cm.
@@ -600,3 +604,4 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+

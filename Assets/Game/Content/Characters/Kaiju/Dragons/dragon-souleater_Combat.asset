@@ -27,8 +27,16 @@ MonoBehaviour:
   projectileMaxLifetime: 8
   projectileTrailLength: 6
   projectileSplashRadius: 5
+  knockFlyHeight: 0
+  knockFlyRadius: 0
   chargeDamageMultiplier: 1
   chargeMinSpeedFraction: 0.6
   meleeSplashRadius: 0
+  trampleDamageMultiplier: 0
+  trampleSpeedLoss: 0.0025
+  trampleMinSpeedFraction: 0.45
+  trampleDamageTaken: 1
   flightAltitude: 20
   projectileFxColor: {r: 0.6, g: 0.2, b: 1, a: 1}
+  projectileFxScale: 1
+  projectileFxDensity: 1

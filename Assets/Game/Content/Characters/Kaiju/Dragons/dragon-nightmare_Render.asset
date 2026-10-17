@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: dragon-nightmare_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: 8cece8bfe8ed2ff4393172d9af44c83a, type: 2}
-  nearMesh: {fileID: -6243660470106695913, guid: 80ad2168997603b4caac76a22f85c5bf, type: 2}
-  midMesh: {fileID: 4665646681315439149, guid: 8cece8bfe8ed2ff4393172d9af44c83a, type: 2}
-  farMesh: {fileID: 4665646681315439149, guid: 8cece8bfe8ed2ff4393172d9af44c83a, type: 2}
+  vatProfile: {fileID: 11400000, guid: b7eba384b48b9bf47aceddd4a3847204, type: 2}
+  nearMesh: {fileID: -4878747092739440192, guid: 4ec0973ae50792042b9e6c199f0d8a00, type: 2}
+  midMesh: {fileID: -9077254199841006701, guid: b7eba384b48b9bf47aceddd4a3847204, type: 2}
+  farMesh: {fileID: -9077254199841006701, guid: b7eba384b48b9bf47aceddd4a3847204, type: 2}
   nearMaterial: {fileID: 2100000, guid: 577ca91c51f28b64eb3ab250fcc8ffa4, type: 2}
   midMaterial: {fileID: 2100000, guid: 223af71d50f317b46bd3e0e5db041835, type: 2}
   farMaterial: {fileID: 2100000, guid: 223af71d50f317b46bd3e0e5db041835, type: 2}

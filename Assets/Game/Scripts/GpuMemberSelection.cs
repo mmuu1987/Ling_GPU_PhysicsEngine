@@ -48,10 +48,22 @@ namespace MassEngine.Game
         public bool Request(MemberSelectionProjection captured)
         {
             if(faulted||!IsCurrent){Invalidate("Battle generation changed or selection unavailable");return false;}
-            projection=captured;whole=false;State.Begin();queued=true;return true;
+            projection=captured;whole=false;explicitPending=false;State.Begin();queued=true;return true;
         }
+        /// <summary>2026-10-17 minimap composition badge: select exactly these stable agent slots (the GPU still drops the
+        /// dead and other teams on its refresh pass). Same ticket / readback path as a box selection.</summary>
+        public bool RequestMembers(int team,int start,int count)
+        {
+            if(faulted||!IsCurrent){Invalidate("Battle generation changed or selection unavailable");return false;}
+            int n=buffers.AgentCount;if(start<0||count<=0||start>=n)return false;count=Math.Min(count,n-start);
+            if(State.Team!=team)State.Clear(team);
+            if(explicitMask==null||explicitMask.Length!=n)explicitMask=new uint[n];else Array.Clear(explicitMask,0,n);
+            for(int i=0;i<count;i++)explicitMask[start+i]=1;
+            mask.SetData(explicitMask);whole=false;explicitPending=true;State.Begin();queued=true;return true;
+        }
+        private uint[] explicitMask;private bool explicitPending;
         public void Clear(int team)
-        {if(disposed)return;State.Clear(team);whole=true;queued=true;}
+        {if(disposed)return;State.Clear(team);whole=true;explicitPending=false;queued=true;}
         public void Invalidate(string reason)
         {if(!disposed){State.Invalidate(reason);queued=false;}}
         public void Tick()
@@ -78,7 +90,7 @@ namespace MassEngine.Game
                     else if(Time.realtimeSinceStartupAsDouble-readbackStarted>10)throw new TimeoutException("Selection GPU confirmation timed out");
                 }
                 if(!inFlight&&State.Scope!=MemberSelectionScope.Unavailable&&(queued||Time.realtimeSinceStartupAsDouble>=nextRefresh))
-                {bool replace=queued;queued=false;Dispatch(replace);nextRefresh=Time.realtimeSinceStartupAsDouble+.25;}
+                {bool replace=queued&&!explicitPending;queued=false;explicitPending=false;Dispatch(replace);nextRefresh=Time.realtimeSinceStartupAsDouble+.25;}
             }
             catch(Exception ex){faulted=true;State.Invalidate(ex.Message);queued=false;/* Do not reuse an in-flight resource after a GPU failure. Explicit close/reopen required. */}
         }
@@ -119,4 +131,5 @@ namespace MassEngine.Game
         private static void Destroy(UnityEngine.Object o){if(o==null)return;if(Application.isPlaying)UnityEngine.Object.Destroy(o);else UnityEngine.Object.DestroyImmediate(o);}
     }
 }
+
 
