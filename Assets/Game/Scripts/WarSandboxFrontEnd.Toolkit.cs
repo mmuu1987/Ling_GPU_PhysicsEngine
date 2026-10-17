@@ -34,6 +34,19 @@ namespace MassEngine.Game
         private List<WarSandboxUnitTemplateEntry> tkChoices = new List<WarSandboxUnitTemplateEntry>();
 
         /// <summary>True while the new UI draws the current screen (the switch is on and the page is a migrated one).</summary>
+        // 2026-10-17 (playtest): entering a map flashed the bare 3D scene for a few frames before the deployment page
+        // appeared. The loading card now stays up until the deployment page has been laid out and drawn once (5 s cap).
+        private bool deployCover; private float deployCoverSince = -1f;
+        private bool UpdateDeployCover(WarSandboxEntryState state)
+        {
+            if (state == WarSandboxEntryState.Loading) { deployCover = openDeploymentOnEnter; deployCoverSince = -1f; return false; }
+            if (!deployCover) return false;
+            if (state != WarSandboxEntryState.Battle) { deployCover = false; return false; }
+            if (deployCoverSince < 0f) deployCoverSince = Time.realtimeSinceStartup;
+            var hud = session.Controller != null ? session.Controller.GetComponent<WarSandboxDeploymentHUD>() : null;
+            if ((hud != null && hud.DeployPageDrawn) || Time.realtimeSinceStartup - deployCoverSince > 5f) deployCover = false;
+            return deployCover;
+        }
         private bool ToolkitOwnsScreen() => Tk.Enabled; // phase 4: settings, help, unit library and unit zoom are migrated too
 
         private void HideToolkit()
@@ -118,16 +131,17 @@ namespace MassEngine.Game
             Tk.Show(tkRoot, true);
             var state = session.State;
             bool battle = state == WarSandboxEntryState.Battle, confirm = session.ConfirmationOpen;
+            bool cover = UpdateDeployCover(state);
             bool guide = Guide30.For(session) != null;
-            Tk.Show(tkMenu, !battle);
+            Tk.Show(tkMenu, !battle || cover);
             bool library = state == WarSandboxEntryState.Menu && libraryOpen; // the library page (Pages.uxml) replaces home/catalog
             Tk.Show(tkHome, state == WarSandboxEntryState.Menu && homeOpen && !library);
             Tk.Show(tkCatalog, state == WarSandboxEntryState.Menu && !homeOpen && !library);
             Tk.Show(tkTopbar, state == WarSandboxEntryState.Menu && !homeOpen && !library);
             UpdateMenuPlans(state == WarSandboxEntryState.Menu && !homeOpen && !library);
-            Tk.Show(tkLoading, state == WarSandboxEntryState.Loading);
+            Tk.Show(tkLoading, state == WarSandboxEntryState.Loading || cover);
             Tk.Show(tkFailure, state == WarSandboxEntryState.Failed);
-            Tk.Show(tkNav, battle && !confirm && !session.SettingsOpen && !session.HelpOpen && !BattleHudOwnsSystemMenu && !DeployHudOwnsSystemMenu); // compact battle HUD carries the strip in its menu
+            Tk.Show(tkNav, battle && !cover && !confirm && !session.SettingsOpen && !session.HelpOpen && !BattleHudOwnsSystemMenu && !DeployHudOwnsSystemMenu); // compact battle HUD carries the strip in its menu
             Tk.Show(tkConfirm, confirm);
             Tk.Show(tkHomeHelp, guide); Tk.Show(tkTopHelp, guide); Tk.Show(tkNavHelp, guide);
 
@@ -345,4 +359,5 @@ namespace MassEngine.Game
         }
     }
 }
+
 

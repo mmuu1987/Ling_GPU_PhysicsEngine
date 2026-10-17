@@ -48,7 +48,14 @@ namespace MassEngine.Game
             float limit = BodyDensityLimit(template.flockingConfig.agentRadius);
             float effective = Mathf.Clamp(density, AutoDensityFloor, SpawnConfig.PackingLimitPerSquareMeter);
             if (effective <= limit) return; // also false for NaN density, which falls through and is replaced
-            if (limit >= AutoDensityFloor) { density = limit; return; }
+            // 2026-10-17: after the radius halving most large bodies (knight 1.65 m) land here; the thinned density
+            // ignores row/column rounding and jitter, so the real lattice can still fall under 2r. Fall back to an
+            // explicit footprint grown to the lattice instead of leaving a block that validation rejects.
+            if (limit >= AutoDensityFloor)
+            {
+                density = limit;
+                if (template.spawnConfig == null || WarSandboxDeploymentResize.Fits(this, template.flockingConfig.agentRadius, template.spawnConfig.formationJitterFraction, out _)) return;
+            }
             float shape = Mathf.Clamp(float.IsNaN(aspect) ? 1f : aspect, .1f, 10f);
             float depth = Mathf.Sqrt(Mathf.Max(1, count) / limit / shape); // X, as SpawnConfig.ResolveSpawnSize
             manualSize = new Vector3(depth, 0f, depth * shape);
@@ -463,6 +470,7 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
 
