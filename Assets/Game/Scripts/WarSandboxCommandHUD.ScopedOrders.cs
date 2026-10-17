@@ -130,7 +130,25 @@ namespace MassEngine.Game
             }
             if(!memberSelection.RequestMembers(team,density.GroupStart(group),density.GroupSize(group))){SetFeedback("这个编成已经没有可指挥的部队");return;}
             minimapGroup=group;minimapGroupRequest=memberSelection.State.Request;minimapGroupSelection=memberSelection;
+            FocusMinimapComposition(density,group,team);
             SetFeedback(FormatTeamName(team)+" · 编成 "+density.GroupOrdinal(group)+" 已选中\n右键地面或小地图下令；Esc 取消选择");
+        }
+        /// <summary>
+        /// 2026-10-17 (playtest): clicking a composition badge also flies the camera to frame the whole composition (live extent
+        /// from the minimap readback), standing behind it toward the nearest enemy like the army focus. One-shot: army follow is
+        /// switched off so it does not drag the view away; manual camera input interrupts the flight as usual.
+        /// </summary>
+        private void FocusMinimapComposition(GpuMinimapDensity density,int group,int team)
+        {
+            ResolveReferences();
+            if(cameraManager==null||!density.TryGetGroupExtent(group,out Vector3 min,out Vector3 max))return;
+            float y=0f,height=20f;
+            if(TryResolveLiveArmyBounds(team,out Bounds army)&&float.IsFinite(army.center.y)){y=army.center.y;height=Mathf.Clamp(army.size.y,4f,60f);}
+            var bounds=new Bounds(new Vector3((min.x+max.x)*.5f,y,(min.z+max.z)*.5f),
+                new Vector3(Mathf.Max(max.x-min.x,20f),height,Mathf.Max(max.z-min.z,20f)));
+            cameraFocusMode=CameraFocusMode.None;
+            Vector3? toward=TryResolveNearestEnemyCenter(team,bounds.center,out Vector3 enemy)?enemy:(Vector3?)null;
+            cameraManager.FocusTacticalBounds(ExpandLiveBounds(bounds),toward);
         }
         /// <summary>2026-10-17: players see plain Chinese, never engine diagnostics (those stay in the log).</summary>
         private static string PlainOrderErrorP8(string error)
@@ -187,4 +205,5 @@ namespace MassEngine.Game
 #endif
     }
 }
+
 

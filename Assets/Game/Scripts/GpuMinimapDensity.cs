@@ -31,6 +31,8 @@ namespace MassEngine.Game
         private double nextDispatch, started;
         private uint[] counts = Array.Empty<uint>();
         // 2026-10-17 composition badges: one group per registered unit type (= one 编成), agents contiguous per type.
+        // Per group: [alive, sum u*4096, sum v*4096, min u, min v, max u, max v] (extent quantised to 0..65535).
+        private const int GroupStride = 7;
         private ComputeBuffer groupBuffer;
         private AsyncGPUReadbackRequest groupRequest;
         private bool groupDone;
@@ -87,7 +89,7 @@ namespace MassEngine.Game
                 groupTeam[g] = t.TeamId; groupStart[g] = t.BufferOffset; groupCount[g] = t.UnitCount;
                 perTeam.TryGetValue(t.TeamId, out int k); perTeam[t.TeamId] = ++k; groupOrdinal[g] = k;
             }
-            groupBuffer = new ComputeBuffer(Mathf.Max(1, n) * 3, 4);
+            groupBuffer = new ComputeBuffer(Mathf.Max(1, n) * GroupStride, 4);
             groupAnchors = new Vector2[n]; groupAlive = new int[n];
         }
 
@@ -102,8 +104,8 @@ namespace MassEngine.Game
                     if (!groupDone && groupRequest.done)
                     {
                         if (groupRequest.hasError) throw new InvalidOperationException("Minimap group readback failed");
-                        if (flightGroupData.Length != GroupCount * 3) flightGroupData = new uint[GroupCount * 3];
-                        if (GroupCount > 0) groupRequest.GetData<uint>().GetSubArray(0, GroupCount * 3).CopyTo(flightGroupData);
+                        if (flightGroupData.Length != GroupCount * GroupStride) flightGroupData = new uint[GroupCount * GroupStride];
+                        if (GroupCount > 0) groupRequest.GetData<uint>().GetSubArray(0, GroupCount * GroupStride).CopyTo(flightGroupData);
                         groupDone = true;
                     }
                     if (request.done && groupDone)
@@ -244,9 +246,10 @@ namespace MassEngine.Game
             for (int g = 0; g < GroupCount; g++)
             {
                 groupAlive[g] = 0;
-                if (groupData.Length < (g + 1) * 3) continue;
-                uint alive = groupData[g * 3]; if (alive == 0) continue;
-                float cx = groupData[g * 3 + 1] / 4096f / alive * R, cz = groupData[g * 3 + 2] / 4096f / alive * R;
+                if (groupData.Length < (g + 1) * GroupStride) continue;
+                int o = g * GroupStride;
+                uint alive = groupData[o]; if (alive == 0) continue;
+                float cx = groupData[o + 1] / 4096f / alive * R, cz = groupData[o + 2] / 4096f / alive * R;
                 int team = groupTeam[g], best = -1; float bestDistance = float.MaxValue;
                 int x0 = Mathf.Clamp((int)cx, 0, R - 1), z0 = Mathf.Clamp((int)cz, 0, R - 1);
                 // Search outward in a window first (cheap); the whole grid only if the window has no owned cell.
@@ -276,6 +279,22 @@ namespace MassEngine.Game
             return true;
         }
 
+        /// <summary>
+        /// 2026-10-17: world-space extent (x, z) of a composition's living members from the last readback (camera framing on
+        /// badge click). False if none alive or no data yet. y is left at 0.
+        /// </summary>
+        public bool TryGetGroupExtent(int g, out Vector3 min, out Vector3 max)
+        {
+            min = max = default;
+            if (g < 0 || g >= GroupCount || WorldSize.x <= 0 || groupData.Length < (g + 1) * GroupStride) return false;
+            int o = g * GroupStride;
+            if (groupData[o] == 0 || groupData[o + 3] > groupData[o + 5] || groupData[o + 4] > groupData[o + 6]) return false;
+            const float Q = 1f / 65535f;
+            min = new Vector3((groupData[o + 3] * Q - .5f) * WorldSize.x, 0f, (groupData[o + 4] * Q - .5f) * WorldSize.y);
+            max = new Vector3((groupData[o + 5] * Q - .5f) * WorldSize.x, 0f, (groupData[o + 6] * Q - .5f) * WorldSize.y);
+            return true;
+        }
+
         /// <summary>Army anchor in world space (x, z), or false if the army has no living members on the grid.</summary>
         public bool TryGetAnchor(int team, out Vector3 world)
         {
@@ -301,4 +320,5 @@ namespace MassEngine.Game
         }
     }
 }
+
 

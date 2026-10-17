@@ -7,7 +7,8 @@
 StructuredBuffer<AgentData> _Agents;
 StructuredBuffer<int> _TeamIds, _Hp, _Types;
 RWStructuredBuffer<uint> _Cells; // [team * Res * Res + z * Res + x]
-// 2026-10-17 composition badges: per registered unit type (= one 编成) [alive, sum u * 4096, sum v * 4096].
+// 2026-10-17 composition badges: per registered unit type (= one 编成) [alive, sum u * 4096, sum v * 4096,
+// min u, min v, max u, max v] (extent quantised to 0..65535, for camera framing on badge click).
 RWStructuredBuffer<uint> _Groups;
 int _Count, _Res, _TeamCount, _GroupCount;
 float4 _World; // xy = world min (x, z), zw = 1 / world size
@@ -16,7 +17,11 @@ float4 _World; // xy = world min (x, z), zw = 1 / world size
 void ClearCells(uint3 id : SV_DispatchThreadID)
 {
     if (id.x < (uint)(_Res * _Res * _TeamCount)) _Cells[id.x] = 0;
-    if (id.x < (uint)(_GroupCount * 3)) _Groups[id.x] = 0;
+    if (id.x < (uint)(_GroupCount * 7))
+    {
+        uint slot = id.x % 7u;
+        _Groups[id.x] = (slot == 3u || slot == 4u) ? 0xFFFFFFFFu : 0u;
+    }
 }
 
 [numthreads(64, 1, 1)]
@@ -34,9 +39,16 @@ void SplatAgents(uint3 id : SV_DispatchThreadID)
     int g = _Types[i];
     if (g >= 0 && g < _GroupCount)
     {
-        InterlockedAdd(_Groups[g * 3], 1u);
-        InterlockedAdd(_Groups[g * 3 + 1], (uint)(uv.x * 4096.0));
-        InterlockedAdd(_Groups[g * 3 + 2], (uint)(uv.y * 4096.0));
+        uint o = (uint)g * 7u;
+        InterlockedAdd(_Groups[o], 1u);
+        InterlockedAdd(_Groups[o + 1], (uint)(uv.x * 4096.0));
+        InterlockedAdd(_Groups[o + 2], (uint)(uv.y * 4096.0));
+        uint2 q = (uint2)(uv * 65535.0);
+        InterlockedMin(_Groups[o + 3], q.x);
+        InterlockedMin(_Groups[o + 4], q.y);
+        InterlockedMax(_Groups[o + 5], q.x);
+        InterlockedMax(_Groups[o + 6], q.y);
     }
 }
+
 
