@@ -66,7 +66,7 @@ namespace MassEngine.Game.EditorTools
         static readonly Spec Artillery = new Spec
         {
             key = "artillery", title = "炮车", templateUnit = TriceratopsUnit, sourceTemplateId = "roster-triceratops", templateId = "roster-cc0-artillery",
-            priceScale = .0785f, hp = 600, damage = 120, interval = 6f, range = 700f, splash = 12f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
+            priceScale = .594f, hp = 600, damage = 120, interval = 6f, range = 700f, splash = 6f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
             projectileSpeed = 300f, gravity = 0f, lifetime = 4f, trail = 4f, hitRadius = 1f, releasePhase = TankReleasePhase, originHeight = 0f, fx = new Color(1f, .55f, .15f, 1f)
         };
 
@@ -253,14 +253,14 @@ namespace MassEngine.Game.EditorTools
             c.projectileSplashRadius = s.splash;
             // 炸飞 (2026-10-17, user approved 甲, render only): bodies killed by a shell fly up to 7 m.
             c.knockFlyHeight = s.splash > 0f ? 7f : 0f;
-            // 2026-10-17: only bodies within half the splash fly (user: 炸飞范围再小一半).
-            c.knockFlyRadius = s.splash > 0f ? s.splash * 0.5f : 0f;
+            // 2026-10-17: knock range 6 m (user: 炸飞范围再小一半); plan A then cut the splash itself to 6 m, so the whole splash flies.
+            c.knockFlyRadius = 0f;
             c.attackReleasePhase = s.releasePhase;
             c.projectileOriginHeight = s.originHeight > 0 ? s.originHeight : height * .85f;
             c.projectileTargetHeight = height * .5f;
             c.projectileFxColor = s.fx;
             // 2026-10-17 (user approved 甲): the shell look is the dragon fireball sized by the 12 m splash - shrink it and thin it out.
-            c.projectileFxScale = s.splash > 0f ? 0.3f : 1f;
+            c.projectileFxScale = s.splash > 0f ? 0.6f : 1f; // 6 m splash x 0.6 = the same look as 12 m x 0.3
             c.projectileFxDensity = s.splash > 0f ? 0.55f : 1f;
             c.meleeSplashRadius = 0f; c.chargeDamageMultiplier = 1f; c.trampleDamageMultiplier = 0f; c.flightAltitude = 0f;
             u.flockingConfig.agentRadius = s.radius;
