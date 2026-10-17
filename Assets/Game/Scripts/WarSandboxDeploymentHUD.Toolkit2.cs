@@ -438,7 +438,7 @@ namespace MassEngine.Game
             {
                 bool save = pendingPlanAction == "save";
                 Tk.SetText(plConfirmTitle, (save ? "覆盖方案 " : "载入方案 ") + pendingPlanSlot + "？");
-                Tk.SetText(plConfirmNote, save ? "旧文件将被替换。写入失败时会保留旧方案。" : "当前输入将被替换，已更新的布阵可撤销恢复。");
+                Tk.SetText(plConfirmNote, save ? "旧文件将被替换。写入失败时会保留旧方案。" : PlanLoadNote());
                 plConfirmYes.text = save ? "确认覆盖" : "确认载入";
             }
             else
@@ -483,3 +483,4 @@ namespace MassEngine.Game
         }
     }
 }
+

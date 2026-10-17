@@ -26,8 +26,10 @@ namespace MassEngine.Game
             for (int i = 0; i < planSlots.Length; i++)
             {
                 if (deployment.PlanStore.TryLoad(planSlots[i], out var plan, out _))
-                    planLabels[i] = planSlots[i] + "  /  " + plan.displayName + "  /  " + plan.battlefieldId +
-                        (plan.statOverrides != null && plan.statOverrides.Length > 0 ? "  /  含兵种数值" : "");
+                    // The UI hides the last "  /  " segment, so the map name stays visible and the id is last.
+                    planLabels[i] = planSlots[i] + "  /  " + plan.displayName + "  /  " + MapName(plan.battlefieldId) +
+                        (IsCurrentMap(plan.battlefieldId) ? "" : "（载入时切换地图）") +
+                        (plan.statOverrides != null && plan.statOverrides.Length > 0 ? "  /  含兵种数值" : "") + "  /  " + plan.battlefieldId;
                 else planLabels[i] = planSlots[i] + "  /  文件损坏或版本不支持";
             }
             if (Array.IndexOf(planSlots, selectedPlanSlot) < 0) selectedPlanSlot = null;
@@ -50,7 +52,7 @@ namespace MassEngine.Game
                 GUILayout.Space(20);
                 bool overwrite = pendingPlanAction == "save";
                 GUILayout.Label((overwrite ? "覆盖方案 " : "载入方案 ") + pendingPlanSlot + "？", heading);
-                GUILayout.Label(overwrite ? "旧文件将被替换。" : "当前输入将被替换，已更新的布阵可撤销恢复。", label);
+                GUILayout.Label(overwrite ? "旧文件将被替换。" : PlanLoadNote(), label);
                 GUILayout.Space(16);
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(overwrite ? "确认覆盖" : "确认载入", button, GUILayout.Height(36))) ExecutePlanAction();
@@ -106,11 +108,101 @@ namespace MassEngine.Game
         {
             string action = pendingPlanAction; pendingPlanAction = null;
             if (action == "save") SavePlan(pendingPlanSlot, pendingPlanName, true);
+            else if (PlanNeedsSwitch(pendingPlanSlot, out var foreign))
+            {
+                if (!TrySwitchForPlan(pendingPlanSlot, foreign, out var switchError)) { planMessage = switchError; planActionFailed28 = true; }
+            }
             else if (deployment.TryLoadPlan(pendingPlanSlot, out var error))
             {
                 selected = 0; plansOpen = false; ReadFields();
             }
             else { planMessage = error; planActionFailed28 = true; }
+            clearFocusRequested = true;
+        }
+
+        // 2026-10-17: a plan belongs to its battlefield ("以方案为准"). Loading a plan saved on another battlefield
+        // switches to that battlefield first and loads the plan once the new scene is ready. A missing or changed
+        // battlefield (version / terrain) is reported up front and nothing is switched.
+        private static string resumePlanSlot, resumePlanDirectory;
+        private static float resumePlanDeadline;
+        private string noteSlot, noteText;
+
+        private static WarSandboxBattlefieldEntry FindMap(string id)
+        {
+            var entries = WarSandboxSceneSession.Instance != null && WarSandboxSceneSession.Instance.catalog != null
+                ? WarSandboxSceneSession.Instance.catalog.entries : null;
+            if (entries != null) foreach (var e in entries) if (e != null && e.id == id) return e;
+            return null;
+        }
+
+        private static string MapName(string id)
+        {
+            var e = FindMap(id);
+            return e != null && !string.IsNullOrEmpty(e.displayName) ? e.displayName : id;
+        }
+
+        private static bool IsCurrentMap(string id)
+        {
+            var session = WarSandboxSceneSession.Instance;
+            return session == null || string.IsNullOrEmpty(session.CurrentEntryId) || session.CurrentEntryId == id;
+        }
+
+        private bool PlanNeedsSwitch(string slot, out WarSandboxPlanFile plan)
+        {
+            plan = null;
+            return deployment != null && !string.IsNullOrEmpty(slot) && deployment.PlanStore.TryLoad(slot, out plan, out _) &&
+                plan != null && !IsCurrentMap(plan.battlefieldId);
+        }
+
+        private string PlanLoadNote()
+        {
+            if (noteSlot != pendingPlanSlot || noteText == null)
+            {
+                noteSlot = pendingPlanSlot;
+                noteText = !PlanNeedsSwitch(pendingPlanSlot, out var plan) ? "当前输入将被替换，已更新的布阵可撤销恢复。"
+                    : SwitchProblem(plan) ?? "此方案属于地图「" + MapName(plan.battlefieldId) + "」：将切换到该地图并自动载入方案。当前布阵未保存的改动会丢失。";
+            }
+            return noteText;
+        }
+
+        private static string SwitchProblem(WarSandboxPlanFile plan)
+        {
+            var map = FindMap(plan.battlefieldId);
+            if (map == null) return "方案的地图已不存在：" + plan.battlefieldId + "，无法载入。";
+            if (map.contentVersion != plan.battlefieldVersion || map.terrainId != plan.terrainId || map.terrainVersion != plan.terrainVersion)
+                return "地图「" + MapName(map.id) + "」已更新（版本或地形变化），此方案无法载入。";
+            return null;
+        }
+
+        private bool TrySwitchForPlan(string slot, WarSandboxPlanFile plan, out string error)
+        {
+            error = null;
+            var session = WarSandboxSceneSession.Instance;
+            var map = FindMap(plan.battlefieldId);
+            if (session == null) { error = "当前无法切换地图。"; return false; }
+            if ((error = SwitchProblem(plan)) != null) return false;
+            resumePlanSlot = slot; resumePlanDirectory = deployment.PlanStore.DirectoryPath;
+            resumePlanDeadline = Time.realtimeSinceStartup + 180f;
+            if (!session.TryEnterBattlefield(plan.battlefieldId, true, out error))
+            { resumePlanSlot = null; error = "切换到地图「" + MapName(map.id) + "」失败：" + error; return false; }
+            plansOpen = false;
+            return true;
+        }
+
+        // Runs on the HUD of the newly loaded battlefield (statics survive the scene change).
+        private void ResumePendingPlan()
+        {
+            var session = WarSandboxSceneSession.Instance;
+            if (session == null || session.State == WarSandboxEntryState.Failed || session.State == WarSandboxEntryState.Menu && !session.IsLoading ||
+                Time.realtimeSinceStartup > resumePlanDeadline) { resumePlanSlot = null; return; }
+            if (deployment == null || deployment.controller == null || session.InputBlocked || session.Controller != deployment.controller) return;
+            string slot = resumePlanSlot; resumePlanSlot = null;
+            if (!string.IsNullOrEmpty(resumePlanDirectory) && deployment.PlanStore.DirectoryPath != resumePlanDirectory)
+                deployment.PlanStore = new WarSandboxLocalPlanStore(resumePlanDirectory);
+            if (!deployment.IsEditing) Open(true);
+            if (!deployment.IsEditing) { Debug.LogWarning("[方案] 切换地图后无法进入布阵：" + inputError); return; }
+            if (deployment.TryLoadPlan(slot, out var error)) { selected = 0; plansOpen = false; planMessage = null; ReadFields(); }
+            else { OpenPlanLibrary(); selectedPlanSlot = slot; planMessage = error; planActionFailed28 = true; }
             clearFocusRequested = true;
         }
 
@@ -122,3 +214,4 @@ namespace MassEngine.Game
         }
     }
 }
+

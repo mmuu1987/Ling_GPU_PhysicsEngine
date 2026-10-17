@@ -76,6 +76,7 @@ namespace MassEngine.Game
         private void Update()
         {
             if (CheckTranslation()) return;
+            if (resumePlanSlot != null) ResumePendingPlan();
             if (WarSandboxSceneSession.Instance != null && WarSandboxSceneSession.Instance.InputBlocked) { runtimeUi?.SetVisible(false); HideDeployToolkit(); return; }
             if (deployment == null) return;
             if (!Confirming && !deployment.IsEditing) { runtimeUi?.SetVisible(false); HideDeployToolkit(); ReleaseCamera(); return; }
@@ -410,6 +411,7 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
 
