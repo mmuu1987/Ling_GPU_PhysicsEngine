@@ -156,6 +156,28 @@ namespace MassEngine
         }
 
         /// <summary>
+        /// 炸飞 (2026-10-17, render only): knock-fly apex height per unit type; only splash shooters count.
+        /// Returns true only when at least one unit type knocks bodies flying.
+        /// </summary>
+        public bool FillKnockFlyHeights(float[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            bool any = false;
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                float height = config != null && config.projectileSplashRadius > 0f ? config.knockFlyHeight : 0f;
+                height = float.IsNaN(height) || float.IsInfinity(height) ? 0f : Mathf.Clamp(height, 0f, 50f);
+                target[i] = height;
+                any |= height > 0f;
+            }
+
+            return any;
+        }
+
+        /// <summary>
         /// Melee charge parameters per unit type: x = damage multiplier (1 = off), y = minimum speed fraction.
         /// Returns true only when at least one unit type charges, so callers can keep the legacy kernel otherwise.
         /// </summary>
@@ -368,3 +390,4 @@ namespace MassEngine
         }
     }
 }
+

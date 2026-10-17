@@ -189,6 +189,8 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
         #endif
 
         // 用来生成欧拉角旋转矩阵的方法
+        #include "MassAgentKnock.hlsl" // 炸飞 (2026-10-17, render only)
+
         float4x4 CreateEulerRotationMatrix(float3 euler)
         {
             float cx = cos(euler.x); float sx = sin(euler.x);
@@ -256,6 +258,9 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 float3 renderPosition = data.position;
                 renderPosition.y -= ResolveCorpseSink(data.currentState, data.currentAnimationTime);
                 renderPosition.y += ResolveFlightLift(data.currentState, data.currentAnimationTime);
+                float knockAngle;
+                float4 knock = MassKnockFetch(agentIndex, data.currentState);
+                renderPosition += MassKnockOffset(knock, data.currentAnimationTime, knockAngle);
 
                 float4x4 scaleMatrix = float4x4(
                     data.scale.x, 0, 0, 0,
@@ -293,6 +298,7 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
                 );
 
                 unity_WorldToObject = mul(invScaleMatrix, mul(invRotMatrix, invTransMatrix));
+                MassKnockTumble(knock, knockAngle, renderPosition + float3(0.0, 0.9 * data.scale.y, 0.0));
 
                 // 记录当前实例的动画时间。后面的 vertex shader 会用它采 VAT。
                 _GlobalAnimationTime = data.currentAnimationTime;
@@ -711,3 +717,4 @@ Shader "Universal Render Pipeline/MassEngine/LitInstancedAgent"
         }
     }
 }
+

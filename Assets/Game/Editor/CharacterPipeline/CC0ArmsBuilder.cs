@@ -251,6 +251,8 @@ namespace MassEngine.Game.EditorTools
             c.projectileMaxLifetime = s.lifetime;
             c.projectileTrailLength = s.trail;
             c.projectileSplashRadius = s.splash;
+            // 炸飞 (2026-10-17, user approved 甲, render only): bodies killed by a shell fly up to 7 m.
+            c.knockFlyHeight = s.splash > 0f ? 7f : 0f;
             c.attackReleasePhase = s.releasePhase;
             c.projectileOriginHeight = s.originHeight > 0 ? s.originHeight : height * .85f;
             c.projectileTargetHeight = height * .5f;

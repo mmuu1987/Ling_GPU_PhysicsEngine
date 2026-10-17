@@ -1,6 +1,86 @@
 #pragma kernel ClassifyVisibleAgentsForUnitType
+#pragma multi_compile_local __ MASS_AGENT_KNOCK
 
 #include "../../Core/Shaders/AgentDataCommon.hlsl"
+
+#if defined(MASS_AGENT_KNOCK)
+// 炸飞 / knock-fly (2026-10-17, render only; see AgentKnockFx and MassAgentKnock.hlsl).
+// Same layout as ProjectileImpactData in ProjectileSimulation.compute (read only here).
+struct KnockImpactData
+{
+    float3 position;
+    float radius;
+    float time;
+    float groundY;
+    float2 padding; // x: asfloat(shooter agent index + 1)
+};
+StructuredBuffer<KnockImpactData> projectileImpactRing;
+uint projectileImpactCapacity;
+StructuredBuffer<float> _MassKnockHeights;
+uint _MassKnockTypeCount;
+RWStructuredBuffer<float4> _MassKnock;
+
+// A body is matched to a blast only during its first moments as a corpse; the latch runs once.
+#define KNOCK_LATCH_SECONDS 0.4
+#define KNOCK_WINDOW_BEFORE 0.6
+#define KNOCK_WINDOW_AFTER 0.15
+#define KNOCK_MAX_BODY_RADIUS 1.2
+#define KNOCK_DISTANCE_FACTOR 0.8
+
+void LatchKnock(uint index, AgentData agent, uint agentCount)
+{
+    float4 knock = _MassKnock[index];
+    if (agent.currentState != STATE_DEAD)
+    {
+        if (knock.w != 0.0)
+            _MassKnock[index] = float4(0.0, 0.0, 0.0, 0.0);
+        return;
+    }
+    if (knock.w != 0.0)
+        return;
+
+    float4 result = float4(0.0, 0.0, 0.0, 1.0);
+    float age = agent.currentAnimationTime;
+    if (age < KNOCK_LATCH_SECONDS && AgentBodyRadius(index) <= KNOCK_MAX_BODY_RADIUS)
+    {
+        float death = currentTime - age;
+        float best = 0.0;
+        for (uint i = 0; i < projectileImpactCapacity; i++)
+        {
+            KnockImpactData fx = projectileImpactRing[i];
+            if (fx.radius <= 0.0 || fx.time < death - KNOCK_WINDOW_BEFORE || fx.time > death + KNOCK_WINDOW_AFTER)
+                continue;
+            int shooter = asint(fx.padding.x) - 1;
+            if (shooter < 0 || (uint)shooter >= agentCount)
+                continue;
+            int shooterType = unitTypeIndexReadBuffer[shooter];
+            if (shooterType < 0 || (uint)shooterType >= _MassKnockTypeCount)
+                continue;
+            float height = _MassKnockHeights[shooterType];
+            if (height <= 0.0)
+                continue;
+            float2 delta = agent.position.xz - fx.position.xz;
+            float d = length(delta);
+            if (d > fx.radius + 1.0)
+                continue;
+            float h = height * clamp(1.0 - d / max(fx.radius, 0.01), 0.25, 1.0);
+            if (h <= best)
+                continue;
+            best = h;
+            float2 dir;
+            if (d > 0.05)
+                dir = delta / d;
+            else
+            {
+                float a = (float)((index * 2654435761u) >> 16) * (6.2831853 / 65536.0);
+                dir = float2(cos(a), sin(a));
+            }
+            result = float4(dir * (KNOCK_DISTANCE_FACTOR * h), h, 1.0);
+        }
+    }
+    _MassKnock[index] = result;
+}
+#endif
 
 // Dispatched once per registered unit type with classifyUnitTypeIndex set and the
 // near/mid/far append buffers of that unit type bound. Each agent belongs to exactly one
@@ -26,6 +106,10 @@ void ClassifyVisibleAgentsForUnitType(uint3 id : SV_DispatchThreadID)
     if (IsCorpseDespawned(agent))
         return;
 
+#if defined(MASS_AGENT_KNOCK)
+    LatchKnock(id.x, agent, count);
+#endif
     AppendVisibleAgentForUnitType(id.x, agent);
     agentBuffer[id.x] = agent;
 }
+

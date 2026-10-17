@@ -27,6 +27,7 @@ MonoBehaviour:
   projectileMaxLifetime: 1.6
   projectileTrailLength: 3
   projectileSplashRadius: 0
+  knockFlyHeight: 0
   chargeDamageMultiplier: 1
   chargeMinSpeedFraction: 0.6
   meleeSplashRadius: 0
