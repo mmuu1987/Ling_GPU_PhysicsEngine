@@ -194,7 +194,9 @@ namespace MassEngine.Game.EditorTools
             recipe.agentRadius = s.radius;
             recipe.lowPolicy = CharacterLowLodPolicy.PaletteGrid;
             recipe.paletteColumns = 8; recipe.paletteRows = 4;
-            recipe.lowVertexBudget = s == Gunner ? 300 : 450; // far-mesh budgets: infantry 300, large 400-500
+            // far-mesh budgets: infantry 300, large 400-500. Gunner 600 (2026-10-17, playtest): this 17k-vertex SWAT model
+            // fell apart at 300 (PaletteGrid: stick legs; standard clustering: one blob) — same budget as UnityChanVAT.
+            recipe.lowVertexBudget = s == Gunner ? 600 : 450;
             recipe.fullVertexBudget = 24000;
             recipe.maxTextureMiB = 64;
             recipe.maximumPositionError = s == Gunner ? .0025f : .02f;
@@ -812,4 +814,5 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+
 
