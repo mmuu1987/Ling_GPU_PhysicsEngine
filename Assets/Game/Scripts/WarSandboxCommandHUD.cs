@@ -301,6 +301,8 @@ namespace MassEngine.Game
                     GUILayout.Height(compactLayout ? 17f : 36f));
             else if (Time.unscaledTime < feedbackUntil)
                 GUILayout.Label(commandFeedback, GUILayout.Height(compactLayout ? 17f : 20f));
+            else if (LagHint() is string lag && lag.Length > 0)
+                GUILayout.Label(lag, GUILayout.Height(compactLayout ? 17f : 20f));
             else if (showHotkeys && !compactLayout)
                 GUILayout.Label("数字键选军团(双击聚焦) · Tab轮换 · F跟随 · F3全景 · Enter开战 · A/M/H/R下令");
 
@@ -1277,5 +1279,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
