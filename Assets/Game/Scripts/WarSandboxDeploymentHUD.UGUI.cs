@@ -222,7 +222,7 @@ namespace MassEngine.Game
                 bool save = pendingPlanAction == "save";
                 ui.Panel("plans-confirm", new Rect(x, 114, w, 234)); ui.Brackets("plans-confirm-br", new Rect(x, 114, w, 234));
                 ui.Label("plans-confirm-title", new Rect(x + 18, 134, w - 36, 44), (save ? "覆盖方案 " : "载入方案 ") + pendingPlanSlot + "？", 24, null, true);
-                ui.Label("plans-confirm-note", new Rect(x + 18, 192, w - 36, 60), save ? "旧文件将被替换。写入失败时会保留旧方案。" : "当前输入将被替换，已更新的布阵可撤销恢复。", 16, WarSandboxUGUI.Muted);
+                ui.Label("plans-confirm-note", new Rect(x + 18, 192, w - 36, 60), save ? "旧文件将被替换。写入失败时会保留旧方案。" : PlanLoadNote(), 16, WarSandboxUGUI.Muted);
                 ui.Button("plans-confirm-yes", new Rect(x + 28, 278, (w - 68) / 2, 40), save ? "确认覆盖" : "确认载入", ExecutePlanAction, true);
                 ui.Button("plans-confirm-no", new Rect(x + 40 + (w - 68) / 2, 278, (w - 68) / 2, 40), "取消", () => pendingPlanAction = null);
             }
@@ -266,5 +266,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 
