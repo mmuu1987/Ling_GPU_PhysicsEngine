@@ -93,6 +93,7 @@ void LatchKnock(uint index, AgentData agent, uint agentCount)
 [numthreads(64, 1, 1)]
 void ClassifyVisibleAgentsForUnitType(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint count;
     uint stride;
     agentBuffer.GetDimensions(count, stride);
@@ -117,4 +118,5 @@ void ClassifyVisibleAgentsForUnitType(uint3 id : SV_DispatchThreadID)
     AppendVisibleAgentForUnitType(id.x, agent);
     agentBuffer[id.x] = agent;
 }
+
 

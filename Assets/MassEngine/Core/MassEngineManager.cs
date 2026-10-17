@@ -844,7 +844,7 @@ namespace MassEngine
         private PipelineFrameContext CreateFrameContext()
         {
             int total = unitTypeRegistry != null ? unitTypeRegistry.TotalAgentCount : 0;
-            int agentThreadGroups = Mathf.Max(1, Mathf.CeilToInt(total / 64f));
+            int agentThreadGroups = GpuDispatch.GroupsFor(total); // exact; float division drifts past 2^24 agents
             int gridThreadGroups = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, bufferManager != null ? bufferManager.GridCellCount : 1) / 64f));
             int flowResolution = Flow.flowFieldResolution;
             int flowThreadGroups = Mathf.Max(1, Mathf.CeilToInt(Mathf.Max(1, flowResolution * flowResolution) / 64f));
@@ -1331,6 +1331,7 @@ namespace MassEngine
         }
     }
 }
+
 
 
 

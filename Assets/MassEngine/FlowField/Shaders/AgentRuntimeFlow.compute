@@ -53,6 +53,7 @@ float3 FlowTeamPreviewTint()
 [numthreads(64, 1, 1)]
 void ClearRuntimeFlowResources(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint cellCount = FlowFieldCellCount();
     if (id.x < cellCount)
         runtimeFlowTargetDensity[FlowDensityIndex(id.x)] = 0;
@@ -74,6 +75,7 @@ void ClearRuntimeFlowResources(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void BuildRuntimeFlowTargetDensity(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     TeamFlowParams params = GetTeamFlowParams(flowTeamId);
     if (params.modes.z == 0 || combatEnabled == 0 || battleStarted == 0)
         return;
@@ -171,6 +173,7 @@ void SelectRuntimeFlowTargets(uint3 groupId : SV_GroupID, uint groupThreadIndex 
 [numthreads(64, 1, 1)]
 void GenerateRuntimeFlowField(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint cellCount = FlowFieldCellCount();
     if (id.x >= cellCount)
         return;
@@ -315,3 +318,4 @@ void GenerateRuntimeFlowField(uint3 id : SV_DispatchThreadID)
     if (flowPreviewEnabled != 0)
         runtimeFlowPreviewTexture[int2(x, z)] = float4(color, 1.0);
 }
+

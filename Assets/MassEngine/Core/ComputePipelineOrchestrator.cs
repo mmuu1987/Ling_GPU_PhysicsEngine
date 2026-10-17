@@ -595,7 +595,9 @@ namespace MassEngine
 
         private void Dispatch(ComputeShader shader, int kernel, int groupsX, string label)
         {
-            Dispatch(shader, kernel, groupsX, 1, label);
+            // 1D kernels wrap past 65535 groups (GpuDispatch); 2D callers pass their own groupsY.
+            GpuDispatch.Groups1D(groupsX, out int x, out int y);
+            Dispatch(shader, kernel, x, y, label);
         }
 
         /// <summary>
@@ -615,7 +617,7 @@ namespace MassEngine
                 return;
             }
 
-            shader.Dispatch(kernel, Mathf.Max(1, groupsX), 1, 1);
+            GpuDispatch.Dispatch1D(shader, kernel, groupsX);
         }
 
         private void Dispatch(ComputeShader shader, int kernel, int groupsX, int groupsY, string label)
@@ -636,6 +638,7 @@ namespace MassEngine
         }
     }
 }
+
 
 
 

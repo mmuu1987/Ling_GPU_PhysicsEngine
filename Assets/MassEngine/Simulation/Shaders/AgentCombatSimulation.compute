@@ -701,6 +701,7 @@ void ClearDensityMap(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void BuildDensityMap(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint count;
     uint stride;
     agentBuffer.GetDimensions(count, stride);
@@ -722,6 +723,7 @@ void BuildDensityMap(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void BuildEngagementSlotOccupancy(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint count;
     uint stride;
     agentBuffer.GetDimensions(count, stride);
@@ -743,6 +745,7 @@ void BuildEngagementSlotOccupancy(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void ClearPendingDamage(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint count;
     uint stride;
     agentBuffer.GetDimensions(count, stride);
@@ -1364,6 +1367,7 @@ void ResolveBeforeIntegration(uint3 id, inout AgentData agent,
 [numthreads(64, 1, 1)]
 void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint count;
     uint stride;
     agentBuffer.GetDimensions(count, stride);
@@ -1447,6 +1451,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint count;
     uint stride;
     agentBuffer.GetDimensions(count, stride);
@@ -2140,6 +2145,7 @@ void SimulateCombatAndAccumulateDamage(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void ClearLaunchRequests(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint count;
     uint stride;
     launchRequestBuffer.GetDimensions(count, stride);
@@ -2164,6 +2170,7 @@ void ObserveLocalOrders(uint3 id:SV_DispatchThreadID)
     _LocalOrderAck[id.x]=(uint)o.sequence | (battleStarted==0?0x80000000u:0u) | (!open?0x40000000u:0u) | (observedRevision!=-(float)o.sequence?0x20000000u:0u);
 #endif
 }
+
 
 
 

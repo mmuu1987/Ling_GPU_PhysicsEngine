@@ -381,7 +381,7 @@ namespace MassEngine.Game
                 if (entry == null || entry.valuesVersion != 1 || string.IsNullOrWhiteSpace(entry.templateId) || entry.templateRevision <= 0 ||
                     entry.center == null || entry.manualSize == null || entry.center.valuesVersion != 1 || entry.manualSize.valuesVersion != 1)
                 { error = "方案包含不完整的编成数据。"; return false; }
-                if (entry.teamId < 0 || entry.teamId > ConfigValidator.MaxTeamId || entry.count < 1 || entry.count > WarSandboxDeploymentDraft.MaxTotalUnits ||
+                if (entry.teamId < 0 || entry.teamId > ConfigValidator.MaxTeamId || entry.count < 1 ||
                     !Finite(entry.center.ToRuntime()) || !Finite(entry.manualSize.ToRuntime()) ||
                     !Finite(entry.density) || entry.density < 0.05f || entry.density > SpawnConfig.PackingLimitPerSquareMeter ||
                     !Finite(entry.aspect) || entry.aspect < 0.1f || entry.aspect > 10f ||
@@ -389,8 +389,8 @@ namespace MassEngine.Game
                     ((entry.manualSize.x > 0) != (entry.manualSize.z > 0)) || !WarSandboxDeploymentFacing.IsValid(entry.facing))
                 { error = "方案编成包含非法数值。"; return false; }
             }
-            if (plan.entries.Sum(entry => (long)entry.count) > WarSandboxDeploymentDraft.MaxTotalUnits)
-            { error = "方案总人数超出上限。"; return false; }
+            if (plan.entries.Sum(entry => (long)entry.count) > int.MaxValue)
+            { error = "方案总人数超出整数范围。"; return false; }
             if (plan.statOverrides != null)
             {
                 if (plan.statOverrides.Length > WarSandboxDeploymentDraft.MaxCompositions) { error = "方案兵种数值条目过多。"; return false; }
@@ -474,4 +474,5 @@ namespace MassEngine.Game
         private static void TryDelete(string path) { try { if (File.Exists(path)) File.Delete(path); } catch { } }
     }
 }
+
 

@@ -240,8 +240,8 @@ namespace MassEngine
                 ObservationZoneId,
                 new Vector4(observationZoneCenter.x, observationZoneCenter.z, observationZoneRadius, 0f));
 
-            spatialHashShader.Dispatch(clearTeamSpatialStatsKernel, Mathf.Max(1, (buffers.TeamStatsSlotCount + 63) / 64), 1, 1);
-            spatialHashShader.Dispatch(buildTeamSpatialStatsKernel, Mathf.Max(1, (buffers.AgentCount + 63) / 64), 1, 1);
+            GpuDispatch.Dispatch1D(spatialHashShader, clearTeamSpatialStatsKernel, GpuDispatch.GroupsFor(buffers.TeamStatsSlotCount));
+            GpuDispatch.Dispatch1D(spatialHashShader, buildTeamSpatialStatsKernel, GpuDispatch.GroupsFor(buffers.AgentCount));
         }
 
         private void OnTeamSpatialReadback(AsyncGPUReadbackRequest request, float sampleTime)
@@ -375,3 +375,4 @@ namespace MassEngine
         }
     }
 }
+
