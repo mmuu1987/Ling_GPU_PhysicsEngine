@@ -37,7 +37,7 @@ namespace MassEngine.Game.EditorTools
         {
             public string key, title, mesh, prefab, animDir, idle, move, attack, death;
             public bool flying;
-            public float length, radius, speed, priceScale;
+            public float length, radius, speed, priceScale; // radius halved 2026-10-17 (user: 大型角色半径减半): 8/7.5/6.5 -> 4/3.75/3.25
             public int hp, damage, count;
             public float interval, splash, range;
             public Color fx; // fireball tint (CombatConfig.projectileFxColor), alpha 0 = legacy tracer
@@ -49,16 +49,16 @@ namespace MassEngine.Game.EditorTools
         {
             new Def { key = "usurper", title = "篡位者·红龙（飞行巨兽）", mesh = "DragonUsurperMesh", prefab = "DragonUsurper/Red", animDir = "DragonUsurper",
                 idle = "FlyIdle", move = "FlyForward", attack = "FlyFlame", death = "Die", flying = true,
-                length = 18f, radius = 8f, speed = 10f, hp = 21000, damage = 300, interval = 3f, splash = 7f, range = 250f, count = 6, priceScale = 6f, fx = new Color(1f, .35f, .05f, 1f) },
+                length = 18f, radius = 4f, speed = 10f, hp = 21000, damage = 300, interval = 3f, splash = 7f, range = 250f, count = 6, priceScale = 6f, fx = new Color(1f, .35f, .05f, 1f) },
             new Def { key = "terrorbringer", title = "恐惧使者·绿龙（飞行巨兽）", mesh = "DragonTerrorBringerMesh", prefab = "DragonTerrorBringer/Green", animDir = "DragonTerrorBringer",
                 idle = "FlyIdle", move = "FlyForward", attack = "FlyAttack", death = "die", flying = true,
-                length = 17f, radius = 7.5f, speed = 11f, hp = 18000, damage = 260, interval = 3.3f, splash = 7f, range = 250f, count = 6, priceScale = 6f, fx = new Color(.45f, 1f, .15f, 1f) },
+                length = 17f, radius = 3.75f, speed = 11f, hp = 18000, damage = 260, interval = 3.3f, splash = 7f, range = 250f, count = 6, priceScale = 6f, fx = new Color(.45f, 1f, .15f, 1f) },
             new Def { key = "souleater", title = "噬魂者·黑龙（飞行巨兽）", mesh = "DragonSoulEaterMesh", prefab = "DragonSoulEater/Grey", animDir = "DragonSoulEater",
                 idle = "Fly Float", move = "Fly Forward", attack = "Fly Fireball Shoot", death = "Die", flying = true,
-                length = 15f, radius = 6.5f, speed = 12f, hp = 13500, damage = 120, interval = 1.2f, splash = 5f, range = 250f, count = 6, priceScale = 6f, fx = new Color(.6f, .2f, 1f, 1f) },
+                length = 15f, radius = 3.25f, speed = 12f, hp = 13500, damage = 120, interval = 1.2f, splash = 5f, range = 250f, count = 6, priceScale = 6f, fx = new Color(.6f, .2f, 1f, 1f) },
             new Def { key = "nightmare", title = "梦魇·蓝龙（地面巨兽）", mesh = "DragonTheNightmareMesh", prefab = "DragonNightmare/Blue", animDir = "DragonNightMare",
                 idle = "idle01", move = "walk", attack = "Basic Attack", death = "die", flying = false,
-                length = 15f, radius = 6.5f, speed = 8f, hp = 8000, damage = 140, interval = 1.2f, splash = 4.5f, range = 0f, count = 6, priceScale = 4.5f },
+                length = 15f, radius = 3.25f, speed = 8f, hp = 8000, damage = 140, interval = 1.2f, splash = 4.5f, range = 0f, count = 6, priceScale = 4.5f },
         };
 
         public static string TemplateIdOf(string key) => "roster-dragon-" + key;
@@ -86,6 +86,7 @@ namespace MassEngine.Game.EditorTools
                 }
                 EnsureImpactFx();
                 AssetDatabase.SaveAssets();
+                Log.AppendLine(UnitPortraitBackfill.Run(null, false)); // RegisterTemplate clears unitPreview: restore / capture the picker portraits
                 Log.AppendLine("DONE");
             }
             catch (Exception e)
@@ -146,6 +147,7 @@ namespace MassEngine.Game.EditorTools
                 }
                 EnsureImpactFx();
                 AssetDatabase.SaveAssets();
+                Log.AppendLine(UnitPortraitBackfill.Run(null, false)); // RegisterTemplate clears unitPreview: restore / capture the picker portraits
                 AssetDatabase.Refresh();
                 Log.AppendLine("DONE");
             }
@@ -230,7 +232,9 @@ namespace MassEngine.Game.EditorTools
             recipe.groundBindFeet = true;
             recipe.agentRadius = d.radius;
             recipe.lowPolicy = CharacterLowLodPolicy.StandardClustering;
-            recipe.lowVertexBudget = 500;
+            // 2026-10-17: 500 crumpled the 25-35 m wings at mid distance (playtest). 2000 = the first dragon's budget
+            // (DragonBuilder); still 10x below the full mesh, and these are 5-20 units per side.
+            recipe.lowVertexBudget = 2000;
             recipe.fullVertexBudget = 20000;
             recipe.maxTextureMiB = 64;
             // Half VAT rounding grows with coordinate size: these 15-18 m bodies flap 25-35 m wingspans, measured 2.5-3.4 cm.
@@ -600,3 +604,5 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+
+

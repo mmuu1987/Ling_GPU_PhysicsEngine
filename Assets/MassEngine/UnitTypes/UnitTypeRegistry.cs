@@ -234,7 +234,9 @@ namespace MassEngine
         }
 
         /// <summary>
-        /// Flight altitude per unit type (see FillFlightAltitudes).
+        /// Flight altitude per unit type (see FillFlightAltitudes). 2026-10-17: a ground type with
+        /// CombatConfig.groundTargetsOnly is written as -1 (FlightAltitudeOf clamps it to 0 = ground; the shaders read the
+        /// sign as "cannot hit air"). Returns true only when somebody flies, so nothing changes without flyers.
         /// </summary>
         public bool FillFlightAltitudes(float[] target)
         {
@@ -247,7 +249,7 @@ namespace MassEngine
                 CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
                 float altitude = config != null ? config.flightAltitude : 0f;
                 if (float.IsNaN(altitude) || float.IsInfinity(altitude) || altitude < 0f) altitude = 0f;
-                target[i] = altitude;
+                target[i] = altitude > 0f ? altitude : config != null && config.groundTargetsOnly ? -1f : 0f;
                 any |= altitude > 0f;
             }
 
@@ -301,6 +303,28 @@ namespace MassEngine
                 taken = float.IsNaN(taken) ? 1f : Mathf.Clamp01(taken);
                 target[i] = multiplier > 0f ? new Vector4(multiplier, loss, fraction, taken) : Vector4.zero;
                 any |= multiplier > 0f;
+            }
+
+            return any;
+        }
+
+        /// <summary>
+        /// Burst fire per unit type (2026-10-17): x = average shots per burst (0 = continuous), y = max random pause between
+        /// bursts in seconds. Ranged types only. Returns true only when at least one type fires in bursts.
+        /// </summary>
+        public bool FillBurst(Vector2[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            bool any = false;
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                bool on = config != null && config.projectileRange > 0.01f && config.burstShots > 1 &&
+                          config.burstPauseMax > 0f && !float.IsNaN(config.burstPauseMax) && !float.IsInfinity(config.burstPauseMax);
+                target[i] = on ? new Vector2(config.burstShots, config.burstPauseMax) : Vector2.zero;
+                any |= on;
             }
 
             return any;
@@ -396,4 +420,6 @@ namespace MassEngine
         }
     }
 }
+
+
 

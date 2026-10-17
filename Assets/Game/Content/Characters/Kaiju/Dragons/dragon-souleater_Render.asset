@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: dragon-souleater_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: 92c394f9b27ff6043b347ebd691eb2ee, type: 2}
-  nearMesh: {fileID: 1606213983961203368, guid: cf18bb01f482b5d4db691adbfd790d1d, type: 2}
-  midMesh: {fileID: 7850062992524474101, guid: 92c394f9b27ff6043b347ebd691eb2ee, type: 2}
-  farMesh: {fileID: 7850062992524474101, guid: 92c394f9b27ff6043b347ebd691eb2ee, type: 2}
+  vatProfile: {fileID: 11400000, guid: d59d2a74fbab3bc41abb8abafb762caf, type: 2}
+  nearMesh: {fileID: -2545980789974049972, guid: 3662732b0fa29ac49835636cfb53379f, type: 2}
+  midMesh: {fileID: -5146839089395174791, guid: d59d2a74fbab3bc41abb8abafb762caf, type: 2}
+  farMesh: {fileID: -5146839089395174791, guid: d59d2a74fbab3bc41abb8abafb762caf, type: 2}
   nearMaterial: {fileID: 2100000, guid: 8827cdbed2c5e624a8f8c09443ae40c8, type: 2}
   midMaterial: {fileID: 2100000, guid: 01ad65f5461530f42a90effd57ec1589, type: 2}
   farMaterial: {fileID: 2100000, guid: 01ad65f5461530f42a90effd57ec1589, type: 2}

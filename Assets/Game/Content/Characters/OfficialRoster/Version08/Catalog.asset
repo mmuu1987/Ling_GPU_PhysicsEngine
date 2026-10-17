@@ -1029,8 +1029,8 @@ MonoBehaviour:
     config: {fileID: 11400000, guid: 56e18da992c016f4292f21d0c06c9e0e, type: 2}
     hiddenFromSelection: 0
     selectionNote: 
-    unitPreview: {fileID: 0}
-    priceScale: 3.25
+    unitPreview: {fileID: 2800000, guid: d3f8afa369704ef48a55e3d32bbf9239, type: 3}
+    priceScale: 6.5
   - templateId: roster-skeleton-warrior
     revision: 1
     config: {fileID: 11400000, guid: 08ea7092940f9bd409195be721f25f0b, type: 2}
@@ -1127,8 +1127,8 @@ MonoBehaviour:
     config: {fileID: 11400000, guid: 4f910f2dca4845f4ba3631d6311cd6c1, type: 2}
     hiddenFromSelection: 0
     selectionNote: 
-    unitPreview: {fileID: 0}
-    priceScale: 0.594
+    unitPreview: {fileID: 2800000, guid: e92d1c4d71762c34c8a731d9dc6e79d1, type: 3}
+    priceScale: 0.4192
   - templateId: roster-stegosaurus
     revision: 1
     config: {fileID: 11400000, guid: 1b5fb98e6fdb92c4493ce5ef27497dce, type: 2}
@@ -1218,29 +1218,29 @@ MonoBehaviour:
     config: {fileID: 11400000, guid: 63194a1a095f0754aa734e88254ced7a, type: 2}
     hiddenFromSelection: 0
     selectionNote: 
-    unitPreview: {fileID: 0}
+    unitPreview: {fileID: 2800000, guid: 2d0f6e3b8cdc88549b5793ec5f4ee0a2, type: 3}
     priceScale: 6
   - templateId: roster-dragon-terrorbringer
     revision: 1
     config: {fileID: 11400000, guid: 8d2ace7cd72195b4a8119f67af73f3ec, type: 2}
     hiddenFromSelection: 0
     selectionNote: 
-    unitPreview: {fileID: 0}
+    unitPreview: {fileID: 2800000, guid: 9b4a6e136ae29b74680d2db5a20bc105, type: 3}
     priceScale: 6
   - templateId: roster-dragon-usurper
     revision: 1
     config: {fileID: 11400000, guid: 0d3f088026ae5344f87ea01bbf1dab99, type: 2}
     hiddenFromSelection: 0
     selectionNote: 
-    unitPreview: {fileID: 0}
+    unitPreview: {fileID: 2800000, guid: 1c9c1d1d54ecc50468445067e87bea03, type: 3}
     priceScale: 6
   - templateId: roster-dragon-nightmare
     revision: 1
     config: {fileID: 11400000, guid: 470156c71c2228743ba4258a4e36c8ae, type: 2}
     hiddenFromSelection: 0
     selectionNote: 
-    unitPreview: {fileID: 0}
-    priceScale: 5.5
+    unitPreview: {fileID: 2800000, guid: 36e1ac71a98856149b8f77ab42126348, type: 3}
+    priceScale: 4.5
   - templateId: roster-giant-yeti
     revision: 1
     config: {fileID: 11400000, guid: 0f956bc584647d94ca324fd1f84d434a, type: 2}

@@ -112,6 +112,8 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
             float age = _ProjectileImpactNow - d.time;
             // Styled: the slot stays drawn for the scorch; age stays in ring lifetimes (> 1 after the shock ring).
             bool alive = d.radius > 0.0 && age >= 0.0 && age < (styled ? max(duration, STYLED_SCORCH_SECONDS) : duration);
+            // 2026-10-17: no ground ring / scorch for air bursts (dragon vs dragon): only when the blast sphere reaches the ground.
+            alive = alive && d.position.y - d.groundY <= d.radius;
             // Styled: the quad covers 1.2 x the splash radius so the shock ring can overshoot the damage edge a little.
             float size = alive ? d.radius * 2.0 * (styled ? 1.2 : 1.0) : 0.0;
             _ImpactAge01 = alive ? age / duration : 1.0;
@@ -329,4 +331,5 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
     }
     Fallback Off
 }
+
 

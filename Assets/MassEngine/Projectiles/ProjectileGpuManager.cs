@@ -389,8 +389,9 @@ namespace MassEngine.Projectiles
                     float[] flight = UnitTypeFlightAltitudes;
                     if (flight != null)
                     {
-                        if (unitTypeIdx < flight.Length) sourcePos.y += flight[unitTypeIdx] * Mathf.Clamp01(FlightLiftScale);
-                        if (targetType < flight.Length) targetPos.y += flight[targetType];
+                        // Max(0): -1 marks a ground-targets-only type (UnitTypeRegistry.FillFlightAltitudes), not a height.
+                        if (unitTypeIdx < flight.Length) sourcePos.y += Mathf.Max(0f, flight[unitTypeIdx]) * Mathf.Clamp01(FlightLiftScale);
+                        if (targetType < flight.Length) targetPos.y += Mathf.Max(0f, flight[targetType]);
                     }
                     // Approximate facing by shot direction; no per-frame bone/rotation readback.
                     Vector3 forward = new Vector3(targetPos.x - sourcePos.x, 0f, targetPos.z - sourcePos.z);
@@ -547,3 +548,4 @@ namespace MassEngine.Projectiles
         }
     }
 }
+

@@ -31,7 +31,7 @@
                 <tac:TacFrame class="dp-mapcard">
                     <ui:VisualElement class="row dp-maphead">
                         <ui:VisualElement class="bh-grow">
-                            <ui:Label text="战前位置与阵型" class="code" />
+                            <ui:Label name="dp-map-plan" text="战前位置与阵型" class="code" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" />
                             <ui:Label text="部署预览" class="h-panel" />
                         </ui:VisualElement>
                         <ui:Button name="dp-place" text="点击放置" class="btn btn--sm" />
@@ -383,4 +383,5 @@
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
+
 

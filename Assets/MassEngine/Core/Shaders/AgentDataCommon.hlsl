@@ -339,10 +339,19 @@ float FlightAltitudeOf(uint agentIndex)
 {
     return max(0.0, unitTypeFlight[unitTypeIndexReadBuffer[agentIndex]]);
 }
+// 2026-10-17: negative = ground unit with CombatConfig.groundTargetsOnly (e.g. tank gun): never targets or hits a flyer.
+bool CannotHitAirIndex(uint agentIndex)
+{
+    return unitTypeFlight[unitTypeIndexReadBuffer[agentIndex]] < 0.0;
+}
 #else
 float FlightAltitudeOf(uint agentIndex)
 {
     return 0.0;
+}
+bool CannotHitAirIndex(uint agentIndex)
+{
+    return false;
 }
 #endif
 
@@ -362,6 +371,21 @@ float4 TrampleParamsOf(uint agentIndex)
 }
 #else
 float4 TrampleParamsOf(uint agentIndex)
+{
+    return 0.0;
+}
+#endif
+
+// Burst fire (2026-10-17, gunner): per unit type x = average shots per burst (0 = continuous), y = max random pause
+// between bursts (s). Opt-in combat variant only; every other kernel fires continuously.
+#if defined(MASS_MELEE_CHARGE)
+StructuredBuffer<float2> unitTypeBurst;
+float2 BurstParamsOf(uint agentIndex)
+{
+    return unitTypeBurst[unitTypeIndexReadBuffer[agentIndex]];
+}
+#else
+float2 BurstParamsOf(uint agentIndex)
 {
     return 0.0;
 }
@@ -1568,8 +1592,10 @@ bool TargetIsUsable(uint selfIndex, uint otherIndex, float distSqr, float3 selfP
     if (selfIndex == otherIndex || !IsAliveIndex(otherIndex) || !IsEnemy(selfIndex, otherIndex))
         return false;
 
-    // Flight: a ground melee unit can never target a flying unit; ranged units and other flyers can.
-    if (IsFlyingIndex(otherIndex) && !IsFlyingIndex(selfIndex) && !(GetUnitSettings(selfIndex).projectileRange > 0.01))
+    // Flight: a ground melee unit can never target a flying unit; ranged units and other flyers can,
+    // except ground-targets-only weapons (2026-10-17: tank gun).
+    if (IsFlyingIndex(otherIndex) && !IsFlyingIndex(selfIndex) &&
+        (!(GetUnitSettings(selfIndex).projectileRange > 0.01) || CannotHitAirIndex(selfIndex)))
         return false;
 
     // C2: ranges reach a large target's surface, not its centre (0 for normal targets).
@@ -2109,6 +2135,8 @@ void AppendVisibleAgentForUnitType(uint index, inout AgentData agent)
     if (lodFading)
         AppendLodTier(index, lodPrevTier, culled, includeFar);
 }
+
+
 
 
 

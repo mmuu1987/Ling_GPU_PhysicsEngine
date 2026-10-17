@@ -57,16 +57,20 @@ namespace MassEngine.Game.EditorTools
 
         // Stats approved 2026-10-17 (plan): 机枪手 hp 100, 4 per 0.15 s, range 300; 炮车 hp 600, 120 per 6 s, splash 12 m,
         // range 700, 0.4x infantry speed. priceScale is calibrated with equal-budget duels (target ~90 / ~250 points).
+        // 2026-10-17 playtest (gunner too strong): tank hp x2 (600 -> 1200); gunner damage /2 (4 -> 2), interval x2 (.15 -> .3 s),
+        // bursts of ~10 shots with a random 0-3 s pause. Prices kept (gunner 108, tank 500): priceScale 3.25 -> 6.5, .594 -> .4192.
         static readonly Spec Gunner = new Spec
         {
             key = "gunner", title = "机枪手", templateUnit = RangerUnit, sourceTemplateId = "roster-ranger", templateId = "roster-cc0-gunner",
-            priceScale = 3.25f, hp = 100, damage = 4, interval = .15f, range = 300f, splash = 0f, speedFactor = 1f, radius = .45f, height = 1.8f, count = 0,
+            priceScale = 6.5f, hp = 100, damage = 2, interval = .3f, range = 300f, splash = 0f, speedFactor = 1f, radius = .45f, height = 1.8f, count = 0,
             projectileSpeed = 220f, gravity = 0f, lifetime = 1.6f, trail = 3f, hitRadius = .5f, releasePhase = .4f, originHeight = 1.3f, fx = new Color(0, 0, 0, 0)
         };
+        // 2026-10-17 (user: 大型角色半径减半): tank radius 2.8 -> 1.55, not 1.4 - a body of r <= 1.5 would leave the large-body
+        // path (WarSandboxRosterPolicy.IsLargeBody, cell 3 m) and widen every crowd unit's navigation clearance.
         static readonly Spec Artillery = new Spec
         {
             key = "artillery", title = "炮车", templateUnit = TriceratopsUnit, sourceTemplateId = "roster-triceratops", templateId = "roster-cc0-artillery",
-            priceScale = .594f, hp = 600, damage = 120, interval = 6f, range = 700f, splash = 6f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
+            priceScale = .4192f, hp = 1200, damage = 120, interval = 6f, range = 700f, splash = 6f, speedFactor = .4f, radius = 1.55f, height = 0f, count = 6,
             projectileSpeed = 300f, gravity = 0f, lifetime = 4f, trail = 4f, hitRadius = 1f, releasePhase = TankReleasePhase, originHeight = 0f, fx = new Color(1f, .55f, .15f, 1f)
         };
 
@@ -119,6 +123,7 @@ namespace MassEngine.Game.EditorTools
             }
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
+            Log.AppendLine(UnitPortraitBackfill.Run(null, false)); // 2026-10-17: picker portraits for new builds
         });
 
         [MenuItem("Tools/机枪手炮车/只刷新数值（不重新烘焙）")]
@@ -193,7 +198,9 @@ namespace MassEngine.Game.EditorTools
             recipe.agentRadius = s.radius;
             recipe.lowPolicy = CharacterLowLodPolicy.PaletteGrid;
             recipe.paletteColumns = 8; recipe.paletteRows = 4;
-            recipe.lowVertexBudget = s == Gunner ? 300 : 450; // far-mesh budgets: infantry 300, large 400-500
+            // far-mesh budgets: infantry 300, large 400-500. Gunner 600 (2026-10-17, playtest): this 17k-vertex SWAT model
+            // fell apart at 300 (PaletteGrid: stick legs; standard clustering: one blob) — same budget as UnityChanVAT.
+            recipe.lowVertexBudget = s == Gunner ? 600 : 450;
             recipe.fullVertexBudget = 24000;
             recipe.maxTextureMiB = 64;
             recipe.maximumPositionError = s == Gunner ? .0025f : .02f;
@@ -263,6 +270,9 @@ namespace MassEngine.Game.EditorTools
             c.projectileFxScale = s.splash > 0f ? 0.6f : 1f; // 6 m splash x 0.6 = the same look as 12 m x 0.3
             c.projectileFxDensity = s.splash > 0f ? 0.55f : 1f;
             c.meleeSplashRadius = 0f; c.chargeDamageMultiplier = 1f; c.trampleDamageMultiplier = 0f; c.flightAltitude = 0f;
+            c.groundTargetsOnly = s == Artillery; // 2026-10-17 (playtest): the tank gun cannot engage flying dragons
+            c.burstShots = s == Gunner ? 10 : 0; // 2026-10-17 (playtest): gunner fires ~10-shot bursts
+            c.burstPauseMax = s == Gunner ? 3f : 0f; // then pauses a random 0-3 s
             u.flockingConfig.agentRadius = s.radius;
             u.movementConfig.maxSpeed = infantrySpeed * s.speedFactor;
             var a = new SerializedObject(u.animationConfig);
@@ -811,3 +821,8 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+
+
+
+
+

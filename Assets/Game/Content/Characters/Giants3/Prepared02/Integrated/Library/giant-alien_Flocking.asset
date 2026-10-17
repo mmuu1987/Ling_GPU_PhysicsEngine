@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010004, type: 3}
   m_Name: giant-alien_Flocking
   m_EditorClassIdentifier: 
-  agentRadius: 3.3
+  agentRadius: 1.65
   separationStrength: 24
   attractionStrength: 1
   densityAvoidanceStrength: 1.6

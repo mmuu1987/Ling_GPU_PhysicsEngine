@@ -544,23 +544,65 @@ namespace MassEngine.Game
                 return true;
             }
 
+            private Label NextBadge(ref int shown)
+            {
+                if (shown == badges.Count)
+                {
+                    var label = new Label { pickingMode = PickingMode.Position };
+                    label.AddToClassList("bh-mm-badge");
+                    // 2026-10-17: left click on a composition badge selects that composition for command; right click falls through (move order).
+                    label.RegisterCallback<PointerDownEvent>(e => { if (e.button == 0 && label.userData is int) e.StopPropagation(); });
+                    label.RegisterCallback<PointerUpEvent>(e =>
+                    {
+                        if (e.button != 0 || !(label.userData is int g)) return;
+                        e.StopPropagation(); downButton = -1;
+                        if (density != null) hud.SelectMinimapComposition(density, g);
+                    });
+                    badgeLayer.Add(label); badges.Add(label);
+                }
+                return badges[shown++];
+            }
+
+            /// <summary>2026-10-17: one round badge per composition (number = its place in the army), on its live centroid.</summary>
+            private bool UpdateCompositionBadges(WarSandboxBattleController controller, Rect map, Vector2 world, ref int shown)
+            {
+                if (!shapes || density == null || density.GroupCount == 0) return false;
+                Label selectedBadge = null;
+                for (int g = 0; g < density.GroupCount; g++)
+                {
+                    int team = density.GroupTeam(g);
+                    if (team < 0 || team >= controller.ArmyCount || !density.TryGetGroupAnchor(g, out var point, out _)) continue;
+                    Vector2 pos = WarSandboxMinimapProjection.WorldToMap(point, world, map);
+                    var badge = NextBadge(ref shown);
+                    bool armySelected = controller.selectedTeam == team, picked = hud.IsMinimapCompositionSelected(g);
+                    Color color = WarSandboxTeamPalette.Resolve(team);
+                    badge.userData = g;
+                    badge.text = density.GroupOrdinal(g).ToString();
+                    badge.EnableInClassList("bh-mm-badge--sel", picked);
+                    badge.style.borderTopColor = badge.style.borderBottomColor = badge.style.borderLeftColor = badge.style.borderRightColor = picked ? Ink : armySelected ? color * .7f : color;
+                    badge.style.backgroundColor = picked ? color : Color.white;
+                    badge.style.color = picked ? Color.white : Ink;
+                    badge.style.left = pos.x; badge.style.top = pos.y;
+                    badge.style.display = DisplayStyle.Flex;
+                    if (picked) selectedBadge = badge;
+                }
+                if (selectedBadge != null && badgeLayer.IndexOf(selectedBadge) != badgeLayer.childCount - 1) selectedBadge.BringToFront();
+                return true;
+            }
+
             private void UpdateBadges(WarSandboxBattleController controller)
             {
                 int shown = 0;
                 var map = new Rect(0, 0, contentRect.width, contentRect.height);
-                if (controller != null && map.width >= 4 && map.height >= 4 && hud.TryResolveSimulationWorldSize(out var world))
+                if (controller != null && map.width >= 4 && map.height >= 4 && hud.TryResolveSimulationWorldSize(out var world)
+                    && !UpdateCompositionBadges(controller, map, world, ref shown))
                 {
                     for (int team = 0; team < controller.ArmyCount && team < GpuMinimapDensity.MaxTeams; team++)
                     {
                         if (!TryArmyPoint(controller, team, out var point)) continue;
                         Vector2 pos = WarSandboxMinimapProjection.WorldToMap(point, world, map);
-                        if (shown == badges.Count)
-                        {
-                            var label = new Label { pickingMode = PickingMode.Ignore };
-                            label.AddToClassList("bh-mm-badge");
-                            badgeLayer.Add(label); badges.Add(label);
-                        }
-                        var badge = badges[shown++];
+                        var badge = NextBadge(ref shown);
+                        badge.userData = null;
                         bool selected = controller.selectedTeam == team;
                         Color color = WarSandboxTeamPalette.Resolve(team);
                         badge.text = badgeText[team] ??= (team + 1).ToString();
@@ -647,4 +689,5 @@ namespace MassEngine.Game
         }
     }
 }
+
 

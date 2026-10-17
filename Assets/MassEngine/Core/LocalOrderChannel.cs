@@ -10,7 +10,7 @@ namespace MassEngine
     public sealed class LocalOrderChannel : IDisposable
     {
         public const string Keyword="MASS_LOCAL_ORDERS";
-        public const int GroupBudget=8,PhysicalSlots=GroupBudget+1,MaxCells=65536;
+        public const int GroupBudget=8,PhysicalSlots=GroupBudget+1,MaxCells=262144; // 2026-10-17: 512² (2048 maps); was 65536, which refused every selected-unit order there
         private readonly MassGpuBufferManager buffers;private readonly Func<float,TerrainNavigationGrid> makeNavigation;
         private readonly Func<bool> canRefreshAttack;private float nextAttackRefresh;private int lastAttackSequence;
         private readonly Func<bool> contextCurrent;private readonly int[] teams;private readonly float[] radii;
@@ -39,7 +39,7 @@ namespace MassEngine
             Func<float,TerrainNavigationGrid> navigationFactory,Func<bool> contextCurrent=null,Func<bool> canRefreshAttack=null)
         {
             if(buffers==null||!buffers.IsAllocated||buffers.FlowCellCount>MaxCells||teams.Length!=buffers.AgentCount||radii.Length!=teams.Length)
-                throw new ArgumentException("Local prototype requires allocated buffers, matching immutable membership and <=65536 flow cells.");
+                throw new ArgumentException("Local prototype requires allocated buffers, matching immutable membership and <=262144 flow cells.");
             this.buffers=buffers;Epoch=epoch;this.teams=(int[])teams.Clone();this.radii=(float[])radii.Clone();makeNavigation=navigationFactory;
             this.canRefreshAttack=canRefreshAttack;this.contextCurrent=contextCurrent;cells=buffers.FlowCellCount;orders=new LocalAgentOrder[teams.Length];
             try{orderBuffer=new ComputeBuffer(orders.Length,32);spareOrderBuffer=new ComputeBuffer(orders.Length,32);flowBuffer=new ComputeBuffer(cells*PhysicalSlots,8);maskBuffer=new ComputeBuffer(cells*PhysicalSlots,4);ackBuffer=new ComputeBuffer(orders.Length,4);orderBuffer.SetData(orders);spareOrderBuffer.SetData(orders);ackBuffer.SetData(new uint[orders.Length]);}
@@ -230,5 +230,6 @@ namespace MassEngine
         }
     }
 }
+
 
 

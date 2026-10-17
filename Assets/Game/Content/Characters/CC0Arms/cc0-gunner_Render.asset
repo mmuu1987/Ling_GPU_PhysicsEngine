@@ -12,10 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010007, type: 3}
   m_Name: cc0-gunner_Render
   m_EditorClassIdentifier: 
-  vatProfile: {fileID: 11400000, guid: edf31da737f306a41ab14bad05c1d91d, type: 2}
-  nearMesh: {fileID: -4479586944116675748, guid: ce406e31af7ef8e44af4a8ab13992e95, type: 2}
-  midMesh: {fileID: 5369912968423043936, guid: edf31da737f306a41ab14bad05c1d91d, type: 2}
-  farMesh: {fileID: 5369912968423043936, guid: edf31da737f306a41ab14bad05c1d91d, type: 2}
+  vatProfile: {fileID: 11400000, guid: 716a47f7da989d54c8d6c781e36ad33f, type: 2}
+  nearMesh: {fileID: 297562388835451789, guid: 3e9862ecd96dc8b46a1863bd90409b15, type: 2}
+  midMesh: {fileID: 3182489414897861933, guid: 716a47f7da989d54c8d6c781e36ad33f, type: 2}
+  farMesh: {fileID: 3182489414897861933, guid: 716a47f7da989d54c8d6c781e36ad33f, type: 2}
   nearMaterial: {fileID: 2100000, guid: 61a722e98e0d8ea4a83564812a2608ec, type: 2}
   midMaterial: {fileID: 2100000, guid: aa060c5eafa5a194894c77cc21266663, type: 2}
   farMaterial: {fileID: 2100000, guid: aa060c5eafa5a194894c77cc21266663, type: 2}

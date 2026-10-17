@@ -223,7 +223,7 @@
             <ui:VisualElement class="row bc-mini__head">
                 <ui:Label text="小地图" class="code code--accent" />
                 <ui:VisualElement class="spacer" />
-                <ui:Label text="左键定位 · 右键下令" class="code bc-mini__hint" />
+                <ui:Label text="点徽章选编成 · 右键下令" class="code bc-mini__hint" />
             </ui:VisualElement>
             <ui:VisualElement name="bh-mini-host" class="bc-mini__host" />
         </tac:TacFrame>
@@ -295,3 +295,4 @@
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
+
