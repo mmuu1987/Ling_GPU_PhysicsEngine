@@ -65,10 +65,12 @@ namespace MassEngine.Game.EditorTools
             priceScale = 6.5f, hp = 100, damage = 2, interval = .3f, range = 300f, splash = 0f, speedFactor = 1f, radius = .45f, height = 1.8f, count = 0,
             projectileSpeed = 220f, gravity = 0f, lifetime = 1.6f, trail = 3f, hitRadius = .5f, releasePhase = .4f, originHeight = 1.3f, fx = new Color(0, 0, 0, 0)
         };
+        // 2026-10-17 (user: 大型角色半径减半): tank radius 2.8 -> 1.55, not 1.4 - a body of r <= 1.5 would leave the large-body
+        // path (WarSandboxRosterPolicy.IsLargeBody, cell 3 m) and widen every crowd unit's navigation clearance.
         static readonly Spec Artillery = new Spec
         {
             key = "artillery", title = "炮车", templateUnit = TriceratopsUnit, sourceTemplateId = "roster-triceratops", templateId = "roster-cc0-artillery",
-            priceScale = .4192f, hp = 1200, damage = 120, interval = 6f, range = 700f, splash = 6f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
+            priceScale = .4192f, hp = 1200, damage = 120, interval = 6f, range = 700f, splash = 6f, speedFactor = .4f, radius = 1.55f, height = 0f, count = 6,
             projectileSpeed = 300f, gravity = 0f, lifetime = 4f, trail = 4f, hitRadius = 1f, releasePhase = TankReleasePhase, originHeight = 0f, fx = new Color(1f, .55f, .15f, 1f)
         };
 
@@ -819,6 +821,7 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+
 
 
 

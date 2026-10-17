@@ -16,7 +16,7 @@ MonoBehaviour:
   projectileOriginHeight: 2.6534307
   projectileTargetHeight: 1.5608416
   targetAcquireRadius: 710
-  attackRange: 5.8
+  attackRange: 4.55
   attackDamage: 120
   attackInterval: 6
   maxHp: 1200

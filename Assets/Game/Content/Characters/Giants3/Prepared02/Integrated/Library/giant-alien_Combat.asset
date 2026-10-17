@@ -16,7 +16,7 @@ MonoBehaviour:
   projectileOriginHeight: 2.8388195
   projectileTargetHeight: 2.580745
   targetAcquireRadius: 22
-  attackRange: 4.35
+  attackRange: 2.6999998
   attackDamage: 45
   attackInterval: 0.86666673
   maxHp: 1100
@@ -27,5 +27,19 @@ MonoBehaviour:
   projectileMaxLifetime: 10
   projectileTrailLength: 2.5
   projectileSplashRadius: 0
+  knockFlyHeight: 0
+  knockFlyRadius: 0
   chargeDamageMultiplier: 1
   chargeMinSpeedFraction: 0.6
+  meleeSplashRadius: 0
+  trampleDamageMultiplier: 0
+  trampleSpeedLoss: 0.0025
+  trampleMinSpeedFraction: 0.45
+  trampleDamageTaken: 1
+  flightAltitude: 0
+  groundTargetsOnly: 0
+  burstShots: 0
+  burstPauseMax: 0
+  projectileFxColor: {r: 0, g: 0, b: 0, a: 0}
+  projectileFxScale: 1
+  projectileFxDensity: 1

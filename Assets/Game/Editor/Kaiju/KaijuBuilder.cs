@@ -108,13 +108,16 @@ namespace MassEngine.Game.EditorTools
             main.FindProperty("unitTypeName").stringValue = "巨兽暴龙（巨兽级）";
             main.ApplyModifiedPropertiesWithoutUndo();
 
-            float radius = baseRadius * Scale; // 3.9 -> 11.7 m (about 17 m tall)
+            // 2026-10-17 (user: 大型角色半径减半): body radius halved, 11.7 -> 5.85 m (model still about 17 m tall); attack range
+            // shrinks by the same amount so the reach beyond the body is unchanged (14.85 -> 9 m).
+            float fullRadius = baseRadius * Scale; // 3.9 x 3 = 11.7 m
+            float radius = fullRadius * .5f;
             var flock = new SerializedObject(c[3]);
             Set(flock, "agentRadius", radius);
             flock.ApplyModifiedPropertiesWithoutUndo();
 
             var combat = new SerializedObject(c[5]);
-            Set(combat, "attackRange", srcCombat.FindProperty("attackRange").floatValue * Scale);
+            Set(combat, "attackRange", srcCombat.FindProperty("attackRange").floatValue * Scale - (fullRadius - radius));
             Set(combat, "targetAcquireRadius", srcCombat.FindProperty("targetAcquireRadius").floatValue * Scale);
             Set(combat, "projectileOriginHeight", srcCombat.FindProperty("projectileOriginHeight").floatValue * Scale);
             Set(combat, "projectileTargetHeight", srcCombat.FindProperty("projectileTargetHeight").floatValue * Scale);
@@ -135,7 +138,7 @@ namespace MassEngine.Game.EditorTools
             Set(anim, "moveStartSpeed", srcAnim.FindProperty("moveStartSpeed").floatValue * Scale);
             anim.ApplyModifiedPropertiesWithoutUndo();
 
-            // 6 bodies of r 11.7 need >= 6 * 4r^2 = 3285 m^2 of footprint (policy packing rule).
+            // 6 bodies of r 11.7 (before the 2026-10-17 halving; the footprint is kept) need >= 6 * 4r^2 = 3285 m^2 of footprint (policy packing rule).
             var spawn = new SerializedObject(c[1]);
             Set(spawn, "unitCount", 6);
             spawn.FindProperty("spawnSize").vector3Value = new Vector3(90f, 0f, 45f);
@@ -386,5 +389,6 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+
 
 
