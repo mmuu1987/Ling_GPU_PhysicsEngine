@@ -85,6 +85,14 @@ namespace MassEngine
                  "targets a flying unit and its shots pass under / through flyers. false = unchanged (default). Ignored for flyers.")]
         public bool groundTargetsOnly = false;
 
+        [Tooltip("Burst fire (2026-10-17, ranged only): average shots per burst. 0 or 1 = continuous fire (default; behaviour unchanged). " +
+                 "After each shot the burst ends with chance 1 / burstShots, then the gun pauses a random 0..burstPauseMax seconds " +
+                 "(on top of attackInterval) before the next burst.")]
+        [Min(0)] public int burstShots = 0;
+
+        [Tooltip("Burst fire: maximum random pause in seconds between bursts (uniform 0..this). 0 = off.")]
+        [Min(0f)] public float burstPauseMax = 0f;
+
         [Tooltip("Fireball look (2026-10-16), render only: alpha 0 = legacy look (default). Otherwise splash shots draw as a glowing " +
                  "fireball with a flickering flame tail and burst on impact (fire ball, shock ring, smoke), tinted with this colour.")]
         public Color projectileFxColor = new Color(0f, 0f, 0f, 0f);
@@ -97,5 +105,6 @@ namespace MassEngine
         [Range(0.1f, 1f)] public float projectileFxDensity = 1f;
     }
 }
+
 
 

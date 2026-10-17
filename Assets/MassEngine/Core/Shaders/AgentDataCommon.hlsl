@@ -376,6 +376,21 @@ float4 TrampleParamsOf(uint agentIndex)
 }
 #endif
 
+// Burst fire (2026-10-17, gunner): per unit type x = average shots per burst (0 = continuous), y = max random pause
+// between bursts (s). Opt-in combat variant only; every other kernel fires continuously.
+#if defined(MASS_MELEE_CHARGE)
+StructuredBuffer<float2> unitTypeBurst;
+float2 BurstParamsOf(uint agentIndex)
+{
+    return unitTypeBurst[unitTypeIndexReadBuffer[agentIndex]];
+}
+#else
+float2 BurstParamsOf(uint agentIndex)
+{
+    return 0.0;
+}
+#endif
+
 bool IsTrampleTypeIndex(uint agentIndex)
 {
     return TrampleParamsOf(agentIndex).x > 0.0;
@@ -2120,6 +2135,7 @@ void AppendVisibleAgentForUnitType(uint index, inout AgentData agent)
     if (lodFading)
         AppendLodTier(index, lodPrevTier, culled, includeFar);
 }
+
 
 
 

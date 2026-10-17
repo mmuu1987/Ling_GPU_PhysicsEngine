@@ -232,9 +232,19 @@ void AdvanceRangedCycle(uint index, inout AgentData agent, UnitTypeSettings sett
         int ignored;
         InterlockedAdd(launchRequestBuffer[index], attacks, ignored);
         cooldown += attacks * interval;
+        // Burst fire (2026-10-17): each shot ends the burst with chance 1 / x, then a random 0..y s pause. Stateless
+        // (hash of agent + frame), so the burst length varies around x. Off (x = 0) for every other type.
+        float2 burst = BurstParamsOf(index);
+        if (burst.x > 1.0 && burst.y > 0.0)
+        {
+            uint seed = (index * 0x9E3779B9u) ^ (frameIndex * 0x85EBCA6Bu);
+            if (Hash01(seed) < saturate((float)attacks / burst.x))
+                cooldown += Hash01(seed ^ 0x5BD1E995u) * burst.y;
+        }
     }
     attackCooldownBuffer[index] = cooldown;
-    agent.currentAnimationTime = frac(release - cooldown / interval + 1.0) * max(0.0001, settings.attackClipDuration);
+    // A burst pause holds the aim pose (cooldown > interval only happens during a pause).
+    agent.currentAnimationTime = frac(release - min(cooldown, interval) / interval + 1.0) * max(0.0001, settings.attackClipDuration);
 }
 
 // Attack contact response (see the STATE_ATTACK branch). The old impulse model settled
@@ -2154,6 +2164,7 @@ void ObserveLocalOrders(uint3 id:SV_DispatchThreadID)
     _LocalOrderAck[id.x]=(uint)o.sequence | (battleStarted==0?0x80000000u:0u) | (!open?0x40000000u:0u) | (observedRevision!=-(float)o.sequence?0x20000000u:0u);
 #endif
 }
+
 
 
 

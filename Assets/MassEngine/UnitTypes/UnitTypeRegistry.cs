@@ -308,6 +308,28 @@ namespace MassEngine
             return any;
         }
 
+        /// <summary>
+        /// Burst fire per unit type (2026-10-17): x = average shots per burst (0 = continuous), y = max random pause between
+        /// bursts in seconds. Ranged types only. Returns true only when at least one type fires in bursts.
+        /// </summary>
+        public bool FillBurst(Vector2[] target)
+        {
+            if (target == null || target.Length != registeredTypes.Count)
+                return false;
+
+            bool any = false;
+            for (int i = 0; i < registeredTypes.Count; i++)
+            {
+                CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
+                bool on = config != null && config.projectileRange > 0.01f && config.burstShots > 1 &&
+                          config.burstPauseMax > 0f && !float.IsNaN(config.burstPauseMax) && !float.IsInfinity(config.burstPauseMax);
+                target[i] = on ? new Vector2(config.burstShots, config.burstPauseMax) : Vector2.zero;
+                any |= on;
+            }
+
+            return any;
+        }
+
         public int CountAgentsForTeam(int teamId)
         {
             int count = 0;
@@ -398,5 +420,6 @@ namespace MassEngine
         }
     }
 }
+
 
 

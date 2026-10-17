@@ -57,16 +57,18 @@ namespace MassEngine.Game.EditorTools
 
         // Stats approved 2026-10-17 (plan): 机枪手 hp 100, 4 per 0.15 s, range 300; 炮车 hp 600, 120 per 6 s, splash 12 m,
         // range 700, 0.4x infantry speed. priceScale is calibrated with equal-budget duels (target ~90 / ~250 points).
+        // 2026-10-17 playtest (gunner too strong): tank hp x2 (600 -> 1200); gunner damage /2 (4 -> 2), interval x2 (.15 -> .3 s),
+        // bursts of ~10 shots with a random 0-3 s pause. Prices kept (gunner 108, tank 500): priceScale 3.25 -> 6.5, .594 -> .4192.
         static readonly Spec Gunner = new Spec
         {
             key = "gunner", title = "机枪手", templateUnit = RangerUnit, sourceTemplateId = "roster-ranger", templateId = "roster-cc0-gunner",
-            priceScale = 3.25f, hp = 100, damage = 4, interval = .15f, range = 300f, splash = 0f, speedFactor = 1f, radius = .45f, height = 1.8f, count = 0,
+            priceScale = 6.5f, hp = 100, damage = 2, interval = .3f, range = 300f, splash = 0f, speedFactor = 1f, radius = .45f, height = 1.8f, count = 0,
             projectileSpeed = 220f, gravity = 0f, lifetime = 1.6f, trail = 3f, hitRadius = .5f, releasePhase = .4f, originHeight = 1.3f, fx = new Color(0, 0, 0, 0)
         };
         static readonly Spec Artillery = new Spec
         {
             key = "artillery", title = "炮车", templateUnit = TriceratopsUnit, sourceTemplateId = "roster-triceratops", templateId = "roster-cc0-artillery",
-            priceScale = .594f, hp = 600, damage = 120, interval = 6f, range = 700f, splash = 6f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
+            priceScale = .4192f, hp = 1200, damage = 120, interval = 6f, range = 700f, splash = 6f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
             projectileSpeed = 300f, gravity = 0f, lifetime = 4f, trail = 4f, hitRadius = 1f, releasePhase = TankReleasePhase, originHeight = 0f, fx = new Color(1f, .55f, .15f, 1f)
         };
 
@@ -267,6 +269,8 @@ namespace MassEngine.Game.EditorTools
             c.projectileFxDensity = s.splash > 0f ? 0.55f : 1f;
             c.meleeSplashRadius = 0f; c.chargeDamageMultiplier = 1f; c.trampleDamageMultiplier = 0f; c.flightAltitude = 0f;
             c.groundTargetsOnly = s == Artillery; // 2026-10-17 (playtest): the tank gun cannot engage flying dragons
+            c.burstShots = s == Gunner ? 10 : 0; // 2026-10-17 (playtest): gunner fires ~10-shot bursts
+            c.burstPauseMax = s == Gunner ? 3f : 0f; // then pauses a random 0-3 s
             u.flockingConfig.agentRadius = s.radius;
             u.movementConfig.maxSpeed = infantrySpeed * s.speedFactor;
             var a = new SerializedObject(u.animationConfig);
@@ -815,6 +819,7 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+
 
 
 

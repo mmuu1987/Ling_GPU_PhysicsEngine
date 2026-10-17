@@ -19,7 +19,7 @@ MonoBehaviour:
   attackRange: 5.8
   attackDamage: 120
   attackInterval: 6
-  maxHp: 600
+  maxHp: 1200
   projectileRange: 700
   projectileSpeed: 300
   projectileGravity: 0
@@ -38,6 +38,8 @@ MonoBehaviour:
   trampleDamageTaken: 1
   flightAltitude: 0
   groundTargetsOnly: 1
+  burstShots: 0
+  burstPauseMax: 0
   projectileFxColor: {r: 1, g: 0.55, b: 0.15, a: 1}
   projectileFxScale: 0.6
   projectileFxDensity: 0.55

@@ -71,6 +71,8 @@ namespace MassEngine.Game
             string flight = c.flightAltitude > 0f ? "飞行单位 · 高度 " + c.flightAltitude.ToString("0.#", CultureInfo.InvariantCulture) + " 米 · 只有远程和飞行单位能打到\n" : "";
             if (!WarSandboxUnitStats.IsRanged(template)) return flight + "近战单位 · 碰撞与模型尺寸由兵种资源决定";
             if (c.groundTargetsOnly && c.flightAltitude <= 0f) flight += "只能打地面 · 不能对空\n";
+            if (c.burstShots > 1 && c.burstPauseMax > 0f)
+                flight += "连射 · 每轮约 " + c.burstShots + " 发，之后随机停 0–" + c.burstPauseMax.ToString("0.#", CultureInfo.InvariantCulture) + " 秒\n";
             return flight + "出手时机 " + c.attackReleasePhase.ToString("0.##", CultureInfo.InvariantCulture) +
                 "\n弹道高度 " + c.projectileOriginHeight.ToString("0.##", CultureInfo.InvariantCulture) + " 米" +
                 "\n命中半径 " + c.projectileHitRadius.ToString("0.##", CultureInfo.InvariantCulture) + " 米" +
@@ -325,5 +327,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 

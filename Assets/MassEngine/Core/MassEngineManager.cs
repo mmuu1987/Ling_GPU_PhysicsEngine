@@ -93,6 +93,7 @@ namespace MassEngine
         private float[] meleeSplashCache;
         private float[] flightCache;
         private Vector4[] trampleCache;
+        private Vector2[] burstCache;
         private Vector4[] projectileFxCache;
         private MeleeChargeParams meleeCharge;
         private int[] agentUnitTypeIndices;
@@ -651,6 +652,7 @@ namespace MassEngine
             meleeSplashCache = null;
             flightCache = null;
             trampleCache = null;
+            burstCache = null;
             projectileFxCache = null;
             renderDispatcher = null;
             pipelineOrchestrator = null;
@@ -718,12 +720,16 @@ namespace MassEngine
                 trampleCache = new Vector4[gpuSettingsCache.Length];
             // Trample (2026-10-16, cavalry): rides on the same opt-in combat variant.
             bool trample = unitTypeRegistry.FillTrample(trampleCache);
-            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash | flight | trample;
+            if (burstCache == null || burstCache.Length != gpuSettingsCache.Length)
+                burstCache = new Vector2[gpuSettingsCache.Length];
+            // Burst fire (2026-10-17, gunner): rides on the same opt-in combat variant.
+            bool burst = unitTypeRegistry.FillBurst(burstCache);
+            bool wanted = unitTypeRegistry.FillMeleeCharge(meleeChargeCache) | splash | flight | trample | burst;
             if (wanted)
             {
                 if (meleeCharge == null)
                     meleeCharge = new MeleeChargeParams();
-                meleeCharge.Upload(meleeChargeCache, meleeSplashCache, flightCache, trampleCache);
+                meleeCharge.Upload(meleeChargeCache, meleeSplashCache, flightCache, trampleCache, burstCache);
             }
             else if (meleeCharge != null)
             {
@@ -1325,6 +1331,7 @@ namespace MassEngine
         }
     }
 }
+
 
 
 
