@@ -234,7 +234,9 @@ namespace MassEngine
         }
 
         /// <summary>
-        /// Flight altitude per unit type (see FillFlightAltitudes).
+        /// Flight altitude per unit type (see FillFlightAltitudes). 2026-10-17: a ground type with
+        /// CombatConfig.groundTargetsOnly is written as -1 (FlightAltitudeOf clamps it to 0 = ground; the shaders read the
+        /// sign as "cannot hit air"). Returns true only when somebody flies, so nothing changes without flyers.
         /// </summary>
         public bool FillFlightAltitudes(float[] target)
         {
@@ -247,7 +249,7 @@ namespace MassEngine
                 CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
                 float altitude = config != null ? config.flightAltitude : 0f;
                 if (float.IsNaN(altitude) || float.IsInfinity(altitude) || altitude < 0f) altitude = 0f;
-                target[i] = altitude;
+                target[i] = altitude > 0f ? altitude : config != null && config.groundTargetsOnly ? -1f : 0f;
                 any |= altitude > 0f;
             }
 
@@ -396,4 +398,5 @@ namespace MassEngine
         }
     }
 }
+
 

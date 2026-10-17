@@ -15,6 +15,8 @@ void ConsiderProjectileUnit(uint index, ProjectileData proj, float3 start, float
 {
     if ((int)index + 1 == proj.sourceAgentIndexPlusOne || hpReadBuffer[index] <= 0) return;
     if (teamIdReadBuffer[index] == proj.sourceTeamId) return; // area fire: allies never block a projectile
+    // 2026-10-17: a ground-targets-only weapon (tank gun) passes through flyers.
+    if (proj.sourceAgentIndexPlusOne > 0 && IsFlyingIndex(index) && CannotHitAirIndex((uint)(proj.sourceAgentIndexPlusOne - 1))) return;
     UnitTypeSettings settings = GetUnitSettings(index);
     AgentData agent = agentBuffer[index];
     float2 xz = agentPositionReadBuffer[index];
@@ -168,4 +170,5 @@ void ApplyProjectileSplash(ProjectileData proj, float3 impact, int directHit, ui
         ConsiderLargeSplashVictims(int2(x, z), proj, impact, directHit, agentCount);
     }
 }
+
 

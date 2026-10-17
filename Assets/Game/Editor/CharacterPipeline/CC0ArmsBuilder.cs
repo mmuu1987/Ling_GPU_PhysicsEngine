@@ -266,6 +266,7 @@ namespace MassEngine.Game.EditorTools
             c.projectileFxScale = s.splash > 0f ? 0.6f : 1f; // 6 m splash x 0.6 = the same look as 12 m x 0.3
             c.projectileFxDensity = s.splash > 0f ? 0.55f : 1f;
             c.meleeSplashRadius = 0f; c.chargeDamageMultiplier = 1f; c.trampleDamageMultiplier = 0f; c.flightAltitude = 0f;
+            c.groundTargetsOnly = s == Artillery; // 2026-10-17 (playtest): the tank gun cannot engage flying dragons
             u.flockingConfig.agentRadius = s.radius;
             u.movementConfig.maxSpeed = infantrySpeed * s.speedFactor;
             var a = new SerializedObject(u.animationConfig);
@@ -814,5 +815,6 @@ namespace MassEngine.Game.EditorTools
         }
     }
 }
+
 
 
