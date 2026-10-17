@@ -66,7 +66,7 @@ namespace MassEngine.Game.EditorTools
         static readonly Spec Artillery = new Spec
         {
             key = "artillery", title = "炮车", templateUnit = TriceratopsUnit, sourceTemplateId = "roster-triceratops", templateId = "roster-cc0-artillery",
-            priceScale = .275f, hp = 600, damage = 120, interval = 6f, range = 700f, splash = 12f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
+            priceScale = .0785f, hp = 600, damage = 120, interval = 6f, range = 700f, splash = 12f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
             projectileSpeed = 95f, gravity = -9.8f, lifetime = 14f, trail = 4f, hitRadius = 1f, releasePhase = TankReleasePhase, originHeight = 0f, fx = new Color(1f, .55f, .15f, 1f)
         };
 
