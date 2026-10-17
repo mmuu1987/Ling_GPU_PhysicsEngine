@@ -39,22 +39,26 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
         StructuredBuffer<int> projectileAgentUnitType;
         StructuredBuffer<float4> projectileFxByType;
         static float4 _ImpactTint;
+        static float _ImpactScale; // 2026-10-17: CombatConfig.projectileFxScale of the shooter type (fire ball + smoke only)
 
         float4 ResolveImpactTint(ProjectileImpactData d)
         {
             int shooter = asint(d.padding.x);
+            _ImpactScale = 1.0;
             if (_ProjectileFxEnabled < 0.5 || shooter <= 0)
                 return 0;
             uint agentCount, stride, typeCount;
             projectileAgentUnitType.GetDimensions(agentCount, stride);
             projectileFxByType.GetDimensions(typeCount, stride);
+            typeCount /= 2; // [2t] = tint, [2t + 1] = (size scale, ...)
             uint agent = (uint)(shooter - 1);
             if (agent >= agentCount)
                 return 0;
             int type = projectileAgentUnitType[agent];
             if (type < 0 || (uint)type >= typeCount)
                 return 0;
-            return projectileFxByType[type];
+            _ImpactScale = clamp(projectileFxByType[type * 2 + 1].x, 0.1, 3.0);
+            return projectileFxByType[type * 2];
         }
     #endif
 
@@ -131,9 +135,10 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
             float t = alive ? age / duration : 1.0;
             // Styled: the fire ball swells fast (ease-out) to ~2.4 x the splash radius across, then burns out.
             float grow = 1.0 - (1.0 - t) * (1.0 - t) * (1.0 - t);
-            float size = alive ? (styled ? d.radius * (1.0 + 1.0 * grow) : d.radius * (0.7 + 0.6 * t)) : 0.0;
+            float fxR = styled ? d.radius * _ImpactScale : d.radius;
+            float size = alive ? (styled ? fxR * (1.0 + 1.0 * grow) : d.radius * (0.7 + 0.6 * t)) : 0.0;
             _ImpactAge01 = t;
-            float3 centre = float3(d.position.x, max(d.position.y, d.groundY + d.radius * (styled ? 0.45 + 0.35 * t : 0.25)), d.position.z);
+            float3 centre = float3(d.position.x, max(d.position.y, d.groundY + fxR * (styled ? 0.45 + 0.35 * t : 0.25)), d.position.z);
             float3 toCam = normalize(_WorldSpaceCameraPos - centre + float3(0, 1e-4, 0));
             float3 right = normalize(cross(float3(0, 1, 0), toCam) + float3(1e-5, 0, 0));
             float3 up = cross(toCam, right);
@@ -150,9 +155,10 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
             float age = _ProjectileImpactNow - d.time;
             bool alive = _ImpactTint.a > 0.0 && d.radius > 0.0 && age >= 0.0 && age < duration;  // legacy: no smoke
             float t = alive ? age / duration : 1.0;
-            float size = alive ? d.radius * (1.4 + 1.4 * sqrt(t)) : 0.0;
+            float fxR = d.radius * _ImpactScale;
+            float size = alive ? fxR * (1.4 + 1.4 * sqrt(t)) : 0.0;
             _ImpactAge01 = t;
-            float3 centre = float3(d.position.x, max(d.position.y, d.groundY) + d.radius * (0.5 + 1.6 * t), d.position.z);
+            float3 centre = float3(d.position.x, max(d.position.y, d.groundY) + fxR * (0.5 + 1.6 * t), d.position.z);
             float3 toCam = normalize(_WorldSpaceCameraPos - centre + float3(0, 1e-4, 0));
             float3 right = normalize(cross(float3(0, 1, 0), toCam) + float3(1e-5, 0, 0));
             float3 up = cross(toCam, right);
@@ -209,7 +215,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
             float3 shockRgb = lerp(i.tint.rgb, float3(1.0, 0.95, 0.8), 0.5);
             float a = saturate(shock + discA);
             float3 rgb = lerp(discRgb, shockRgb, saturate(shock / max(a, 1e-3)));
-            return half4(rgb, a * step(d, 1.0));
+            return half4(rgb, a * step(d, 1.0) * saturate((i.tint.a - 0.5) * 2.0)); // density
         }
         // The disc covers the whole damage area almost immediately (0.6 -> 1.0 of the splash radius in the
         // first ~15 % of the lifetime), so what the player sees matches who gets hit.
@@ -238,7 +244,7 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
             float fade = (1.0 - t) * (1.0 - t * 0.5);
             float3 rgb = lerp(i.tint.rgb, float3(1.0, 0.92, 0.7), core);
             rgb = lerp(rgb, i.tint.rgb * 0.5, saturate(t * 1.4 - 0.4) * (1.0 - core));
-            return half4(rgb, body * fade * 0.6); // glow only; the burst pass carries the body
+            return half4(rgb, body * fade * 0.6 * saturate((i.tint.a - 0.5) * 2.0)); // glow only; the burst pass carries the body; density
         }
         float core = saturate(1.0 - d);
         float a = core * core * (1.0 - t);
@@ -263,7 +269,8 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
         float burn = 1.0 - smoothstep(0.12, 0.42, t + (n - 0.5) * 0.15);
         float3 rgb = lerp(float3(0.2, 0.18, 0.16), fire, burn);
         float a = puff * lerp(0.55, 1.0, burn) * (1.0 - smoothstep(0.5, 1.0, t)) * smoothstep(0.0, 0.03, t);
-        return half4(rgb * a + fire * burn * puff * 0.25, a);
+        float density = saturate((i.tint.a - 0.5) * 2.0); // premultiplied: scale both
+        return half4((rgb * a + fire * burn * puff * 0.25) * density, a * density);
     }
     ENDHLSL
 
@@ -322,3 +329,4 @@ Shader "Universal Render Pipeline/MassEngine/ProjectileImpact"
     }
     Fallback Off
 }
+

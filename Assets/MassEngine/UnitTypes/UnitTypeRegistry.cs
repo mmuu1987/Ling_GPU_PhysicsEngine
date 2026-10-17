@@ -209,7 +209,9 @@ namespace MassEngine
         /// </summary>
         public bool FillProjectileFx(Vector4[] target)
         {
-            if (target == null || target.Length != registeredTypes.Count)
+            // Two entries per unit type (2026-10-17): [2i] = tint (rgb, a = 0.5 + 0.5 x density; 0 = legacy look),
+            // [2i + 1] = (size scale, 0, 0, 0).
+            if (target == null || target.Length != registeredTypes.Count * 2)
                 return false;
 
             bool any = false;
@@ -220,7 +222,10 @@ namespace MassEngine
                 Color color = config != null ? config.projectileFxColor : Color.clear;
                 bool on = color.a > 0f && !(float.IsNaN(color.r) || float.IsNaN(color.g) || float.IsNaN(color.b));
                 Color rgb = linear ? new Color(color.r, color.g, color.b, 1f).linear : color;
-                target[i] = on ? new Vector4(rgb.r, rgb.g, rgb.b, 1f) : Vector4.zero;
+                float density = config != null && !float.IsNaN(config.projectileFxDensity) ? Mathf.Clamp(config.projectileFxDensity, 0.1f, 1f) : 1f;
+                float scale = config != null && !float.IsNaN(config.projectileFxScale) ? Mathf.Clamp(config.projectileFxScale, 0.1f, 3f) : 1f;
+                target[i * 2] = on ? new Vector4(rgb.r, rgb.g, rgb.b, 0.5f + 0.5f * density) : Vector4.zero;
+                target[i * 2 + 1] = on ? new Vector4(scale, 0f, 0f, 0f) : Vector4.zero;
                 any |= on;
             }
 

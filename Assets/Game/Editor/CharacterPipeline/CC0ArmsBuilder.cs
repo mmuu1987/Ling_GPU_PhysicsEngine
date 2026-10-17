@@ -257,6 +257,9 @@ namespace MassEngine.Game.EditorTools
             c.projectileOriginHeight = s.originHeight > 0 ? s.originHeight : height * .85f;
             c.projectileTargetHeight = height * .5f;
             c.projectileFxColor = s.fx;
+            // 2026-10-17 (user approved 甲): the shell look is the dragon fireball sized by the 12 m splash - shrink it and thin it out.
+            c.projectileFxScale = s.splash > 0f ? 0.3f : 1f;
+            c.projectileFxDensity = s.splash > 0f ? 0.55f : 1f;
             c.meleeSplashRadius = 0f; c.chargeDamageMultiplier = 1f; c.trampleDamageMultiplier = 0f; c.flightAltitude = 0f;
             u.flockingConfig.agentRadius = s.radius;
             u.movementConfig.maxSpeed = infantrySpeed * s.speedFactor;

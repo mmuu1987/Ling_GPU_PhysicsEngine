@@ -80,6 +80,13 @@ namespace MassEngine
         [Tooltip("Fireball look (2026-10-16), render only: alpha 0 = legacy look (default). Otherwise splash shots draw as a glowing " +
                  "fireball with a flickering flame tail and burst on impact (fire ball, shock ring, smoke), tinted with this colour.")]
         public Color projectileFxColor = new Color(0f, 0f, 0f, 0f);
+
+        [Tooltip("Fireball look size (2026-10-17), render only: scales the flying ball and the impact fire ball / smoke, which otherwise " +
+                 "follow the splash radius. 1 = unchanged (default). The ground shock ring and scorch keep showing the real damage area.")]
+        [Range(0.1f, 3f)] public float projectileFxScale = 1f;
+
+        [Tooltip("Fireball look density (2026-10-17), render only: opacity of the fireball, tail, impact fire, smoke and scorch. 1 = unchanged (default).")]
+        [Range(0.1f, 1f)] public float projectileFxDensity = 1f;
     }
 }
 

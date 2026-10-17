@@ -37,3 +37,5 @@ MonoBehaviour:
   trampleDamageTaken: 1
   flightAltitude: 0
   projectileFxColor: {r: 1, g: 0.55, b: 0.15, a: 1}
+  projectileFxScale: 0.3
+  projectileFxDensity: 0.55

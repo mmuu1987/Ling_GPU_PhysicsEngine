@@ -755,8 +755,8 @@ namespace MassEngine
                 SyncAgentKnock();
                 SyncMeleeCharge();
                 // Fireball look (2026-10-16): per-type tint table for the tracer/impact shaders, render only.
-                if (projectileFxCache == null || projectileFxCache.Length != gpuSettingsCache.Length)
-                    projectileFxCache = new Vector4[gpuSettingsCache.Length];
+                if (projectileFxCache == null || projectileFxCache.Length != gpuSettingsCache.Length * 2)
+                    projectileFxCache = new Vector4[gpuSettingsCache.Length * 2]; // tint + size per type
                 if (projectileRenderDispatcher != null)
                     projectileRenderDispatcher.SetProjectileFx(unitTypeRegistry.FillProjectileFx(projectileFxCache) ? projectileFxCache : null);
             }
