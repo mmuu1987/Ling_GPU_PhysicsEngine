@@ -156,10 +156,10 @@ namespace MassEngine
         }
 
         /// <summary>
-        /// 炸飞 (2026-10-17, render only): knock-fly apex height per unit type; only splash shooters count.
-        /// Returns true only when at least one unit type knocks bodies flying.
+        /// 炸飞 (2026-10-17, render only): per unit type x = knock-fly apex height, y = knock range (0 = whole splash);
+        /// only splash shooters count. Returns true only when at least one unit type knocks bodies flying.
         /// </summary>
-        public bool FillKnockFlyHeights(float[] target)
+        public bool FillKnockFlyHeights(Vector2[] target)
         {
             if (target == null || target.Length != registeredTypes.Count)
                 return false;
@@ -170,7 +170,8 @@ namespace MassEngine
                 CombatConfig config = (registeredTypes[i].CombatModule as DefaultCombatModule)?.Config;
                 float height = config != null && config.projectileSplashRadius > 0f ? config.knockFlyHeight : 0f;
                 height = float.IsNaN(height) || float.IsInfinity(height) ? 0f : Mathf.Clamp(height, 0f, 50f);
-                target[i] = height;
+                float range = config != null && !float.IsNaN(config.knockFlyRadius) ? Mathf.Clamp(config.knockFlyRadius, 0f, 1000f) : 0f;
+                target[i] = new Vector2(height, height > 0f ? range : 0f);
                 any |= height > 0f;
             }
 

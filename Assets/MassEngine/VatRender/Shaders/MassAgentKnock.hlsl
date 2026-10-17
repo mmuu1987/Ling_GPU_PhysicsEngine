@@ -3,7 +3,7 @@
 
 // 炸飞 / knock-fly (2026-10-17, render only). The LOD classification kernel latches, once per
 // death, whether the body was killed inside a blast of a unit type with CombatConfig.knockFlyHeight
-// > 0 and writes _MassKnock[agent] = (landing offset x, landing offset z, apex height, 1).
+// > 0 and writes _MassKnock[agent] = (landing offset x, landing offset z, apex height, 1 + whole tumble turns).
 // Here the body follows a parabola to that offset and tumbles one full turn on the way; the corpse
 // then stays at the landing point. agentBuffer is never changed: combat, positions and the
 // corpse-despawn timing are exactly the same as without the effect.
@@ -33,7 +33,8 @@ float3 MassKnockOffset(float4 knock, float age, out float angle)
         return float3(0.0, 0.0, 0.0);
     float flight = 2.0 * sqrt(2.0 * h / MASS_KNOCK_GRAVITY);
     float t = saturate(age / max(flight, 0.0001));
-    angle = t < 1.0 ? 6.2831853 * t : 0.0;
+    float turns = max(1.0, round(knock.w - 1.0));
+    angle = t < 1.0 ? 6.2831853 * turns * t : 0.0;
     return float3(knock.x * t, 4.0 * h * t * (1.0 - t), knock.y * t);
 }
 

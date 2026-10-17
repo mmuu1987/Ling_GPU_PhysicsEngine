@@ -6,7 +6,7 @@ namespace MassEngine
     {
         // 炸飞 (2026-10-17, render only): see AgentKnockFx.
         private AgentKnockFx agentKnock;
-        private float[] knockHeightCache;
+        private Vector2[] knockHeightCache;
 
         /// <summary>
         /// Allocates the knock buffer only while some unit type knocks bodies flying AND the splash
@@ -16,7 +16,7 @@ namespace MassEngine
         {
             int typeCount = gpuSettingsCache != null ? gpuSettingsCache.Length : 0;
             if (knockHeightCache == null || knockHeightCache.Length != typeCount)
-                knockHeightCache = new float[typeCount];
+                knockHeightCache = new Vector2[typeCount];
             bool wanted = typeCount > 0 && projectileImpactFx != null && unitTypeRegistry != null
                 && unitTypeRegistry.FillKnockFlyHeights(knockHeightCache);
             int agents = unitTypeRegistry != null ? unitTypeRegistry.TotalAgentCount : 0;

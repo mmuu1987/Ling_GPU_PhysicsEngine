@@ -46,6 +46,10 @@ namespace MassEngine
                  "away from the blast with one tumble and lie where they land; combat, positions and despawn timing are unchanged. Large bodies never fly.")]
         [Min(0f)] public float knockFlyHeight = 0f;
 
+        [Tooltip("炸飞 range (2026-10-17, render only): only bodies killed within this many metres of the blast fly. " +
+                 "0 = the whole projectileSplashRadius (default). Larger than the splash radius has no effect.")]
+        [Min(0f)] public float knockFlyRadius = 0f;
+
         [Tooltip("Melee charge: the first melee hit after closing in at speed deals attackDamage x this. 1 = off (default; behaviour unchanged). " +
                  "Applies only when the attacker was not already attacking on its previous decision and its speed is at least chargeMinSpeedFraction x maxSpeed. Ranged units ignore it.")]
         [Min(1f)] public float chargeDamageMultiplier = 1f;

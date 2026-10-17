@@ -21,13 +21,14 @@ MonoBehaviour:
   attackInterval: 6
   maxHp: 600
   projectileRange: 700
-  projectileSpeed: 95
-  projectileGravity: -9.8
+  projectileSpeed: 300
+  projectileGravity: 0
   projectileHitRadius: 1
-  projectileMaxLifetime: 14
+  projectileMaxLifetime: 4
   projectileTrailLength: 4
   projectileSplashRadius: 12
   knockFlyHeight: 7
+  knockFlyRadius: 6
   chargeDamageMultiplier: 1
   chargeMinSpeedFraction: 0.6
   meleeSplashRadius: 0

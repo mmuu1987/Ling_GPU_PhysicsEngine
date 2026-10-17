@@ -16,7 +16,7 @@ struct KnockImpactData
 };
 StructuredBuffer<KnockImpactData> projectileImpactRing;
 uint projectileImpactCapacity;
-StructuredBuffer<float> _MassKnockHeights;
+StructuredBuffer<float2> _MassKnockHeights; // x = apex height, y = knock range (0 = whole splash)
 uint _MassKnockTypeCount;
 RWStructuredBuffer<float4> _MassKnock;
 
@@ -56,26 +56,31 @@ void LatchKnock(uint index, AgentData agent, uint agentCount)
             int shooterType = unitTypeIndexReadBuffer[shooter];
             if (shooterType < 0 || (uint)shooterType >= _MassKnockTypeCount)
                 continue;
-            float height = _MassKnockHeights[shooterType];
+            float2 knockType = _MassKnockHeights[shooterType];
+            float height = knockType.x;
             if (height <= 0.0)
                 continue;
+            float range = knockType.y > 0.0 ? min(knockType.y, fx.radius) : fx.radius;
             float2 delta = agent.position.xz - fx.position.xz;
             float d = length(delta);
-            if (d > fx.radius + 1.0)
+            if (d > range + 0.5)
                 continue;
-            float h = height * clamp(1.0 - d / max(fx.radius, 0.01), 0.25, 1.0);
-            if (h <= best)
+            float k = clamp(1.0 - d / max(range, 0.01), 0.2, 1.0);
+            if (k <= best)
                 continue;
-            best = h;
-            float2 dir;
-            if (d > 0.05)
-                dir = delta / d;
-            else
-            {
-                float a = (float)((index * 2654435761u) >> 16) * (6.2831853 / 65536.0);
-                dir = float2(cos(a), sin(a));
-            }
-            result = float4(dir * (KNOCK_DISTANCE_FACTOR * h), h, 1.0);
+            best = k;
+            // Per-body randomness (2026-10-17): height, throw distance, direction and spin vary independently, so a
+            // blast scatters bodies instead of throwing them along one dome-shaped shell.
+            uint hs = index * 2654435761u; hs ^= hs >> 15; hs *= 2246822519u; hs ^= hs >> 13;
+            float r1 = (float)(hs & 1023u) / 1023.0;
+            float r2 = (float)((hs >> 10) & 1023u) / 1023.0;
+            float r3 = (float)((hs >> 20) & 1023u) / 1023.0;
+            float h = height * lerp(0.3, 1.0, k) * lerp(0.35, 1.3, r1 * r1);
+            float throwDistance = height * KNOCK_DISTANCE_FACTOR * lerp(0.4, 1.0, k) * lerp(0.25, 1.2, r2);
+            float baseAngle = d > 0.05 ? atan2(delta.y, delta.x) : r2 * 6.2831853;
+            float angle = baseAngle + (r3 - 0.5) * 1.2;
+            float turns = r3 > 0.8 ? 2.0 : 1.0;
+            result = float4(float2(cos(angle), sin(angle)) * throwDistance, h, 1.0 + turns);
         }
     }
     _MassKnock[index] = result;

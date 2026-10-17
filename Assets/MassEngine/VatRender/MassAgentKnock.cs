@@ -31,11 +31,11 @@ namespace MassEngine
             TypeCount = Mathf.Max(1, typeCount);
             Knock = new ComputeBuffer(AgentCount, sizeof(float) * 4);
             Knock.SetData(new Vector4[AgentCount]); // w = 0: not latched yet
-            Heights = new ComputeBuffer(TypeCount, sizeof(float));
-            Heights.SetData(new float[TypeCount]);
+            Heights = new ComputeBuffer(TypeCount, sizeof(float) * 2); // (apex height, knock range)
+            Heights.SetData(new Vector2[TypeCount]);
         }
 
-        public void UploadHeights(float[] heights)
+        public void UploadHeights(Vector2[] heights)
         {
             if (Heights != null && heights != null && heights.Length == TypeCount)
                 Heights.SetData(heights);

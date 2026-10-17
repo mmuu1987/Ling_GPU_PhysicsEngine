@@ -67,7 +67,7 @@ namespace MassEngine.Game.EditorTools
         {
             key = "artillery", title = "炮车", templateUnit = TriceratopsUnit, sourceTemplateId = "roster-triceratops", templateId = "roster-cc0-artillery",
             priceScale = .0785f, hp = 600, damage = 120, interval = 6f, range = 700f, splash = 12f, speedFactor = .4f, radius = 2.8f, height = 0f, count = 6,
-            projectileSpeed = 95f, gravity = -9.8f, lifetime = 14f, trail = 4f, hitRadius = 1f, releasePhase = TankReleasePhase, originHeight = 0f, fx = new Color(1f, .55f, .15f, 1f)
+            projectileSpeed = 300f, gravity = 0f, lifetime = 4f, trail = 4f, hitRadius = 1f, releasePhase = TankReleasePhase, originHeight = 0f, fx = new Color(1f, .55f, .15f, 1f)
         };
 
         [MenuItem("Tools/机枪手炮车/预览（只出图，不生成）")]
@@ -253,6 +253,8 @@ namespace MassEngine.Game.EditorTools
             c.projectileSplashRadius = s.splash;
             // 炸飞 (2026-10-17, user approved 甲, render only): bodies killed by a shell fly up to 7 m.
             c.knockFlyHeight = s.splash > 0f ? 7f : 0f;
+            // 2026-10-17: only bodies within half the splash fly (user: 炸飞范围再小一半).
+            c.knockFlyRadius = s.splash > 0f ? s.splash * 0.5f : 0f;
             c.attackReleasePhase = s.releasePhase;
             c.projectileOriginHeight = s.originHeight > 0 ? s.originHeight : height * .85f;
             c.projectileTargetHeight = height * .5f;
