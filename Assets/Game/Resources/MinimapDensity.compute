@@ -16,6 +16,7 @@ float4 _World; // xy = world min (x, z), zw = 1 / world size
 [numthreads(64, 1, 1)]
 void ClearCells(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     if (id.x < (uint)(_Res * _Res * _TeamCount)) _Cells[id.x] = 0;
     if (id.x < (uint)(_GroupCount * 7))
     {
@@ -27,6 +28,7 @@ void ClearCells(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void SplatAgents(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     uint i = id.x;
     if (i >= (uint)_Count || _Hp[i] <= 0) return;
     int team = _TeamIds[i];
@@ -50,5 +52,6 @@ void SplatAgents(uint3 id : SV_DispatchThreadID)
         InterlockedMax(_Groups[o + 6], q.y);
     }
 }
+
 
 

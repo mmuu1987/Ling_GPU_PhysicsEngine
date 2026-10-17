@@ -157,6 +157,7 @@ void NavFieldRelax(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void NavFieldFill(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     if ((int)id.x >= _NavFillCount) return;
     _NavDistOut[(uint)_NavLayerOffset + id.x] = _NavFill;
 }
@@ -164,6 +165,7 @@ void NavFieldFill(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void NavCrowdClear(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     if ((int)id.x >= _NavFillCount) return;
     _NavCrowdCountRW[id.x] = 0u;
 }
@@ -171,6 +173,7 @@ void NavCrowdClear(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void NavCrowdCount(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     if ((int)id.x >= _NavAgentCount) return;
     NavAgent a = _NavAgents[id.x];
     // Fighting is not congestion: engaging / attacking / dead agents never price the way for others.
@@ -191,6 +194,7 @@ void NavCrowdCount(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void NavCrowdSmooth(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     if ((int)id.x >= _NavFillCount) return;
     float ema = _NavCrowdEmaRW[id.x];
     _NavCrowdEmaRW[id.x] = ema + _NavCrowdAlpha * ((float)_NavCrowdCountRW[id.x] * (1.0 / NAV_CROWD_UNIT) - ema);
@@ -199,9 +203,11 @@ void NavCrowdSmooth(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void NavFieldSmooth(uint3 id : SV_DispatchThreadID)
 {
+    id.x += id.y * 4194240u; // GpuDispatch.RowThreads: rows past 65535 groups (no unit cap, 2026-10-17)
     if ((int)id.x >= _NavFillCount) return;
     uint i = (uint)_NavLayerOffset + id.x;
     float d = _NavDistIn[i];
     float s = _NavDistSmoothRW[i];
     _NavDistSmoothRW[i] = (d >= 1e29 || s >= 1e29 || abs(d - s) > _NavSmoothSnap) ? d : s + _NavSmoothAlpha * (d - s);
 }
+

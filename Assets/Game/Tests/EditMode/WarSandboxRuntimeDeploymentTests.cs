@@ -98,7 +98,7 @@ namespace MassEngine.Game.Tests
                 case "nan": e.center.z = float.NaN; break;
                 case "infinite": e.manualSize = new Vector3(float.PositiveInfinity, 0, 10); break;
                 case "count": e.count = 0; break;
-                case "capacity": e.count = WarSandboxDeploymentDraft.MaxTotalUnits + 1; break;
+                case "capacity": e.count = 10000000; break; // no unit cap since 2026-10-17: rejected for space (footprint leaves the field)
                 case "density": e.density = 20; break;
                 case "manual": e.manualSize = new Vector3(10, 0, 0); break;
                 case "team": e.teamId = ConfigValidator.MaxTeamId + 1; break;
@@ -202,3 +202,4 @@ namespace MassEngine.Game.Tests
         }
     }
 }
+

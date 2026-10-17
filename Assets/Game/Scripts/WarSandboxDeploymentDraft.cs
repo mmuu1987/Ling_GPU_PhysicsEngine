@@ -102,7 +102,6 @@ namespace MassEngine.Game
     public sealed class WarSandboxDeploymentDraft
     {
         public const int MaxCompositions = 32;
-        public const int MaxTotalUnits = 400000;
         private const int HistoryLimit = 32;
         private readonly List<WarSandboxDeploymentEntry> entries;
         private sealed class State
@@ -325,7 +324,7 @@ namespace MassEngine.Game
                 if (!validation.IsValid) { error = prefix + string.Join("\n", validation.Errors); return false; }
                 if (e.teamId < 0 || e.teamId > ConfigValidator.MaxTeamId) error = prefix + "军团无效。";
                 else if (!WarSandboxDeploymentFacing.IsValid(e.facing)) error = prefix + "朝向无效。";
-                else if (e.count <= 0 || e.count > MaxTotalUnits) error = prefix + "人数必须为 1 到 " + MaxTotalUnits + "。";
+                else if (e.count <= 0) error = prefix + "人数必须大于 0。"; // 2026-10-17: no upper cap, space decides
                 else if (!Finite(e.center) || !Finite(e.manualSize) || e.manualSize.x < 0 || e.manualSize.y < 0 || e.manualSize.z < 0)
                     error = prefix + "位置和阵型尺寸必须为有效数值。";
                 else if ((e.manualSize.x > 0) != (e.manualSize.z > 0)) error = prefix + "手动阵型的宽、深必须同时大于零。";
@@ -333,7 +332,7 @@ namespace MassEngine.Game
                     !Finite(e.aspect) || e.aspect < 0.1f || e.aspect > 10f) error = prefix + "密度或宽深比超出范围。";
                 if (error != null) return false;
                 total += e.count;
-                if (total > MaxTotalUnits) { error = "总兵力不能超过 " + MaxTotalUnits + "。"; return false; }
+                if (total > int.MaxValue) { error = "总兵力超出整数范围。"; return false; } // engine counts are int; not a game rule
                 if (!spatial) continue;
                 Rect bounds = e.Bounds;
                 if (!Finite(e.Size) || bounds.xMin < -worldSize.x * 0.5f || bounds.xMax > worldSize.x * 0.5f ||

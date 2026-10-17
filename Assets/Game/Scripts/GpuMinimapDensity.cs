@@ -144,12 +144,12 @@ namespace MassEngine.Game
             shader.SetBuffer(splatKernel, "_Types", buffers.unitTypeIndexBuffer);
             shader.SetVector("_World", new Vector4(-worldSize.x * .5f, -worldSize.y * .5f, 1f / worldSize.x, 1f / worldSize.y));
             shader.SetBuffer(clearKernel, "_Cells", cells);
-            shader.Dispatch(clearKernel, (teams * Resolution * Resolution + 63) / 64, 1, 1);
+            GpuDispatch.Dispatch1D(shader, clearKernel, GpuDispatch.GroupsFor((long)teams * Resolution * Resolution));
             shader.SetBuffer(splatKernel, "_Cells", cells);
             shader.SetBuffer(splatKernel, "_Agents", identity);
             shader.SetBuffer(splatKernel, "_TeamIds", buffers.combatBuffers.teamIdBuffer);
             shader.SetBuffer(splatKernel, "_Hp", buffers.combatBuffers.hpReadBuffer);
-            if (buffers.AgentCount > 0) shader.Dispatch(splatKernel, (buffers.AgentCount + 63) / 64, 1, 1);
+            if (buffers.AgentCount > 0) GpuDispatch.Dispatch1D(shader, splatKernel, GpuDispatch.GroupsFor(buffers.AgentCount));
             request = AsyncGPUReadback.Request(cells);
             groupRequest = AsyncGPUReadback.Request(groupBuffer); groupDone = false;
             flightTeams = teams; flightWorld = worldSize; inFlight = true; started = Time.realtimeSinceStartupAsDouble;
@@ -320,5 +320,6 @@ namespace MassEngine.Game
         }
     }
 }
+
 
 

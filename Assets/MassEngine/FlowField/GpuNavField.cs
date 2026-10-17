@@ -273,7 +273,7 @@ namespace MassEngine
             agentCount = Mathf.Min(agentCount, Mathf.Min(agents.count, teamIds.count));
             shader.SetInt(FillCountId, n);
             shader.SetBuffer(crowdClearKernel, CrowdCountRwId, crowdCount);
-            shader.Dispatch(crowdClearKernel, (n + 63) / 64, 1, 1);
+            GpuDispatch.Dispatch1D(shader, crowdClearKernel, GpuDispatch.GroupsFor(n));
             shader.SetInt(ResId, Graph.Resolution);
             shader.SetVector(GridId, new Vector4(Graph.Origin.x, Graph.Origin.y, Graph.CellSize, 0));
             shader.SetInt(AgentCountId, agentCount);
@@ -282,13 +282,13 @@ namespace MassEngine
             shader.SetBuffer(crowdCountKernel, AgentsId, agents);
             shader.SetBuffer(crowdCountKernel, AgentTeamsId, teamIds);
             shader.SetBuffer(crowdCountKernel, CrowdCountRwId, crowdCount);
-            shader.Dispatch(crowdCountKernel, (agentCount + 63) / 64, 1, 1);
+            GpuDispatch.Dispatch1D(shader, crowdCountKernel, GpuDispatch.GroupsFor(agentCount));
             float tau = Mathf.Max(1e-3f, CrowdTimeConstant);
             float alpha = crowdWasActive ? 1f - Mathf.Exp(-Mathf.Max(0f, deltaTime) / tau) : 1f;
             shader.SetFloat(CrowdAlphaId, alpha);
             shader.SetBuffer(crowdSmoothKernel, CrowdCountRwId, crowdCount);
             shader.SetBuffer(crowdSmoothKernel, CrowdEmaRwId, crowdEma);
-            shader.Dispatch(crowdSmoothKernel, (n + 63) / 64, 1, 1);
+            GpuDispatch.Dispatch1D(shader, crowdSmoothKernel, GpuDispatch.GroupsFor(n));
             crowdWasActive = true;
             CrowdUpdates++;
             CrowdError = null;
@@ -486,7 +486,7 @@ namespace MassEngine
             shader.SetFloat(SmoothSnapId, FarSmoothSnap);
             shader.SetBuffer(smoothKernel, InId, distA);
             shader.SetBuffer(smoothKernel, SmoothRwId, distSmooth);
-            shader.Dispatch(smoothKernel, (n + 63) / 64, 1, 1);
+            GpuDispatch.Dispatch1D(shader, smoothKernel, GpuDispatch.GroupsFor(n));
             smoothPrimed[team] = true;
         }
 
@@ -499,7 +499,7 @@ namespace MassEngine
             foreach (var target in new[] { distA, distB })
             {
                 shader.SetBuffer(fillKernel, OutId, target);
-                shader.Dispatch(fillKernel, (n + 63) / 64, 1, 1);
+                GpuDispatch.Dispatch1D(shader, fillKernel, GpuDispatch.GroupsFor(n));
             }
         }
 
@@ -541,3 +541,4 @@ namespace MassEngine
         }
     }
 }
+

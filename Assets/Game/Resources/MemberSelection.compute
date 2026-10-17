@@ -26,5 +26,6 @@ void Process(uint i,bool replace)
     _Mask[i]=selected?1:0;
     if(selected){InterlockedAdd(_Counts[0],1);_SelectedIndices.Append(i);}
 }
-[numthreads(64,1,1)] void SelectMembers(uint3 id:SV_DispatchThreadID){Process(id.x,true);}
-[numthreads(64,1,1)] void RefreshMembers(uint3 id:SV_DispatchThreadID){Process(id.x,false);}
+[numthreads(64,1,1)] void SelectMembers(uint3 id:SV_DispatchThreadID){Process(id.x+id.y*4194240u,true);}
+[numthreads(64,1,1)] void RefreshMembers(uint3 id:SV_DispatchThreadID){Process(id.x+id.y*4194240u,false);}
+

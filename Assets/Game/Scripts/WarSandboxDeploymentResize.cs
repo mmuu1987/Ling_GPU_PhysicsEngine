@@ -12,7 +12,7 @@ namespace MassEngine.Game
             out WarSandboxDeploymentEntry result, out string error)
         {
             result=source;error=null;
-            if(source.count<=0 || source.count>WarSandboxDeploymentDraft.MaxTotalUnits || !Finite(center.x)||!Finite(center.y)||!Finite(center.z)||
+            if(source.count<=0 || !Finite(center.x)||!Finite(center.y)||!Finite(center.z)||
                 !Finite(depthWidth.x)||!Finite(depthWidth.y)||depthWidth.x<=0||depthWidth.y<=0)
             {error="人数、中心和尺寸必须为有效正数（中心可为负）。";return false;}
             double area=(double)depthWidth.x*depthWidth.y;float density=(float)(source.count/area),aspect=depthWidth.y/depthWidth.x;
@@ -34,11 +34,27 @@ namespace MassEngine.Game
             error=null;var size=entry.Size;
             if(entry.count<=0||!Finite(radius)||radius<=0||!Finite(jitter)||!Finite(size.x)||!Finite(size.z)||size.x<=0||size.z<=0)
             {error="无法验证实际半径或阵型尺寸。";return false;}
-            float a=Mathf.Max(.01f,size.z/Mathf.Max(.01f,size.x));int cols=Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(entry.count*a)),1,entry.count),rows=Mathf.CeilToInt(entry.count/(float)cols);
-            float f=1-2*Mathf.Clamp(jitter,0,.08f);
-            if((rows>1 && size.x/(rows-1)*f+.0001f<2*radius)||(cols>1 && size.z/(cols-1)*f+.0001f<2*radius))
-            {error="实际行列间距/抖动不能容纳当前半径，请扩大占地；不会减人数或缩模型。";return false;}return true;
+            if(!LatticeFits(size,entry.count,radius,jitter)){error=NoRoom(-1,MaxLatticeCount(size,entry.count,radius,jitter),entry.count);return false;}return true;
         }
+        /// <summary>Same rows/columns as DefaultSpawnModule; jitter taken off conservatively.</summary>
+        public static bool LatticeFits(Vector3 size,int count,float radius,float jitter)
+        {
+            if(count<=1)return true;
+            float a=Mathf.Max(.01f,size.z/Mathf.Max(.01f,size.x));int cols=Mathf.Clamp(Mathf.CeilToInt(Mathf.Sqrt(count*a)),1,count),rows=Mathf.CeilToInt(count/(float)cols);
+            float f=1-2*Mathf.Clamp(jitter,0,.08f);
+            return !((rows>1 && size.x/(rows-1)*f+.0001f<2*radius)||(cols>1 && size.z/(cols-1)*f+.0001f<2*radius));
+        }
+        /// <summary>2026-10-17 (no unit cap): largest count up to <paramref name="count"/> whose lattice fits this footprint.</summary>
+        public static int MaxLatticeCount(Vector3 size,int count,float radius,float jitter)
+        {
+            int lo=1,hi=Mathf.Max(1,count);
+            while(lo<hi){int mid=lo+(hi-lo+1)/2;if(LatticeFits(size,mid,radius,jitter))lo=mid;else hi=mid-1;}
+            while(lo>1&&!LatticeFits(size,lo,radius,jitter))lo--;
+            return LatticeFits(size,lo,radius,jitter)?lo:0;
+        }
+        /// <summary>The one "not enough room" message: how many fit, never a fixed unit cap.</summary>
+        public static string NoRoom(int index,int fit,int count)=>
+            (index>=0?"编成 "+(index+1)+"：":"")+"格子不够：这块占地最多放 "+fit+" 个（当前 "+count+" 个）。请扩大占地或减少人数；不会自动减人数或缩模型。";
         /// <summary>Smallest uniform scale (1 = none) of the footprint after which the real lattice clears 2r once jitter
         /// is taken off. Uniform scaling keeps the aspect, so rows/cols do not change. At most ~6.5% per side.</summary>
         public static float LatticeGrowth(WarSandboxDeploymentEntry entry,float radius,float jitter)
@@ -98,4 +114,5 @@ namespace MassEngine.Game
         }
     }
 }
+
 

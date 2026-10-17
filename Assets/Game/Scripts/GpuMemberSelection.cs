@@ -104,7 +104,7 @@ namespace MassEngine.Game
             shader.SetVector("_Clip",new Vector4(projection.Near,projection.Far,0,0));
             shader.SetBuffer(kernel,"_Agents",identity);shader.SetBuffer(kernel,"_Teams",buffers.combatBuffers.teamIdBuffer);shader.SetBuffer(kernel,"_Hp",buffers.combatBuffers.hpReadBuffer);
             shader.SetBuffer(kernel,"_Mask",mask);shader.SetBuffer(kernel,"_SelectedIndices",visible);shader.SetBuffer(kernel,"_Counts",counts);
-            visible.SetCounterValue(0);counts.SetData(zeros);shader.Dispatch(kernel,(buffers.AgentCount+63)/64,1,1);ComputeBuffer.CopyCount(visible,args,4);
+            visible.SetCounterValue(0);counts.SetData(zeros);GpuDispatch.Dispatch1D(shader,kernel,GpuDispatch.GroupsFor(buffers.AgentCount));ComputeBuffer.CopyCount(visible,args,4);
             flightTicket=State.Current;flightWhole=whole;maskData=countData=null;
             maskRequest=AsyncGPUReadback.Request(mask);countRequest=AsyncGPUReadback.Request(counts);inFlight=true;readbackStarted=Time.realtimeSinceStartupAsDouble;Dispatches++;ReadbackPairs++;
         }
@@ -131,5 +131,6 @@ namespace MassEngine.Game
         private static void Destroy(UnityEngine.Object o){if(o==null)return;if(Application.isPlaying)UnityEngine.Object.Destroy(o);else UnityEngine.Object.DestroyImmediate(o);}
     }
 }
+
 
 

@@ -511,8 +511,7 @@ namespace MassEngine.Projectiles
                 return;
 
             _combatSimulationShader.SetBuffer(_kernelClearLaunchRequests, MassGpuShaderPropertyIds.LaunchRequestBufferId, launchRequestBuffer);
-            int threadGroups = Mathf.Max(1, Mathf.CeilToInt(agentCount / 64f));
-            _combatSimulationShader.Dispatch(_kernelClearLaunchRequests, threadGroups, 1, 1);
+            GpuDispatch.Dispatch1D(_combatSimulationShader, _kernelClearLaunchRequests, GpuDispatch.GroupsFor(agentCount));
         }
 
         /// <summary>CPU leases, including pending uploads and asynchronous recycling delay; not draw count.</summary>
@@ -548,4 +547,5 @@ namespace MassEngine.Projectiles
         }
     }
 }
+
 
