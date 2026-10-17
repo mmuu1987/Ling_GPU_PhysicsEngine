@@ -433,6 +433,13 @@ MonoBehaviour:
     selectionNote: 
     unitPreview: {fileID: 2800000, guid: 974908093e46b25408d4862a5c3b2dea, type: 3}
     priceScale: 3.444
+  - templateId: roster-cc0-gunner
+    revision: 1
+    config: {fileID: 11400000, guid: 56e18da992c016f4292f21d0c06c9e0e, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 0}
+    priceScale: 3.25
   - templateId: roster-skeleton-warrior
     revision: 1
     config: {fileID: 11400000, guid: 04dcb367ac4b2644982d42e389947de7, type: 2}
@@ -524,6 +531,13 @@ MonoBehaviour:
     selectionNote: 
     unitPreview: {fileID: 2800000, guid: 5c21deee79a5cc048b87496202d9be1f, type: 3}
     priceScale: 0.825
+  - templateId: roster-cc0-artillery
+    revision: 1
+    config: {fileID: 11400000, guid: 4f910f2dca4845f4ba3631d6311cd6c1, type: 2}
+    hiddenFromSelection: 0
+    selectionNote: 
+    unitPreview: {fileID: 0}
+    priceScale: 0.275
   - templateId: roster-stegosaurus
     revision: 1
     config: {fileID: 11400000, guid: 1b5fb98e6fdb92c4493ce5ef27497dce, type: 2}

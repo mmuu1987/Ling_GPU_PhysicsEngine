@@ -55,6 +55,8 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0d3f088026ae5344f87ea01bbf1dab99, type: 2}
   - {fileID: 11400000, guid: 8d2ace7cd72195b4a8119f67af73f3ec, type: 2}
   - {fileID: 11400000, guid: 63194a1a095f0754aa734e88254ced7a, type: 2}
+  - {fileID: 11400000, guid: 56e18da992c016f4292f21d0c06c9e0e, type: 2}
+  - {fileID: 11400000, guid: 4f910f2dca4845f4ba3631d6311cd6c1, type: 2}
   maximumUnits: 200000
   maximumRadius: 11.800001
   useTemplateSpawnDefaults: 0

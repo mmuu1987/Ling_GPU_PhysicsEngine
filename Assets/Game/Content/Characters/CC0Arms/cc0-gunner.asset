@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a101f6d47c224bdc9b8a5c31e7010001, type: 3}
+  m_Name: cc0-gunner
+  m_EditorClassIdentifier: 
+  unitTypeName: "\u673A\u67AA\u624B"
+  unitTypeClassName: MassEngine.DefaultSwordUnit
+  teamId: 1
+  spawnConfig: {fileID: 11400000, guid: 2b4242caaa83e78458e2db47d9702ba6, type: 2}
+  movementConfig: {fileID: 11400000, guid: 89ba979658a0ca743b24f7ee733c0297, type: 2}
+  flockingConfig: {fileID: 11400000, guid: 0d4f7731468d1884cb8c38379063320e, type: 2}
+  animationConfig: {fileID: 11400000, guid: ec1fff23aa2e71846b51235e66a2f628, type: 2}
+  combatConfig: {fileID: 11400000, guid: 7e40f8a7697a1fa4baeba9100cb2903f, type: 2}
+  renderConfig: {fileID: 11400000, guid: ff3851bacf496484c8de5528fbe68d1a, type: 2}
